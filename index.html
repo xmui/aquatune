@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AQUATUNE</title><!-- CHANGE APP NAME: also update APP_NAME constant in the script below -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <style>
+    :root {
+      --bg:         #010d20;
+      --panel-bg:   rgba(8, 32, 72, 0.55);
+      --panel-bg2:  rgba(4, 18, 45, 0.75);
+      --border:     rgba(80, 180, 255, 0.18);
+      --border2:    rgba(120, 210, 255, 0.28);
+      --accent:     #0099ff;
+      --accent2:    #00ccff;
+      --glow:       rgba(0, 150, 255, 0.35);
+      --text:       #dff0ff;
+      --text2:      rgba(160, 210, 255, 0.65);
+      --btn-bg:     linear-gradient(160deg, rgba(0,130,255,0.55) 0%, rgba(0,60,180,0.75) 100%);
+      --btn-hover:  linear-gradient(160deg, rgba(0,170,255,0.75) 0%, rgba(0,90,210,0.9) 100%);
+      --r-panel:    18px;
+      --r-btn:      999px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    /* ── BACKGROUND ─────────────────────────────── */
+    #bg {
+      position: fixed; inset: 0; z-index: 0; overflow: hidden;
+      background: radial-gradient(ellipse 80% 60% at 15% 40%, #03174a 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 50% at 85% 15%, #041e52 0%, transparent 65%),
+                  #010d20;
+    }
+    .orb {
+      position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.12;
+      animation: drift var(--t,22s) ease-in-out infinite alternate;
+    }
+    .o1 { width:480px; height:480px; background:#0055ff; top:-120px; left:-80px;  --t:20s; }
+    .o2 { width:340px; height:340px; background:#00aaff; bottom:-60px; right:8%;  --t:27s; animation-direction:alternate-reverse; }
+    .o3 { width:220px; height:220px; background:#5500cc; top:35%; left:32%;       --t:16s; }
+    @keyframes drift {
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(28px,-18px) scale(1.08); }
+      100% { transform: translate(-18px,26px) scale(0.94); }
+    }
+
+    /* ── LAYOUT ─────────────────────────────────── */
+    #app {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── HEADER ─────────────────────────────────── */
+    #hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 18px;
+      background: linear-gradient(180deg, rgba(6,24,58,0.92) 0%, rgba(3,14,38,0.7) 100%);
+      border-bottom: 1px solid var(--border2);
+      backdrop-filter: blur(18px);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+    #logo {
+      font-size: 20px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;
+      background: linear-gradient(135deg, #fff 0%, #9adcff 45%, #0088ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 10px rgba(0,140,255,0.5));
+      white-space: nowrap;
+    }
+    #kbd-hint {
+      font-size: 10px; color: var(--text2); display: flex; gap: 8px; align-items: center;
+      flex-wrap: wrap;
+    }
+    .k { background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18);
+         border-radius:4px; padding:1px 5px; font-family:monospace; font-size:9px; }
+    /* auth area */
+    #auth-area { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    #signin-btn {
+      background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+      border: 1px solid var(--border2); border-radius: var(--r-btn);
+      color: var(--text); padding: 6px 14px; cursor: pointer;
+      font-size: 11px; font-weight: 600; transition: all .2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    #signin-btn:hover { background:rgba(0,110,255,0.3); border-color:var(--accent); box-shadow:0 0 10px var(--glow); }
+    #signin-btn svg { width:14px; height:14px; flex-shrink:0; }
+    #user-info { display:none; align-items:center; gap:7px; }
+    #user-avatar { width:26px; height:26px; border-radius:50%; border:1px solid var(--border2); object-fit:cover; }
+    #user-name { font-size:11px; color:var(--text2); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #signout-btn {
+      background: var(--panel-bg); border:1px solid var(--border);
+      color:var(--text2); padding:4px 10px; border-radius:var(--r-btn);
+      cursor:pointer; font-size:10px; transition:all .2s;
+    }
+    #signout-btn:hover { color:rgba(255,100,100,0.9); border-color:rgba(255,100,100,0.4); }
+    #client-id-btn {
+      background: var(--panel-bg); border: 1px solid var(--border);
+      color: var(--text2); padding: 4px 8px; border-radius: var(--r-btn);
+      cursor: pointer; font-size: 10px; transition: all .2s; white-space: nowrap;
+    }
+    #client-id-btn:hover { background:rgba(0,110,255,0.25); color:var(--text); }
+
+    /* ── THREE-COLUMN MAIN ───────────────────────── */
+    #main {
+      display: grid;
+      grid-template-columns: 272px 1fr 290px;
+      flex: 1; overflow: hidden;
+    }
+
+    /* ── LEFT SIDEBAR ────────────────────────────── */
+    #left {
+      display: flex; flex-direction: column; overflow: hidden;
+      background: linear-gradient(180deg, rgba(4,20,52,0.72) 0%, rgba(2,12,32,0.82) 100%);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+    }
+    #search-wrap {
+      padding: 12px 10px; border-bottom: 1px solid var(--border); flex-shrink:0;
+    }
+    #search-row { display:flex; gap:6px; }
+    #q {
+      flex:1; background:rgba(255,255,255,0.06); border:1px solid var(--border);
+      border-radius:var(--r-btn); padding:7px 13px; color:var(--text);
+      font-size:12px; outline:none; transition:all .2s;
+    }
+    #q::placeholder { color:var(--text2); }
+    #q:focus { border-color:var(--accent); background:rgba(0,90,200,0.15);
+               box-shadow:0 0 0 2px rgba(0,140,255,0.18); }
+    #search-btn {
+      background: var(--btn-bg); border:1px solid rgba(0,150,255,0.4);
+      border-radius:var(--r-btn); color:#fff; padding:7px 13px;
+      cursor:pointer; font-size:12px; transition:all .2s; white-space:nowrap;
+    }
+    #search-btn:hover { background:var(--btn-hover); box-shadow:0 0 12px var(--glow); }
+
+    #results {
+      flex:1; overflow-y:auto; padding:6px;
+    }
+    #results::-webkit-scrollbar, #queue-list::-webkit-scrollbar,
+    #related-list::-webkit-scrollbar, #channel-list::-webkit-scrollbar,
+    #pl-list::-webkit-scrollbar { width:3px; }
+    #results::-webkit-scrollbar-thumb, #queue-list::-webkit-scrollbar-thumb,
+    #related-list::-webkit-scrollbar-thumb, #channel-list::-webkit-scrollbar-thumb,
+    #pl-list::-webkit-scrollbar-thumb {
+      background:rgba(0,140,255,0.28); border-radius:4px;
+    }
+    ::-webkit-scrollbar-track { background:transparent; }
+
+    .r-item {
+      display:flex; gap:7px; padding:6px 7px; border-radius:10px;
+      cursor:pointer; align-items:flex-start;
+      border:1px solid transparent; transition:all .14s;
+    }
+    .r-item:hover { background:rgba(0,110,255,0.16); border-color:rgba(0,160,255,0.2); }
+    .r-thumb { width:60px; height:34px; border-radius:5px; object-fit:cover;
+               flex-shrink:0; background:rgba(0,0,0,0.4); }
+    .r-info { flex:1; min-width:0; }
+    .r-title {
+      font-size:11px; font-weight:500; color:var(--text);
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; line-height:1.35;
+    }
+    .r-ch { font-size:10px; color:var(--text2); margin-top:2px;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .r-acts { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+    .mb {
+      background:rgba(0,90,200,0.28); border:1px solid rgba(0,150,255,0.25);
+      border-radius:5px; color:var(--text2); font-size:9px; padding:2px 5px;
+      cursor:pointer; transition:all .14s; white-space:nowrap;
+    }
+    .mb:hover { background:rgba(0,150,255,0.4); color:#fff; }
+
+    /* playlists section */
+    #pl-wrap {
+      border-top:1px solid var(--border); padding:8px 10px;
+      flex-shrink:0; max-height:190px; display:flex; flex-direction:column;
+    }
+    .sec-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .sec-ttl { font-size:10px; font-weight:700; text-transform:uppercase;
+               letter-spacing:1.2px; color:var(--text2); }
+    .ico-btn {
+      background:rgba(0,110,255,0.2); border:1px solid var(--border);
+      border-radius:50%; width:20px; height:20px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; color:var(--accent2); font-size:13px; font-weight:300;
+      transition:all .14s; line-height:1;
+    }
+    .ico-btn:hover { background:rgba(0,150,255,0.38); box-shadow:0 0 7px var(--glow); }
+    #pl-list { overflow-y:auto; flex:1; }
+    .pl-item {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:4px 7px; border-radius:7px; cursor:pointer;
+      color:var(--text2); font-size:11px; transition:all .14s;
+      border:1px solid transparent;
+    }
+    .pl-item:hover { background:rgba(0,110,255,0.18); color:var(--text); }
+    .pl-item.active { background:rgba(0,140,255,0.22); color:var(--text); border-color:var(--border2); }
+    .pl-cnt { font-size:9px; background:rgba(0,90,200,0.32); padding:1px 6px; border-radius:10px; }
+
+    /* ── CENTER ──────────────────────────────────── */
+    #center {
+      display:flex; flex-direction:column; overflow:hidden;
+      background:linear-gradient(180deg,rgba(2,12,32,0.6) 0%,rgba(1,8,22,0.8) 100%);
+      backdrop-filter:blur(8px);
+    }
+    #player-box {
+      position:relative; flex-shrink:0;
+    }
+    #player-box::after { content:''; display:block; padding-top:56.25%; }
+    #player-box > * { position:absolute; inset:0; width:100%; height:100%; }
+    #ph {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+      background:radial-gradient(ellipse at center, rgba(0,40,110,0.45) 0%, rgba(1,8,22,0.95) 100%);
+    }
+    #ph-icon { font-size:44px; opacity:.35; }
+    #ph-txt  { font-size:13px; color:var(--text2); text-align:center; }
+
+    /* visualizer */
+    #viz {
+      display:flex; align-items:flex-end; justify-content:center; gap:2px;
+      padding:8px 14px; height:42px; flex-shrink:0;
+    }
+    .vb {
+      width:3px; background:linear-gradient(0deg,#0055ff,#00ccff);
+      border-radius:2px 2px 0 0; min-height:3px;
+    }
+    #viz.on .vb { animation:vbounce var(--spd,.8s) ease-in-out infinite alternate; }
+    @keyframes vbounce {
+      0%  { height:var(--lo,3px); }
+      100%{ height:var(--hi,28px); }
+    }
+
+    /* controls */
+    #ctrl-wrap {
+      padding:10px 14px 12px;
+      background:linear-gradient(180deg,rgba(3,16,42,0.82) 0%,rgba(2,10,28,0.93) 100%);
+      border-top:1px solid var(--border); flex-shrink:0;
+    }
+    #now-row {
+      display:flex; align-items:center; gap:8px; margin-bottom:8px; min-height:34px;
+    }
+    #np-thumb { width:38px; height:38px; border-radius:7px; object-fit:cover;
+                flex-shrink:0; border:1px solid var(--border); display:none; }
+    #np-title { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #np-ch    { font-size:10px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
+    #np-info  { flex:1; min-width:0; }
+
+    #prog-row { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
+    .time { font-size:10px; color:var(--text2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+    #prog {
+      flex:1; height:4px; background:rgba(255,255,255,0.09);
+      border-radius:4px; cursor:pointer; transition:height .14s;
+    }
+    #prog:hover { height:6px; }
+    #prog-fill {
+      height:100%; background:linear-gradient(90deg,#0077ff,#00ccff);
+      border-radius:4px; position:relative; pointer-events:none;
+      transition:width .45s linear;
+    }
+    #prog-fill::after {
+      content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%);
+      width:10px; height:10px; background:#00ccff; border-radius:50%;
+      box-shadow:0 0 6px #00ccff; opacity:0; transition:opacity .14s;
+    }
+    #prog:hover #prog-fill::after { opacity:1; }
+
+    #btns { display:flex; align-items:center; justify-content:center; gap:7px; }
+    .cb {
+      background:rgba(0,70,150,0.32); border:1px solid var(--border);
+      border-radius:var(--r-btn); color:var(--text);
+      padding:7px 13px; cursor:pointer; font-size:15px;
+      min-width:38px; height:36px;
+      display:flex; align-items:center; justify-content:center;
+      position:relative; overflow:hidden;
+      transition:all .18s;
+    }
+    .cb::before {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(180deg,rgba(255,255,255,0.09) 0%,transparent 55%);
+      pointer-events:none;
+    }
+    .cb:hover {
+      background:rgba(0,120,255,0.38); border-color:var(--accent);
+      box-shadow:0 0 12px var(--glow); transform:translateY(-1px);
+    }
+    #play-btn {
+      background:linear-gradient(145deg,#007eef,#003db5);
+      border-color:#00aaff; padding:7px 22px; font-size:17px;
+      box-shadow:0 0 14px rgba(0,110,255,0.3), inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+    #play-btn:hover {
+      background:linear-gradient(145deg,#009fff,#0055cc);
+      box-shadow:0 0 22px rgba(0,150,255,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .cb.lit { background:rgba(0,140,255,0.28); border-color:var(--accent); color:var(--accent2); }
+
+    #vol-row { display:flex; align-items:center; gap:7px; margin-top:9px; }
+    .vi { font-size:12px; color:var(--text2); }
+    #vol {
+      -webkit-appearance:none; appearance:none;
+      width:76px; height:4px; background:rgba(255,255,255,0.1);
+      border-radius:4px; outline:none; cursor:pointer;
+    }
+    #vol::-webkit-slider-thumb {
+      -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+      background:#00aaff; box-shadow:0 0 5px #00aaff; cursor:pointer;
+    }
+    #automix-btn {
+      margin-left:auto; font-size:10px; padding:4px 10px; height:auto;
+      border-radius:var(--r-btn); white-space:nowrap;
+    }
+
+    /* ── RIGHT PANEL ─────────────────────────────── */
+    #right {
+      display:flex; flex-direction:column; overflow:hidden;
+      background:linear-gradient(180deg,rgba(4,20,52,0.72) 0%,rgba(2,12,32,0.82) 100%);
+      border-left:1px solid var(--border);
+      backdrop-filter:blur(18px);
+    }
+    #tabs { display:flex; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .tab {
+      flex:1; padding:9px 6px; text-align:center;
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+      cursor:pointer; color:var(--text2); border:none;
+      border-bottom:2px solid transparent; background:transparent;
+      transition:all .18s;
+    }
+    .tab:hover { color:var(--text); background:rgba(0,90,200,0.1); }
+    .tab.on { color:var(--accent2); border-bottom-color:var(--accent); background:rgba(0,100,200,0.14); }
+
+    .tp { flex:1; overflow-y:auto; padding:6px; display:none; flex-direction:column; }
+    .tp.on { display:flex; }
+
+    #queue-top { display:flex; gap:5px; padding:6px 6px 2px; flex-shrink:0; }
+    .q-btn {
+      flex:1; background:rgba(0,70,150,0.28); border:1px solid var(--border);
+      border-radius:7px; color:var(--text2); font-size:10px; padding:5px 4px;
+      cursor:pointer; transition:all .14s; text-align:center;
+    }
+    .q-btn:hover { background:rgba(0,130,255,0.3); color:var(--text); }
+
+    .v-item {
+      display:flex; gap:7px; padding:6px 5px; border-radius:9px;
+      cursor:pointer; align-items:flex-start; flex-shrink:0;
+      border:1px solid transparent; transition:all .14s;
+    }
+    .v-item:hover { background:rgba(0,110,255,0.16); border-color:rgba(0,160,255,0.2); }
+    .v-item.now { background:rgba(0,140,255,0.2); border-color:rgba(0,180,255,0.32); }
+    .vt { width:66px; height:37px; border-radius:5px; object-fit:cover;
+          flex-shrink:0; background:rgba(0,0,0,0.4); }
+    .vi2 { flex:1; min-width:0; }
+    .vtt {
+      font-size:11px; color:var(--text);
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; line-height:1.35;
+    }
+    .vch { font-size:10px; color:var(--text2); margin-top:2px; }
+    .vx {
+      color:rgba(255,90,90,0.45); font-size:13px;
+      background:none; border:none; cursor:pointer; padding:0 2px;
+      flex-shrink:0; align-self:flex-start; transition:color .14s;
+    }
+    .vx:hover { color:rgba(255,90,90,0.9); }
+
+    /* ── MODALS ──────────────────────────────────── */
+    .ov {
+      display:none; position:fixed; inset:0; z-index:200;
+      align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.68); backdrop-filter:blur(5px);
+    }
+    .ov.show { display:flex; }
+    .modal {
+      background:linear-gradient(145deg,rgba(8,30,72,0.97),rgba(4,16,42,0.99));
+      border:1px solid var(--border2); border-radius:16px;
+      padding:22px; width:350px; max-width:90vw;
+      box-shadow:0 20px 55px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .modal h3 { font-size:15px; margin-bottom:14px; }
+    .m-inp {
+      width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border);
+      border-radius:9px; padding:9px 13px; color:var(--text);
+      font-size:12px; outline:none; margin-bottom:10px;
+    }
+    .m-inp:focus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(0,140,255,0.18); }
+    .m-inp::placeholder { color:var(--text2); }
+    .m-hint { font-size:10px; color:var(--text2); line-height:1.55; margin-bottom:14px; }
+    .m-acts { display:flex; gap:7px; justify-content:flex-end; }
+    .mbtn {
+      padding:7px 16px; border-radius:var(--r-btn); border:1px solid var(--border);
+      cursor:pointer; font-size:12px; transition:all .18s;
+    }
+    .mbtn.p { background:linear-gradient(145deg,#007eef,#003db5); color:#fff; border-color:#00aaff; }
+    .mbtn.p:hover { box-shadow:0 0 14px var(--glow); }
+    .mbtn.s { background:rgba(255,255,255,0.06); color:var(--text2); }
+    .mbtn.s:hover { background:rgba(255,255,255,0.11); color:var(--text); }
+    #pl-picker { max-height:190px; overflow-y:auto; margin-bottom:12px; }
+
+    /* ── TOAST ───────────────────────────────────── */
+    #toast {
+      position:fixed; bottom:18px; left:50%;
+      transform:translateX(-50%) translateY(60px);
+      background:linear-gradient(145deg,rgba(0,72,175,0.96),rgba(0,38,115,0.99));
+      border:1px solid var(--border2); border-radius:var(--r-btn);
+      padding:9px 18px; font-size:12px; color:var(--text);
+      z-index:300; pointer-events:none;
+      transition:transform .28s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 8px 22px rgba(0,0,0,0.45); white-space:nowrap; max-width:90vw;
+    }
+    #toast.show { transform:translateX(-50%) translateY(0); }
+
+    /* ── EMPTY STATE ─────────────────────────────── */
+    .empty {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:8px; padding:28px 16px; color:var(--text2); font-size:11px;
+      text-align:center; height:100%; min-height:80px;
+    }
+    .e-ico { font-size:28px; opacity:.35; }
+
+    /* playlist view back bar */
+    #pl-view-hdr {
+      display:flex; align-items:center; gap:7px; padding:7px 8px;
+      border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    #back-btn {
+      background:none; border:none; color:var(--text2); cursor:pointer;
+      font-size:15px; padding:2px 6px; border-radius:5px; transition:all .14s;
+    }
+    #back-btn:hover { background:rgba(255,255,255,0.1); color:var(--text); }
+  </style>
+</head>
+<body>
+<div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="hdr">
+    <div id="logo">AQUATUNE</div><!-- CHANGE APP NAME HERE -->
+    <div id="kbd-hint">
+      <span class="k">Space</span>play/pause
+      <span class="k">N</span>next
+      <span class="k">P</span>prev
+      <span class="k">←→</span>seek 5s
+      <span class="k">↑↓</span>volume
+      <span class="k">M</span>mute
+    </div>
+    <div id="auth-area">
+      <button id="client-id-btn" onclick="openModal('cid-modal')" title="Set OAuth Client ID">⚙</button>
+      <button id="signin-btn" onclick="signIn()">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign in with Google
+      </button>
+      <div id="user-info">
+        <img id="user-avatar" src="" alt="">
+        <span id="user-name"></span>
+        <button id="signout-btn" onclick="signOut()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- LEFT: search + playlists -->
+    <div id="left">
+      <div id="search-wrap">
+        <div id="search-row">
+          <input id="q" type="text" placeholder="Search YouTube…" onkeydown="if(event.key==='Enter')doSearch()">
+          <button id="search-btn" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+      <div id="results">
+        <div class="empty"><div class="e-ico">🎵</div>Search for music to begin</div>
+      </div>
+      <div id="pl-wrap">
+        <div class="sec-hdr">
+          <span class="sec-ttl">Playlists</span>
+          <div class="ico-btn" onclick="newPlaylistPrompt()" title="New playlist">+</div>
+        </div>
+        <div id="pl-list"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: player + controls -->
+    <div id="center">
+      <div id="player-box">
+        <div id="yt-player"></div>
+        <div id="ph">
+          <div id="ph-icon">▶</div>
+          <div id="ph-txt">Search and select a video to play</div>
+        </div>
+      </div>
+
+      <div id="viz"></div>
+
+      <div id="ctrl-wrap">
+        <div id="now-row">
+          <img id="np-thumb" src="" alt="">
+          <div id="np-info">
+            <div id="np-title">Nothing playing</div>
+            <div id="np-ch">Select a video from search results</div>
+          </div>
+        </div>
+
+        <div id="prog-row">
+          <span class="time" id="t-cur">0:00</span>
+          <div id="prog" onclick="seekClick(event)">
+            <div id="prog-fill" style="width:0%"></div>
+          </div>
+          <span class="time" id="t-dur">0:00</span>
+        </div>
+
+        <div id="btns">
+          <button class="cb" onclick="prevVid()" title="Previous (P)">⏮</button>
+          <button class="cb" id="shuf-btn" onclick="toggleShuffle()" title="Shuffle">⇄</button>
+          <button class="cb" id="play-btn" onclick="togglePlay()" title="Play/Pause (Space)">▶</button>
+          <button class="cb" id="rep-btn" onclick="toggleRepeat()" title="Repeat">↻</button>
+          <button class="cb" onclick="nextVid()" title="Next (N)">⏭</button>
+        </div>
+
+        <div id="vol-row">
+          <span class="vi">🔈</span>
+          <input id="vol" type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
+          <span class="vi">🔊</span>
+          <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix — auto-queues related videos when queue is empty">⚡ Automix</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: queue / related / channel -->
+    <div id="right">
+      <div id="tabs">
+        <button class="tab on" onclick="switchTab('queue',this)">Queue</button>
+        <button class="tab"    onclick="switchTab('related',this)">Related</button>
+        <button class="tab"    onclick="switchTab('channel',this)">Channel</button>
+      </div>
+
+      <div id="tab-queue" class="tp on" style="padding:0; gap:0;">
+        <div id="queue-top">
+          <button class="q-btn" onclick="clearQueue()">Clear queue</button>
+          <button class="q-btn" onclick="saveQueuePl()">Save as playlist</button>
+        </div>
+        <div id="queue-list" style="flex:1;overflow-y:auto;padding:6px;">
+          <div class="empty"><div class="e-ico">🎶</div>Queue is empty<br>Add videos with "+ Q"</div>
+        </div>
+      </div>
+
+      <div id="tab-related" class="tp">
+        <div id="related-list">
+          <div class="empty"><div class="e-ico">🔗</div>Play a video to see related</div>
+        </div>
+      </div>
+
+      <div id="tab-channel" class="tp">
+        <div id="channel-list">
+          <div class="empty"><div class="e-ico">📺</div>Play a video to browse its channel</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+
+<!-- OAuth Client ID -->
+<div class="ov" id="cid-modal">
+  <div class="modal">
+    <h3>⚙ Google OAuth Client ID</h3>
+    <input class="m-inp" id="cid-inp" type="text" placeholder="123456789-abc….apps.googleusercontent.com"
+           onkeydown="if(event.key==='Enter')saveClientId()">
+    <p class="m-hint">
+      <strong>One-time setup in Google Cloud Console:</strong><br>
+      1. Go to <em>APIs &amp; Services → Credentials</em><br>
+      2. Create an <em>OAuth 2.0 Client ID</em> (Web application)<br>
+      3. Add your page's origin to <em>Authorised JavaScript origins</em><br>
+      4. Enable the <em>YouTube Data API v3</em><br><br>
+      Your Client ID is stored in localStorage. No client secret is needed or used.
+    </p>
+    <div class="m-acts">
+      <button class="mbtn s" onclick="closeModal('cid-modal')">Cancel</button>
+      <button class="mbtn p" onclick="saveClientId()">Save &amp; Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- New playlist -->
+<div class="ov" id="pl-modal">
+  <div class="modal">
+    <h3>📋 New Playlist</h3>
+    <input class="m-inp" id="pl-name-inp" type="text" placeholder="Playlist name…"
+           onkeydown="if(event.key==='Enter')confirmNewPl()">
+    <div class="m-acts">
+      <button class="mbtn s" onclick="closeModal('pl-modal')">Cancel</button>
+      <button class="mbtn p" onclick="confirmNewPl()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add to playlist picker -->
+<div class="ov" id="addpl-modal">
+  <div class="modal">
+    <h3>Add to Playlist</h3>
+    <div id="pl-picker"></div>
+    <div class="m-acts">
+      <button class="mbtn s" onclick="closeModal('addpl-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  APP NAME ── change this one string to rename the app
+// ═══════════════════════════════════════════════════════════
+const APP_NAME = 'AQUATUNE';
+document.title = APP_NAME;
+document.getElementById('logo').textContent = APP_NAME;
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let player       = null;
+let ready        = false;
+let clientId     = localStorage.getItem('yt_client_id') || '';
+let accessToken  = null;   // never persisted — memory only
+let tokenClient  = null;   // GIS token client instance
+let tokenExpiry  = 0;      // epoch ms when current token expires
+let pendingCall  = null;   // fn to retry after token refresh
+let current      = null;   // { id, title, channelTitle, channelId, thumbnail }
+let queue        = [];
+let playlists    = JSON.parse(localStorage.getItem('yt_pls') || '[]');
+let activePlId   = null;   // playlist being viewed in sidebar
+let playing      = false;
+let shuffle      = false;
+let repeat       = false;
+let automix      = true;
+let progTimer    = null;
+let pendingAddPl = null;   // video waiting to be added to a playlist
+let toastTmr;
+
+// ═══════════════════════════════════════════════════════════
+//  YOUTUBE IFRAME API
+// ═══════════════════════════════════════════════════════════
+window.onYouTubeIframeAPIReady = () => {
+  player = new YT.Player('yt-player', {
+    height: '100%', width: '100%',
+    playerVars: { autoplay: 0, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3 },
+    events: {
+      onReady: () => { ready = true; player.setVolume(80); },
+      onStateChange: onState,
+    }
+  });
+};
+
+function onState(e) {
+  const S = YT.PlayerState;
+  if (e.data === S.PLAYING) {
+    playing = true;
+    document.getElementById('play-btn').textContent = '⏸';
+    document.getElementById('viz').classList.add('on');
+    startProg();
+  } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
+    playing = false;
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('viz').classList.remove('on');
+  } else if (e.data === S.ENDED) {
+    playing = false;
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('viz').classList.remove('on');
+    onEnded();
+  }
+}
+
+function onEnded() {
+  if (repeat && current) { playVideo(current); return; }
+  if (queue.length > 0) { popQueue(); return; }
+  if (automix && current) fetchAutomix(current.id);
+}
+
+function startProg() {
+  clearInterval(progTimer);
+  progTimer = setInterval(() => {
+    if (!player || !ready) return;
+    const c = player.getCurrentTime() || 0;
+    const d = player.getDuration()   || 0;
+    document.getElementById('t-cur').textContent = fmt(c);
+    document.getElementById('t-dur').textContent = fmt(d);
+    document.getElementById('prog-fill').style.width = d ? (c / d * 100) + '%' : '0%';
+  }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAY VIDEO
+// ═══════════════════════════════════════════════════════════
+function playVideo(v) {
+  if (!ready) { toast('Player not ready yet'); return; }
+  current = v;
+  document.getElementById('ph').style.display = 'none';
+  player.loadVideoById(v.id);
+  document.getElementById('np-title').textContent = v.title;
+  document.getElementById('np-ch').textContent   = v.channelTitle || '';
+  const th = document.getElementById('np-thumb');
+  th.src = v.thumbnail || '';
+  th.style.display = v.thumbnail ? 'block' : 'none';
+  renderQueue();
+  if (accessToken) { fetchRelated(v.id); if (v.channelId) fetchChannel(v.channelId); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════════════════
+async function doSearch() {
+  if (!accessToken) { signIn(); return; }
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  const box = document.getElementById('results');
+  box.innerHTML = '<div class="empty"><div class="e-ico">⏳</div>Searching…</div>';
+  try {
+    const d = await ytApi('search', { part:'snippet', q, type:'video', maxResults:25 });
+    if (!d.items?.length) { box.innerHTML = '<div class="empty">No results</div>'; return; }
+    box.innerHTML = '';
+    d.items.forEach(it => box.appendChild(makeResultItem(snToVid(it))));
+  } catch(err) {
+    box.innerHTML = `<div class="empty">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function makeResultItem(v) {
+  const el = document.createElement('div');
+  el.className = 'r-item';
+  el.innerHTML = `
+    <img class="r-thumb" src="${v.thumbnail}" loading="lazy" alt="">
+    <div class="r-info">
+      <div class="r-title">${esc(v.title)}</div>
+      <div class="r-ch">${esc(v.channelTitle)}</div>
+    </div>
+    <div class="r-acts">
+      <button class="mb" title="Play now">▶</button>
+      <button class="mb" title="Add to queue">+Q</button>
+      <button class="mb" title="Add to playlist">+PL</button>
+    </div>`;
+  const [btnPlay, btnQ, btnPL] = el.querySelectorAll('.mb');
+  btnPlay.onclick = e => { e.stopPropagation(); playVideo(v); };
+  btnQ.onclick    = e => { e.stopPropagation(); addToQueue(v); };
+  btnPL.onclick   = e => { e.stopPropagation(); openAddPl(v); };
+  el.onclick = () => playVideo(v);
+  return el;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUEUE
+// ═══════════════════════════════════════════════════════════
+function addToQueue(v) {
+  queue.push(v);
+  renderQueue();
+  toast('Added to queue: ' + v.title.slice(0,38));
+}
+
+function popQueue() {
+  const v = shuffle ? queue.splice(Math.floor(Math.random() * queue.length), 1)[0] : queue.shift();
+  playVideo(v);
+  renderQueue();
+}
+
+function renderQueue() {
+  const box = document.getElementById('queue-list');
+  if (!queue.length) {
+    box.innerHTML = '<div class="empty"><div class="e-ico">🎶</div>Queue is empty</div>'; return;
+  }
+  box.innerHTML = '';
+  queue.forEach((v, i) => {
+    const el = document.createElement('div');
+    el.className = 'v-item';
+    el.innerHTML = `
+      <img class="vt" src="${v.thumbnail}" loading="lazy" alt="">
+      <div class="vi2"><div class="vtt">${esc(v.title)}</div><div class="vch">${esc(v.channelTitle||'')}</div></div>
+      <button class="vx" title="Remove">✕</button>`;
+    el.querySelector('.vx').onclick = e => { e.stopPropagation(); queue.splice(i,1); renderQueue(); };
+    el.onclick = e => { if (!e.target.classList.contains('vx')) { queue.splice(i,1); playVideo(v); renderQueue(); } };
+    box.appendChild(el);
+  });
+}
+
+function clearQueue() { queue = []; renderQueue(); toast('Queue cleared'); }
+
+function saveQueuePl() {
+  if (!queue.length) { toast('Queue is empty'); return; }
+  const name = prompt('Playlist name:');
+  if (!name?.trim()) return;
+  playlists.push({ id: Date.now(), name: name.trim(), videos: [...queue] });
+  savePls();
+  toast(`Saved "${name.trim()}" (${queue.length} videos)`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RELATED VIDEOS
+// ═══════════════════════════════════════════════════════════
+async function fetchRelated(videoId) {
+  if (!accessToken) return;
+  const box = document.getElementById('related-list');
+  box.innerHTML = '<div class="empty"><div class="e-ico">⏳</div>Loading…</div>';
+  let items;
+  try {
+    const d = await ytApi('search', { part:'snippet', relatedToVideoId:videoId, type:'video', maxResults:15 });
+    items = d.items;
+  } catch {
+    // relatedToVideoId deprecated — fall back to title-based search
+    try {
+      const words = (current?.title || '').split(' ').slice(0,5).join(' ');
+      const d2 = await ytApi('search', { part:'snippet', q:words, type:'video', maxResults:15 });
+      items = d2.items;
+    } catch { box.innerHTML = '<div class="empty">Could not load related</div>'; return; }
+  }
+  renderVidList(box, items);
+}
+
+async function fetchAutomix(videoId) {
+  if (!accessToken) return;
+  let items;
+  try {
+    const d = await ytApi('search', { part:'snippet', relatedToVideoId:videoId, type:'video', maxResults:6 });
+    items = d.items;
+  } catch {
+    try {
+      const words = (current?.title || '').split(' ').slice(0,5).join(' ');
+      const d2 = await ytApi('search', { part:'snippet', q:words, type:'video', maxResults:6 });
+      items = d2.items;
+    } catch { return; }
+  }
+  if (!items?.length) return;
+  const pick = items[Math.floor(Math.random() * items.length)];
+  const v = snToVid(pick);
+  if (v.id) { playVideo(v); toast('Automix ⚡ playing related video'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHANNEL VIDEOS
+// ═══════════════════════════════════════════════════════════
+async function fetchChannel(channelId) {
+  if (!accessToken) return;
+  const box = document.getElementById('channel-list');
+  box.innerHTML = '<div class="empty"><div class="e-ico">⏳</div>Loading channel…</div>';
+  try {
+    const d = await ytApi('search', { part:'snippet', channelId, type:'video', maxResults:20, order:'date' });
+    renderVidList(box, d.items);
+  } catch {
+    box.innerHTML = '<div class="empty">Could not load channel</div>';
+  }
+}
+
+function renderVidList(box, items) {
+  if (!items?.length) { box.innerHTML = '<div class="empty">No videos found</div>'; return; }
+  box.innerHTML = '';
+  items.forEach(it => {
+    const v = snToVid(it);
+    if (!v.id) return;
+    const el = document.createElement('div');
+    el.className = 'v-item' + (current?.id === v.id ? ' now' : '');
+    el.innerHTML = `
+      <img class="vt" src="${v.thumbnail}" loading="lazy" alt="">
+      <div class="vi2"><div class="vtt">${esc(v.title)}</div><div class="vch">${esc(v.channelTitle||'')}</div></div>`;
+    el.onclick = () => playVideo(v);
+    box.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYLISTS
+// ═══════════════════════════════════════════════════════════
+function renderPls() {
+  const box = document.getElementById('pl-list');
+  if (!playlists.length) {
+    box.innerHTML = '<div style="font-size:10px;color:var(--text2);padding:5px 7px">No playlists yet</div>'; return;
+  }
+  box.innerHTML = '';
+  playlists.forEach(pl => {
+    const el = document.createElement('div');
+    el.className = 'pl-item' + (activePlId === pl.id ? ' active' : '');
+    el.innerHTML = `<span>📋 ${esc(pl.name)}</span><span class="pl-cnt">${pl.videos.length}</span>`;
+    el.onclick = () => viewPl(pl.id);
+    box.appendChild(el);
+  });
+}
+
+function viewPl(id) {
+  const pl = playlists.find(p => p.id === id);
+  if (!pl) return;
+  activePlId = id;
+  renderPls();
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+
+  const hdr = document.createElement('div');
+  hdr.id = 'pl-view-hdr';
+  hdr.innerHTML = `
+    <button id="back-btn" onclick="backToSearch()">←</button>
+    <span style="font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pl.name)}</span>
+    <button class="mb" onclick="playPl(${id})" style="font-size:10px;padding:3px 8px">▶ Play all</button>`;
+  box.appendChild(hdr);
+
+  if (!pl.videos.length) {
+    const e = document.createElement('div');
+    e.className = 'empty'; e.innerHTML = 'Playlist is empty';
+    box.appendChild(e); return;
+  }
+  pl.videos.forEach(v => {
+    const el = document.createElement('div');
+    el.className = 'r-item';
+    el.innerHTML = `
+      <img class="r-thumb" src="${v.thumbnail}" loading="lazy" alt="">
+      <div class="r-info"><div class="r-title">${esc(v.title)}</div><div class="r-ch">${esc(v.channelTitle||'')}</div></div>
+      <div class="r-acts">
+        <button class="mb">▶</button>
+        <button class="mb" style="color:rgba(255,90,90,.7)">✕</button>
+      </div>`;
+    el.querySelectorAll('.mb')[0].onclick = e => { e.stopPropagation(); playVideo(v); };
+    el.querySelectorAll('.mb')[1].onclick = e => {
+      e.stopPropagation();
+      pl.videos = pl.videos.filter(x => x.id !== v.id);
+      savePls(); viewPl(id);
+    };
+    el.onclick = () => playVideo(v);
+    box.appendChild(el);
+  });
+}
+
+function playPl(id) {
+  const pl = playlists.find(p => p.id === id);
+  if (!pl?.videos.length) return;
+  playVideo(pl.videos[0]);
+  queue = pl.videos.slice(1);
+  renderQueue();
+  toast(`Playing playlist: ${pl.name}`);
+}
+
+function backToSearch() {
+  activePlId = null;
+  renderPls();
+  const box = document.getElementById('results');
+  box.innerHTML = '<div class="empty"><div class="e-ico">🎵</div>Search for music to begin</div>';
+}
+
+function newPlaylistPrompt() {
+  document.getElementById('pl-name-inp').value = '';
+  openModal('pl-modal');
+  setTimeout(() => document.getElementById('pl-name-inp').focus(), 80);
+}
+
+function confirmNewPl() {
+  const name = document.getElementById('pl-name-inp').value.trim();
+  if (!name) return;
+  playlists.push({ id: Date.now(), name, videos: [] });
+  savePls();
+  closeModal('pl-modal');
+  toast(`Playlist "${name}" created`);
+}
+
+function openAddPl(v) {
+  pendingAddPl = v;
+  const box = document.getElementById('pl-picker');
+  if (!playlists.length) {
+    box.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:8px">No playlists — create one first</div>';
+  } else {
+    box.innerHTML = '';
+    playlists.forEach(pl => {
+      const el = document.createElement('div');
+      el.className = 'pl-item';
+      el.innerHTML = `📋 ${esc(pl.name)} <span class="pl-cnt">${pl.videos.length}</span>`;
+      el.onclick = () => {
+        pl.videos.push(pendingAddPl);
+        savePls();
+        closeModal('addpl-modal');
+        toast(`Added to "${pl.name}"`);
+        if (activePlId === pl.id) viewPl(pl.id);
+      };
+      box.appendChild(el);
+    });
+  }
+  openModal('addpl-modal');
+}
+
+function savePls() {
+  localStorage.setItem('yt_pls', JSON.stringify(playlists));
+  renderPls();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER CONTROLS
+// ═══════════════════════════════════════════════════════════
+function togglePlay() { if (ready) playing ? player.pauseVideo() : player.playVideo(); }
+function prevVid()    { if (ready) { const t = player.getCurrentTime(); t > 3 ? player.seekTo(0) : player.seekTo(0); } }
+function nextVid()    { queue.length ? popQueue() : (automix && current ? fetchAutomix(current.id) : toast('Queue is empty')); }
+function toggleShuffle() { shuffle = !shuffle; document.getElementById('shuf-btn').classList.toggle('lit', shuffle); toast(shuffle ? 'Shuffle on' : 'Shuffle off'); }
+function toggleRepeat()  { repeat  = !repeat;  document.getElementById('rep-btn').classList.toggle('lit', repeat);   toast(repeat  ? 'Repeat on'  : 'Repeat off'); }
+function toggleAutomix() { automix = !automix; document.getElementById('automix-btn').classList.toggle('lit', automix); toast(automix ? 'Automix on' : 'Automix off'); }
+function setVol(v)   { if (ready) player.setVolume(+v); }
+function seekClick(e) {
+  if (!ready) return;
+  const r = document.getElementById('prog').getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  player.seekTo(pct * (player.getDuration() || 0));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  switch (e.code) {
+    case 'Space':       e.preventDefault(); togglePlay(); break;
+    case 'KeyN':        nextVid(); break;
+    case 'KeyP':        prevVid(); break;
+    case 'ArrowLeft':   if (ready) player.seekTo(Math.max(0, player.getCurrentTime() - 5)); break;
+    case 'ArrowRight':  if (ready) player.seekTo(player.getCurrentTime() + 5); break;
+    case 'ArrowUp':     e.preventDefault(); { const s = document.getElementById('vol'); s.value = Math.min(100, +s.value + 5); setVol(s.value); } break;
+    case 'ArrowDown':   e.preventDefault(); { const s = document.getElementById('vol'); s.value = Math.max(0, +s.value - 5); setVol(s.value); } break;
+    case 'KeyM':        if (ready) player.isMuted() ? player.unMute() : player.mute(); break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.tp').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('tab-' + name).classList.add('on');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  OAUTH / GOOGLE IDENTITY SERVICES
+// ═══════════════════════════════════════════════════════════
+function saveClientId() {
+  clientId = document.getElementById('cid-inp').value.trim();
+  localStorage.setItem('yt_client_id', clientId);
+  closeModal('cid-modal');
+  toast('Client ID saved — click Sign in with Google');
+  initTokenClient();
+}
+
+function initTokenClient() {
+  if (!clientId || typeof google === 'undefined') return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/youtube.readonly openid profile email',
+    callback: onTokenResponse,
+    error_callback: err => {
+      toast('Sign-in failed: ' + (err.type || err.message || 'unknown error'));
+    },
+  });
+}
+
+function onTokenResponse(resp) {
+  if (resp.error) { toast('Sign-in error: ' + resp.error); return; }
+  accessToken = resp.access_token;
+  // Google tokens last 3600s; subtract 60s buffer
+  tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+  fetchUserInfo();
+  // Retry any call that was waiting on a fresh token
+  if (pendingCall) { const fn = pendingCall; pendingCall = null; fn(); }
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const u = await r.json();
+    document.getElementById('signin-btn').style.display = 'none';
+    const info = document.getElementById('user-info');
+    info.style.display = 'flex';
+    const av = document.getElementById('user-avatar');
+    if (u.picture) { av.src = u.picture; av.style.display = 'block'; } else { av.style.display = 'none'; }
+    document.getElementById('user-name').textContent = u.given_name || u.name || u.email || '';
+    toast(`Signed in as ${u.name || u.email} ✓`);
+  } catch { /* non-fatal — signed in but no profile shown */ }
+}
+
+function signIn() {
+  if (!clientId) { openModal('cid-modal'); return; }
+  if (!tokenClient) { initTokenClient(); }
+  // prompt:'' = silent if previously consented, popup only when needed
+  tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  tokenExpiry = 0;
+  document.getElementById('signin-btn').style.display = '';
+  document.getElementById('user-info').style.display = 'none';
+  toast('Signed out');
+}
+
+// Called when the GIS library finishes loading
+window.onGoogleLibraryLoad = () => { if (clientId) initTokenClient(); };
+
+// ═══════════════════════════════════════════════════════════
+//  YOUTUBE DATA API HELPER
+// ═══════════════════════════════════════════════════════════
+async function ytApi(ep, params) {
+  if (!accessToken) throw new Error('Not signed in — click Sign in with Google');
+  // Refresh token if expired
+  if (Date.now() > tokenExpiry) {
+    await new Promise(resolve => {
+      pendingCall = resolve;
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
+  }
+  const u = new URL(`https://www.googleapis.com/youtube/v3/${ep}`);
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  const r = await fetch(u.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  // 401 means token was rejected — try one silent refresh then retry
+  if (r.status === 401) {
+    await new Promise(resolve => { pendingCall = resolve; tokenClient.requestAccessToken({ prompt: '' }); });
+    const r2 = await fetch(u.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+    const j2 = await r2.json();
+    if (!r2.ok) throw new Error(j2.error?.message || `API error ${r2.status}`);
+    return j2;
+  }
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error?.message || `API error ${r.status}`);
+  return j;
+}
+
+function snToVid(item) {
+  const sn = item.snippet || {};
+  return {
+    id:           item.id?.videoId || item.id || '',
+    title:        sn.title         || '',
+    channelTitle: sn.channelTitle  || '',
+    channelId:    sn.channelId     || '',
+    thumbnail:    sn.thumbnails?.default?.url || sn.thumbnails?.medium?.url || '',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  if (id === 'cid-modal') {
+    document.getElementById('cid-inp').value = clientId;
+    setTimeout(() => document.getElementById('cid-inp').focus(), 80);
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.ov').forEach(el => el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); }));
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VISUALIZER SETUP
+// ═══════════════════════════════════════════════════════════
+(function buildViz() {
+  const viz = document.getElementById('viz');
+  const profile = [5,8,14,22,18,11,26,20,13,30,17,9,24,16,7,12,21,28,15,20,9,26,18,13,24,11,17,7,20,14];
+  profile.forEach((h, i) => {
+    const b = document.createElement('div');
+    b.className = 'vb';
+    const lo = Math.max(3, Math.round(h * 0.18)) + 'px';
+    const hi = h + 'px';
+    const spd = (0.38 + Math.random() * 0.72).toFixed(2) + 's';
+    const delay = (Math.random() * 0.55).toFixed(2) + 's';
+    b.style.cssText = `--lo:${lo};--hi:${hi};--spd:${spd};height:${lo};animation-delay:-${delay}`;
+    viz.appendChild(b);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function fmt(s) {
+  s = Math.floor(s || 0);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+renderPls();
+if (!clientId) setTimeout(() => toast('Welcome! Click ⚙ to set your OAuth Client ID, then Sign in'), 900);
+else setTimeout(() => toast('Click "Sign in with Google" to get started'), 900);
+
+const s = document.createElement('script');
+s.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(s);
+</script>
+</body>
+</html>

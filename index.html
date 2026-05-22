@@ -7,7 +7,8 @@
   <title>AQUATUNE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap"></noscript>
   <style>
     :root {
       --panel:   rgba(255,255,255,0.93);
@@ -37,7 +38,7 @@
       background-size: 28px 28px;
       mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
     }
-    .orb { position:absolute; border-radius:50%; will-change:transform; }
+    .orb { position:absolute; border-radius:50%; }
     /* Large white glowing orb — top-left */
     .o1 { width:700px;height:700px;
           background:radial-gradient(circle at 38% 38%, rgba(255,255,255,0.94) 0%, rgba(210,242,255,0.65) 50%, transparent 78%);
@@ -1551,6 +1552,7 @@ function onTokenResponse(resp) {
   if (resp.error) { toast('Sign-in error: ' + resp.error); return; }
   accessToken = resp.access_token; tokenExpiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
   localStorage.setItem('yt_authed', '1');
+  localStorage.setItem('yt_token', JSON.stringify({ token: accessToken, expiry: tokenExpiry }));
   useGoogle = true;
   document.getElementById('google-btn').classList.add('active');
   fetchUserInfo(); if (pendingCall) { const fn = pendingCall; pendingCall = null; fn(); }
@@ -1578,15 +1580,25 @@ function signOut() {
   if (accessToken) try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {}
   accessToken = null; tokenExpiry = 0; useGoogle = false;
   localStorage.removeItem('yt_authed');
+  localStorage.removeItem('yt_token');
   document.getElementById('google-btn').classList.remove('active');
   document.getElementById('google-btn').style.display = 'flex';
   document.getElementById('user-chip').style.display = 'none';
   toast('Signed out');
 }
 function tryAutoSignIn() {
-  // Silently refresh the token if user was previously authorized.
-  // Uses prompt:'' (no UI shown) with a silent error_callback — no popup.
   if (!clientId || localStorage.getItem('yt_authed') !== '1') return;
+  // Restore saved token if it's still valid — no GIS call or popup needed.
+  try {
+    const saved = JSON.parse(localStorage.getItem('yt_token') || 'null');
+    if (saved && saved.expiry > Date.now() + 30000) {
+      accessToken = saved.token; tokenExpiry = saved.expiry; useGoogle = true;
+      document.getElementById('google-btn').classList.add('active');
+      fetchUserInfo();
+      return;
+    }
+  } catch {}
+  // Token expired — try a truly silent refresh (prompt:'none' never shows UI).
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = () => {
@@ -1595,9 +1607,12 @@ function tryAutoSignIn() {
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/youtube.readonly openid profile email',
         callback: onTokenResponse,
-        error_callback: (err) => { console.warn('[GIS] Silent auth failed:', err?.type, err?.message || err); },
+        error_callback: (err) => {
+          console.warn('[GIS] Silent auth failed:', err?.type);
+          localStorage.removeItem('yt_authed'); localStorage.removeItem('yt_token');
+        },
       });
-      tokenClient.requestAccessToken({ prompt: '' });
+      tokenClient.requestAccessToken({ prompt: 'none' });
     } catch {}
   };
   document.head.appendChild(s);
@@ -1609,7 +1624,7 @@ async function ytApi(ep, params) {
   for (const [k,v] of Object.entries(params)) u.searchParams.set(k, v);
   let r = await fetch(u.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
   if (r.status === 401) { await new Promise(rv => { pendingCall = rv; tokenClient.requestAccessToken({ prompt: '' }); }); r = await fetch(u.toString(), { headers: { Authorization: `Bearer ${accessToken}` } }); }
-  const j = await r.json(); if (!r.ok) throw new Error(j.error?.message || `API error ${r.status}`); return j;
+  const j = await r.json(); if (!r.ok) throw new Error((j.error?.message || `API error ${r.status}`).replace(/<[^>]*>/g, '')); return j;
 }
 function snToVid(item) {
   const sn = item.snippet || {}, id = item.id?.videoId || item.id || '';

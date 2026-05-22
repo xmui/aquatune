@@ -473,6 +473,18 @@
       box-shadow:0 2px 8px rgba(0,160,220,0.18), inset 0 -2px 4px rgba(0,100,180,0.12);
       will-change:transform,opacity;
     }
+    .click-ripple {
+      position:fixed; border-radius:50%; pointer-events:none; z-index:9998;
+      width:18px; height:18px; margin:-9px 0 0 -9px;
+      border:2px solid rgba(0,180,230,0.7);
+      background:rgba(0,180,230,0.12);
+      animation:clickRippleOut .55s cubic-bezier(.2,.8,.3,1) forwards;
+    }
+    @keyframes clickRippleOut {
+      0%   { opacity:1; transform:scale(0.2); }
+      60%  { opacity:0.6; }
+      100% { opacity:0; transform:scale(4); }
+    }
 
     /* ── SHORT VIEWPORT (MacBook Touch Bar etc.) ─────────── */
     @media (max-height: 760px) {
@@ -511,40 +523,40 @@
     #synth-btn.active { background:rgba(255,255,255,0.32);border-color:rgba(255,255,255,0.75); }
 
     #synth-flyout {
-      position:fixed; left:50%; bottom:-498px; transform:translateX(-50%);
-      width:min(860px, 96vw); height:480px;
-      /* frosted glass Aero panel */
+      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:min(860px, 96vw); height:520px; max-height:92vh;
       background:var(--synth-bg, linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(218,238,255,0.94) 100%));
       backdrop-filter:blur(28px) saturate(1.5);
-      border:2px solid rgba(0,200,255,0.45); border-bottom:none;
-      border-top:3px solid rgba(100,220,255,0.7);
-      border-radius:18px 18px 0 0;
-      box-shadow:0 -14px 60px rgba(0,50,150,0.22), 0 -3px 14px rgba(0,80,200,0.12),
-                 inset 0 1px 0 rgba(255,255,255,0.95);
-      z-index:450; transition:bottom .34s cubic-bezier(.22,1,.36,1);
-      display:flex; flex-direction:column; overflow:hidden;
+      border:2px solid rgba(255,255,255,0.85);
+      border-radius:12px 12px 8px 8px;
+      box-shadow:0 24px 80px rgba(0,60,150,0.4);
+      z-index:450;
+      display:none; flex-direction:column; overflow:hidden;
     }
-    #synth-flyout.open { bottom:0; }
+    #synth-flyout.open { display:flex; }
+    [data-scheme=dark] #synth-flyout { background: rgba(8,20,50,0.98); border-color: rgba(56,189,248,0.3); }
 
-    /* Header bar — accent-colored Aero chrome */
+    /* Header bar — matches paint/chat titlebar */
     .sf-header {
-      display:flex; align-items:center; gap:10px; padding:0 16px; height:42px; flex-shrink:0;
-      background:linear-gradient(180deg, var(--accent) 0%, var(--accent) 100%);
-      position:relative; overflow:hidden;
-      border-radius:18px 18px 0 0;
+      display:flex; align-items:center; gap:10px; padding:5px 10px 6px; flex-shrink:0;
+      background:var(--hdr-bg);
+      box-shadow:0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
+      position:relative; overflow:hidden; cursor:move;
+      border-radius:10px 10px 0 0; user-select:none;
     }
     .sf-header::after {
       content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
       background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%,rgba(255,255,255,0) 100%);
-      border-radius:18px 18px 0 0;
+      border-radius:10px 10px 0 0;
     }
     .sf-brand {
       font-size:10px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
-      color:rgba(255,255,255,0.92); text-shadow:0 1px 3px rgba(0,0,0,0.25); white-space:nowrap; z-index:1;
+      color:rgba(255,255,255,0.92); text-shadow:0 1px 3px rgba(0,0,0,0.25); white-space:nowrap; z-index:1; flex:1;
     }
-    .sf-drag { flex:1; display:flex; align-items:center; justify-content:center; cursor:ns-resize; padding:0 12px; z-index:1; }
-    .sf-drag-bar { width:38px; height:3px; background:rgba(255,255,255,0.4); border-radius:2px; }
+    .sf-drag { display:none; }
     .sf-transport { display:flex; align-items:center; gap:5px; flex-shrink:0; z-index:1; }
+    .sf-close { background:rgba(200,40,40,0.7); border:1px solid rgba(255,255,255,0.4); color:#fff; border-radius:50%; width:18px; height:18px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1; line-height:1; padding:0; transition:background .12s; }
+    .sf-close:hover { background:rgba(220,60,60,0.9); }
 
     /* Transport buttons on accent header */
     .t-btn {
@@ -1059,6 +1071,53 @@
     .alb-rym   { display:block;font-size:8px;font-weight:700;color:var(--accent);opacity:.7;margin-top:2px;text-decoration:none; }
     .alb-rym:hover { opacity:1; }
     .album-bulk-acts { display:flex;gap:6px;padding:6px 10px 2px;flex-wrap:wrap; }
+    #bubble-sub.open { max-height:130px !important; }
+
+    /* ── SLOT MACHINE ─────────────────────────────────────── */
+    #slots-wrap {
+      display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      z-index:810; width:360px; max-width:96vw;
+      background:linear-gradient(170deg,rgba(20,10,40,0.98),rgba(40,20,80,0.98));
+      border:2px solid rgba(255,215,0,0.5); border-radius:12px 12px 8px 8px;
+      box-shadow:0 24px 80px rgba(80,0,150,0.5), 0 0 0 1px rgba(255,215,0,0.15);
+      flex-direction:column; font-family:'M PLUS Rounded 1c',system-ui,sans-serif; overflow:hidden;
+    }
+    #slots-wrap.open { display:flex; }
+    #slots-titlebar {
+      background:var(--hdr-bg); padding:5px 10px 6px;
+      display:flex; align-items:center; gap:8px; flex-shrink:0; cursor:move;
+      border-radius:10px 10px 0 0; position:relative; overflow:hidden;
+      box-shadow:0 1px 0 rgba(255,255,255,0.18),inset 0 1.5px 0 rgba(255,255,255,0.52);
+    }
+    #slots-titlebar::after { content:'';position:absolute;inset:0;bottom:50%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%,rgba(255,255,255,0) 100%);border-radius:10px 10px 0 0; }
+    #slots-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+    #slots-credits-row { display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#ccc; }
+    #slots-reels { display:flex; gap:8px; justify-content:center; }
+    .slot-reel {
+      width:80px; height:90px; overflow:hidden; border-radius:8px;
+      background:rgba(0,0,0,0.6); border:2px solid rgba(255,215,0,0.3);
+      box-shadow:inset 0 2px 12px rgba(0,0,0,0.5);
+      position:relative;
+    }
+    .slot-reel::before,.slot-reel::after {
+      content:''; position:absolute; left:0;right:0; height:28px; z-index:2; pointer-events:none;
+    }
+    .slot-reel::before { top:0; background:linear-gradient(180deg,rgba(20,10,40,0.9),transparent); }
+    .slot-reel::after  { bottom:0; background:linear-gradient(0deg,rgba(20,10,40,0.9),transparent); }
+    .slot-strip { display:flex; flex-direction:column; align-items:center; transition:transform 0.05s; }
+    .slot-sym { font-size:36px; width:80px; height:90px; display:flex;align-items:center;justify-content:center; }
+    #slots-win-line { height:18px;text-align:center;font-size:12px;font-weight:700;color:#ffd700; }
+    #slots-controls { display:flex; gap:8px; justify-content:center; }
+    .slots-btn {
+      padding:7px 14px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:700;
+      background:rgba(255,255,255,0.1); border:1.5px solid rgba(255,255,255,0.25); color:#fff;
+      transition:all .14s;
+    }
+    .slots-btn:hover { background:rgba(255,255,255,0.2); }
+    .slots-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .slots-spin { background:linear-gradient(180deg,#ffd700,#e0a000); color:#1a0a00; border-color:#ffd700; font-size:13px; padding:7px 22px; }
+    .slots-spin:hover { background:linear-gradient(180deg,#ffe44d,#ffd700); }
+    #slots-paytable { display:flex;flex-wrap:wrap;gap:4px 10px;font-size:9px;color:rgba(255,215,0,0.65);justify-content:center;border-top:1px solid rgba(255,215,0,0.15);padding-top:8px; }
 
     /* ── ARTIST TAB ────────────────────────────────────── */
     .art-header { display:flex;gap:10px;padding:10px 10px 6px;align-items:flex-start; }
@@ -1358,6 +1417,28 @@
       border-top: 1px solid #000;
       box-shadow: 0 -1px 0 rgba(255,255,255,0.07) inset;
     }
+    #mob-tools-bar {
+      display: none;
+      position: fixed;
+      bottom: 50px; left: 0; right: 0;
+      height: 44px;
+      z-index: 599;
+      background: var(--hdr-bg);
+      border-top: 1px solid rgba(255,255,255,0.18);
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      box-shadow: 0 -2px 12px rgba(0,60,150,0.18);
+      align-items: stretch;
+    }
+    .mob-tool-btn {
+      flex: 1; border: none; background: none; color: rgba(255,255,255,0.82);
+      font-size: 18px; cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1px;
+      border-right: 1px solid rgba(255,255,255,0.1); transition: background .12s;
+      position: relative;
+    }
+    .mob-tool-btn:last-child { border-right: none; }
+    .mob-tool-btn:active { background: rgba(255,255,255,0.15); }
+    .mob-tool-btn span { font-size: 8px; font-weight: 700; letter-spacing: .3px; opacity: .75; }
     .mob-tab {
       flex: 1;
       display: flex;
@@ -1409,8 +1490,8 @@
       #auth-area { gap: 4px; }
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
-      /* synth/kbd/paint buttons — slightly smaller */
-      #synth-btn, #kbd-btn, #paint-btn, #gear-btn { width: 26px; height: 26px; font-size: 13px; }
+      /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
+      #slots-btn, #synth-btn, #kbd-btn, #paint-btn, #gear-btn, #board-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -1429,7 +1510,7 @@
 
       /* Make left/right panels tall enough to feel like a full screen */
       #left.mob-active, #right.mob-active {
-        min-height: calc(100dvh - 50px - 64px - 14px);
+        min-height: calc(100dvh - 50px - 44px - 64px - 14px);
       }
 
       #mob-tab-bar { display: flex; }
@@ -1516,26 +1597,29 @@
       }
       #search-wrap { background: rgba(215,238,255,0.45); }
 
-      /* Buddy + restore above tab bar */
-      #aqua-buddy  { bottom: calc(50px + 16px) !important; right: 14px; }
-      #buddy-restore-btn { bottom: calc(50px + 8px) !important; right: 8px; }
+      /* Buddy + restore above tools bar */
+      #aqua-buddy  { bottom: calc(50px + 44px + 16px) !important; right: 14px; }
+      #buddy-restore-btn { bottom: calc(50px + 44px + 8px) !important; right: 8px; }
 
       /* Gun not usable on touch — hide */
       #aqua-gun { display: none !important; }
 
-      /* Theme panel slides up from bottom */
+      /* Theme panel slides up from bottom — above tools bar */
       #theme-panel {
         width: 100%;
         border-radius: 16px 16px 0 0;
         top: auto !important;
-        bottom: 50px;
+        bottom: 94px;
         right: 0;
         transform: translateY(100%);
       }
       #theme-panel.open { transform: translateY(0); }
 
-      /* Toast above tab bar */
-      #toast { bottom: 60px; }
+      /* Toast above tools bar */
+      #toast { bottom: 104px; }
+
+      /* Mob tools bar visible */
+      #mob-tools-bar { display: flex; }
 
       /* Modals */
       .modal { width: 94vw !important; max-width: 94vw !important; }
@@ -1722,6 +1806,7 @@
     </div>
     <div id="auth-area">
       <button id="board-btn" onclick="toggleBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
+      <button id="slots-btn" onclick="toggleSlots()" title="Slot Machine 🎰" style="background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.10));border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.2),inset 0 1px 0 rgba(255,255,255,0.45)">🎰</button>
       <button id="synth-btn" onclick="toggleSynthFlyout()" title="Synth &amp; Drum pad">🎹</button>
       <button id="kbd-btn" onclick="toggleKbdHint()" title="Keyboard shortcuts">&#9000;</button>
       <button id="paint-btn" onclick="openPaint()" title="AquaPaint 🎨" style="background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.10));border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.2),inset 0 1px 0 rgba(255,255,255,0.45)">🎨</button>
@@ -1901,18 +1986,30 @@
   </div>
   <div class="theme-section">
     <div class="theme-label">Effects</div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
-      <input type="checkbox" id="bubbles-chk" onchange="setBubblesEnabled(this.checked)" style="cursor:pointer"> Cursor bubbles
-    </label>
-    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:6px">
-      <label style="white-space:nowrap;color:var(--text2);width:56px">Density</label>
-      <input type="range" id="bubble-density-rng" min="1" max="80" value="18" oninput="setBubbleDensity(this.value);document.getElementById('bubble-density-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
-      <span id="bubble-density-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">18</span>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="bubbles-chk" onchange="setBubblesEnabled(this.checked)" style="cursor:pointer"> Cursor bubbles
+      </label>
+      <button onclick="document.getElementById('bubble-sub').classList.toggle('open')" style="font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.1);border:1px solid rgba(0,100,200,0.25);color:var(--accent);cursor:pointer" title="Bubble settings">⚙ settings</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:4px">
-      <label style="white-space:nowrap;color:var(--text2);width:56px">Gravity</label>
-      <input type="range" id="bubble-gravity-rng" min="0" max="250" value="80" oninput="setBubbleGravity(this.value);document.getElementById('bubble-gravity-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
-      <span id="bubble-gravity-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">80</span>
+    <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
+      <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <label style="white-space:nowrap;color:var(--text2);width:52px">Density</label>
+          <input type="range" id="bubble-density-rng" min="1" max="60" value="8" oninput="setBubbleDensity(this.value);document.getElementById('bubble-density-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+          <span id="bubble-density-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">8</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <label style="white-space:nowrap;color:var(--text2);width:52px">Gravity</label>
+          <input type="range" id="bubble-gravity-rng" min="0" max="250" value="80" oninput="setBubbleGravity(this.value);document.getElementById('bubble-gravity-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+          <span id="bubble-gravity-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">80</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <label style="white-space:nowrap;color:var(--text2);width:52px">Size</label>
+          <input type="range" id="bubble-size-rng" min="4" max="48" value="16" oninput="setBubbleSize(this.value);document.getElementById('bubble-size-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+          <span id="bubble-size-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">16</span>
+        </div>
+      </div>
     </div>
   </div>
   <div class="theme-section">
@@ -3598,17 +3695,22 @@ async function fetchChannel() {
           <div class="art-track-title">${esc(t.name)}</div>
           ${plays ? `<div class="art-track-plays">${plays}</div>` : ''}
         </div>
-        <span class="art-track-play">&#9654;</span>`;
-      row.onclick = async () => {
-        row.style.opacity = '0.5';
-        try {
-          const q = `${info?.name || artistName} ${t.name}`;
-          const results = await freeSearch(q);
-          const v = results.find(x => x.id);
-          if (v) { playVideo(v); } else toast('No YouTube result found');
-        } catch { toast('Search unavailable'); }
-        row.style.opacity = '';
+        <div class="r-acts" style="flex-shrink:0"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb">+PL</button></div>`;
+      const searchFn = async () => {
+        const results = await freeSearch(`${info?.name || artistName} ${t.name}`);
+        return results.find(x => x.id) || results[0] || null;
       };
+      const [btnP, btnQ2, btnPL2] = row.querySelectorAll('.mb');
+      const withLoad2 = async (btn, fn) => {
+        btn.textContent = '…'; btn.disabled = true;
+        try { const v = await searchFn(); if (v) fn(v); else toast('No YouTube result found'); }
+        catch { toast('Search unavailable'); }
+        finally { btn.textContent = btn === btnP ? 'Play' : btn === btnQ2 ? '+Q' : '+PL'; btn.disabled = false; }
+      };
+      btnP.onclick   = e => { e.stopPropagation(); withLoad2(btnP,   playVideo); };
+      btnQ2.onclick  = e => { e.stopPropagation(); withLoad2(btnQ2,  addToQueue); };
+      btnPL2.onclick = e => { e.stopPropagation(); withLoad2(btnPL2, openAddPl); };
+      row.onclick = () => btnP.click();
       box.appendChild(row);
     });
   }
@@ -4228,10 +4330,10 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
       setTimeout(() => { propEl.remove(); propActive = false; }, 350);
     }, prop.dur - 400);
   }
-  // Random prop every 40–90 sec, 70% chance — actually show it
+  // Random prop every 12–28 sec, 75% chance
   setInterval(() => {
-    if (buddyEnabled && Math.random() < 0.70) doRandomProp();
-  }, 40000 + Math.random() * 50000);
+    if (buddyEnabled && Math.random() < 0.75) doRandomProp();
+  }, 12000 + Math.random() * 16000);
 
   // ── Idle animation cycling ─────────────────────────────
   const IDLE_ANIMS = ['', 'ab-idle-bounce', 'ab-idle-sway', 'ab-idle-dance', 'ab-idle-pulse', 'ab-idle-spin'];
@@ -4741,6 +4843,22 @@ function toggleSynthFlyout() {
     document.getElementById('bpm-inp').addEventListener('input', e => {
       seqBpm = Math.max(40, Math.min(240, parseInt(e.target.value)||128));
     });
+    // Draggable header
+    const hdr = fl.querySelector('.sf-header');
+    let sfDrag = null;
+    hdr.addEventListener('mousedown', e => {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      const r = fl.getBoundingClientRect();
+      fl.style.transform = 'none';
+      fl.style.left = r.left + 'px'; fl.style.top = r.top + 'px';
+      sfDrag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', e => {
+      if (!sfDrag) return;
+      fl.style.left = (e.clientX - sfDrag.sx) + 'px';
+      fl.style.top  = (e.clientY - sfDrag.sy) + 'px';
+    });
+    document.addEventListener('mouseup', () => { sfDrag = null; });
   }
 }
 
@@ -5298,6 +5416,17 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
+<div id="mob-tools-bar">
+  <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
+    💬<span>Chat</span>
+    <span id="mob-chat-badge" style="display:none;position:absolute;top:4px;right:calc(50% - 18px);background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:0 4px;min-width:14px;text-align:center;line-height:14px"></span>
+  </button>
+  <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
+  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Synth">🎹<span>Synth</span></button>
+  <button class="mob-tool-btn" onclick="openPaint()" title="AquaPaint">🎨<span>Paint</span></button>
+  <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
+</div>
+
 <div id="mob-tab-bar">
   <button class="mob-tab" data-panel="search" onclick="switchMobPanel('search')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -5368,14 +5497,136 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 })();
 
 // ─────────────────────────────────────────────────────────
+//  SLOT MACHINE
+// ─────────────────────────────────────────────────────────
+const SLOT_SYMS = ['🎵','7️⃣','💎','⭐','🍒','🔔','🍋','🍇'];
+const SLOT_PAYS = { '🎵': 50, '7️⃣': 20, '💎': 15, '⭐': 10, '🍒': 5 };
+let slotsCredits = +(localStorage.getItem('aq_slots_credits') || 100);
+let slotsBet = 5, slotsSpinning = false;
+let _slotsInited = false;
+
+function toggleSlots() {
+  const w = document.getElementById('slots-wrap');
+  const open = w.classList.toggle('open');
+  if (open && !_slotsInited) { _slotsInited = true; initSlots(); }
+}
+function initSlots() {
+  for (let i = 0; i < 3; i++) {
+    const strip = document.getElementById('reel-' + i);
+    // Build a long strip of shuffled symbols
+    const syms = [];
+    for (let r = 0; r < 20; r++) syms.push(SLOT_SYMS[Math.floor(Math.random() * SLOT_SYMS.length)]);
+    strip.innerHTML = syms.map(s => `<div class="slot-sym">${s}</div>`).join('');
+    strip.style.transform = `translateY(0)`;
+  }
+  updateSlotsUI();
+}
+function updateSlotsUI() {
+  document.getElementById('slots-credits').textContent = slotsCredits;
+  document.getElementById('slots-bet-disp').textContent = slotsBet;
+  localStorage.setItem('aq_slots_credits', slotsCredits);
+}
+function adjustBet(delta) {
+  if (slotsSpinning) return;
+  slotsBet = Math.max(1, Math.min(slotsCredits, slotsBet + delta));
+  updateSlotsUI();
+}
+function spinSlots() {
+  if (slotsSpinning || slotsBet > slotsCredits) return;
+  slotsCredits -= slotsBet;
+  slotsSpinning = true;
+  document.getElementById('slots-spin-btn').disabled = true;
+  document.getElementById('slots-msg').textContent = '';
+  document.getElementById('slots-win-line').textContent = '';
+  updateSlotsUI();
+
+  const results = [];
+  const spinPromises = [0, 1, 2].map(i => {
+    return new Promise(resolve => {
+      const strip = document.getElementById('reel-' + i);
+      const result = SLOT_SYMS[Math.floor(Math.random() * SLOT_SYMS.length)];
+      results[i] = result;
+      // Animate: spin fast then slow to result
+      const sym = document.createElement('div'); sym.className = 'slot-sym'; sym.textContent = result;
+      // Build new strip with result in center
+      const newSyms = [];
+      for (let r = 0; r < 8; r++) newSyms.push(SLOT_SYMS[Math.floor(Math.random() * SLOT_SYMS.length)]);
+      newSyms.push(result);
+      for (let r = 0; r < 8; r++) newSyms.push(SLOT_SYMS[Math.floor(Math.random() * SLOT_SYMS.length)]);
+      strip.innerHTML = newSyms.map(s => `<div class="slot-sym">${s}</div>`).join('');
+      strip.style.transition = 'none';
+      strip.style.transform = 'translateY(0)';
+      // Target: scroll to index 8 (center)
+      const targetY = -(8 * 90);
+      const delay = i * 180;
+      setTimeout(() => {
+        strip.style.transition = `transform ${0.7 + i * 0.2}s cubic-bezier(.17,.67,.35,1)`;
+        strip.style.transform = `translateY(${targetY}px)`;
+        setTimeout(() => resolve(), (700 + i * 200) + 50);
+      }, delay + 80);
+    });
+  });
+
+  Promise.all(spinPromises).then(() => {
+    slotsSpinning = false;
+    document.getElementById('slots-spin-btn').disabled = false;
+    evaluateSlots(results);
+  });
+}
+function evaluateSlots(syms) {
+  const [a, b, c] = syms;
+  let win = 0, msg = '';
+  if (a === b && b === c) {
+    const mult = SLOT_PAYS[a] || 3;
+    win = slotsBet * mult;
+    msg = `JACKPOT! ${a}${b}${c} +${win}`;
+  } else if (a === b || b === c || a === c) {
+    win = slotsBet;
+    msg = `Match! +${win}`;
+  }
+  slotsCredits += win;
+  if (slotsCredits <= 0) { slotsCredits = 20; msg += ' (refill!)'; }
+  document.getElementById('slots-msg').textContent = win > 0 ? msg : 'No win';
+  document.getElementById('slots-win-line').textContent = win > 0 ? `▶ ${syms.join(' ')} ◀` : syms.join(' ');
+  updateSlotsUI();
+  // Play a tone
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (win > 0) {
+      const notes = win >= slotsBet * 10 ? [523,659,784,1047] : [523,659,784];
+      notes.forEach((freq, i) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type = 'square'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0, ac.currentTime + i*0.1);
+        g.gain.linearRampToValueAtTime(0.12, ac.currentTime + i*0.1 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + i*0.1 + 0.25);
+        o.start(ac.currentTime + i*0.1); o.stop(ac.currentTime + i*0.1 + 0.25);
+      });
+      setTimeout(() => ac.close(), 1200);
+    } else {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'sawtooth'; o.frequency.value = 120;
+      g.gain.setValueAtTime(0.1, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
+      o.start(ac.currentTime); o.stop(ac.currentTime + 0.3);
+      setTimeout(() => ac.close(), 500);
+    }
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────
 //  CURSOR BUBBLES — glossy, physics-based gravity pull
 // ─────────────────────────────────────────────────────────
 let _bubblesEnabled = localStorage.getItem('aq_bubbles') !== '0';
-let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 18);
+let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 8);
 let _bubbleGravity  = +(localStorage.getItem('aq_bubble_gravity') ?? 80);
+let _bubbleSize     = +(localStorage.getItem('aq_bubble_size')    ?? 16);
 window._bubblesEnabled = _bubblesEnabled;
 window._bubbleDensity  = _bubbleDensity;
 window._bubbleGravity  = _bubbleGravity;
+window._bubbleSize     = _bubbleSize;
 function setBubblesEnabled(on) {
   _bubblesEnabled = on; window._bubblesEnabled = on;
   localStorage.setItem('aq_bubbles', on ? '1' : '0');
@@ -5388,6 +5639,10 @@ function setBubbleGravity(v) {
   window._bubbleGravity = +v;
   localStorage.setItem('aq_bubble_gravity', v);
 }
+function setBubbleSize(v) {
+  window._bubbleSize = +v;
+  localStorage.setItem('aq_bubble_size', v);
+}
 (function() {
   const bubbles = [];
   let mx = -999, my = -999;
@@ -5396,7 +5651,8 @@ function setBubbleGravity(v) {
     mx = e.clientX; my = e.clientY;
     if (!window._bubblesEnabled) return;
     if (Math.random() * 100 > window._bubbleDensity) return;
-    const size = 10 + Math.random() * 18;
+    const base = window._bubbleSize || 16;
+    const size = base * (0.6 + Math.random() * 0.8);
     const spread = 28;
     const vx = (Math.random() - 0.5) * 1.8;
     const vy = -(0.6 + Math.random() * 1.2);
@@ -5465,17 +5721,41 @@ let boardFbUrl = localStorage.getItem(BOARD_FB_KEY) || '';
 let boardLocalPosts = [];
 try { boardLocalPosts = JSON.parse(localStorage.getItem(BOARD_LS_KEY) || '[]'); } catch {}
 let boardPollTimer = null, boardSse = null, boardRenderedIds = new Set();
-let _lastSeenPostCount = 0;
-function updateChatBadge(count) {
+let _lastSeenPostTs = +(localStorage.getItem('aq_board_seen_ts') || 0);
+let _boardKnownMaxTs = 0;
+function playBoardDing() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1047, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1319, ac.currentTime + 0.06);
+    g.gain.setValueAtTime(0.15, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.45);
+    o.start(ac.currentTime); o.stop(ac.currentTime + 0.45);
+    o.onended = () => ac.close();
+  } catch {}
+}
+function updateChatBadge(posts) {
   const badge = document.getElementById('chat-badge');
   if (!badge) return;
-  const unseen = Math.max(0, count - _lastSeenPostCount);
-  if (unseen > 0 && !document.getElementById('board-overlay').classList.contains('show')) {
-    badge.textContent = unseen > 9 ? '9+' : unseen;
-    badge.style.display = 'inline-block';
+  const isOpen = document.getElementById('board-overlay').classList.contains('show');
+  if (isOpen) { badge.style.display = 'none'; return; }
+  const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
+  const mobBadge = document.getElementById('mob-chat-badge');
+  if (unseen > 0) {
+    const txt = unseen > 9 ? '9+' : String(unseen);
+    badge.textContent = txt; badge.style.display = 'inline-block';
+    if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
+    if (mobBadge) mobBadge.style.display = 'none';
   }
+  // Ding on genuinely new posts (not first load)
+  const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);
+  if (newArrivals.length && _boardKnownMaxTs > 0) playBoardDing();
+  _boardKnownMaxTs = posts.reduce((m, p) => Math.max(m, p.ts), _boardKnownMaxTs);
 }
 
 const MSN_COLORS = ['#CC0000','#0057B8','#007A00','#7D00CC','#007B7B','#CC6600','#990099','#005C8A','#886600','#8A2BE2'];
@@ -5531,7 +5811,7 @@ async function boardLoadAndRender() {
   } else { posts = boardLocalPosts; }
   boardRenderPosts(posts);
   boardUpdateBadge();
-  updateChatBadge(posts.length);
+  updateChatBadge(posts);
 }
 
 function boardFmtTime(ts) {
@@ -5616,7 +5896,8 @@ function openBoard() {
   document.getElementById('board-wrap').classList.remove('minimized');
   const inp = document.getElementById('board-fb-inp');
   if (inp && boardFbUrl) inp.value = boardFbUrl;
-  _lastSeenPostCount = boardLocalPosts.length;
+  _lastSeenPostTs = Date.now();
+  localStorage.setItem('aq_board_seen_ts', _lastSeenPostTs);
   const badge = document.getElementById('chat-badge');
   if (badge) badge.style.display = 'none';
   document.getElementById('board-btn').classList.add('active');
@@ -5868,28 +6149,32 @@ let _paintInited=false;
 function initPaint() {
   const cv=document.getElementById('paint-canvas');
   const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   const pc=document.getElementById('paint-color');
   const ps=document.getElementById('paint-size');
-  const palette=['#000000','#ffffff','#FF6B6B','#FF9F43','#FFEAA7','#6BCB77','#4ECDC4','#45B7D1','#0068b8','#A29BFE','#FD79A8','#636e72'];
+  ps.value = 6; // chunkier default
+  // Classic 16-color MS Paint palette
+  const palette=['#000000','#808080','#800000','#808000','#008000','#008080','#000080','#800080',
+                 '#ffffff','#c0c0c0','#ff0000','#ffff00','#00ff00','#00ffff','#0000ff','#ff00ff',
+                 '#ff8040','#804000','#004000','#004040','#0040ff','#8000ff','#ff0080','#ff80ff'];
   const pal=document.getElementById('paint-palette');
-  palette.forEach(c=>{ const d=document.createElement('div'); d.style.cssText=`width:16px;height:16px;background:${c};border-radius:3px;cursor:pointer;border:1px solid rgba(0,0,0,0.2)`; d.onclick=()=>{pc.value=c;}; pal.appendChild(d); });
+  palette.forEach(c=>{ const d=document.createElement('div'); d.style.cssText=`width:14px;height:14px;background:${c};cursor:pointer;border:2px outset #c0c0c0;box-sizing:border-box;flex-shrink:0`; d.onclick=()=>{pc.value=c;}; pal.appendChild(d); });
   document.getElementById('ptool-pencil').classList.add('active');
 
+  const PX_W = 320, PX_H = 200;
   function resize() {
-    const w = cv.offsetWidth || 640, h = cv.offsetHeight || 400;
-    if (w === cv.width && h === cv.height) return;
-    const snap = cv.width > 0 && cv.height > 0 ? ctx.getImageData(0, 0, cv.width, cv.height) : null;
-    cv.width = w; cv.height = h;
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-    if (snap) ctx.putImageData(snap, 0, 0);
+    if (cv.width === PX_W && cv.height === PX_H) return;
+    cv.width = PX_W; cv.height = PX_H;
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, PX_W, PX_H);
   }
   resize();
-  new ResizeObserver(() => resize()).observe(cv);
 
   function getPos(e) {
     const r=cv.getBoundingClientRect();
     const cl=e.touches?e.touches[0]:e;
-    return {x:cl.clientX-r.left, y:cl.clientY-r.top};
+    const scaleX = PX_W / r.width, scaleY = PX_H / r.height;
+    return { x: Math.floor((cl.clientX-r.left)*scaleX), y: Math.floor((cl.clientY-r.top)*scaleY) };
   }
   function flood(x,y,fc) {
     x=Math.round(x); y=Math.round(y);
@@ -5917,24 +6202,35 @@ function initPaint() {
     _paintSnapshot = ctx.getImageData(0, 0, cv.width, cv.height);
     if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
     ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
-    ctx.strokeStyle = pc.value;
-    ctx.lineWidth = parseInt(ps.value);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const sz = parseInt(ps.value);
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
-      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillRect(p.x - (sz>>1), p.y - (sz>>1), sz, sz);
+    } else {
+      ctx.strokeStyle = pc.value; ctx.lineWidth = sz;
+      ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
     }
   });
   cv.addEventListener('pointermove', e => {
     if (!_painting) return;
     const p = getPos(e);
+    const sz = parseInt(ps.value);
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
-      ctx.beginPath(); ctx.moveTo(lastPt.x, lastPt.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
+      // Bresenham line fill for no gaps
+      let {x:x0,y:y0}=lastPt, {x:x1,y:y1}=p;
+      const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0);
+      const sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+      let err=dx-dy;
+      while(true){ctx.fillRect(x0-(sz>>1),y0-(sz>>1),sz,sz);if(x0===x1&&y0===y1)break;const e2=2*err;if(e2>-dy){err-=dy;x0+=sx;}if(e2<dx){err+=dx;y0+=sy;}}
       lastPt = p;
     } else {
       ctx.putImageData(_paintSnapshot, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = pc.value; ctx.lineWidth = parseInt(ps.value);
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
       ctx.beginPath();
       if (_paintTool === 'line') {
         ctx.moveTo(_paintStart.x, _paintStart.y); ctx.lineTo(p.x, p.y);
@@ -5972,6 +6268,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if (bDen) { bDen.value = _bubbleDensity; document.getElementById('bubble-density-val').textContent = _bubbleDensity; }
   const bGrav = document.getElementById('bubble-gravity-rng');
   if (bGrav) { bGrav.value = _bubbleGravity; document.getElementById('bubble-gravity-val').textContent = _bubbleGravity; }
+  const bSz = document.getElementById('bubble-size-rng');
+  if (bSz) { bSz.value = _bubbleSize; document.getElementById('bubble-size-val').textContent = _bubbleSize; }
+
+  // Slot machine drag
+  (function() {
+    let drag = null;
+    document.addEventListener('mousedown', e => {
+      if (!e.target.closest('#slots-titlebar')) return;
+      const w = document.getElementById('slots-wrap');
+      const r = w.getBoundingClientRect();
+      w.style.transform = 'none'; w.style.left = r.left+'px'; w.style.top = r.top+'px';
+      drag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const w = document.getElementById('slots-wrap');
+      w.style.left = (e.clientX - drag.sx)+'px'; w.style.top = (e.clientY - drag.sy)+'px';
+    });
+    document.addEventListener('mouseup', () => { drag = null; });
+  })();
+
+  // Click ripple
+  document.addEventListener('click', e => {
+    const r = document.createElement('div');
+    r.className = 'click-ripple';
+    r.style.left = e.clientX + 'px';
+    r.style.top  = e.clientY + 'px';
+    document.body.appendChild(r);
+    r.addEventListener('animationend', () => r.remove(), { once: true });
+  });
 });
 </script>
 
@@ -6055,15 +6381,14 @@ document.addEventListener('DOMContentLoaded', () => {
     <input type="color" id="paint-color" value="#0068b8" style="width:26px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:0">
     <div id="paint-palette" style="display:flex;gap:3px;flex-wrap:wrap;max-width:160px"></div>
   </div>
-  <canvas id="paint-canvas" style="flex:1;cursor:crosshair;display:block;background:#fff;touch-action:none"></canvas>
+  <canvas id="paint-canvas" style="flex:1;cursor:crosshair;display:block;background:#fff;touch-action:none;image-rendering:pixelated;image-rendering:crisp-edges"></canvas>
 </div>
 
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->
 <div id="synth-flyout">
 
   <div class="sf-header">
-    <span class="sf-brand">AquaTune Studio</span>
-    <div class="sf-drag" onclick="toggleSynthFlyout()"><div class="sf-drag-bar"></div></div>
+    <span class="sf-brand">🎹 AquaTune Studio</span>
     <div class="sf-transport">
       <button class="t-btn seq-play-btn" onclick="seqPlay()">▶ Play</button>
       <button class="t-btn seq-stop-btn active" onclick="seqStop()">■ Stop</button>
@@ -6071,6 +6396,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="bpm-lbl">BPM</span>
       <button class="t-btn" onclick="exportMidi()" title="Export MIDI">💾 MIDI</button>
     </div>
+    <button class="sf-close" onclick="toggleSynthFlyout()" title="Close">✕</button>
   </div>
 
   <div class="sf-tabs">
@@ -6192,5 +6518,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <script type="module" src="/src/chat-firebase.js"></script>
+
+<!-- SLOT MACHINE -->
+<div id="slots-wrap">
+  <div id="slots-titlebar">
+    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;text-transform:uppercase;flex:1;user-select:none">🎰 AquaSlots</span>
+    <button onclick="toggleSlots()" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+  </div>
+  <div id="slots-body">
+    <div id="slots-credits-row">
+      <span>Credits: <strong id="slots-credits">100</strong></span>
+      <span id="slots-msg" style="color:#ffd700;font-weight:700;min-width:80px;text-align:center"></span>
+      <span>Bet: <strong id="slots-bet-disp">5</strong></span>
+    </div>
+    <div id="slots-reels">
+      <div class="slot-reel"><div class="slot-strip" id="reel-0"></div></div>
+      <div class="slot-reel"><div class="slot-strip" id="reel-1"></div></div>
+      <div class="slot-reel"><div class="slot-strip" id="reel-2"></div></div>
+    </div>
+    <div id="slots-win-line"></div>
+    <div id="slots-controls">
+      <button class="slots-btn" onclick="adjustBet(-5)">− Bet</button>
+      <button class="slots-btn slots-spin" id="slots-spin-btn" onclick="spinSlots()">SPIN 🎰</button>
+      <button class="slots-btn" onclick="adjustBet(5)">+ Bet</button>
+    </div>
+    <div id="slots-paytable">
+      <span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span><span>💎💎💎 = 15×</span>
+      <span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span><span>Any 3 match = 3×</span>
+      <span>2 match = 1×</span>
+    </div>
+  </div>
+</div>
 </body>
 </html>

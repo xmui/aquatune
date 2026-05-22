@@ -1056,6 +1056,9 @@
     .alb-info { padding:6px 8px 8px; }
     .alb-title { font-size:10px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     .alb-year  { font-size:9px;color:var(--text2);margin-top:1px; }
+    .alb-rym   { display:block;font-size:8px;font-weight:700;color:var(--accent);opacity:.7;margin-top:2px;text-decoration:none; }
+    .alb-rym:hover { opacity:1; }
+    .album-bulk-acts { display:flex;gap:6px;padding:6px 10px 2px;flex-wrap:wrap; }
 
     /* ── ARTIST TAB ────────────────────────────────────── */
     .art-header { display:flex;gap:10px;padding:10px 10px 6px;align-items:flex-start; }
@@ -1901,6 +1904,16 @@
     <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
       <input type="checkbox" id="bubbles-chk" onchange="setBubblesEnabled(this.checked)" style="cursor:pointer"> Cursor bubbles
     </label>
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:6px">
+      <label style="white-space:nowrap;color:var(--text2);width:56px">Density</label>
+      <input type="range" id="bubble-density-rng" min="1" max="80" value="18" oninput="setBubbleDensity(this.value);document.getElementById('bubble-density-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+      <span id="bubble-density-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">18</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:4px">
+      <label style="white-space:nowrap;color:var(--text2);width:56px">Gravity</label>
+      <input type="range" id="bubble-gravity-rng" min="0" max="250" value="80" oninput="setBubbleGravity(this.value);document.getElementById('bubble-gravity-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+      <span id="bubble-gravity-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">80</span>
+    </div>
   </div>
   <div class="theme-section">
     <div class="theme-label">Custom accent</div>
@@ -3290,7 +3303,8 @@ function renderDiscView() {
         const coverHtml = album.img
           ? `<div class="alb-cover"><img src="${esc(album.img)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"></div>`
           : `<div class="alb-cover alb-init">${esc(album.title[0]?.toUpperCase() || '?')}</div>`;
-        card.innerHTML = `${coverHtml}<div class="alb-info"><div class="alb-title" title="${esc(album.title)}">${esc(album.title)}</div><div class="alb-year">${esc(album.year)}</div></div>`;
+        const _rymQ = encodeURIComponent(`${albumArtist} ${album.title}`);
+        card.innerHTML = `${coverHtml}<div class="alb-info"><div class="alb-title" title="${esc(album.title)}">${esc(album.title)}</div><div class="alb-year">${esc(album.year)}</div><a class="alb-rym" href="https://rateyourmusic.com/search?searchterm=${_rymQ}&searchtype=l" target="_blank" rel="noopener" onclick="event.stopPropagation()">RYM ↗</a></div>`;
         card.onclick = () => discSelectAlbum(album);
         grid.appendChild(card);
       });
@@ -3308,6 +3322,35 @@ function renderDiscView() {
       ? `${discState.album?.title} — tracklist`
       : `${discState.album?.title} on YouTube`;
     box.appendChild(hdr);
+
+    if (discState.ytResults[0]?._isTrack) {
+      const bulkBar = document.createElement('div'); bulkBar.className = 'album-bulk-acts';
+      const makeSearchAll = async () => {
+        const tracks = discState.ytResults.filter(v => v._isTrack);
+        const lArtist = albumArtist.toLowerCase();
+        const res = await Promise.allSettled(tracks.map(async v => {
+          const results = await freeSearch(`${albumArtist} ${v.title}`);
+          const tw = v.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+          return results.find(r => { const t = r.title.toLowerCase(); return t.includes(lArtist) || tw.some(w => t.includes(w)); }) || results[0];
+        }));
+        return res.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+      };
+      const withBulkLoad = async (btn, origText, fn) => {
+        btn.textContent = '…'; btn.disabled = true;
+        try { const found = await makeSearchAll(); if (found.length) fn(found); else toast('No tracks found on YouTube'); }
+        catch { toast('Search failed'); }
+        finally { btn.textContent = origText; btn.disabled = false; }
+      };
+      const btnPA = document.createElement('button'); btnPA.className = 'mb'; btnPA.textContent = '▶ Play All';
+      btnPA.onclick = e => { e.stopPropagation(); withBulkLoad(btnPA, '▶ Play All', f => { playVideo(f[0]); f.slice(1).forEach(addToQueue); toast(`Playing ${f.length} tracks`); }); };
+      const btnQA = document.createElement('button'); btnQA.className = 'mb'; btnQA.textContent = '+ Queue All';
+      btnQA.onclick = e => { e.stopPropagation(); withBulkLoad(btnQA, '+ Queue All', f => { f.forEach(addToQueue); toast(`Queued ${f.length} tracks`); }); };
+      const btnPLA = document.createElement('button'); btnPLA.className = 'mb'; btnPLA.textContent = '+ Playlist';
+      btnPLA.onclick = e => { e.stopPropagation(); withBulkLoad(btnPLA, '+ Playlist', f => openAddPlMulti(f)); };
+      bulkBar.appendChild(btnPA); bulkBar.appendChild(btnQA); bulkBar.appendChild(btnPLA);
+      box.appendChild(bulkBar);
+    }
+
     discState.ytResults.forEach((v, i) => {
       if (v._isTrack) {
         const row = document.createElement('div'); row.className = 'art-track';
@@ -3458,7 +3501,8 @@ async function fetchChannel() {
       const coverHtml = aImg
         ? `<div class="alb-cover"><img src="${esc(aImg)}" loading="lazy" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"></div>`
         : `<div class="alb-cover alb-init">${esc(album.name[0]?.toUpperCase() || '?')}</div>`;
-      card.innerHTML = `${coverHtml}<div class="alb-info"><div class="alb-title" title="${esc(album.name)}">${esc(album.name)}</div></div>`;
+      const _rymQA = encodeURIComponent(`${info?.name || artistName} ${album.name}`);
+      card.innerHTML = `${coverHtml}<div class="alb-info"><div class="alb-title" title="${esc(album.name)}">${esc(album.name)}</div><a class="alb-rym" href="https://rateyourmusic.com/search?searchterm=${_rymQA}&searchtype=l" target="_blank" rel="noopener" onclick="event.stopPropagation()">RYM ↗</a></div>`;
       card.onclick = async () => {
         card.style.opacity = '0.5';
         try {
@@ -3472,21 +3516,52 @@ async function fetchChannel() {
             const tlist = document.createElement('div'); tlist.className = 'art-tracklist';
             const tlHdr = document.createElement('span'); tlHdr.className = 'disc-sec';
             tlHdr.textContent = album.name; tlist.appendChild(tlHdr);
+            const inArtist = info?.name || artistName;
+            // Bulk action bar
+            const tlBulk = document.createElement('div'); tlBulk.className = 'album-bulk-acts';
+            const tlSearchAll = async () => {
+              const lA = inArtist.toLowerCase();
+              const res = await Promise.allSettled(tracks2.map(async t2 => {
+                const r = await freeSearch(`${inArtist} ${t2.name}`);
+                const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+                return r.find(x=>{ const rt=x.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || r[0];
+              }));
+              return res.map(r => r.status==='fulfilled' ? r.value : null).filter(Boolean);
+            };
+            const tlWithLoad = async (btn, orig, fn) => {
+              btn.textContent='…'; btn.disabled=true;
+              try { const f=await tlSearchAll(); if(f.length) fn(f); else toast('No tracks found on YouTube'); }
+              catch { toast('Search failed'); }
+              finally { btn.textContent=orig; btn.disabled=false; }
+            };
+            const tlPA = document.createElement('button'); tlPA.className='mb'; tlPA.textContent='▶ Play All';
+            tlPA.onclick=e=>{e.stopPropagation();tlWithLoad(tlPA,'▶ Play All',f=>{playVideo(f[0]);f.slice(1).forEach(addToQueue);toast(`Playing ${f.length} tracks`);});};
+            const tlQA = document.createElement('button'); tlQA.className='mb'; tlQA.textContent='+ Queue All';
+            tlQA.onclick=e=>{e.stopPropagation();tlWithLoad(tlQA,'+ Queue All',f=>{f.forEach(addToQueue);toast(`Queued ${f.length} tracks`);});};
+            const tlPLA = document.createElement('button'); tlPLA.className='mb'; tlPLA.textContent='+ Playlist';
+            tlPLA.onclick=e=>{e.stopPropagation();tlWithLoad(tlPLA,'+ Playlist',f=>openAddPlMulti(f));};
+            tlBulk.appendChild(tlPA); tlBulk.appendChild(tlQA); tlBulk.appendChild(tlPLA);
+            tlist.appendChild(tlBulk);
             tracks2.forEach((t2, ti) => {
               const trow = document.createElement('div'); trow.className = 'art-track';
-              trow.innerHTML = `<span class="art-track-num">${t2['@attr']?.rank || ti+1}</span><div class="art-track-info"><div class="art-track-title">${esc(t2.name)}</div></div>`;
-              trow.onclick = async () => {
-                trow.style.opacity = '0.5';
-                try {
-                  const qr = `${info?.name || artistName} ${t2.name}`;
-                  const res = await freeSearch(qr);
-                  const lA = (info?.name || artistName).toLowerCase();
-                  const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
-                  const fnd = res.find(r=>{ const rt=r.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || res[0];
-                  if (fnd) { playVideo(fnd); toast(`▶ ${t2.name}`); } else toast('No YouTube result found');
-                } catch { toast('Search unavailable'); }
-                finally { trow.style.opacity=''; }
+              trow.innerHTML = `<span class="art-track-num">${t2['@attr']?.rank || ti+1}</span><div class="art-track-info"><div class="art-track-title">${esc(t2.name)}</div></div><div class="r-acts" style="flex-shrink:0"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb">+PL</button></div>`;
+              const searchRow = async () => {
+                const r = await freeSearch(`${inArtist} ${t2.name}`);
+                const lA = inArtist.toLowerCase();
+                const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+                return r.find(x=>{ const rt=x.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || r[0];
               };
+              const [rBtnP, rBtnQ, rBtnPL] = trow.querySelectorAll('.mb');
+              const withRowLoad = async (btn, fn) => {
+                btn.textContent='…'; btn.disabled=true;
+                try { const f=await searchRow(); if(f) fn(f); else toast('No YouTube result'); }
+                catch { toast('Search unavailable'); }
+                finally { btn.textContent=btn===rBtnP?'Play':btn===rBtnQ?'+Q':'+PL'; btn.disabled=false; }
+              };
+              rBtnP.onclick=e=>{e.stopPropagation();withRowLoad(rBtnP,playVideo);};
+              rBtnQ.onclick=e=>{e.stopPropagation();withRowLoad(rBtnQ,addToQueue);};
+              rBtnPL.onclick=e=>{e.stopPropagation();withRowLoad(rBtnPL,openAddPl);};
+              trow.onclick=()=>rBtnP.click();
               tlist.appendChild(trow);
             });
             box.insertBefore(tlist, grid.nextSibling);
@@ -3601,6 +3676,29 @@ function openAddPl(v) {
   const local=playlists.filter(p=>!p.ytId);
   if(!local.length){box.innerHTML='<div style="font-size:11px;color:var(--text2);padding:8px">No local playlists yet — create one with +</div>';}
   else{box.innerHTML='';local.forEach(pl=>{const el=document.createElement('div');el.className='pl-item';el.innerHTML=`${esc(pl.name)} <span class="pl-cnt">${pl.videos.length}</span>`;el.onclick=()=>{pl.videos.push(pendingAddPl);savePls();closeModal('addpl-modal');toast(`Added to "${pl.name}"`);if(activePlId===pl.id)viewPl(pl.id);};box.appendChild(el);});}
+  openModal('addpl-modal');
+}
+let pendingAddPlMulti = null;
+function openAddPlMulti(videos) {
+  pendingAddPlMulti = videos;
+  const box = document.getElementById('pl-picker');
+  const local = playlists.filter(p => !p.ytId);
+  if (!local.length) {
+    box.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:8px">No local playlists yet — create one with +</div>';
+  } else {
+    box.innerHTML = '';
+    local.forEach(pl => {
+      const el = document.createElement('div'); el.className = 'pl-item';
+      el.innerHTML = `${esc(pl.name)} <span class="pl-cnt">${pl.videos.length}</span>`;
+      el.onclick = () => {
+        pl.videos.push(...pendingAddPlMulti);
+        savePls(); closeModal('addpl-modal');
+        toast(`Added ${pendingAddPlMulti.length} tracks to "${pl.name}"`);
+        if (activePlId === pl.id) viewPl(pl.id);
+      };
+      box.appendChild(el);
+    });
+  }
   openModal('addpl-modal');
 }
 function savePls() { localStorage.setItem('yt_pls',JSON.stringify(playlists)); renderPls(); }
@@ -5273,11 +5371,22 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 //  CURSOR BUBBLES — glossy, physics-based gravity pull
 // ─────────────────────────────────────────────────────────
 let _bubblesEnabled = localStorage.getItem('aq_bubbles') !== '0';
+let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 18);
+let _bubbleGravity  = +(localStorage.getItem('aq_bubble_gravity') ?? 80);
 window._bubblesEnabled = _bubblesEnabled;
+window._bubbleDensity  = _bubbleDensity;
+window._bubbleGravity  = _bubbleGravity;
 function setBubblesEnabled(on) {
-  _bubblesEnabled = on;
-  window._bubblesEnabled = on;
+  _bubblesEnabled = on; window._bubblesEnabled = on;
   localStorage.setItem('aq_bubbles', on ? '1' : '0');
+}
+function setBubbleDensity(v) {
+  window._bubbleDensity = +v;
+  localStorage.setItem('aq_bubble_density', v);
+}
+function setBubbleGravity(v) {
+  window._bubbleGravity = +v;
+  localStorage.setItem('aq_bubble_gravity', v);
 }
 (function() {
   const bubbles = [];
@@ -5286,7 +5395,7 @@ function setBubblesEnabled(on) {
   document.addEventListener('mousemove', e => {
     mx = e.clientX; my = e.clientY;
     if (!window._bubblesEnabled) return;
-    if (Math.random() > 0.18) return;
+    if (Math.random() * 100 > window._bubbleDensity) return;
     const size = 10 + Math.random() * 18;
     const spread = 28;
     const vx = (Math.random() - 0.5) * 1.8;
@@ -5315,7 +5424,7 @@ function setBubblesEnabled(on) {
       const cx = b.x + b.size/2, cy = b.y + b.size/2;
       const dx = mx - cx, dy = my - cy;
       const dist = Math.sqrt(dx*dx + dy*dy) + 1;
-      const G = 80;
+      const G = window._bubbleGravity;
       const force = G / (dist * dist);
       b.vx += (dx / dist) * force / b.mass;
       b.vy += (dy / dist) * force / b.mass;
@@ -5859,6 +5968,10 @@ function initPaint() {
 document.addEventListener('DOMContentLoaded', () => {
   const bchk = document.getElementById('bubbles-chk');
   if (bchk) bchk.checked = _bubblesEnabled;
+  const bDen = document.getElementById('bubble-density-rng');
+  if (bDen) { bDen.value = _bubbleDensity; document.getElementById('bubble-density-val').textContent = _bubbleDensity; }
+  const bGrav = document.getElementById('bubble-gravity-rng');
+  if (bGrav) { bGrav.value = _bubbleGravity; document.getElementById('bubble-gravity-val').textContent = _bubbleGravity; }
 });
 </script>
 
@@ -5871,7 +5984,6 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="board-tb-icon">💬</span>
       <span class="board-tb-title">AquaChat &nbsp;·&nbsp; /aq/ Suggestions &amp; Chat</span>
       <div class="board-tb-btns">
-        <button class="board-tb-btn board-tb-cfg" onclick="boardClearAll()" title="Clear all local posts">⚙</button>
         <button class="board-tb-btn board-tb-min" onclick="minimizeBoard()" title="Minimize">─</button>
         <button class="board-tb-btn board-tb-close" onclick="closeBoard()">✕</button>
       </div>
@@ -5880,7 +5992,6 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- XP-style menu bar -->
     <div class="board-menubar">
       <span class="board-menu-item" onclick="boardLoadAndRender()">Refresh</span>
-      <span class="board-menu-item" onclick="boardClearAll()">Clear</span>
       <span class="board-status" id="board-fb-badge" class="board-fb-badge local">● Local</span>
     </div>
 

@@ -311,8 +311,15 @@
     /* ── CENTER ─────────────────────────────────────────── */
     #center { display:flex;flex-direction:column;overflow:hidden;gap:8px; }
 
-    #player-bubble { position:relative;flex-shrink:0;border-radius:var(--r);overflow:hidden;box-shadow:var(--ps);border:1.5px solid var(--border); }
-    #player-bubble::after { content:'';display:block;padding-top:56.25%; }
+    #player-bubble {
+      position:relative; border-radius:var(--r); overflow:hidden;
+      box-shadow:var(--ps); border:1.5px solid var(--border);
+      flex-shrink:1; flex-grow:0; min-height:60px;
+      aspect-ratio:16/9;
+      /* never eat so much vertical space that the controls fall off */
+      max-height:calc(100vh - 280px);
+      width:100%;
+    }
     #player-bubble > * { position:absolute;inset:0;width:100%;height:100%; }
     #ph { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,rgba(0,160,200,0.1),rgba(34,212,176,0.08)); }
     #ph-txt { font-size:13px;color:var(--text2);text-align:center;padding:0 20px;line-height:1.7;font-weight:500; }
@@ -471,10 +478,19 @@
       #np-title { font-size:13px; }
       #btns { gap:5px; }
       #vol-row { margin-top:7px; }
+      #player-bubble { max-height:calc(100vh - 260px); }
     }
     @media (max-height: 640px) {
       #info-strip { display:none !important; }
       #now-row { display:none; }
+      #player-bubble { max-height:calc(100vh - 200px); }
+    }
+    @media (max-height: 520px) {
+      #now-row { display:none; }
+      #prog-row { margin-bottom:3px; }
+      #vol-row { margin-top:4px; }
+      #ctrl-bubble { padding:5px 12px 7px; }
+      #player-bubble { max-height:calc(100vh - 170px); }
     }
 
     /* ── SYNTH FLYOUT ──────────────────────────────────────── */

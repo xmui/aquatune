@@ -1386,15 +1386,21 @@ async function refreshPipedInstances() {
     if (fresh.length >= 4) PIPED.splice(0, PIPED.length, ...fresh);
   } catch {}
 }
-async function pipedRace(path, params = {}) {
+async function pipedRace(path, params = {}, timeoutMs = 8000) {
   const qs = new URLSearchParams(params).toString();
   const suffix = qs ? `?${qs}` : '';
   const controllers = PIPED.map(() => new AbortController());
-  return Promise.any(PIPED.map((base, i) =>
-    fetch(`${base}/${path}${suffix}`, { signal: controllers[i].signal })
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => { controllers.forEach((c,j) => j !== i && c.abort()); return data; })
-  ));
+  const timer = setTimeout(() => controllers.forEach(c => c.abort()), timeoutMs);
+  try {
+    return await Promise.any(PIPED.map((base, i) =>
+      fetch(`${base}/${path}${suffix}`, { signal: controllers[i].signal })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => { controllers.forEach((c,j) => j !== i && c.abort()); return data; })
+    ));
+  } finally {
+    clearTimeout(timer);
+    controllers.forEach(c => c.abort());
+  }
 }
 function decodeHtml(s) { const t = document.createElement('textarea'); t.innerHTML = String(s); return t.value; }
 function pipedToVid(item) {
@@ -1402,6 +1408,72 @@ function pipedToVid(item) {
   const id = new URLSearchParams(qs).get('v') || item.videoId || '';
   const chId = item.uploaderUrl?.split('/channel/')?.[1]?.split('/')?.[0] || '';
   return { id, title: decodeHtml(item.title || id), channelTitle: decodeHtml(item.uploaderName || item.uploader || ''), channelId: chId, thumbnail: id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : '' };
+}
+
+// ─────────────────────────────────────────────────────────
+//  INVIDIOUS  (fallback when all Piped instances fail)
+// ─────────────────────────────────────────────────────────
+let INVIDIOUS = [
+  'https://invidious.privacydev.net', 'https://inv.riverside.rocks',
+  'https://invidious.nerdvpn.de',     'https://iv.melmac.space',
+  'https://invidious.drgns.space',    'https://invidious.slipfox.xyz',
+  'https://invidious.jing.rocks',     'https://vid.priv.au',
+  'https://invidious.perennialte.ch', 'https://invidious.floss.social',
+];
+async function refreshInvidiousInstances() {
+  try {
+    const r = await fetch('https://api.invidious.io/instances.json?sort_by=health&type=https', { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return;
+    const list = await r.json();
+    const fresh = list
+      .filter(([, info]) => info.type === 'https' && info.api === true && info.uri)
+      .map(([, info]) => info.uri.replace(/\/$/, ''))
+      .slice(0, 16);
+    if (fresh.length >= 4) INVIDIOUS.splice(0, INVIDIOUS.length, ...fresh);
+  } catch {}
+}
+async function invidiousRace(path, params = {}, timeoutMs = 8000) {
+  const qs = new URLSearchParams(params).toString();
+  const suffix = qs ? `?${qs}` : '';
+  const controllers = INVIDIOUS.map(() => new AbortController());
+  const timer = setTimeout(() => controllers.forEach(c => c.abort()), timeoutMs);
+  try {
+    return await Promise.any(INVIDIOUS.map((base, i) =>
+      fetch(`${base}/api/v1/${path}${suffix}`, { signal: controllers[i].signal })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => { controllers.forEach((c,j) => j !== i && c.abort()); return data; })
+    ));
+  } finally {
+    clearTimeout(timer);
+    controllers.forEach(c => c.abort());
+  }
+}
+function invidiousToVid(item) {
+  return {
+    id: item.videoId || '',
+    title: item.title || item.videoId || '',
+    channelTitle: item.author || '',
+    channelId: item.authorId || '',
+    thumbnail: item.videoId ? `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg` : '',
+  };
+}
+
+// Try Piped first, fall back to Invidious. Returns array of vid objects (may be empty).
+async function freeSearch(q) {
+  try {
+    const d = await pipedRace('search', { q, filter: 'music_songs' });
+    const items = (d.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id);
+    if (items.length) return items;
+    const d2 = await pipedRace('search', { q, filter: 'videos' });
+    const items2 = (d2.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id);
+    if (items2.length) return items2;
+  } catch {}
+  // Piped failed — try Invidious
+  try {
+    const d = await invidiousRace('search', { q, type: 'video' });
+    return (Array.isArray(d) ? d : []).filter(x => x.videoId).map(invidiousToVid).filter(v => v.id);
+  } catch {}
+  return [];
 }
 
 // ─────────────────────────────────────────────────────────
@@ -2112,18 +2184,13 @@ async function doSearch() {
     } catch(err) { box.innerHTML = `<div class="empty">Search error: ${esc(err.message)}</div>`; return; }
   }
 
-  // Piped
+  // Piped → Invidious fallback
   box.innerHTML = '<div class="empty">Searching...</div>';
   try {
-    const d = await pipedRace('search', { q: raw, filter: 'music_songs' });
-    const items = (d.items || d || []).filter(x => x.url || x.videoId);
-    if (!items.length) {
-      const d2 = await pipedRace('search', { q: raw, filter: 'videos' });
-      const items2 = (d2.items || d2 || []).filter(x => x.url || x.videoId);
-      if (!items2.length) { box.innerHTML = '<div class="empty">No results found</div>'; return; }
-      box.innerHTML = ''; items2.forEach(it => box.appendChild(makeResultItem(pipedToVid(it)))); return;
-    }
-    box.innerHTML = ''; items.forEach(it => box.appendChild(makeResultItem(pipedToVid(it))));
+    const items = await freeSearch(raw);
+    if (!items.length) { box.innerHTML = '<div class="empty">No results found</div>'; return; }
+    box.innerHTML = '';
+    items.forEach(v => box.appendChild(makeResultItem(v)));
   } catch {
     const enc = encodeURIComponent(raw);
     box.innerHTML = `<div class="empty">Search unavailable on this network.<br><br>Paste a YouTube URL or video ID directly,<br><a href="https://www.youtube.com/results?search_query=${enc}" target="_blank" rel="noopener">search on YouTube</a> and paste the link,<br>or click <strong>Sign in</strong> above.</div>`;
@@ -2367,8 +2434,7 @@ async function discSelectAlbum(album) {
 
   try {
     const q = `${discState.artist?.name || ''} ${album.title} full album`;
-    const d = await pipedRace('search', { q, filter: 'videos' });
-    discState.ytResults = (d.items || []).filter(x => x.url || x.videoId).slice(0, 8).map(pipedToVid).filter(v => v.id);
+    discState.ytResults = (await freeSearch(q)).slice(0, 8);
     renderDiscView();
   } catch { document.getElementById('related-list').innerHTML = '<div class="empty">YouTube search unavailable</div>'; }
 }
@@ -2471,8 +2537,8 @@ async function fetchAutomix(videoId) {
         if (similar.length) {
           const pick = similar[Math.floor(Math.random() * Math.min(similar.length, 6))];
           const q = `${pick.artist?.name || artist} ${pick.name}`;
-          const sr = await pipedRace('search', { q, filter: 'music_songs' });
-          const found = (sr.items || []).map(pipedToVid).find(v => v.id && !isStale(v));
+          const results = await freeSearch(q);
+          const found = results.find(v => v.id && !isStale(v));
           if (found) { playVideo(found); toast('Automix: playing similar track'); return; }
         }
       } catch {}
@@ -2571,8 +2637,8 @@ async function fetchChannel() {
         card.style.opacity = '0.5';
         try {
           const q = `${info?.name || artistName} ${album.name}`;
-          const d = await pipedRace('search', { q, filter: 'music_songs' });
-          const v = (d.items || []).map(pipedToVid).find(x => x.id);
+          const results = await freeSearch(q);
+          const v = results.find(x => x.id);
           if (v) { playVideo(v); toast(`Playing: ${album.name}`); } else toast('No YouTube result found');
         } catch { toast('Search unavailable'); }
         card.style.opacity = '';
@@ -2600,8 +2666,8 @@ async function fetchChannel() {
         row.style.opacity = '0.5';
         try {
           const q = `${info?.name || artistName} ${t.name}`;
-          const d = await pipedRace('search', { q, filter: 'music_songs' });
-          const v = (d.items || []).map(pipedToVid).find(x => x.id);
+          const results = await freeSearch(q);
+          const v = results.find(x => x.id);
           if (v) { playVideo(v); } else toast('No YouTube result found');
         } catch { toast('Search unavailable'); }
         row.style.opacity = '';
@@ -3630,6 +3696,7 @@ renderPls();
 if (clientId) document.getElementById('cid-inp').value = clientId;
 tryAutoSignIn();
 refreshPipedInstances();
+refreshInvidiousInstances();
 const _s=document.createElement('script');_s.src='https://www.youtube.com/iframe_api';document.head.appendChild(_s);
 </script>
 

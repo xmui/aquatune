@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — AQUATUNE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root { --accent:#0068b8; --text:#0a1828; --text2:#3a5880; --border:rgba(0,80,160,0.15); }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    html { font-family:'M PLUS Rounded 1c',system-ui,sans-serif; color:var(--text); font-size:15px; line-height:1.7; background:linear-gradient(160deg,#d4e8f8,#e8f2fc,#dce8f8); min-height:100vh; }
+    body { max-width:760px; margin:0 auto; padding:40px 24px 80px; }
+    nav { display:flex; align-items:center; gap:16px; margin-bottom:48px; }
+    .nav-logo { font-size:16px; font-weight:900; letter-spacing:4px; text-transform:uppercase; color:var(--accent); text-decoration:none; }
+    .nav-back { font-size:13px; color:var(--text2); text-decoration:none; border:1.5px solid var(--border); border-radius:999px; padding:4px 14px; background:#fff; transition:all .15s; }
+    .nav-back:hover { border-color:var(--accent); color:var(--accent); }
+    .card { background:rgba(255,255,255,0.94); border:1.5px solid var(--border); border-radius:16px; padding:40px 44px; box-shadow:0 4px 20px rgba(0,40,120,0.10),inset 0 1px 0 #fff; }
+    h1 { font-size:26px; font-weight:800; color:var(--text); margin-bottom:6px; }
+    .subtitle { font-size:13px; color:var(--text2); margin-bottom:36px; }
+    h2 { font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-left:3px solid var(--accent); padding-left:10px; margin:32px 0 12px; }
+    p { color:var(--text2); margin-bottom:12px; font-size:14px; }
+    ul { margin:0 0 12px 20px; color:var(--text2); font-size:14px; }
+    ul li { margin-bottom:6px; }
+    a { color:var(--accent); }
+    .footer-links { margin-top:32px; padding-top:20px; border-top:1px solid var(--border); display:flex; gap:20px; font-size:12px; }
+    .footer-links a { color:var(--text2); text-decoration:none; }
+    .footer-links a:hover { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">AQUATUNE</a>
+    <a class="nav-back" href="/">&larr; Back to app</a>
+  </nav>
+  <div class="card">
+    <h1>Privacy Policy</h1>
+    <p class="subtitle">Last updated: May 2026</p>
+
+    <h2>Overview</h2>
+    <p>AQUATUNE is a client-side music player that runs entirely in your browser. We do not operate servers, collect personal data, or track your usage. This policy describes how data flows between your browser and the third-party services the app connects to.</p>
+
+    <h2>Data we do not collect</h2>
+    <ul>
+      <li>We have no backend server and receive no data from you</li>
+      <li>We do not use cookies, analytics, or tracking pixels</li>
+      <li>We do not log IP addresses, search queries, or playback history</li>
+      <li>We do not share or sell any information</li>
+    </ul>
+
+    <h2>Data stored in your browser</h2>
+    <p>The following is saved in your browser's <code>localStorage</code> and never leaves your device:</p>
+    <ul>
+      <li><strong>Playlists</strong> — names and video IDs of playlists you create</li>
+      <li><strong>Session state</strong> — current video, queue, volume, and toggle preferences, so the app restores your session on refresh</li>
+      <li><strong>Theme preference</strong> — your chosen color theme and accent</li>
+      <li><strong>Google OAuth Client ID</strong> — if you provide one for Google search, it is stored locally so you don't need to re-enter it</li>
+      <li><strong>Last.fm API key</strong> — if you provide one for artist bios, it is stored locally</li>
+    </ul>
+    <p>You can clear all stored data at any time by clearing your browser's site data for this domain.</p>
+
+    <h2>Third-party services</h2>
+    <p>The app connects to the following external services on your behalf. Their own privacy policies apply.</p>
+    <ul>
+      <li><strong>YouTube / Google</strong> — video playback is handled via the YouTube IFrame Player API. Search and related videos optionally use the YouTube Data API v3 when you sign in with Google. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
+      <li><strong>Piped</strong> — an open-source YouTube proxy used for search when you are not signed in. Your search queries are sent to public Piped instances. See <a href="https://github.com/TeamPiped/Piped" target="_blank" rel="noopener">Piped on GitHub</a>.</li>
+      <li><strong>Last.fm</strong> (optional) — if you provide a Last.fm API key, artist names are sent to Last.fm to retrieve biographies. See <a href="https://www.last.fm/legal/privacy" target="_blank" rel="noopener">Last.fm's Privacy Policy</a>.</li>
+      <li><strong>Wikipedia</strong> (optional) — artist or game names may be looked up via Wikipedia's public REST API when no Last.fm key is present. See <a href="https://foundation.wikimedia.org/wiki/Privacy_policy" target="_blank" rel="noopener">Wikimedia's Privacy Policy</a>.</li>
+      <li><strong>Google Fonts / CDN</strong> — no external font CDNs are used; the app uses system fonts only.</li>
+    </ul>
+
+    <h2>Google sign-in (optional)</h2>
+    <p>Signing in with Google is entirely optional. If you choose to sign in, an OAuth access token is obtained via Google Identity Services and held in memory for the duration of your session — it is never written to disk or sent to any server we control. The token is used only to make YouTube Data API requests on your behalf.</p>
+    <p>The first time you sign in you will see Google's standard OAuth consent screen. On subsequent visits the app attempts a silent token refresh so you are not prompted again.</p>
+
+    <h2>Children's privacy</h2>
+    <p>AQUATUNE is not directed at children under 13. We do not knowingly collect any data from children.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If this policy changes materially, the "last updated" date at the top will be revised. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy can be directed to the repository owner via the project's source repository.</p>
+
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/terms.html">Terms of Service</a>
+    </div>
+  </div>
+</body>
+</html>

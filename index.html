@@ -4474,7 +4474,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
   gun.addEventListener('click', shoot);
 
-  function shoot() {
+  async function shoot() {
     if (!gunActive || buddyDead) return;
     buddyDead = true;
     buddy.style.cursor = '';

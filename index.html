@@ -38,6 +38,10 @@
       background-size: 28px 28px;
       mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
     }
+    #wc {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  image-rendering:pixelated;
+}
     .orb { position:absolute; border-radius:50%; }
     /* Large white glowing orb — top-left */
     .o1 { width:700px;height:700px;
@@ -124,6 +128,16 @@
     #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
     .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
     #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
+    #weather {
+  display:flex; align-items:center; gap:5px; flex-shrink:0; cursor:pointer;
+  padding:3px 9px; border-radius:12px;
+  background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35);
+  transition:background .15s;
+}
+#weather:hover { background:rgba(255,255,255,0.28); }
+#wx-icon { font-size:16px; line-height:1; }
+#wx-temp { font-size:12px; font-weight:700; color:#fff; }
+#wx-city { font-size:9px; color:rgba(255,255,255,0.75); max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     #auth-area { display:flex;align-items:center;gap:8px;flex-shrink:0; }
     #gear-btn, #kbd-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
@@ -155,7 +169,8 @@
 
     /* ── PANEL BASE ─────────────────────────────────────── */
     .panel {
-      background: linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(228,248,255,0.90) 100%);
+      background: linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(215,240,255,0.62) 100%);
+      backdrop-filter: blur(18px) saturate(1.3);
       border: 1.5px solid rgba(100,210,245,0.42);
       border-radius: var(--r);
       box-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.2);
@@ -359,7 +374,8 @@
     /* controls */
     #ctrl-bubble {
       flex-shrink:0; padding:12px 16px 14px;
-      background: linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(228,248,255,0.90) 100%);
+      background: linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(228,248,255,0.90) 100%);
+      backdrop-filter: blur(18px) saturate(1.3);
       border: 1.5px solid rgba(100,210,245,0.42);
       border-radius:var(--r);
       box-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.18);
@@ -577,6 +593,7 @@
 
     .sf-panel { display:none; flex:1; flex-direction:column; overflow:hidden; padding:8px 14px 8px; }
     .sf-panel.active { display:flex; }
+    #sfx-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; flex:1; }
 
     /* Controls row */
     .sc-row { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-bottom:7px; flex-wrap:wrap; }
@@ -1649,6 +1666,7 @@
   </style>
 </head>
 <body>
+<canvas id="wc"></canvas>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
@@ -1665,6 +1683,13 @@
     </div>
     <div style="flex:1"></div>
     <span id="hdr-clock">12:00 PM</span>
+    <div id="weather" title="Click to refresh weather" onclick="fetchWeather()">
+      <span id="wx-icon">🌤️</span>
+      <div style="display:flex;flex-direction:column;gap:0">
+        <span id="wx-temp">--°F</span>
+        <span id="wx-city">Boulder</span>
+      </div>
+    </div>
     <div id="auth-area">
       <button id="board-btn" onclick="openBoard()" title="Suggestion board">/aq/</button>
       <button id="synth-btn" onclick="toggleSynthFlyout()" title="Synth &amp; Drum pad">🎹</button>
@@ -1834,6 +1859,14 @@
     <button class="theme-swatch" data-theme="sunset" onclick="selectTheme('sunset',this)">Sunset</button>
     <button class="theme-swatch" data-theme="forest" onclick="selectTheme('forest',this)">Forest</button>
     <button class="theme-swatch" data-theme="dark" onclick="selectTheme('dark',this)">Dark</button>
+  </div>
+  <div class="theme-section">
+    <div class="theme-label">Weather location</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input class="m-inp" id="wx-zip-inp" type="text" placeholder="ZIP code (e.g. 80301)" maxlength="10" style="flex:1;font-size:11px;padding:5px 8px" value="">
+      <button class="mbtn" onclick="saveWeatherZip()" style="white-space:nowrap">Update</button>
+    </div>
+    <div style="font-size:9px;color:var(--text2);margin-top:4px">Default: Boulder CO (80301)</div>
   </div>
   <div class="theme-section">
     <div class="theme-label">Custom accent</div>
@@ -4431,7 +4464,7 @@ let synthWave = 'sine', synthOct = 4;
 const activeNotes = {};
 
 /* ---- flyout toggle ---- */
-let _synthInited = false;
+let _synthInited = false, _fxInited = false, _bassInited = false, _sfxInited = false;
 function toggleSynthFlyout() {
   const fl = document.getElementById('synth-flyout');
   const btn = document.getElementById('synth-btn');
@@ -4451,10 +4484,13 @@ function toggleSynthFlyout() {
 }
 
 function switchSynthTab(tab) {
-  ['synth','drums'].forEach(t => {
+  ['synth','drums','fx','bass','sfx'].forEach(t => {
     document.getElementById('spanel-'+t).classList.toggle('active', t===tab);
     document.getElementById('stab-'+t).classList.toggle('active', t===tab);
   });
+  if (tab==='fx' && !_fxInited) initFX();
+  if (tab==='bass' && !_bassInited) { _bassInited=true; buildBassKeys(); buildBassSeq(); }
+  if (tab==='sfx' && !_sfxInited) { _sfxInited=true; buildSFXPads(); }
 }
 
 /* ---- wave selector ---- */
@@ -4682,6 +4718,14 @@ function seqTick() {
     osc.start(); osc.stop(cx.currentTime + dur + 0.01);
   });
 
+  /* bass */
+  if (typeof bassSeqData !== 'undefined') {
+    bassSeqData.forEach((noteRow, ni) => {
+      if (!noteRow[seqStep]) return;
+      playBass(SEQ_NOTES[ni]);
+    });
+  }
+
   seqStep = (seqStep + 1) % SEQ_STEPS;
   _seqTimer = setTimeout(seqTick, seqInterval());
 }
@@ -4763,6 +4807,15 @@ function buildSynthSeq() {
   });
 }
 
+function clearSynthSeq() {
+  synthSeqData.forEach(row => row.fill(false));
+  document.querySelectorAll('#synth-seq .seq-step').forEach(b => b.classList.remove('on'));
+}
+function clearDrumSeq() {
+  drumSeqData.forEach(row => row.fill(false));
+  document.querySelectorAll('#drum-seq .seq-step').forEach(b => b.classList.remove('on'));
+}
+
 /* ---- keyboard control ---- */
 document.addEventListener('keydown', e => {
   if (!document.getElementById('synth-flyout').classList.contains('open')) return;
@@ -4797,6 +4850,183 @@ document.addEventListener('keyup', e => {
   const kEl = document.querySelector(`#synth-keys [data-note="${note}"]`);
   if (kEl) kEl.classList.remove('pressed');
 });
+
+/* ---- FX: Delay + Reverb ---- */
+let dlyNode=null, dlyFbk=null, dlyWet=null, revNode=null, revWet=null, dryNode=null;
+function initFX() {
+  if (_fxInited) return;
+  _fxInited = true;
+  initActx();
+  const cx = actx;
+  dryNode = cx.createGain(); dryNode.gain.value=1; dryNode.connect(cx.destination);
+  dlyNode = cx.createDelay(2); dlyNode.delayTime.value=0.375;
+  dlyFbk  = cx.createGain(); dlyFbk.gain.value=0.4;
+  dlyWet  = cx.createGain(); dlyWet.gain.value=0;
+  dlyNode.connect(dlyFbk); dlyFbk.connect(dlyNode); dlyNode.connect(dlyWet); dlyWet.connect(cx.destination);
+  revNode = cx.createConvolver();
+  revWet  = cx.createGain(); revWet.gain.value=0;
+  revNode.connect(revWet); revWet.connect(cx.destination);
+  rebuildReverb();
+  // re-route filter output through FX bus
+  filterNode.disconnect(); filterNode.connect(dryNode); filterNode.connect(dlyNode); filterNode.connect(revNode);
+}
+function rebuildReverb() {
+  if (!revNode||!actx) return;
+  const cx=actx, dur=parseFloat(document.getElementById('rev-size-sl')?.value||2);
+  const len=Math.round(cx.sampleRate*dur), buf=cx.createBuffer(2,len,cx.sampleRate);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);}
+  revNode.buffer=buf;
+}
+function updateFX() {
+  if(!dlyWet||!actx) return;
+  const t=actx.currentTime;
+  const dw=parseFloat(document.getElementById('dly-sl')?.value||0);
+  const dt=parseFloat(document.getElementById('dly-time-sl')?.value||0.375);
+  const df=parseFloat(document.getElementById('dly-fbk-sl')?.value||0.4);
+  const rw=parseFloat(document.getElementById('rev-sl')?.value||0);
+  dlyWet.gain.setTargetAtTime(dw,t,0.01);
+  dlyNode.delayTime.setTargetAtTime(dt,t,0.01);
+  dlyFbk.gain.setTargetAtTime(df,t,0.01);
+  revWet.gain.setTargetAtTime(rw,t,0.01);
+  if(dryNode) dryNode.gain.setTargetAtTime(1-rw*0.4,t,0.01);
+}
+
+/* ---- Bass synth ---- */
+let bassWave='square', bassOct=2;
+const bassNotes = [
+  {n:'C',b:false,wi:0},{n:'C#',b:true,wi:0},{n:'D',b:false,wi:1},{n:'D#',b:true,wi:1},
+  {n:'E',b:false,wi:2},{n:'F',b:false,wi:3},{n:'F#',b:true,wi:3},{n:'G',b:false,wi:4},
+  {n:'G#',b:true,wi:4},{n:'A',b:false,wi:5},{n:'A#',b:true,wi:5},{n:'B',b:false,wi:6},
+];
+const BASS_KB = {'z':'C','x':'D','c':'E','v':'F','b':'G','n':'A','m':'B'};
+
+function setBassWave(w) {
+  bassWave=w;
+  ['sawtooth','square','triangle'].forEach(x=>document.getElementById('bwb-'+x)?.classList.toggle('sel',x===w));
+}
+function shiftBassOct(d) { bassOct=Math.max(0,Math.min(4,bassOct+d)); document.getElementById('bass-oct-disp').textContent=bassOct; }
+
+function playBass(note) {
+  const cx=initActx(), freq=noteFreq(note,bassOct);
+  const osc=cx.createOscillator(), g=cx.createGain();
+  osc.type=bassWave; osc.frequency.value=freq;
+  const dec=parseFloat(document.getElementById('bass-dec-sl')?.value||0.4);
+  g.gain.setValueAtTime(0.35,cx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+dec);
+  osc.connect(g); g.connect(synthDest());
+  osc.start(); osc.stop(cx.currentTime+dec+0.02);
+  const k=document.querySelector(`#bass-keys [data-note="${note}"]`);
+  if(k){k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),100);}
+}
+
+function buildBassKeys() {
+  const wrap=document.getElementById('bass-keys');
+  if(wrap.dataset.built)return; wrap.dataset.built='1'; wrap.innerHTML='';
+  wrap.style.cssText='position:relative;height:60px;flex-shrink:0;margin-bottom:6px;border:1.5px solid rgba(0,80,160,0.15);border-radius:6px;overflow:visible;box-shadow:0 3px 10px rgba(0,80,160,0.1)';
+  const wFrac=100/7;
+  bassNotes.forEach(k=>{
+    const div=document.createElement('div');
+    div.dataset.note=k.n;
+    if(!k.b){
+      div.className='skey-w'; div.style.left=(k.wi*wFrac)+'%'; div.style.width=wFrac+'%';
+    } else {
+      div.className='skey-b'; div.style.left=((k.wi*100+70)/7)+'%'; div.style.width=(wFrac*0.6)+'%';
+    }
+    div.addEventListener('pointerdown',e=>{e.preventDefault();playBass(k.n);});
+    wrap.appendChild(div);
+  });
+}
+
+const bassSeqData=Array.from({length:12},()=>new Array(SEQ_STEPS).fill(false));
+function buildBassSeq() {
+  const el=document.getElementById('bass-seq');
+  if(el.dataset.built)return; el.dataset.built='1';
+  SEQ_NOTES.forEach((note,ni)=>{
+    const isBlack=note.includes('#');
+    const row=document.createElement('div'); row.className='seq-row';
+    const lbl=document.createElement('div'); lbl.className='seq-rlabel';
+    lbl.textContent=note;
+    lbl.style.background=isBlack?'rgba(20,30,60,0.12)':'rgba(0,80,200,0.06)';
+    lbl.style.color=isBlack?'rgba(0,100,200,0.6)':'var(--text2)';
+    row.appendChild(lbl);
+    for(let s=0;s<SEQ_STEPS;s++){
+      const btn=document.createElement('div');
+      btn.className='seq-step'+(s%4===0?' b4':''); btn.dataset.col=s;
+      btn.style.setProperty('--led-bg','rgba(0,140,80,0.55)');
+      btn.style.setProperty('--led-border','rgba(0,200,100,0.72)');
+      btn.style.setProperty('--led-glow','rgba(0,180,90,0.55)');
+      btn.addEventListener('pointerdown',e=>{
+        e.preventDefault();
+        bassSeqData[ni][s]=!bassSeqData[ni][s];
+        btn.classList.toggle('on',bassSeqData[ni][s]);
+      });
+      row.appendChild(btn);
+    }
+    el.appendChild(row);
+  });
+}
+
+/* ---- SFX pads ---- */
+const SFX_PADS=[
+  {name:'Laser',   color:'#2980b9', key:'q', fn:sfxLaser},
+  {name:'Powerup', color:'#8e44ad', key:'w', fn:sfxPowerup},
+  {name:'Coin',    color:'#f39c12', key:'e', fn:sfxCoin},
+  {name:'Explode', color:'#c0392b', key:'r', fn:sfxExplode},
+  {name:'Jump',    color:'#27ae60', key:'t', fn:sfxJump},
+  {name:'Win',     color:'#16a085', key:'y', fn:sfxWin},
+  {name:'Zap',     color:'#2c3e50', key:'u', fn:sfxZap},
+  {name:'Woosh',   color:'#7f8c8d', key:'i', fn:sfxWoosh},
+];
+
+function sfxLaser(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='sawtooth';osc.frequency.setValueAtTime(1400,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(200,cx.currentTime+0.25);g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.25);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.26);}
+function sfxPowerup(){const cx=initActx();[0,0.1,0.2,0.3].forEach((d,i)=>{const osc=cx.createOscillator(),g=cx.createGain();osc.type='square';osc.frequency.value=300+i*150;g.gain.setValueAtTime(0.2,cx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+d+0.12);osc.connect(g);g.connect(cx.destination);osc.start(cx.currentTime+d);osc.stop(cx.currentTime+d+0.13);});}
+function sfxCoin(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='sine';osc.frequency.setValueAtTime(1568,cx.currentTime);osc.frequency.setValueAtTime(2093,cx.currentTime+0.07);g.gain.setValueAtTime(0.35,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.22);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.23);}
+function sfxExplode(){const cx=initActx(),g=cx.createGain(),n=mkNoise(cx,0.5),flt=cx.createBiquadFilter();flt.type='lowpass';flt.frequency.value=400;g.gain.setValueAtTime(1.2,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.45);const osc=cx.createOscillator(),og=cx.createGain();osc.frequency.setValueAtTime(80,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.3);og.gain.setValueAtTime(0.9,cx.currentTime);og.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);osc.connect(og);og.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.31);n.connect(flt);flt.connect(g);g.connect(cx.destination);n.start();}
+function sfxJump(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='square';osc.frequency.setValueAtTime(300,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(800,cx.currentTime+0.15);g.gain.setValueAtTime(0.25,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.18);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.19);}
+function sfxWin(){const cx=initActx();[0,0.12,0.24,0.36].forEach((d,i)=>{const notes=[523,659,784,1047];const osc=cx.createOscillator(),g=cx.createGain();osc.type='sine';osc.frequency.value=notes[i];g.gain.setValueAtTime(0.25,cx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+d+0.18);osc.connect(g);g.connect(cx.destination);osc.start(cx.currentTime+d);osc.stop(cx.currentTime+d+0.2);});}
+function sfxZap(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain(),flt=cx.createBiquadFilter();osc.type='sawtooth';flt.type='bandpass';flt.frequency.value=800;flt.Q.value=3;osc.frequency.setValueAtTime(600,cx.currentTime);osc.frequency.setValueAtTime(200,cx.currentTime+0.04);osc.frequency.setValueAtTime(800,cx.currentTime+0.08);g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.15);osc.connect(flt);flt.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.16);}
+function sfxWoosh(){const cx=initActx(),g=cx.createGain(),n=mkNoise(cx,0.35),flt=cx.createBiquadFilter();flt.type='bandpass';flt.frequency.setValueAtTime(800,cx.currentTime);flt.frequency.exponentialRampToValueAtTime(200,cx.currentTime+0.3);flt.Q.value=2;g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);n.connect(flt);flt.connect(g);g.connect(cx.destination);n.start();}
+
+function buildSFXPads() {
+  const grid=document.getElementById('sfx-grid');
+  if(grid.dataset.built)return; grid.dataset.built='1';
+  grid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:calc(100% - 0px)';
+  SFX_PADS.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='dpad';
+    div.style.background=`linear-gradient(175deg,${p.color}cc,${p.color}88)`;
+    div.style.borderColor=p.color+'aa';
+    div.innerHTML=`<span class="dp-name">${p.name}</span><span class="dp-key">[${p.key.toUpperCase()}]</span>`;
+    div.addEventListener('pointerdown',e=>{e.preventDefault();hitDrum(div,p.fn);});
+    grid.appendChild(div);
+  });
+}
+
+/* ── WEATHER WIDGET ─────────────────────────────────── */
+const WX_CODES = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'🌨️',80:'🌧️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WX_ZIP_KEY = 'aq_wx_zip';
+let _wxZip = localStorage.getItem(WX_ZIP_KEY) || '80301';
+
+async function fetchWeather() {
+  try {
+    const zip = _wxZip;
+    const geo = await fetch(`https://api.zippopotam.us/us/${zip}`).then(r=>r.ok?r.json():null);
+    const lat = geo ? parseFloat(geo.places[0].latitude)  :  40.015;
+    const lon = geo ? parseFloat(geo.places[0].longitude) : -105.270;
+    const city = geo ? geo.places[0]['place name'] : 'Boulder';
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`).then(r=>r.json());
+    const cw = wx.current_weather;
+    document.getElementById('wx-icon').textContent = WX_CODES[cw.weathercode] || '🌡️';
+    document.getElementById('wx-temp').textContent = Math.round(cw.temperature) + '°F';
+    document.getElementById('wx-city').textContent = city;
+  } catch(e) { document.getElementById('wx-temp').textContent = '--°F'; }
+}
+function saveWeatherZip() {
+  const v = (document.getElementById('wx-zip-inp')?.value||'').trim();
+  if (v) { _wxZip = v; localStorage.setItem(WX_ZIP_KEY, v); }
+  fetchWeather();
+}
+setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=_wxZip; fetchWeather(); }, 900);
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
@@ -5230,6 +5460,9 @@ document.addEventListener('keydown', e => {
   <div class="sf-tabs">
     <button class="sf-tab active" id="stab-synth"  onclick="switchSynthTab('synth')">🎹 Synth</button>
     <button class="sf-tab"        id="stab-drums"  onclick="switchSynthTab('drums')">🥁 Drums</button>
+    <button class="sf-tab"        id="stab-fx"     onclick="switchSynthTab('fx')">🎛️ FX</button>
+    <button class="sf-tab"        id="stab-bass"   onclick="switchSynthTab('bass')">🎸 Bass</button>
+    <button class="sf-tab"        id="stab-sfx"    onclick="switchSynthTab('sfx')">🔊 SFX</button>
   </div>
 
   <!-- SYNTH PANEL -->
@@ -5270,7 +5503,7 @@ document.addEventListener('keydown', e => {
     </div>
     <div id="synth-keys"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Piano Roll</span><span style="opacity:.6">16 steps · 1 octave</span></div>
+      <div class="seq-hdr"><span>Piano Roll</span><button onclick="clearSynthSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div>
       <div class="seq-grid" id="synth-seq"></div>
     </div>
   </div>
@@ -5279,11 +5512,154 @@ document.addEventListener('keydown', e => {
   <div class="sf-panel" id="spanel-drums">
     <div id="drum-grid"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Step Sequencer</span><span style="opacity:.6">Keys 1–8 to play</span></div>
+      <div class="seq-hdr"><span>Step Sequencer</span><button onclick="clearDrumSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div>
       <div class="seq-grid" id="drum-seq"></div>
     </div>
   </div>
 
+  <!-- FX PANEL -->
+  <div class="sf-panel" id="spanel-fx">
+    <div class="sc-row" style="margin-bottom:12px">
+      <div class="sc-group"><span class="sc-label">Reverb Mix</span><input class="sc-range" id="rev-sl" type="range" min="0" max="0.9" step="0.01" value="0" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Room Size</span><input class="sc-range" id="rev-size-sl" type="range" min="0.5" max="6" step="0.1" value="2" oninput="rebuildReverb()"></div>
+      <div class="sc-group"><span class="sc-label">Delay Mix</span><input class="sc-range" id="dly-sl" type="range" min="0" max="0.9" step="0.01" value="0" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Dly Time</span><input class="sc-range" id="dly-time-sl" type="range" min="0.05" max="1" step="0.01" value="0.375" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Feedback</span><input class="sc-range" id="dly-fbk-sl" type="range" min="0" max="0.92" step="0.01" value="0.4" oninput="updateFX()"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9px;color:var(--text2);font-weight:700">SIGNAL CHAIN:</span>
+      <span style="font-size:9px;padding:3px 8px;background:var(--accent);color:#fff;border-radius:10px">OSC</span>
+      <span style="font-size:9px;color:var(--text2)">→</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">FILTER</span>
+      <span style="font-size:9px;color:var(--text2)">→</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">DELAY</span>
+      <span style="font-size:9px;color:var(--text2)">+</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">REVERB</span>
+      <span style="font-size:9px;color:var(--text2)">→ OUT</span>
+    </div>
+  </div>
+
+  <!-- BASS PANEL -->
+  <div class="sf-panel" id="spanel-bass">
+    <div class="sc-row">
+      <div class="sc-group">
+        <span class="sc-label">Wave</span>
+        <button class="wbtn" id="bwb-sawtooth" onclick="setBassWave('sawtooth')">Saw</button>
+        <button class="wbtn sel" id="bwb-square" onclick="setBassWave('square')">Square</button>
+        <button class="wbtn" id="bwb-triangle" onclick="setBassWave('triangle')">Tri</button>
+      </div>
+      <div class="sc-group">
+        <span class="sc-label">Oct</span>
+        <button class="wbtn" onclick="shiftBassOct(-1)">−</button>
+        <span id="bass-oct-disp" style="color:var(--accent);font-size:11px;min-width:14px;text-align:center;font-weight:700">2</span>
+        <button class="wbtn" onclick="shiftBassOct(1)">+</button>
+      </div>
+      <div class="sc-group"><span class="sc-label">Decay</span><input class="sc-range" id="bass-dec-sl" type="range" min="0.05" max="1.5" step="0.01" value="0.4"></div>
+      <span style="color:rgba(0,80,180,0.45);font-size:8px;margin-left:auto">Z X C V B N M</span>
+    </div>
+    <div id="bass-keys"></div>
+    <div class="seq-section" style="margin-top:6px">
+      <div class="seq-hdr">
+        <span>Bass Sequencer</span>
+        <span style="opacity:.6">1 note per step · pitch = row</span>
+      </div>
+      <div class="seq-grid" id="bass-seq"></div>
+    </div>
+  </div>
+
+  <!-- SFX PANEL -->
+  <div class="sf-panel" id="spanel-sfx">
+    <div id="sfx-grid"></div>
+  </div>
+
 </div>
+
+<script>
+/* ── WATER BACKGROUND ───────────────────────────────────── */
+(function(){
+  const cv = document.getElementById('wc');
+  const ctx = cv.getContext('2d');
+  const SCALE = 5;
+  let W=0,H=0,buf1,buf2,idat,mx=-1,my=-1,lastRipple=0;
+
+  function resize(){
+    W=Math.ceil(window.innerWidth/SCALE);
+    H=Math.ceil(window.innerHeight/SCALE);
+    cv.width=W; cv.height=H;
+    cv.style.width=window.innerWidth+'px';
+    cv.style.height=window.innerHeight+'px';
+    buf1=new Float32Array(W*H);
+    buf2=new Float32Array(W*H);
+    idat=ctx.createImageData(W,H);
+  }
+  window.addEventListener('resize',resize); resize();
+
+  function disturb(sx,sy,r,s){
+    const gx=Math.round(sx/SCALE), gy=Math.round(sy/SCALE);
+    for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<=r){const nx=gx+dx,ny=gy+dy;if(nx>0&&nx<W-1&&ny>0&&ny<H-1)buf1[ny*W+nx]+=s*(1-d/r);}
+    }
+  }
+
+  document.addEventListener('mousemove',e=>{
+    const now=Date.now();
+    if(now-lastRipple<40)return;
+    lastRipple=now; mx=e.clientX; my=e.clientY;
+    disturb(e.clientX,e.clientY,3,120);
+  });
+
+  function step(){
+    const D=0.988;
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      const i=y*W+x;
+      const v=(buf1[i-1]+buf1[i+1]+buf1[i-W]+buf1[i+W])*0.5-buf2[i];
+      buf2[i]=v*D;
+    }
+    const t=buf1; buf1=buf2; buf2=t;
+  }
+
+  function render(){
+    const d=idat.data;
+    for(let y=0;y<H;y++){
+      const t=y/H;
+      // base sky-to-deep-water gradient
+      const br=Math.round(100+t*(-30)), bg=Math.round(190-t*60), bb=Math.round(235-t*40);
+      for(let x=0;x<W;x++){
+        const i=y*W+x;
+        const h=buf1[i];
+        const nx=x<W-1?buf1[i+1]-h:0;
+        const ny=y<H-1?buf1[i+W]-h:0;
+        const lit=1+nx*0.22+ny*0.14;
+        const pi=i*4;
+        d[pi  ]=Math.max(0,Math.min(255,Math.round(br*lit+nx*35)));
+        d[pi+1]=Math.max(0,Math.min(255,Math.round(bg*lit+ny*18)));
+        d[pi+2]=Math.max(0,Math.min(255,Math.round(bb*lit+h*0.15)));
+        d[pi+3]=255;
+      }
+    }
+    ctx.putImageData(idat,0,0);
+  }
+
+  // passive wave sources - add gentle background chop
+  let wt=0;
+  function addAmbient(){
+    wt+=0.04;
+    const pts=[[0.2,0.3],[0.7,0.15],[0.5,0.8],[0.85,0.55]];
+    pts.forEach(([fx,fy],i)=>{
+      const amp=Math.sin(wt+i*1.7)*60;
+      if(Math.abs(amp)>10) disturb(fx*window.innerWidth,fy*window.innerHeight,2,amp);
+    });
+  }
+
+  function loop(){
+    addAmbient();
+    step(); step();
+    render();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
 </body>
 </html>

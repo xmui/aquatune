@@ -38,6 +38,10 @@
       background-size: 28px 28px;
       mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
     }
+    #wc {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  image-rendering:pixelated;
+}
     .orb { position:absolute; border-radius:50%; }
     /* Large white glowing orb — top-left */
     .o1 { width:700px;height:700px;
@@ -124,6 +128,16 @@
     #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
     .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
     #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
+    #weather {
+  display:flex; align-items:center; gap:5px; flex-shrink:0; cursor:pointer;
+  padding:3px 9px; border-radius:12px;
+  background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35);
+  transition:background .15s;
+}
+#weather:hover { background:rgba(255,255,255,0.28); }
+#wx-icon { font-size:16px; line-height:1; }
+#wx-temp { font-size:12px; font-weight:700; color:#fff; }
+#wx-city { font-size:9px; color:rgba(255,255,255,0.75); max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     #auth-area { display:flex;align-items:center;gap:8px;flex-shrink:0; }
     #gear-btn, #kbd-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
@@ -155,7 +169,8 @@
 
     /* ── PANEL BASE ─────────────────────────────────────── */
     .panel {
-      background: linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(228,248,255,0.90) 100%);
+      background: linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(215,240,255,0.62) 100%);
+      backdrop-filter: blur(18px) saturate(1.3);
       border: 1.5px solid rgba(100,210,245,0.42);
       border-radius: var(--r);
       box-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.2);
@@ -359,7 +374,8 @@
     /* controls */
     #ctrl-bubble {
       flex-shrink:0; padding:12px 16px 14px;
-      background: linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(228,248,255,0.90) 100%);
+      background: linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(228,248,255,0.90) 100%);
+      backdrop-filter: blur(18px) saturate(1.3);
       border: 1.5px solid rgba(100,210,245,0.42);
       border-radius:var(--r);
       box-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.18);
@@ -493,7 +509,7 @@
       #player-bubble { max-height:calc(100vh - 170px); }
     }
 
-    /* ── SYNTH FLYOUT ──────────────────────────────────────── */
+    /* ── SYNTH FLYOUT — Frutiger Aero / 2000s Nintendo glass ─── */
     #synth-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;
@@ -503,6 +519,226 @@
     }
     #synth-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
     #synth-btn.active { background:rgba(255,255,255,0.32);border-color:rgba(255,255,255,0.75); }
+
+    #synth-flyout {
+      position:fixed; left:50%; bottom:-498px; transform:translateX(-50%);
+      width:min(860px, 96vw); height:480px;
+      /* frosted glass Aero panel */
+      background:linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(218,238,255,0.94) 100%);
+      backdrop-filter:blur(28px) saturate(1.5);
+      border:1.5px solid rgba(255,255,255,0.82); border-bottom:none;
+      border-top:2px solid rgba(255,255,255,0.95);
+      border-radius:18px 18px 0 0;
+      box-shadow:0 -14px 60px rgba(0,50,150,0.22), 0 -3px 14px rgba(0,80,200,0.12),
+                 inset 0 1px 0 rgba(255,255,255,0.95);
+      z-index:450; transition:bottom .34s cubic-bezier(.22,1,.36,1);
+      display:flex; flex-direction:column; overflow:hidden;
+    }
+    #synth-flyout.open { bottom:0; }
+
+    /* Header bar — accent-colored Aero chrome */
+    .sf-header {
+      display:flex; align-items:center; gap:10px; padding:0 16px; height:42px; flex-shrink:0;
+      background:linear-gradient(180deg, var(--accent) 0%, var(--accent) 100%);
+      position:relative; overflow:hidden;
+      border-radius:18px 18px 0 0;
+    }
+    .sf-header::after {
+      content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%,rgba(255,255,255,0) 100%);
+      border-radius:18px 18px 0 0;
+    }
+    .sf-brand {
+      font-size:10px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
+      color:rgba(255,255,255,0.92); text-shadow:0 1px 3px rgba(0,0,0,0.25); white-space:nowrap; z-index:1;
+    }
+    .sf-drag { flex:1; display:flex; align-items:center; justify-content:center; cursor:ns-resize; padding:0 12px; z-index:1; }
+    .sf-drag-bar { width:38px; height:3px; background:rgba(255,255,255,0.4); border-radius:2px; }
+    .sf-transport { display:flex; align-items:center; gap:5px; flex-shrink:0; z-index:1; }
+
+    /* Transport buttons on accent header */
+    .t-btn {
+      height:25px; padding:0 11px; border-radius:14px; font-size:9px; font-weight:800;
+      letter-spacing:.5px; text-transform:uppercase; cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.75) 100%);
+      border:1.5px solid rgba(255,255,255,0.7);
+      color:var(--accent);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 4px rgba(0,0,0,0.15);
+      transition:all .1s;
+    }
+    .t-btn:hover { background:rgba(255,255,255,0.96); }
+    .t-btn.active {
+      background:linear-gradient(180deg,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.12) 100%);
+      color:rgba(255,255,255,0.9); border-color:rgba(255,255,255,0.45);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.12);
+    }
+    .bpm-inp {
+      width:40px; height:25px; border-radius:8px; font-size:11px; font-weight:700;
+      font-family:monospace; text-align:center; outline:none;
+      background:rgba(255,255,255,0.25); border:1.5px solid rgba(255,255,255,0.5);
+      color:#fff; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .bpm-lbl { font-size:8px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:rgba(255,255,255,0.7); z-index:1; }
+
+    /* Tabs */
+    .sf-tabs { display:flex; flex-shrink:0; background:rgba(255,255,255,0.6); border-bottom:1.5px solid rgba(0,0,0,0.06); }
+    .sf-tab {
+      flex:1; height:30px; border:none; background:transparent;
+      border-bottom:2.5px solid transparent;
+      color:var(--text2); font-size:10.5px; font-weight:700; letter-spacing:.4px;
+      cursor:pointer; transition:all .14s;
+    }
+    .sf-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(255,255,255,0.65); }
+    .sf-tab:hover:not(.active) { background:rgba(255,255,255,0.4); color:var(--accent); }
+
+    .sf-panel { display:none; flex:1; flex-direction:column; overflow:hidden; padding:8px 14px 8px; }
+    .sf-panel.active { display:flex; }
+    #sfx-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; flex:1; }
+
+    /* Controls row */
+    .sc-row { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-bottom:7px; flex-wrap:wrap; }
+    .sc-group { display:flex; align-items:center; gap:5px; }
+    .sc-label { font-size:7.5px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--text2); }
+
+    /* Aero glossy pill buttons */
+    .wbtn {
+      padding:4px 10px; border-radius:12px; font-size:9px; font-weight:700; letter-spacing:.3px;
+      cursor:pointer; position:relative; overflow:hidden;
+      background:linear-gradient(180deg,rgba(255,255,255,0.95) 0%,rgba(218,238,255,0.88) 100%);
+      border:1.5px solid rgba(0,80,160,0.18);
+      color:var(--accent);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 3px rgba(0,50,150,0.1);
+      transition:all .1s;
+    }
+    .wbtn:hover { background:linear-gradient(180deg,#fff,rgba(200,228,255,0.95)); border-color:var(--accent); }
+    .wbtn.sel {
+      background:var(--accent);
+      border-color:var(--accent); color:#fff;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 6px rgba(0,80,160,0.25);
+    }
+    .wbtn.sel::after {
+      content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,rgba(255,255,255,0) 100%);
+      border-radius:11px 11px 0 0;
+    }
+
+    /* Sliders — glossy thumb */
+    .sc-range {
+      -webkit-appearance:none; appearance:none; width:64px; height:5px; border-radius:4px;
+      background:linear-gradient(90deg,rgba(0,80,180,0.12),rgba(0,120,220,0.2));
+      outline:none; border:1px solid rgba(0,80,180,0.15);
+    }
+    .sc-range::-webkit-slider-thumb {
+      -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+      background:radial-gradient(circle at 35% 32%,#fff 0%,rgba(220,238,255,0.95) 40%,var(--accent) 100%);
+      border:2px solid rgba(255,255,255,0.9);
+      box-shadow:0 1px 5px rgba(0,80,200,0.3); cursor:pointer;
+    }
+
+    /* Piano keyboard — Aero gloss finish */
+    #synth-keys {
+      position:relative; height:88px; flex-shrink:0; margin-bottom:7px;
+      border-radius:8px; overflow:visible;
+      border:1.5px solid rgba(0,80,160,0.15);
+      box-shadow:0 4px 14px rgba(0,80,160,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+    .skey-w {
+      position:absolute; top:0; height:100%;
+      background:linear-gradient(180deg,#fff 0%,#f0f5ff 65%,#e0ecff 100%);
+      border-right:1px solid rgba(100,140,200,0.22);
+      border-bottom:4px solid rgba(80,120,200,0.18);
+      cursor:pointer;
+      box-shadow:inset 1px 0 0 rgba(255,255,255,0.9), inset 0 -2px 0 rgba(0,0,0,0.05);
+      transition:background .05s;
+    }
+    /* Gloss overlay on each white key */
+    .skey-w::after {
+      content:''; position:absolute; inset:0; bottom:60%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0) 100%);
+    }
+    .skey-w:hover { background:linear-gradient(180deg,rgba(220,238,255,0.95),rgba(190,220,255,0.9)); }
+    .skey-w.pressed { background:linear-gradient(180deg,rgba(180,215,255,0.95),rgba(140,190,255,0.9)); box-shadow:inset 0 2px 6px rgba(0,80,200,0.2); }
+    .skey-b {
+      position:absolute; top:0; z-index:2; height:62%;
+      background:linear-gradient(180deg,#1a2540 0%,#0e1828 62%,#141f36 100%);
+      border-radius:0 0 5px 5px;
+      border:1px solid rgba(0,0,0,0.5); border-top:none;
+      box-shadow:2px 5px 10px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(0,0,0,0.3), inset 1px 0 0 rgba(255,255,255,0.06);
+      cursor:pointer; transition:background .05s;
+    }
+    .skey-b::after {
+      content:''; position:absolute; inset:0; bottom:70%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0) 100%);
+      border-radius:0 0 0 0;
+    }
+    .skey-b:hover { background:linear-gradient(180deg,#2c3f68,#162240); }
+    .skey-b.pressed { background:linear-gradient(180deg,#1a4080,#0d2050); }
+
+    /* Step sequencer — light Aero */
+    .seq-section { flex:1; display:flex; flex-direction:column; min-height:0; }
+    .seq-hdr {
+      display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+      font-size:8px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase;
+      color:var(--text2); margin-bottom:4px; padding:0 2px;
+    }
+    .seq-grid { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:2px; min-height:0; }
+    .seq-grid::-webkit-scrollbar { width:4px; }
+    .seq-grid::-webkit-scrollbar-thumb { background:rgba(0,80,200,0.2); border-radius:2px; }
+    .seq-row { display:grid; grid-template-columns:38px repeat(16,1fr); gap:2px; flex-shrink:0; }
+    .seq-rlabel {
+      display:flex; align-items:center; padding:0 5px; font-size:7.5px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.2px; border-radius:5px;
+      overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    }
+    .seq-step {
+      height:18px; border-radius:4px; cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(220,235,255,0.8));
+      border:1px solid rgba(0,80,180,0.14);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 2px rgba(0,40,120,0.06);
+      transition:background .05s, box-shadow .05s;
+    }
+    .seq-step.b4 { border-left-color:rgba(0,80,180,0.28); }
+    .seq-step.on {
+      background:var(--accent);
+      border-color:var(--accent);
+      box-shadow:0 0 5px rgba(0,120,220,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+      position:relative; overflow:hidden;
+    }
+    .seq-step.on::after {
+      content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0) 100%);
+    }
+    .seq-step.cur { outline:2px solid var(--accent) !important; outline-offset:-1px; z-index:1; }
+    .seq-step:hover:not(.on) { background:linear-gradient(180deg,rgba(200,228,255,0.95),rgba(175,215,255,0.9)); }
+
+    /* Drum pads — Aero rubber button style */
+    #drum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; height:96px; flex-shrink:0; margin-bottom:8px; }
+    .dpad {
+      border-radius:12px; cursor:pointer; user-select:none;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:2px; position:relative; overflow:hidden;
+      border:2px solid rgba(255,255,255,0.55);
+      box-shadow:0 5px 0 rgba(0,0,0,0.22), 0 7px 16px rgba(0,0,0,0.16),
+                 inset 0 1px 0 rgba(255,255,255,0.65);
+      transition:box-shadow .05s, transform .05s, filter .05s;
+    }
+    /* Aero top-half gloss */
+    .dpad::before {
+      content:''; position:absolute; inset:0; bottom:52%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.52) 0%,rgba(255,255,255,0) 100%);
+      border-radius:10px 10px 0 0;
+    }
+    .dpad:hover { filter:brightness(1.08); transform:translateY(-1px); }
+    .dpad.hit,.dpad:active {
+      transform:translateY(4px);
+      box-shadow:0 1px 0 rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.14),
+                 inset 0 1px 0 rgba(255,255,255,0.45);
+      filter:brightness(1.18);
+    }
+    .dp-name { font-size:9px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:#fff; z-index:1; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
+    .dp-key  { font-size:7.5px; font-weight:600; opacity:.65; z-index:1; color:#fff; }
+
+    /* ── /aq/ BOARD — MSN Messenger × 4chan ─────────────── */
 
     #synth-flyout {
       position:fixed; left:50%; bottom:-498px; transform:translateX(-50%);
@@ -972,6 +1208,7 @@
     .art-bio a { color:var(--accent); }
     .art-bio-more { background:none;border:none;color:var(--accent);font-size:10px;font-weight:700;cursor:pointer;padding:0 10px 8px;display:block; }
     .alb-init { font-size:22px;font-weight:800;color:var(--accent); }
+    .art-tracklist { margin:0 7px 8px;border:1px solid rgba(0,160,220,0.18);border-radius:10px;overflow:hidden;background:rgba(255,255,255,0.55); }
     .art-track { display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .12s; }
     .art-track:hover { background:rgba(0,180,220,0.07); }
     .art-track-num { font-size:9px;color:var(--text2);width:16px;text-align:right;flex-shrink:0; }
@@ -1430,6 +1667,7 @@
   </style>
 </head>
 <body>
+<canvas id="wc"></canvas>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
@@ -1446,6 +1684,13 @@
     </div>
     <div style="flex:1"></div>
     <span id="hdr-clock">12:00 PM</span>
+    <div id="weather" title="Click to refresh weather" onclick="fetchWeather()">
+      <span id="wx-icon">🌤️</span>
+      <div style="display:flex;flex-direction:column;gap:0">
+        <span id="wx-temp">--°F</span>
+        <span id="wx-city">Boulder</span>
+      </div>
+    </div>
     <div id="auth-area">
       <button id="board-btn" onclick="openBoard()" title="Suggestion board">/aq/</button>
       <button id="synth-btn" onclick="toggleSynthFlyout()" title="Synth &amp; Drum pad">🎹</button>
@@ -1615,6 +1860,14 @@
     <button class="theme-swatch" data-theme="sunset" onclick="selectTheme('sunset',this)">Sunset</button>
     <button class="theme-swatch" data-theme="forest" onclick="selectTheme('forest',this)">Forest</button>
     <button class="theme-swatch" data-theme="dark" onclick="selectTheme('dark',this)">Dark</button>
+  </div>
+  <div class="theme-section">
+    <div class="theme-label">Weather location</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input class="m-inp" id="wx-zip-inp" type="text" placeholder="ZIP code (e.g. 80301)" maxlength="10" style="flex:1;font-size:11px;padding:5px 8px" value="">
+      <button class="mbtn" onclick="saveWeatherZip()" style="white-space:nowrap">Update</button>
+    </div>
+    <div style="font-size:9px;color:var(--text2);margin-top:4px">Default: Boulder CO (80301)</div>
   </div>
   <div class="theme-section">
     <div class="theme-label">Custom accent</div>
@@ -2878,11 +3131,31 @@ async function discSelectAlbum(album) {
   renderDiscNav();
 
   const box = document.getElementById('related-list');
-  box.innerHTML = `<div class="empty">Searching YouTube for<br><strong>${esc(discState.artist?.name)} — ${esc(album.title)}</strong>…</div>`;
+  const artistName = discState.artist?.name || '';
+  box.innerHTML = `<div class="empty">Loading tracks for<br><strong>${esc(artistName)} — ${esc(album.title)}</strong>…</div>`;
 
+  // Try Last.fm album.getInfo for accurate tracklist first
   try {
-    const q = `${discState.artist?.name || ''} ${album.title} full album`;
-    discState.ytResults = (await freeSearch(q)).slice(0, 8);
+    const d = await lfmFetch('album.getInfo', { artist: artistName, album: album.title, autocorrect: 1 });
+    const raw = d?.album?.tracks?.track || [];
+    const tracks = Array.isArray(raw) ? raw : [raw]; // single-track albums come as object
+    if (tracks.length) {
+      discState.ytResults = tracks.map(t => ({ _isTrack: true, title: t.name, num: t['@attr']?.rank || '' }));
+      renderDiscView(); return;
+    }
+  } catch {}
+
+  // Fallback: search YouTube with specific "artist - album" query and filter for relevance
+  try {
+    const q = `${artistName} - ${album.title}`;
+    const raw = (await freeSearch(q)).slice(0, 12);
+    const lArtist = artistName.toLowerCase();
+    const albumWords = album.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const relevant = raw.filter(v => {
+      const t = v.title.toLowerCase();
+      return t.includes(lArtist) || albumWords.some(w => t.includes(w));
+    });
+    discState.ytResults = (relevant.length ? relevant : raw).slice(0, 8);
     renderDiscView();
   } catch { document.getElementById('related-list').innerHTML = '<div class="empty">YouTube search unavailable</div>'; }
 }
@@ -2955,11 +3228,37 @@ function renderDiscView() {
 
   if (discState.view === 'album-yt') {
     box.innerHTML = '';
-    if (!discState.ytResults?.length) { box.innerHTML = '<div class="empty">No YouTube results found</div>'; return; }
+    if (!discState.ytResults?.length) { box.innerHTML = '<div class="empty">No tracks found</div>'; return; }
     const hdr = document.createElement('span'); hdr.className = 'disc-sec';
-    hdr.textContent = `${discState.album?.title} on YouTube`;
+    const albumArtist = discState.artist?.name || '';
+    hdr.textContent = discState.ytResults[0]?._isTrack
+      ? `${discState.album?.title} — tracklist`
+      : `${discState.album?.title} on YouTube`;
     box.appendChild(hdr);
-    discState.ytResults.forEach(v => box.appendChild(makeResultItem(v)));
+    discState.ytResults.forEach((v, i) => {
+      if (v._isTrack) {
+        const row = document.createElement('div'); row.className = 'art-track';
+        row.innerHTML = `<span class="art-track-num">${esc(String(v.num || i + 1))}</span><div class="art-track-info"><div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.title)}</div></div>`;
+        row.onclick = async () => {
+          row.style.opacity = '0.5';
+          try {
+            const q = `${albumArtist} ${v.title}`;
+            const results = await freeSearch(q);
+            const lArtist = albumArtist.toLowerCase();
+            const titleWords = v.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            const found = results.find(r => {
+              const t = r.title.toLowerCase();
+              return (t.includes(lArtist) || titleWords.some(w => t.includes(w)));
+            }) || results[0];
+            if (found) playVideo(found); else toast('No YouTube result found');
+          } catch { toast('Search unavailable'); }
+          finally { row.style.opacity = ''; }
+        };
+        box.appendChild(row);
+      } else {
+        box.appendChild(makeResultItem(v));
+      }
+    });
   }
 }
 
@@ -3084,10 +3383,46 @@ async function fetchChannel() {
       card.onclick = async () => {
         card.style.opacity = '0.5';
         try {
-          const q = `${info?.name || artistName} ${album.name}`;
+          const d2 = await lfmFetch('album.getInfo', { artist: info?.name || artistName, album: album.name, autocorrect: 1 });
+          const raw2 = d2?.album?.tracks?.track || [];
+          const tracks2 = Array.isArray(raw2) ? raw2 : [raw2];
+          if (tracks2.length) {
+            // Inject tracklist below grid (replace existing tracklist if any)
+            const existingList = box.querySelector('.art-tracklist');
+            if (existingList) existingList.remove();
+            const tlist = document.createElement('div'); tlist.className = 'art-tracklist';
+            const tlHdr = document.createElement('span'); tlHdr.className = 'disc-sec';
+            tlHdr.textContent = album.name; tlist.appendChild(tlHdr);
+            tracks2.forEach((t2, ti) => {
+              const trow = document.createElement('div'); trow.className = 'art-track';
+              trow.innerHTML = `<span class="art-track-num">${t2['@attr']?.rank || ti+1}</span><div class="art-track-info"><div class="art-track-title">${esc(t2.name)}</div></div>`;
+              trow.onclick = async () => {
+                trow.style.opacity = '0.5';
+                try {
+                  const qr = `${info?.name || artistName} ${t2.name}`;
+                  const res = await freeSearch(qr);
+                  const lA = (info?.name || artistName).toLowerCase();
+                  const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+                  const fnd = res.find(r=>{ const rt=r.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || res[0];
+                  if (fnd) { playVideo(fnd); toast(`▶ ${t2.name}`); } else toast('No YouTube result found');
+                } catch { toast('Search unavailable'); }
+                finally { trow.style.opacity=''; }
+              };
+              tlist.appendChild(trow);
+            });
+            box.insertBefore(tlist, grid.nextSibling);
+            tlist.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            card.style.opacity = ''; return;
+          }
+        } catch {}
+        // Fallback: search YouTube for "artist - album" and filter for relevance
+        try {
+          const q = `${info?.name || artistName} - ${album.name}`;
           const results = await freeSearch(q);
-          const v = results.find(x => x.id);
-          if (v) { playVideo(v); toast(`Playing: ${album.name}`); } else toast('No YouTube result found');
+          const lA = (info?.name || artistName).toLowerCase();
+          const aw = album.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
+          const fnd = results.find(r=>{ const t=r.title.toLowerCase(); return t.includes(lA)||aw.some(w=>t.includes(w)); }) || results[0];
+          if (fnd) { playVideo(fnd); toast(`Playing: ${album.name}`); } else toast('No YouTube result found');
         } catch { toast('Search unavailable'); }
         card.style.opacity = '';
       };
@@ -3716,10 +4051,10 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
       setTimeout(() => { propEl.remove(); propActive = false; }, 350);
     }, prop.dur - 400);
   }
-  // Random prop every 3–8 min, 45% chance
+  // Random prop every 40–90 sec, 70% chance — actually show it
   setInterval(() => {
-    if (buddyEnabled && playing && Math.random() < 0.45) doRandomProp();
-  }, 3 * 60 * 1000 + Math.random() * 5 * 60 * 1000);
+    if (buddyEnabled && Math.random() < 0.70) doRandomProp();
+  }, 40000 + Math.random() * 50000);
 
   // ── Idle animation cycling ─────────────────────────────
   const IDLE_ANIMS = ['', 'ab-idle-bounce', 'ab-idle-sway', 'ab-idle-dance', 'ab-idle-pulse', 'ab-idle-spin'];
@@ -4065,6 +4400,28 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
     buddyDead = true;
     buddy.style.cursor = '';
 
+    // Gunshot sound
+    try {
+      const scx = new (window.AudioContext||window.webkitAudioContext)();
+      const mkN = (dur) => { const b=scx.createBuffer(1,Math.ceil(scx.sampleRate*dur),scx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;const s=scx.createBufferSource();s.buffer=b;return s; };
+      // crack
+      const ng1=scx.createGain(),n1=mkN(0.06),flt=scx.createBiquadFilter();
+      flt.type='bandpass';flt.frequency.value=2200;flt.Q.value=0.4;
+      ng1.gain.setValueAtTime(2.2,scx.currentTime);ng1.gain.exponentialRampToValueAtTime(0.001,scx.currentTime+0.055);
+      n1.connect(flt);flt.connect(ng1);ng1.connect(scx.destination);n1.start();
+      // boom
+      const osc=scx.createOscillator(),og=scx.createGain();
+      osc.frequency.setValueAtTime(95,scx.currentTime);osc.frequency.exponentialRampToValueAtTime(0.01,scx.currentTime+0.28);
+      og.gain.setValueAtTime(1.4,scx.currentTime);og.gain.exponentialRampToValueAtTime(0.001,scx.currentTime+0.28);
+      osc.connect(og);og.connect(scx.destination);osc.start();osc.stop(scx.currentTime+0.3);
+      // body thump
+      const ng2=scx.createGain(),n2=mkN(0.12),flt2=scx.createBiquadFilter();
+      flt2.type='lowpass';flt2.frequency.value=280;
+      ng2.gain.setValueAtTime(0.9,scx.currentTime);ng2.gain.exponentialRampToValueAtTime(0.001,scx.currentTime+0.1);
+      n2.connect(flt2);flt2.connect(ng2);ng2.connect(scx.destination);n2.start();
+      setTimeout(()=>scx.close(),600);
+    } catch(e){}
+
     // Muzzle flash
     flash.setAttribute('opacity', '1');
     setTimeout(() => flash.setAttribute('opacity', '0'), 90);
@@ -4092,7 +4449,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
     hs.textContent = 'HEADSHOT!!1';
     hs.style.cssText = `left:${Math.max(4, cx - 88)}px;top:${Math.max(4, cy - 72)}px`;
     document.body.appendChild(hs);
-    setTimeout(() => hs.remove(), 1600);
+    setTimeout(() => hs.remove(), 4500);
 
     // Kill hint
     const hint = document.createElement('div');
@@ -4100,7 +4457,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
     hint.textContent = '🔫 u killed aqua buddy lol';
     hint.style.cssText = `left:${Math.max(4, cx - 100)}px;top:${cy + 24}px`;
     document.body.appendChild(hint);
-    setTimeout(() => hint.remove(), 2800);
+    setTimeout(() => hint.remove(), 6000);
 
     // Death animation
     buddy.classList.remove('ab-talk', 'ab-drag');
@@ -4190,7 +4547,7 @@ let synthWave = 'sine', synthOct = 4;
 const activeNotes = {};
 
 /* ---- flyout toggle ---- */
-let _synthInited = false;
+let _synthInited = false, _fxInited = false, _bassInited = false, _sfxInited = false;
 function toggleSynthFlyout() {
   const fl = document.getElementById('synth-flyout');
   const btn = document.getElementById('synth-btn');
@@ -4210,10 +4567,13 @@ function toggleSynthFlyout() {
 }
 
 function switchSynthTab(tab) {
-  ['synth','drums'].forEach(t => {
+  ['synth','drums','fx','bass','sfx'].forEach(t => {
     document.getElementById('spanel-'+t).classList.toggle('active', t===tab);
     document.getElementById('stab-'+t).classList.toggle('active', t===tab);
   });
+  if (tab==='fx' && !_fxInited) initFX();
+  if (tab==='bass' && !_bassInited) { _bassInited=true; buildBassKeys(); buildBassSeq(); }
+  if (tab==='sfx' && !_sfxInited) { _sfxInited=true; buildSFXPads(); }
 }
 
 /* ---- wave selector ---- */
@@ -4441,6 +4801,14 @@ function seqTick() {
     osc.start(); osc.stop(cx.currentTime + dur + 0.01);
   });
 
+  /* bass */
+  if (typeof bassSeqData !== 'undefined') {
+    bassSeqData.forEach((noteRow, ni) => {
+      if (!noteRow[seqStep]) return;
+      playBass(SEQ_NOTES[ni]);
+    });
+  }
+
   seqStep = (seqStep + 1) % SEQ_STEPS;
   _seqTimer = setTimeout(seqTick, seqInterval());
 }
@@ -4522,6 +4890,15 @@ function buildSynthSeq() {
   });
 }
 
+function clearSynthSeq() {
+  synthSeqData.forEach(row => row.fill(false));
+  document.querySelectorAll('#synth-seq .seq-step').forEach(b => b.classList.remove('on'));
+}
+function clearDrumSeq() {
+  drumSeqData.forEach(row => row.fill(false));
+  document.querySelectorAll('#drum-seq .seq-step').forEach(b => b.classList.remove('on'));
+}
+
 /* ---- keyboard control ---- */
 document.addEventListener('keydown', e => {
   if (!document.getElementById('synth-flyout').classList.contains('open')) return;
@@ -4556,6 +4933,183 @@ document.addEventListener('keyup', e => {
   const kEl = document.querySelector(`#synth-keys [data-note="${note}"]`);
   if (kEl) kEl.classList.remove('pressed');
 });
+
+/* ---- FX: Delay + Reverb ---- */
+let dlyNode=null, dlyFbk=null, dlyWet=null, revNode=null, revWet=null, dryNode=null;
+function initFX() {
+  if (_fxInited) return;
+  _fxInited = true;
+  initActx();
+  const cx = actx;
+  dryNode = cx.createGain(); dryNode.gain.value=1; dryNode.connect(cx.destination);
+  dlyNode = cx.createDelay(2); dlyNode.delayTime.value=0.375;
+  dlyFbk  = cx.createGain(); dlyFbk.gain.value=0.4;
+  dlyWet  = cx.createGain(); dlyWet.gain.value=0;
+  dlyNode.connect(dlyFbk); dlyFbk.connect(dlyNode); dlyNode.connect(dlyWet); dlyWet.connect(cx.destination);
+  revNode = cx.createConvolver();
+  revWet  = cx.createGain(); revWet.gain.value=0;
+  revNode.connect(revWet); revWet.connect(cx.destination);
+  rebuildReverb();
+  // re-route filter output through FX bus
+  filterNode.disconnect(); filterNode.connect(dryNode); filterNode.connect(dlyNode); filterNode.connect(revNode);
+}
+function rebuildReverb() {
+  if (!revNode||!actx) return;
+  const cx=actx, dur=parseFloat(document.getElementById('rev-size-sl')?.value||2);
+  const len=Math.round(cx.sampleRate*dur), buf=cx.createBuffer(2,len,cx.sampleRate);
+  for(let c=0;c<2;c++){const d=buf.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);}
+  revNode.buffer=buf;
+}
+function updateFX() {
+  if(!dlyWet||!actx) return;
+  const t=actx.currentTime;
+  const dw=parseFloat(document.getElementById('dly-sl')?.value||0);
+  const dt=parseFloat(document.getElementById('dly-time-sl')?.value||0.375);
+  const df=parseFloat(document.getElementById('dly-fbk-sl')?.value||0.4);
+  const rw=parseFloat(document.getElementById('rev-sl')?.value||0);
+  dlyWet.gain.setTargetAtTime(dw,t,0.01);
+  dlyNode.delayTime.setTargetAtTime(dt,t,0.01);
+  dlyFbk.gain.setTargetAtTime(df,t,0.01);
+  revWet.gain.setTargetAtTime(rw,t,0.01);
+  if(dryNode) dryNode.gain.setTargetAtTime(1-rw*0.4,t,0.01);
+}
+
+/* ---- Bass synth ---- */
+let bassWave='square', bassOct=2;
+const bassNotes = [
+  {n:'C',b:false,wi:0},{n:'C#',b:true,wi:0},{n:'D',b:false,wi:1},{n:'D#',b:true,wi:1},
+  {n:'E',b:false,wi:2},{n:'F',b:false,wi:3},{n:'F#',b:true,wi:3},{n:'G',b:false,wi:4},
+  {n:'G#',b:true,wi:4},{n:'A',b:false,wi:5},{n:'A#',b:true,wi:5},{n:'B',b:false,wi:6},
+];
+const BASS_KB = {'z':'C','x':'D','c':'E','v':'F','b':'G','n':'A','m':'B'};
+
+function setBassWave(w) {
+  bassWave=w;
+  ['sawtooth','square','triangle'].forEach(x=>document.getElementById('bwb-'+x)?.classList.toggle('sel',x===w));
+}
+function shiftBassOct(d) { bassOct=Math.max(0,Math.min(4,bassOct+d)); document.getElementById('bass-oct-disp').textContent=bassOct; }
+
+function playBass(note) {
+  const cx=initActx(), freq=noteFreq(note,bassOct);
+  const osc=cx.createOscillator(), g=cx.createGain();
+  osc.type=bassWave; osc.frequency.value=freq;
+  const dec=parseFloat(document.getElementById('bass-dec-sl')?.value||0.4);
+  g.gain.setValueAtTime(0.35,cx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+dec);
+  osc.connect(g); g.connect(synthDest());
+  osc.start(); osc.stop(cx.currentTime+dec+0.02);
+  const k=document.querySelector(`#bass-keys [data-note="${note}"]`);
+  if(k){k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),100);}
+}
+
+function buildBassKeys() {
+  const wrap=document.getElementById('bass-keys');
+  if(wrap.dataset.built)return; wrap.dataset.built='1'; wrap.innerHTML='';
+  wrap.style.cssText='position:relative;height:60px;flex-shrink:0;margin-bottom:6px;border:1.5px solid rgba(0,80,160,0.15);border-radius:6px;overflow:visible;box-shadow:0 3px 10px rgba(0,80,160,0.1)';
+  const wFrac=100/7;
+  bassNotes.forEach(k=>{
+    const div=document.createElement('div');
+    div.dataset.note=k.n;
+    if(!k.b){
+      div.className='skey-w'; div.style.left=(k.wi*wFrac)+'%'; div.style.width=wFrac+'%';
+    } else {
+      div.className='skey-b'; div.style.left=((k.wi*100+70)/7)+'%'; div.style.width=(wFrac*0.6)+'%';
+    }
+    div.addEventListener('pointerdown',e=>{e.preventDefault();playBass(k.n);});
+    wrap.appendChild(div);
+  });
+}
+
+const bassSeqData=Array.from({length:12},()=>new Array(SEQ_STEPS).fill(false));
+function buildBassSeq() {
+  const el=document.getElementById('bass-seq');
+  if(el.dataset.built)return; el.dataset.built='1';
+  SEQ_NOTES.forEach((note,ni)=>{
+    const isBlack=note.includes('#');
+    const row=document.createElement('div'); row.className='seq-row';
+    const lbl=document.createElement('div'); lbl.className='seq-rlabel';
+    lbl.textContent=note;
+    lbl.style.background=isBlack?'rgba(20,30,60,0.12)':'rgba(0,80,200,0.06)';
+    lbl.style.color=isBlack?'rgba(0,100,200,0.6)':'var(--text2)';
+    row.appendChild(lbl);
+    for(let s=0;s<SEQ_STEPS;s++){
+      const btn=document.createElement('div');
+      btn.className='seq-step'+(s%4===0?' b4':''); btn.dataset.col=s;
+      btn.style.setProperty('--led-bg','rgba(0,140,80,0.55)');
+      btn.style.setProperty('--led-border','rgba(0,200,100,0.72)');
+      btn.style.setProperty('--led-glow','rgba(0,180,90,0.55)');
+      btn.addEventListener('pointerdown',e=>{
+        e.preventDefault();
+        bassSeqData[ni][s]=!bassSeqData[ni][s];
+        btn.classList.toggle('on',bassSeqData[ni][s]);
+      });
+      row.appendChild(btn);
+    }
+    el.appendChild(row);
+  });
+}
+
+/* ---- SFX pads ---- */
+const SFX_PADS=[
+  {name:'Laser',   color:'#2980b9', key:'q', fn:sfxLaser},
+  {name:'Powerup', color:'#8e44ad', key:'w', fn:sfxPowerup},
+  {name:'Coin',    color:'#f39c12', key:'e', fn:sfxCoin},
+  {name:'Explode', color:'#c0392b', key:'r', fn:sfxExplode},
+  {name:'Jump',    color:'#27ae60', key:'t', fn:sfxJump},
+  {name:'Win',     color:'#16a085', key:'y', fn:sfxWin},
+  {name:'Zap',     color:'#2c3e50', key:'u', fn:sfxZap},
+  {name:'Woosh',   color:'#7f8c8d', key:'i', fn:sfxWoosh},
+];
+
+function sfxLaser(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='sawtooth';osc.frequency.setValueAtTime(1400,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(200,cx.currentTime+0.25);g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.25);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.26);}
+function sfxPowerup(){const cx=initActx();[0,0.1,0.2,0.3].forEach((d,i)=>{const osc=cx.createOscillator(),g=cx.createGain();osc.type='square';osc.frequency.value=300+i*150;g.gain.setValueAtTime(0.2,cx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+d+0.12);osc.connect(g);g.connect(cx.destination);osc.start(cx.currentTime+d);osc.stop(cx.currentTime+d+0.13);});}
+function sfxCoin(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='sine';osc.frequency.setValueAtTime(1568,cx.currentTime);osc.frequency.setValueAtTime(2093,cx.currentTime+0.07);g.gain.setValueAtTime(0.35,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.22);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.23);}
+function sfxExplode(){const cx=initActx(),g=cx.createGain(),n=mkNoise(cx,0.5),flt=cx.createBiquadFilter();flt.type='lowpass';flt.frequency.value=400;g.gain.setValueAtTime(1.2,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.45);const osc=cx.createOscillator(),og=cx.createGain();osc.frequency.setValueAtTime(80,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.3);og.gain.setValueAtTime(0.9,cx.currentTime);og.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);osc.connect(og);og.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.31);n.connect(flt);flt.connect(g);g.connect(cx.destination);n.start();}
+function sfxJump(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain();osc.type='square';osc.frequency.setValueAtTime(300,cx.currentTime);osc.frequency.exponentialRampToValueAtTime(800,cx.currentTime+0.15);g.gain.setValueAtTime(0.25,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.18);osc.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.19);}
+function sfxWin(){const cx=initActx();[0,0.12,0.24,0.36].forEach((d,i)=>{const notes=[523,659,784,1047];const osc=cx.createOscillator(),g=cx.createGain();osc.type='sine';osc.frequency.value=notes[i];g.gain.setValueAtTime(0.25,cx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+d+0.18);osc.connect(g);g.connect(cx.destination);osc.start(cx.currentTime+d);osc.stop(cx.currentTime+d+0.2);});}
+function sfxZap(){const cx=initActx(),osc=cx.createOscillator(),g=cx.createGain(),flt=cx.createBiquadFilter();osc.type='sawtooth';flt.type='bandpass';flt.frequency.value=800;flt.Q.value=3;osc.frequency.setValueAtTime(600,cx.currentTime);osc.frequency.setValueAtTime(200,cx.currentTime+0.04);osc.frequency.setValueAtTime(800,cx.currentTime+0.08);g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.15);osc.connect(flt);flt.connect(g);g.connect(cx.destination);osc.start();osc.stop(cx.currentTime+0.16);}
+function sfxWoosh(){const cx=initActx(),g=cx.createGain(),n=mkNoise(cx,0.35),flt=cx.createBiquadFilter();flt.type='bandpass';flt.frequency.setValueAtTime(800,cx.currentTime);flt.frequency.exponentialRampToValueAtTime(200,cx.currentTime+0.3);flt.Q.value=2;g.gain.setValueAtTime(0.3,cx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);n.connect(flt);flt.connect(g);g.connect(cx.destination);n.start();}
+
+function buildSFXPads() {
+  const grid=document.getElementById('sfx-grid');
+  if(grid.dataset.built)return; grid.dataset.built='1';
+  grid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:calc(100% - 0px)';
+  SFX_PADS.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='dpad';
+    div.style.background=`linear-gradient(175deg,${p.color}cc,${p.color}88)`;
+    div.style.borderColor=p.color+'aa';
+    div.innerHTML=`<span class="dp-name">${p.name}</span><span class="dp-key">[${p.key.toUpperCase()}]</span>`;
+    div.addEventListener('pointerdown',e=>{e.preventDefault();hitDrum(div,p.fn);});
+    grid.appendChild(div);
+  });
+}
+
+/* ── WEATHER WIDGET ─────────────────────────────────── */
+const WX_CODES = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'🌨️',80:'🌧️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WX_ZIP_KEY = 'aq_wx_zip';
+let _wxZip = localStorage.getItem(WX_ZIP_KEY) || '80301';
+
+async function fetchWeather() {
+  try {
+    const zip = _wxZip;
+    const geo = await fetch(`https://api.zippopotam.us/us/${zip}`).then(r=>r.ok?r.json():null);
+    const lat = geo ? parseFloat(geo.places[0].latitude)  :  40.015;
+    const lon = geo ? parseFloat(geo.places[0].longitude) : -105.270;
+    const city = geo ? geo.places[0]['place name'] : 'Boulder';
+    const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`).then(r=>r.json());
+    const cw = wx.current_weather;
+    document.getElementById('wx-icon').textContent = WX_CODES[cw.weathercode] || '🌡️';
+    document.getElementById('wx-temp').textContent = Math.round(cw.temperature) + '°F';
+    document.getElementById('wx-city').textContent = city;
+  } catch(e) { document.getElementById('wx-temp').textContent = '--°F'; }
+}
+function saveWeatherZip() {
+  const v = (document.getElementById('wx-zip-inp')?.value||'').trim();
+  if (v) { _wxZip = v; localStorage.setItem(WX_ZIP_KEY, v); }
+  fetchWeather();
+}
+setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=_wxZip; fetchWeather(); }, 900);
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
@@ -4989,6 +5543,9 @@ document.addEventListener('keydown', e => {
   <div class="sf-tabs">
     <button class="sf-tab active" id="stab-synth"  onclick="switchSynthTab('synth')">🎹 Synth</button>
     <button class="sf-tab"        id="stab-drums"  onclick="switchSynthTab('drums')">🥁 Drums</button>
+    <button class="sf-tab"        id="stab-fx"     onclick="switchSynthTab('fx')">🎛️ FX</button>
+    <button class="sf-tab"        id="stab-bass"   onclick="switchSynthTab('bass')">🎸 Bass</button>
+    <button class="sf-tab"        id="stab-sfx"    onclick="switchSynthTab('sfx')">🔊 SFX</button>
   </div>
 
   <!-- SYNTH PANEL -->
@@ -5029,7 +5586,7 @@ document.addEventListener('keydown', e => {
     </div>
     <div id="synth-keys"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Piano Roll</span><span style="opacity:.6">16 steps · 1 octave</span></div>
+      <div class="seq-hdr"><span>Piano Roll</span><button onclick="clearSynthSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div>
       <div class="seq-grid" id="synth-seq"></div>
     </div>
   </div>
@@ -5038,11 +5595,154 @@ document.addEventListener('keydown', e => {
   <div class="sf-panel" id="spanel-drums">
     <div id="drum-grid"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Step Sequencer</span><span style="opacity:.6">Keys 1–8 to play</span></div>
+      <div class="seq-hdr"><span>Step Sequencer</span><button onclick="clearDrumSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div>
       <div class="seq-grid" id="drum-seq"></div>
     </div>
   </div>
 
+  <!-- FX PANEL -->
+  <div class="sf-panel" id="spanel-fx">
+    <div class="sc-row" style="margin-bottom:12px">
+      <div class="sc-group"><span class="sc-label">Reverb Mix</span><input class="sc-range" id="rev-sl" type="range" min="0" max="0.9" step="0.01" value="0" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Room Size</span><input class="sc-range" id="rev-size-sl" type="range" min="0.5" max="6" step="0.1" value="2" oninput="rebuildReverb()"></div>
+      <div class="sc-group"><span class="sc-label">Delay Mix</span><input class="sc-range" id="dly-sl" type="range" min="0" max="0.9" step="0.01" value="0" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Dly Time</span><input class="sc-range" id="dly-time-sl" type="range" min="0.05" max="1" step="0.01" value="0.375" oninput="updateFX()"></div>
+      <div class="sc-group"><span class="sc-label">Feedback</span><input class="sc-range" id="dly-fbk-sl" type="range" min="0" max="0.92" step="0.01" value="0.4" oninput="updateFX()"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9px;color:var(--text2);font-weight:700">SIGNAL CHAIN:</span>
+      <span style="font-size:9px;padding:3px 8px;background:var(--accent);color:#fff;border-radius:10px">OSC</span>
+      <span style="font-size:9px;color:var(--text2)">→</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">FILTER</span>
+      <span style="font-size:9px;color:var(--text2)">→</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">DELAY</span>
+      <span style="font-size:9px;color:var(--text2)">+</span>
+      <span style="font-size:9px;padding:3px 8px;background:rgba(0,120,200,0.15);color:var(--accent);border-radius:10px;border:1px solid var(--accent)">REVERB</span>
+      <span style="font-size:9px;color:var(--text2)">→ OUT</span>
+    </div>
+  </div>
+
+  <!-- BASS PANEL -->
+  <div class="sf-panel" id="spanel-bass">
+    <div class="sc-row">
+      <div class="sc-group">
+        <span class="sc-label">Wave</span>
+        <button class="wbtn" id="bwb-sawtooth" onclick="setBassWave('sawtooth')">Saw</button>
+        <button class="wbtn sel" id="bwb-square" onclick="setBassWave('square')">Square</button>
+        <button class="wbtn" id="bwb-triangle" onclick="setBassWave('triangle')">Tri</button>
+      </div>
+      <div class="sc-group">
+        <span class="sc-label">Oct</span>
+        <button class="wbtn" onclick="shiftBassOct(-1)">−</button>
+        <span id="bass-oct-disp" style="color:var(--accent);font-size:11px;min-width:14px;text-align:center;font-weight:700">2</span>
+        <button class="wbtn" onclick="shiftBassOct(1)">+</button>
+      </div>
+      <div class="sc-group"><span class="sc-label">Decay</span><input class="sc-range" id="bass-dec-sl" type="range" min="0.05" max="1.5" step="0.01" value="0.4"></div>
+      <span style="color:rgba(0,80,180,0.45);font-size:8px;margin-left:auto">Z X C V B N M</span>
+    </div>
+    <div id="bass-keys"></div>
+    <div class="seq-section" style="margin-top:6px">
+      <div class="seq-hdr">
+        <span>Bass Sequencer</span>
+        <span style="opacity:.6">1 note per step · pitch = row</span>
+      </div>
+      <div class="seq-grid" id="bass-seq"></div>
+    </div>
+  </div>
+
+  <!-- SFX PANEL -->
+  <div class="sf-panel" id="spanel-sfx">
+    <div id="sfx-grid"></div>
+  </div>
+
 </div>
+
+<script>
+/* ── WATER BACKGROUND ───────────────────────────────────── */
+(function(){
+  const cv = document.getElementById('wc');
+  const ctx = cv.getContext('2d');
+  const SCALE = 5;
+  let W=0,H=0,buf1,buf2,idat,mx=-1,my=-1,lastRipple=0;
+
+  function resize(){
+    W=Math.ceil(window.innerWidth/SCALE);
+    H=Math.ceil(window.innerHeight/SCALE);
+    cv.width=W; cv.height=H;
+    cv.style.width=window.innerWidth+'px';
+    cv.style.height=window.innerHeight+'px';
+    buf1=new Float32Array(W*H);
+    buf2=new Float32Array(W*H);
+    idat=ctx.createImageData(W,H);
+  }
+  window.addEventListener('resize',resize); resize();
+
+  function disturb(sx,sy,r,s){
+    const gx=Math.round(sx/SCALE), gy=Math.round(sy/SCALE);
+    for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<=r){const nx=gx+dx,ny=gy+dy;if(nx>0&&nx<W-1&&ny>0&&ny<H-1)buf1[ny*W+nx]+=s*(1-d/r);}
+    }
+  }
+
+  document.addEventListener('mousemove',e=>{
+    const now=Date.now();
+    if(now-lastRipple<40)return;
+    lastRipple=now; mx=e.clientX; my=e.clientY;
+    disturb(e.clientX,e.clientY,3,120);
+  });
+
+  function step(){
+    const D=0.988;
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      const i=y*W+x;
+      const v=(buf1[i-1]+buf1[i+1]+buf1[i-W]+buf1[i+W])*0.5-buf2[i];
+      buf2[i]=v*D;
+    }
+    const t=buf1; buf1=buf2; buf2=t;
+  }
+
+  function render(){
+    const d=idat.data;
+    for(let y=0;y<H;y++){
+      const t=y/H;
+      // base sky-to-deep-water gradient
+      const br=Math.round(100+t*(-30)), bg=Math.round(190-t*60), bb=Math.round(235-t*40);
+      for(let x=0;x<W;x++){
+        const i=y*W+x;
+        const h=buf1[i];
+        const nx=x<W-1?buf1[i+1]-h:0;
+        const ny=y<H-1?buf1[i+W]-h:0;
+        const lit=1+nx*0.22+ny*0.14;
+        const pi=i*4;
+        d[pi  ]=Math.max(0,Math.min(255,Math.round(br*lit+nx*35)));
+        d[pi+1]=Math.max(0,Math.min(255,Math.round(bg*lit+ny*18)));
+        d[pi+2]=Math.max(0,Math.min(255,Math.round(bb*lit+h*0.15)));
+        d[pi+3]=255;
+      }
+    }
+    ctx.putImageData(idat,0,0);
+  }
+
+  // passive wave sources - add gentle background chop
+  let wt=0;
+  function addAmbient(){
+    wt+=0.04;
+    const pts=[[0.2,0.3],[0.7,0.15],[0.5,0.8],[0.85,0.55]];
+    pts.forEach(([fx,fy],i)=>{
+      const amp=Math.sin(wt+i*1.7)*60;
+      if(Math.abs(amp)>10) disturb(fx*window.innerWidth,fy*window.innerHeight,2,amp);
+    });
+  }
+
+  function loop(){
+    addAmbient();
+    step(); step();
+    render();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
 </body>
 </html>

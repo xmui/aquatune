@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#18b8d8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aquatune">
+  <link rel="manifest" href="/manifest.json">
   <title>AQUATUNE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1779,9 +1784,77 @@
       position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
       display:flex; align-items:center; gap:10px; z-index:2; pointer-events:auto;
     }
+
+    /* ── SPLASH SCREEN ─────────────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: linear-gradient(155deg, #7ec8f0 0%, #a8e0fb 28%, #c0eeff 52%, #9ad8f4 76%, #7ac8ec 100%);
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+    #splash.fade-out { opacity: 0; visibility: hidden; }
+    #splash .sp-logo {
+      width: 120px; height: 120px; object-fit: contain;
+      filter: drop-shadow(0 8px 24px rgba(0,100,180,0.45)) drop-shadow(0 0 32px rgba(255,255,255,0.5));
+      animation: spPulse 1.4s ease-in-out infinite alternate;
+    }
+    #splash .sp-title {
+      margin-top: 18px; font-size: 28px; font-weight: 900; letter-spacing: 4px;
+      color: #fff; text-shadow: 0 3px 12px rgba(0,80,160,0.4), 0 0 40px rgba(255,255,255,0.6);
+      font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
+    }
+    #splash .sp-sub {
+      margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.75); letter-spacing: 2px;
+      font-weight: 600;
+    }
+    #splash .sp-bar {
+      margin-top: 28px; width: 140px; height: 4px; border-radius: 99px;
+      background: rgba(255,255,255,0.25); overflow: hidden;
+    }
+    #splash .sp-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.95));
+      animation: spLoad 1.8s ease-in-out forwards;
+    }
+    @keyframes spPulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+    @keyframes spLoad { from { width: 0%; } to { width: 100%; } }
+
+    /* ── ADMIN PANEL ─────────────────────────────────── */
+    #admin-overlay {
+      display: none; position: fixed; inset: 0; z-index: 900;
+      background: rgba(10,20,40,0.6); align-items: center; justify-content: center;
+    }
+    #admin-overlay.show { display: flex; }
+    #admin-wrap {
+      width: min(520px, 95vw); max-height: 85vh; display: flex; flex-direction: column;
+      background: var(--panel); border: 1.5px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,40,120,0.25);
+    }
+    #admin-titlebar {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      background: var(--hdr-bg); color: #fff; flex-shrink: 0;
+    }
+    #admin-titlebar span { flex: 1; font-size: 12px; font-weight: 800; }
+    #admin-body { flex: 1; overflow-y: auto; padding: 14px; }
+    .admin-post-row { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .admin-post-info { flex: 1; font-size: 11px; color: var(--text2); }
+    .admin-post-name { font-weight: 700; color: var(--text); }
+    .admin-post-com { color: var(--text); margin-top: 2px; word-break: break-word; }
+    .admin-del-btn { padding: 3px 10px; border-radius: 6px; background: rgba(200,0,0,0.12); border: 1px solid rgba(200,0,0,0.3); color: #c00; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+    .admin-del-btn:hover { background: rgba(200,0,0,0.22); }
+    #admin-login { padding: 20px; }
+    #admin-pw-inp { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 12px; color: var(--text); background: #fff; outline: none; }
+    #admin-pw-inp:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
+<div id="splash">
+  <img class="sp-logo" src="/aquatune-logo-outline.png" alt="Aquatune">
+  <div class="sp-title">AQUATUNE</div>
+  <div class="sp-sub">YOUR MUSIC · YOUR VIBE</div>
+  <div class="sp-bar"><div class="sp-fill"></div></div>
+</div>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
@@ -1991,6 +2064,12 @@
         <input type="checkbox" id="bubbles-chk" onchange="setBubblesEnabled(this.checked)" style="cursor:pointer"> Cursor bubbles
       </label>
       <button onclick="document.getElementById('bubble-sub').classList.toggle('open')" style="font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.1);border:1px solid rgba(0,100,200,0.25);color:var(--accent);cursor:pointer" title="Bubble settings">⚙ settings</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="ripple-chk" onchange="setRippleEnabled(this.checked)" style="cursor:pointer"> Click ripple
+      </label>
+      <button onclick="setRippleEnabled(true);document.getElementById('ripple-chk').checked=true" style="font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.1);border:1px solid rgba(0,100,200,0.25);color:var(--accent);cursor:pointer">↺ reset</button>
     </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
       <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
@@ -2309,12 +2388,10 @@ function invidiousToVid(item) {
 // Try Piped first, fall back to Invidious. Returns array of vid objects (may be empty).
 async function freeSearch(q) {
   try {
-    const d = await pipedRace('search', { q, filter: 'music_songs' });
+    // Use videos filter (broader — captures full album uploads, live sets, etc.)
+    const d = await pipedRace('search', { q, filter: 'videos' });
     const items = (d.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id);
     if (items.length) return items;
-    const d2 = await pipedRace('search', { q, filter: 'videos' });
-    const items2 = (d2.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id);
-    if (items2.length) return items2;
   } catch {}
   // Piped failed — try Invidious
   try {
@@ -2719,7 +2796,11 @@ window.onYouTubeIframeAPIReady = () => {
         }
       },
       onStateChange: onState,
-      onError: e => { const m={2:'Invalid video',5:'Playback error',100:'Video unavailable',101:'Embedding not allowed',150:'Embedding not allowed',153:'Cannot embed'}; toast(m[e.data]||`Player error ${e.data}`); },
+      onError: e => {
+        const m={2:'Invalid video',5:'Playback error',100:'Video unavailable — may be region-blocked',101:'Cannot embed this video',150:'Cannot embed this video',153:'Cannot embed this video'};
+        toast(m[e.data] || `Player error ${e.data}`);
+        if ([100,101,150,153].includes(e.data) && current) setTimeout(() => toast('Tip: try searching for an alternate upload'), 3500);
+      },
     }
   });
 };
@@ -2901,6 +2982,12 @@ function playVideo(v) {
   addToHistory(v);
   fetchInfo(v);
   if (window.abSayTrack) abSayTrack(v);
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: v.title || 'Now Playing', artist: v.channelTitle || '', artwork: v.thumbnail ? [{ src: v.thumbnail, sizes: '320x180', type: 'image/jpeg' }] : [] });
+    navigator.mediaSession.setActionHandler('play',      () => player?.playVideo?.());
+    navigator.mediaSession.setActionHandler('pause',     () => player?.pauseVideo?.());
+    navigator.mediaSession.setActionHandler('nexttrack', () => { if (queue.length) popQueue(); });
+  }
 }
 function addToHistory(v) {
   if (sessionHistory[0]?.id === v.id) return;
@@ -4006,7 +4093,7 @@ function toggleKbdHint() {
 document.addEventListener('click', e => {
   const panel = document.getElementById('theme-panel');
   const gear = document.getElementById('gear-btn');
-  if (panel.classList.contains('open') && !panel.contains(e.target) && e.target !== gear) {
+  if (panel.classList.contains('open') && !panel.contains(e.target) && e.target !== gear && !e.target.closest('#mob-tools-bar')) {
     panel.classList.remove('open');
   }
 });
@@ -4798,11 +4885,33 @@ const _s=document.createElement('script');_s.src='https://www.youtube.com/iframe
 
 /* ── SYNTH + DRUM PAD ─────────────────────────────────────── */
 let actx = null;
+let synthMasterGain = null, drumMasterGain = null, bassMasterGain = null;
 function initActx() {
   if (!actx) { actx = new (window.AudioContext||window.webkitAudioContext)(); initFilter(); }
   if (actx.state === 'suspended') actx.resume();
   return actx;
 }
+function drumDest() {
+  initActx();
+  if (!drumMasterGain) {
+    drumMasterGain = actx.createGain();
+    drumMasterGain.gain.value = +(localStorage.getItem('aq_vol_drum') || 1);
+    drumMasterGain.connect(actx.destination);
+  }
+  return drumMasterGain;
+}
+function bassDest() {
+  initActx();
+  if (!bassMasterGain) {
+    bassMasterGain = actx.createGain();
+    bassMasterGain.gain.value = +(localStorage.getItem('aq_vol_bass') || 1);
+    bassMasterGain.connect(actx.destination);
+  }
+  return bassMasterGain;
+}
+function setSynthVol(v) { if (synthMasterGain) synthMasterGain.gain.setTargetAtTime(+v, actx.currentTime, 0.01); localStorage.setItem('aq_vol_synth', v); }
+function setDrumVol(v)  { if (drumMasterGain)  drumMasterGain.gain.setTargetAtTime(+v,  actx.currentTime, 0.01); localStorage.setItem('aq_vol_drum',  v); }
+function setBassVol(v)  { if (bassMasterGain)  bassMasterGain.gain.setTargetAtTime(+v,  actx.currentTime, 0.01); localStorage.setItem('aq_vol_bass',  v); }
 
 /* ---- resonant filter (synth signal chain) ---- */
 let filterNode = null;
@@ -4820,7 +4929,15 @@ function updateFilter() {
   if (c) filterNode.frequency.setTargetAtTime(parseFloat(c.value), actx.currentTime, 0.01);
   if (r) filterNode.Q.setTargetAtTime(parseFloat(r.value), actx.currentTime, 0.01);
 }
-function synthDest() { initActx(); return filterNode || actx.destination; }
+function synthDest() {
+  initActx();
+  if (!synthMasterGain) {
+    synthMasterGain = actx.createGain();
+    synthMasterGain.gain.value = +(localStorage.getItem('aq_vol_synth') || 1);
+    synthMasterGain.connect(filterNode || actx.destination);
+  }
+  return synthMasterGain;
+}
 
 /* ---- state ---- */
 let synthWave = 'sine', synthOct = 4;
@@ -4979,28 +5096,28 @@ function drumKick() {
   osc.frequency.setValueAtTime(180,cx.currentTime);
   osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.42);
   g.gain.setValueAtTime(1.1,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.42);
-  osc.connect(g); g.connect(cx.destination); osc.start(); osc.stop(cx.currentTime+0.44);
+  osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.44);
 }
 function drumSnare() {
   const cx=initActx();
   const ng=cx.createGain(); ng.gain.setValueAtTime(0.65,cx.currentTime); ng.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.2);
   const n=mkNoise(cx,0.22); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=1600;
-  n.connect(flt); flt.connect(ng); ng.connect(cx.destination); n.start();
+  n.connect(flt); flt.connect(ng); ng.connect(drumDest()); n.start();
   const osc=cx.createOscillator(), og=cx.createGain();
   osc.frequency.value=185; og.gain.setValueAtTime(0.45,cx.currentTime); og.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.09);
-  osc.connect(og); og.connect(cx.destination); osc.start(); osc.stop(cx.currentTime+0.1);
+  osc.connect(og); og.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.1);
 }
 function drumHihat() {
   const cx=initActx(), g=cx.createGain();
   g.gain.setValueAtTime(0.32,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.055);
   const n=mkNoise(cx,0.07); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=8500;
-  n.connect(flt); flt.connect(g); g.connect(cx.destination); n.start();
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
 }
 function drumOpenHH() {
   const cx=initActx(), g=cx.createGain();
   g.gain.setValueAtTime(0.38,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.38);
   const n=mkNoise(cx,0.4); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=7200;
-  n.connect(flt); flt.connect(g); g.connect(cx.destination); n.start();
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
 }
 function drumClap() {
   const cx=initActx();
@@ -5010,23 +5127,23 @@ function drumClap() {
     g.gain.setValueAtTime(0,cx.currentTime+delay);
     g.gain.linearRampToValueAtTime(0.55,cx.currentTime+delay+0.005);
     g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+delay+0.14);
-    n.connect(flt); flt.connect(g); g.connect(cx.destination); n.start(cx.currentTime+delay);
+    n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(cx.currentTime+delay);
   });
 }
 function drumTom() {
   const cx=initActx(), osc=cx.createOscillator(), g=cx.createGain();
   osc.frequency.setValueAtTime(100,cx.currentTime); osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.32);
   g.gain.setValueAtTime(0.85,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);
-  osc.connect(g); g.connect(cx.destination); osc.start(); osc.stop(cx.currentTime+0.33);
+  osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.33);
 }
 function drumCrash() {
   const cx=initActx(), g=cx.createGain();
   g.gain.setValueAtTime(0.42,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+1.3);
   const n=mkNoise(cx,1.35); const flt=cx.createBiquadFilter(); flt.type='bandpass'; flt.frequency.value=6200; flt.Q.value=0.28;
-  n.connect(flt); flt.connect(g); g.connect(cx.destination); n.start();
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
   const g2=cx.createGain(); g2.gain.setValueAtTime(0.18,cx.currentTime); g2.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.9);
   const n2=mkNoise(cx,0.95); const flt2=cx.createBiquadFilter(); flt2.type='highpass'; flt2.frequency.value=10500;
-  n2.connect(flt2); flt2.connect(g2); g2.connect(cx.destination); n2.start();
+  n2.connect(flt2); flt2.connect(g2); g2.connect(drumDest()); n2.start();
 }
 function drumCowbell() {
   const cx=initActx();
@@ -5034,7 +5151,7 @@ function drumCowbell() {
     const osc=cx.createOscillator(), g=cx.createGain();
     osc.type='square'; osc.frequency.value=f;
     g.gain.setValueAtTime(0.28,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.58);
-    osc.connect(g); g.connect(cx.destination); osc.start(); osc.stop(cx.currentTime+0.6);
+    osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.6);
   });
 }
 
@@ -5202,6 +5319,23 @@ function clearDrumSeq() {
   drumSeqData.forEach(row => row.fill(false));
   document.querySelectorAll('#drum-seq .seq-step').forEach(b => b.classList.remove('on'));
 }
+function clearBassSeq() {
+  bassSeqData.forEach(row => row.fill(false));
+  document.querySelectorAll('#bass-seq .seq-step').forEach(b => b.classList.remove('on'));
+}
+function randomizeBass() {
+  bassSeqData.forEach(row => row.fill(false));
+  const musicalRows = [0, 2, 4, 5, 7, 9, 10];
+  for (let s = 0; s < SEQ_STEPS; s++) {
+    if (Math.random() < 0.32) {
+      const ni = musicalRows[Math.floor(Math.random() * musicalRows.length)];
+      if (ni < bassSeqData.length) bassSeqData[ni][s] = true;
+    }
+  }
+  document.querySelectorAll('#bass-seq .seq-row').forEach((row, ni) => {
+    row.querySelectorAll('.seq-step').forEach((btn, s) => btn.classList.toggle('on', bassSeqData[ni][s]));
+  });
+}
 
 /* ---- keyboard control ---- */
 document.addEventListener('keydown', e => {
@@ -5300,7 +5434,7 @@ function playBass(note) {
   const dec=parseFloat(document.getElementById('bass-dec-sl')?.value||0.4);
   g.gain.setValueAtTime(0.35,cx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+dec);
-  osc.connect(g); g.connect(synthDest());
+  osc.connect(g); g.connect(bassDest());
   osc.start(); osc.stop(cx.currentTime+dec+0.02);
   const k=document.querySelector(`#bass-keys [data-note="${note}"]`);
   if(k){k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),100);}
@@ -5619,6 +5753,8 @@ function evaluateSlots(syms) {
 // ─────────────────────────────────────────────────────────
 //  CURSOR BUBBLES — glossy, physics-based gravity pull
 // ─────────────────────────────────────────────────────────
+let _rippleEnabled = localStorage.getItem('aq_ripple') !== '0';
+function setRippleEnabled(on) { _rippleEnabled = on; localStorage.setItem('aq_ripple', on ? '1' : '0'); }
 let _bubblesEnabled = localStorage.getItem('aq_bubbles') !== '0';
 let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 8);
 let _bubbleGravity  = +(localStorage.getItem('aq_bubble_gravity') ?? 80);
@@ -5957,6 +6093,60 @@ function boardClearAll() {
   boardRenderPosts([]);
 }
 
+/* ── ADMIN PANEL ── */
+let _adminUnlocked = false;
+function openAdmin() {
+  document.getElementById('admin-overlay').classList.add('show');
+  document.getElementById('admin-login').style.display = _adminUnlocked ? 'none' : 'block';
+  document.getElementById('admin-posts').style.display = _adminUnlocked ? 'block' : 'none';
+  document.getElementById('admin-err').style.display = 'none';
+  if (_adminUnlocked) renderAdminPosts();
+}
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('show');
+  document.getElementById('admin-pw-inp').value = '';
+  document.getElementById('admin-err').style.display = 'none';
+}
+async function verifyAdmin() {
+  const pw = document.getElementById('admin-pw-inp').value;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  // SHA-256 of "aqua2025"
+  if (hex === '3db157884684bd5bab1fec4c252653cf91a26f7f88125019841c4d578db69c8f') {
+    _adminUnlocked = true;
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('admin-posts').style.display = 'block';
+    renderAdminPosts();
+  } else {
+    document.getElementById('admin-err').style.display = 'block';
+  }
+}
+async function renderAdminPosts() {
+  let posts;
+  if (boardFbEnabled()) { try { posts = await boardFbLoad(); } catch { posts = boardLocalPosts; } }
+  else { posts = boardLocalPosts; }
+  const el = document.getElementById('admin-posts');
+  if (!posts.length) { el.innerHTML = '<div style="padding:16px;color:var(--text2);font-size:12px">No posts</div>'; return; }
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong style="font-size:12px">${posts.length} posts</strong><button class="admin-del-btn" onclick="adminClearAll()">✕ Clear All</button></div>`;
+  posts.slice().reverse().forEach(p => {
+    const row = document.createElement('div'); row.className = 'admin-post-row';
+    const delKey = p._key ? `'${p._key}'` : p.no;
+    row.innerHTML = `<div class="admin-post-info"><div class="admin-post-name">${esc(p.name||'Anonymous')} <span style="font-weight:400;color:var(--text2)">#${p.no||p._key}</span></div><div class="admin-post-com">${esc((p.com||'').slice(0,120))}</div><div style="font-size:9px;margin-top:2px;color:var(--text2)">${boardFmtTime(p.ts)}</div></div><button class="admin-del-btn" onclick="adminDelete(${delKey})">Delete</button>`;
+    el.appendChild(row);
+  });
+}
+async function adminDelete(keyOrNo) { await boardDelete(keyOrNo); renderAdminPosts(); boardLoadAndRender(); }
+async function adminClearAll() {
+  if (!confirm('Delete ALL posts? This cannot be undone.')) return;
+  if (boardFbEnabled()) {
+    let posts; try { posts = await boardFbLoad(); } catch { return; }
+    await Promise.allSettled(posts.map(p => boardFbDelete(p._key || String(p.no))));
+  } else {
+    boardLocalPosts = []; try { localStorage.setItem(BOARD_LS_KEY, JSON.stringify(boardLocalPosts)); } catch {}
+  }
+  renderAdminPosts(); boardLoadAndRender(); toast('All posts deleted');
+}
+
 function boardSaveFirebase() {
   const inp = document.getElementById('board-fb-inp');
   const val = inp?.value.trim();
@@ -6264,6 +6454,8 @@ function initPaint() {
 document.addEventListener('DOMContentLoaded', () => {
   const bchk = document.getElementById('bubbles-chk');
   if (bchk) bchk.checked = _bubblesEnabled;
+  const rchk = document.getElementById('ripple-chk');
+  if (rchk) rchk.checked = _rippleEnabled;
   const bDen = document.getElementById('bubble-density-rng');
   if (bDen) { bDen.value = _bubbleDensity; document.getElementById('bubble-density-val').textContent = _bubbleDensity; }
   const bGrav = document.getElementById('bubble-gravity-rng');
@@ -6291,6 +6483,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Click ripple
   document.addEventListener('click', e => {
+    if (!_rippleEnabled) return;
     const r = document.createElement('div');
     r.className = 'click-ripple';
     r.style.left = e.clientX + 'px';
@@ -6298,6 +6491,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(r);
     r.addEventListener('animationend', () => r.remove(), { once: true });
   });
+  // Service worker for background audio
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // Splash dismiss
+  setTimeout(() => {
+    const sp = document.getElementById('splash');
+    if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
+  }, 2000);
 });
 </script>
 
@@ -6318,6 +6518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- XP-style menu bar -->
     <div class="board-menubar">
       <span class="board-menu-item" onclick="boardLoadAndRender()">Refresh</span>
+      <span class="board-menu-item" onclick="openAdmin()">🔐 Admin</span>
       <span class="board-status" id="board-fb-badge" class="board-fb-badge local">● Local</span>
     </div>
 
@@ -6410,6 +6611,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <!-- SYNTH PANEL -->
   <div class="sf-panel active" id="spanel-synth">
     <div class="sc-row">
+      <div class="sc-group"><span class="sc-label">Vol</span><input class="sc-range" id="synth-vol-sl" type="range" min="0" max="1" step="0.01" value="1" oninput="setSynthVol(this.value)"></div>
       <div class="sc-group">
         <span class="sc-label">Wave</span>
         <button class="wbtn sel" id="wb-sine"     onclick="setWave('sine')">Sine</button>
@@ -6452,6 +6654,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <!-- DRUMS PANEL -->
   <div class="sf-panel" id="spanel-drums">
+    <div class="sc-row" style="margin-bottom:6px"><div class="sc-group"><span class="sc-label">Vol</span><input class="sc-range" id="drum-vol-sl" type="range" min="0" max="1" step="0.01" value="1" oninput="setDrumVol(this.value)"></div></div>
     <div id="drum-grid"></div>
     <div class="seq-section">
       <div class="seq-hdr"><span>Step Sequencer</span><div style="display:flex;gap:4px"><button onclick="randomizeDrums()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.15);border:1px solid rgba(0,100,200,0.3);color:#0068b8;cursor:pointer">🎲</button><button onclick="clearDrumSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div></div>
@@ -6484,6 +6687,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <!-- BASS PANEL -->
   <div class="sf-panel" id="spanel-bass">
     <div class="sc-row">
+      <div class="sc-group"><span class="sc-label">Vol</span><input class="sc-range" id="bass-vol-sl" type="range" min="0" max="1" step="0.01" value="1" oninput="setBassVol(this.value)"></div>
       <div class="sc-group">
         <span class="sc-label">Wave</span>
         <button class="wbtn" id="bwb-sawtooth" onclick="setBassWave('sawtooth')">Saw</button>
@@ -6503,7 +6707,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="seq-section" style="margin-top:6px">
       <div class="seq-hdr">
         <span>Bass Sequencer</span>
-        <span style="opacity:.6">1 note per step · pitch = row</span>
+        <div style="display:flex;gap:4px"><button onclick="randomizeBass()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,150,100,0.15);border:1px solid rgba(0,150,100,0.3);color:#007a50;cursor:pointer">🎲</button><button onclick="clearBassSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div>
       </div>
       <div class="seq-grid" id="bass-seq"></div>
     </div>
@@ -6546,6 +6750,28 @@ document.addEventListener('DOMContentLoaded', () => {
       <span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span><span>💎💎💎 = 15×</span>
       <span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span><span>Any 3 match = 3×</span>
       <span>2 match = 1×</span>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-overlay">
+  <div id="admin-wrap">
+    <div id="admin-titlebar">
+      <span>🔐 Admin Panel — AquaChat</span>
+      <button onclick="closeAdmin()" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="admin-body">
+      <div id="admin-login">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Enter admin password</div>
+        <input id="admin-pw-inp" type="password" placeholder="Password..." onkeydown="if(event.key==='Enter')verifyAdmin()">
+        <div style="display:flex;gap:8px">
+          <button class="mbtn p" onclick="verifyAdmin()">Unlock</button>
+          <button class="mbtn s" onclick="closeAdmin()">Cancel</button>
+        </div>
+        <div id="admin-err" style="color:#c00;font-size:11px;margin-top:8px;display:none">Incorrect password</div>
+      </div>
+      <div id="admin-posts" style="display:none"></div>
     </div>
   </div>
 </div>

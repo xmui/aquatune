@@ -311,8 +311,15 @@
     /* ── CENTER ─────────────────────────────────────────── */
     #center { display:flex;flex-direction:column;overflow:hidden;gap:8px; }
 
-    #player-bubble { position:relative;flex-shrink:0;border-radius:var(--r);overflow:hidden;box-shadow:var(--ps);border:1.5px solid var(--border); }
-    #player-bubble::after { content:'';display:block;padding-top:56.25%; }
+    #player-bubble {
+      position:relative; border-radius:var(--r); overflow:hidden;
+      box-shadow:var(--ps); border:1.5px solid var(--border);
+      flex-shrink:1; flex-grow:0; min-height:60px;
+      aspect-ratio:16/9;
+      /* never eat so much vertical space that the controls fall off */
+      max-height:calc(100vh - 280px);
+      width:100%;
+    }
     #player-bubble > * { position:absolute;inset:0;width:100%;height:100%; }
     #ph { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,rgba(0,160,200,0.1),rgba(34,212,176,0.08)); }
     #ph-txt { font-size:13px;color:var(--text2);text-align:center;padding:0 20px;line-height:1.7;font-weight:500; }
@@ -452,22 +459,13 @@
     #play-btn.playing .pi  { display:none; }
     #play-btn.playing .pau { display:flex; }
 
-    /* ── CURSOR ─────────────────────────────────────────── */
-    body { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='28'%3E%3Cpath d='M11 1C7 7 1 16 1 20.5C1 25.5 5.5 28 11 28C16.5 28 21 25.5 21 20.5C21 16 15 7 11 1Z' fill='%2300b4e0' fill-opacity='.88' stroke='white' stroke-width='1.5'/%3E%3Cellipse cx='8' cy='18' rx='2' ry='3.5' fill='white' fill-opacity='.42' transform='rotate(-20 8 18)'/%3E%3C/svg%3E") 11 1, auto; }
-    input[type="text"],input[type="number"],input[type="search"],input[type="email"],textarea { cursor:text; }
-    input[type="range"] { cursor:ew-resize; }
-    input[type="color"] { cursor:pointer; }
-
     /* ── CURSOR BUBBLES ─────────────────────────────────── */
     .cursor-bubble {
       position:fixed;border-radius:50%;pointer-events:none;z-index:9999;
-      background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.88),rgba(0,190,230,0.42));
-      border:1px solid rgba(100,210,245,0.55);
-      animation:cbFloat 1s ease-out forwards;
-    }
-    @keyframes cbFloat {
-      0%   { opacity:.72; transform:translate(0,0) scale(1); }
-      100% { opacity:0;   transform:translate(var(--cbx,0px),-36px) scale(0.15); }
+      background:radial-gradient(circle at 32% 28%,rgba(255,255,255,0.92) 0%,rgba(180,235,255,0.6) 40%,rgba(0,170,220,0.18) 100%);
+      border:1.5px solid rgba(160,230,255,0.7);
+      box-shadow:0 2px 8px rgba(0,160,220,0.18), inset 0 -2px 4px rgba(0,100,180,0.12);
+      will-change:transform,opacity;
     }
 
     /* ── SHORT VIEWPORT (MacBook Touch Bar etc.) ─────────── */
@@ -480,10 +478,19 @@
       #np-title { font-size:13px; }
       #btns { gap:5px; }
       #vol-row { margin-top:7px; }
+      #player-bubble { max-height:calc(100vh - 260px); }
     }
     @media (max-height: 640px) {
       #info-strip { display:none !important; }
       #now-row { display:none; }
+      #player-bubble { max-height:calc(100vh - 200px); }
+    }
+    @media (max-height: 520px) {
+      #now-row { display:none; }
+      #prog-row { margin-bottom:3px; }
+      #vol-row { margin-top:4px; }
+      #ctrl-bubble { padding:5px 12px 7px; }
+      #player-bubble { max-height:calc(100vh - 170px); }
     }
 
     /* ── SYNTH FLYOUT ──────────────────────────────────────── */
@@ -4385,17 +4392,74 @@ document.addEventListener('keyup', e => {
 })();
 
 // ─────────────────────────────────────────────────────────
-//  CURSOR BUBBLES
+//  CURSOR BUBBLES — glossy, physics-based gravity pull
 // ─────────────────────────────────────────────────────────
-document.addEventListener('mousemove', e => {
-  if (Math.random() > 0.12) return;
-  const b = document.createElement('div');
-  b.className = 'cursor-bubble';
-  const size = 3 + Math.random() * 7;
-  b.style.cssText = `left:${e.clientX - size/2}px;top:${e.clientY - size/2}px;width:${size}px;height:${size}px;--cbx:${(Math.random()-0.5)*14}px`;
-  document.body.appendChild(b);
-  setTimeout(() => b.remove(), 1050);
-});
+(function() {
+  const bubbles = [];
+  let mx = -999, my = -999;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    if (Math.random() > 0.18) return;
+    const size = 10 + Math.random() * 18;
+    const spread = 28;
+    const vx = (Math.random() - 0.5) * 1.8;
+    const vy = -(0.6 + Math.random() * 1.2);
+    const el = document.createElement('div');
+    el.className = 'cursor-bubble';
+    el.style.width = el.style.height = size + 'px';
+    document.body.appendChild(el);
+    bubbles.push({
+      el, size,
+      x: e.clientX - size/2 + (Math.random()-0.5)*spread,
+      y: e.clientY - size/2 + (Math.random()-0.5)*spread,
+      vx, vy,
+      life: 0,
+      maxLife: 90 + Math.random() * 60,
+      mass: size * 0.06,
+    });
+  });
+
+  function tick() {
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      b.life++;
+
+      /* gravitational pull toward cursor */
+      const cx = b.x + b.size/2, cy = b.y + b.size/2;
+      const dx = mx - cx, dy = my - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy) + 1;
+      const G = 80;
+      const force = G / (dist * dist);
+      b.vx += (dx / dist) * force / b.mass;
+      b.vy += (dy / dist) * force / b.mass;
+
+      /* gentle buoyancy upward */
+      b.vy -= 0.04;
+
+      /* damping */
+      b.vx *= 0.96;
+      b.vy *= 0.96;
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      const t = b.life / b.maxLife;
+      const opacity = t < 0.15 ? t/0.15 : t > 0.75 ? 1 - (t-0.75)/0.25 : 1;
+
+      b.el.style.left = b.x + 'px';
+      b.el.style.top  = b.y + 'px';
+      b.el.style.opacity = (opacity * 0.78).toFixed(3);
+
+      if (b.life >= b.maxLife) {
+        b.el.remove();
+        bubbles.splice(i, 1);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
 
 // ─────────────────────────────────────────────────────────
 //  /aq/ BOARD — MSN Messenger × 4chan

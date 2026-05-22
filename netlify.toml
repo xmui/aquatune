@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Firebase client API keys (AIza prefix) are intentionally public — security is
+  # enforced by Firebase Security Rules, not the API key itself. Disable Netlify's
+  # smart secret detection to prevent false positives on the bundled key.
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"

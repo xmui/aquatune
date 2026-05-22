@@ -1417,6 +1417,28 @@
       border-top: 1px solid #000;
       box-shadow: 0 -1px 0 rgba(255,255,255,0.07) inset;
     }
+    #mob-tools-bar {
+      display: none;
+      position: fixed;
+      bottom: 50px; left: 0; right: 0;
+      height: 44px;
+      z-index: 599;
+      background: var(--hdr-bg);
+      border-top: 1px solid rgba(255,255,255,0.18);
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      box-shadow: 0 -2px 12px rgba(0,60,150,0.18);
+      align-items: stretch;
+    }
+    .mob-tool-btn {
+      flex: 1; border: none; background: none; color: rgba(255,255,255,0.82);
+      font-size: 18px; cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1px;
+      border-right: 1px solid rgba(255,255,255,0.1); transition: background .12s;
+      position: relative;
+    }
+    .mob-tool-btn:last-child { border-right: none; }
+    .mob-tool-btn:active { background: rgba(255,255,255,0.15); }
+    .mob-tool-btn span { font-size: 8px; font-weight: 700; letter-spacing: .3px; opacity: .75; }
     .mob-tab {
       flex: 1;
       display: flex;
@@ -1468,8 +1490,8 @@
       #auth-area { gap: 4px; }
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
-      /* synth/kbd/paint buttons — slightly smaller */
-      #synth-btn, #kbd-btn, #paint-btn, #gear-btn { width: 26px; height: 26px; font-size: 13px; }
+      /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
+      #slots-btn, #synth-btn, #kbd-btn, #paint-btn, #gear-btn, #board-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -1488,7 +1510,7 @@
 
       /* Make left/right panels tall enough to feel like a full screen */
       #left.mob-active, #right.mob-active {
-        min-height: calc(100dvh - 50px - 64px - 14px);
+        min-height: calc(100dvh - 50px - 44px - 64px - 14px);
       }
 
       #mob-tab-bar { display: flex; }
@@ -1575,26 +1597,29 @@
       }
       #search-wrap { background: rgba(215,238,255,0.45); }
 
-      /* Buddy + restore above tab bar */
-      #aqua-buddy  { bottom: calc(50px + 16px) !important; right: 14px; }
-      #buddy-restore-btn { bottom: calc(50px + 8px) !important; right: 8px; }
+      /* Buddy + restore above tools bar */
+      #aqua-buddy  { bottom: calc(50px + 44px + 16px) !important; right: 14px; }
+      #buddy-restore-btn { bottom: calc(50px + 44px + 8px) !important; right: 8px; }
 
       /* Gun not usable on touch — hide */
       #aqua-gun { display: none !important; }
 
-      /* Theme panel slides up from bottom */
+      /* Theme panel slides up from bottom — above tools bar */
       #theme-panel {
         width: 100%;
         border-radius: 16px 16px 0 0;
         top: auto !important;
-        bottom: 50px;
+        bottom: 94px;
         right: 0;
         transform: translateY(100%);
       }
       #theme-panel.open { transform: translateY(0); }
 
-      /* Toast above tab bar */
-      #toast { bottom: 60px; }
+      /* Toast above tools bar */
+      #toast { bottom: 104px; }
+
+      /* Mob tools bar visible */
+      #mob-tools-bar { display: flex; }
 
       /* Modals */
       .modal { width: 94vw !important; max-width: 94vw !important; }
@@ -5391,6 +5416,17 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
+<div id="mob-tools-bar">
+  <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
+    💬<span>Chat</span>
+    <span id="mob-chat-badge" style="display:none;position:absolute;top:4px;right:calc(50% - 18px);background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:0 4px;min-width:14px;text-align:center;line-height:14px"></span>
+  </button>
+  <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
+  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Synth">🎹<span>Synth</span></button>
+  <button class="mob-tool-btn" onclick="openPaint()" title="AquaPaint">🎨<span>Paint</span></button>
+  <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
+</div>
+
 <div id="mob-tab-bar">
   <button class="mob-tab" data-panel="search" onclick="switchMobPanel('search')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -5707,11 +5743,14 @@ function updateChatBadge(posts) {
   const isOpen = document.getElementById('board-overlay').classList.contains('show');
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
+  const mobBadge = document.getElementById('mob-chat-badge');
   if (unseen > 0) {
-    badge.textContent = unseen > 9 ? '9+' : String(unseen);
-    badge.style.display = 'inline-block';
+    const txt = unseen > 9 ? '9+' : String(unseen);
+    badge.textContent = txt; badge.style.display = 'inline-block';
+    if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
+    if (mobBadge) mobBadge.style.display = 'none';
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);

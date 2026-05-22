@@ -1,0 +1,12 @@
+{
+  "name": "Aquatune",
+  "short_name": "Aquatune",
+  "description": "Aqua-style music player",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#48d8f8",
+  "theme_color": "#18b8d8",
+  "icons": [
+    { "src": "/aquatune-logo-outline.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

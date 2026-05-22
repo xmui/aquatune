@@ -1,0 +1,11 @@
+# Secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+.vite/
+
+# Dependencies
+node_modules/

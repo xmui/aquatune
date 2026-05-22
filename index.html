@@ -38,13 +38,6 @@
       position:fixed; inset:0; z-index:0; overflow:hidden;
       background: linear-gradient(155deg, #7ec8f0 0%, #a8e0fb 28%, #c0eeff 52%, #9ad8f4 76%, #7ac8ec 100%);
     }
-    /* Subtle dot grid — signature 2000s tech texture */
-    #bg::after {
-      content:''; position:absolute; inset:0; pointer-events:none;
-      background-image: radial-gradient(rgba(255,255,255,0.45) 1px, transparent 1px);
-      background-size: 28px 28px;
-      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
-    }
     .orb { position:absolute; border-radius:50%; }
     /* Large white glowing orb — top-left */
     .o1 { width:700px;height:700px;
@@ -747,6 +740,7 @@
       transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.15);
     }
     #board-btn:hover { background:rgba(255,255,255,0.38); }
+    #board-btn.active { background:rgba(255,255,255,0.32); border-color:rgba(255,255,255,0.75); }
     #board-overlay {
       position:fixed;
       left:50%; top:50%;
@@ -1513,31 +1507,14 @@
     .ptool.active { background:var(--accent);border-color:var(--accent); }
 
     /* ── CENTER CLOCK ───────────────────────────────────── */
-    #center-clock {
-      position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-      z-index:5; pointer-events:none;
-      display:flex; flex-direction:column; align-items:center; gap:2px;
-      text-align:center;
-      opacity:0.55; transition:opacity .3s;
-    }
-    #center-clock:hover { opacity:0; }
-    #cc-time {
-      font-size:22px; font-weight:900; color:#fff;
-      text-shadow:0 2px 12px rgba(0,60,150,0.5), 0 1px 4px rgba(0,0,0,0.3);
-      letter-spacing:2px; font-family:'M PLUS Rounded 1c',monospace;
-    }
-    #cc-weather {
-      font-size:13px; font-weight:700; color:rgba(255,255,255,0.9);
-      text-shadow:0 1px 6px rgba(0,60,150,0.4);
-      display:flex; align-items:center; gap:4px;
+    /* centered clock+weather in header */
+    #hdr-center {
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      display:flex; align-items:center; gap:10px; z-index:2; pointer-events:auto;
     }
   </style>
 </head>
 <body>
-<div id="center-clock">
-  <div id="cc-time"></div>
-  <div id="cc-weather"></div>
-</div>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
@@ -1553,13 +1530,15 @@
       <span class="k">M</span>mute
     </div>
     <div style="flex:1"></div>
-    <span id="hdr-clock">12:00 PM</span>
-    <div id="weather" title="Click to refresh weather" onclick="fetchWeather()">
-      <span id="wx-icon">🌤️</span>
-      <span id="wx-temp">--°F</span>
+    <div id="hdr-center">
+      <span id="hdr-clock">12:00 PM</span>
+      <div id="weather" title="Click to refresh weather" onclick="fetchWeather()">
+        <span id="wx-icon">🌤️</span>
+        <span id="wx-temp">--°F</span>
+      </div>
     </div>
     <div id="auth-area">
-      <button id="board-btn" onclick="openBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
+      <button id="board-btn" onclick="toggleBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
       <button id="synth-btn" onclick="toggleSynthFlyout()" title="Synth &amp; Drum pad">🎹</button>
       <button id="kbd-btn" onclick="toggleKbdHint()" title="Keyboard shortcuts">&#9000;</button>
       <button id="paint-btn" onclick="openPaint()" title="AquaPaint 🎨" style="background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.10));border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.2),inset 0 1px 0 rgba(255,255,255,0.45)">🎨</button>
@@ -2084,13 +2063,14 @@ function hexDerived(hex, lightFactor, darkFactor) {
 function applyAccentToDOM(accent) {
   const r = document.documentElement.style;
   r.setProperty('--accent', accent);
-  const { light, deep, rgb } = hexDerived(accent, 0.28, 0.72);
-  r.setProperty('--accent2', light);
-  r.setProperty('--hdr-bg', `linear-gradient(180deg, ${light} 0%, ${accent} 46%, ${deep} 100%)`);
+  const { light, deep, rgb } = hexDerived(accent, 0.55, 0.72);
+  const { light: softLight } = hexDerived(accent, 0.28, 0.72);
+  r.setProperty('--accent2', softLight);
+  r.setProperty('--hdr-bg', `linear-gradient(180deg, ${light} 0%, ${accent} 50%, ${deep} 100%)`);
   r.setProperty('--prog-fill', accent);
+  r.setProperty('--border', `rgba(${rgb},0.25)`);
   const o3 = document.querySelector('.o3');
   if (o3) o3.style.background = `rgba(${rgb},0.18)`;
-  // Restyle key elements that don't use CSS variables
   document.querySelectorAll('.tab.on').forEach(el => el.style.background = `linear-gradient(180deg,rgba(255,255,255,0.36) 0%,rgba(255,255,255,0.06) 50%,rgba(0,0,0,0.04) 100%), linear-gradient(180deg,${light} 0%,${accent} 100%)`);
 }
 
@@ -5001,8 +4981,6 @@ async function fetchWeather() {
     const cw = wx.current_weather;
     document.getElementById('wx-icon').textContent = WX_CODES[cw.weathercode] || '🌡️';
     document.getElementById('wx-temp').textContent = Math.round(cw.temperature) + '°F';
-    const ccw = document.getElementById('cc-weather');
-    if (ccw) ccw.innerHTML = `<span>${WX_CODES[cw.weathercode] || '🌡️'}</span><span>${Math.round(cw.temperature)}°F</span>`;
   } catch(e) { document.getElementById('wx-temp').textContent = '--°F'; }
 }
 function saveWeatherZip() {
@@ -5318,17 +5296,24 @@ function boardUpdateBadge() {
 
 function openBoard() {
   document.getElementById('board-overlay').classList.add('show');
+  document.getElementById('board-wrap').classList.remove('minimized');
   const inp = document.getElementById('board-fb-inp');
   if (inp && boardFbUrl) inp.value = boardFbUrl;
   _lastSeenPostCount = boardLocalPosts.length;
   const badge = document.getElementById('chat-badge');
   if (badge) badge.style.display = 'none';
+  document.getElementById('board-btn').classList.add('active');
   boardLoadAndRender();
   boardStartSse();
 }
 function closeBoard() {
   document.getElementById('board-overlay').classList.remove('show');
+  document.getElementById('board-btn').classList.remove('active');
   boardStopSse();
+}
+function toggleBoard() {
+  const ov = document.getElementById('board-overlay');
+  if (ov.classList.contains('show')) { closeBoard(); } else { openBoard(); }
 }
 
 async function boardPost(e) {
@@ -5535,26 +5520,14 @@ function exportMidi() {
   toast('MIDI exported!');
 }
 
-/* ── CENTER CLOCK ── */
-(function() {
-  function updateCC() {
-    const el = document.getElementById('cc-time');
-    if (!el) return;
-    const n = new Date();
-    const h = n.getHours()%12||12, m = String(n.getMinutes()).padStart(2,'0');
-    const s = String(n.getSeconds()).padStart(2,'0');
-    const ap = n.getHours()<12?'AM':'PM';
-    el.textContent = `${h}:${m}:${s} ${ap}`;
-  }
-  setInterval(updateCC, 1000); updateCC();
-})();
 
 /* ── PAINT TOOL ── */
 let _paintTool='pencil', _painting=false, _paintStart=null, _paintSnapshot=null;
 
 function openPaint() {
-  document.getElementById('paint-wrap').style.display='flex';
-  if (!_paintInited) { _paintInited=true; initPaint(); }
+  const w = document.getElementById('paint-wrap');
+  w.style.display = 'flex';
+  if (!_paintInited) { _paintInited = true; requestAnimationFrame(initPaint); }
 }
 function closePaint() { document.getElementById('paint-wrap').style.display='none'; }
 function clearPaint() {
@@ -5586,13 +5559,15 @@ function initPaint() {
   document.getElementById('ptool-pencil').classList.add('active');
 
   function resize() {
-    const snap=ctx.getImageData(0,0,cv.width,cv.height);
-    cv.width=cv.offsetWidth; cv.height=cv.offsetHeight;
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.putImageData(snap,0,0);
+    const w = cv.offsetWidth || 640, h = cv.offsetHeight || 400;
+    if (w === cv.width && h === cv.height) return;
+    const snap = cv.width > 0 && cv.height > 0 ? ctx.getImageData(0, 0, cv.width, cv.height) : null;
+    cv.width = w; cv.height = h;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+    if (snap) ctx.putImageData(snap, 0, 0);
   }
   resize();
-  new ResizeObserver(resize).observe(cv);
+  new ResizeObserver(() => resize()).observe(cv);
 
   function getPos(e) {
     const r=cv.getBoundingClientRect();
@@ -5617,33 +5592,48 @@ function initPaint() {
     }
     ctx.putImageData(id,0,0);
   }
-  cv.addEventListener('pointerdown',e=>{
+  let lastPt = null;
+  cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId);
-    const p=getPos(e); _painting=true; _paintStart=p;
-    _paintSnapshot=ctx.getImageData(0,0,cv.width,cv.height);
-    if(_paintTool==='fill'){flood(p.x,p.y,pc.value);_painting=false;return;}
-    ctx.beginPath(); ctx.moveTo(p.x,p.y);
-    if(_paintTool==='eraser'){ctx.globalCompositeOperation='destination-out';}
-    else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=pc.value;}
-    ctx.lineWidth=parseInt(ps.value); ctx.lineCap='round'; ctx.lineJoin='round';
-    if(_paintTool==='pencil'){ctx.lineTo(p.x,p.y);ctx.stroke();}
+    const p = getPos(e);
+    _painting = true; _paintStart = p; lastPt = p;
+    _paintSnapshot = ctx.getImageData(0, 0, cv.width, cv.height);
+    if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
+    ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = pc.value;
+    ctx.lineWidth = parseInt(ps.value);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (_paintTool === 'pencil' || _paintTool === 'eraser') {
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
   });
-  cv.addEventListener('pointermove',e=>{
-    if(!_painting) return;
-    const p=getPos(e);
-    if(_paintTool==='pencil'||_paintTool==='eraser'){
-      ctx.lineTo(p.x,p.y); ctx.stroke();
-    } else if(_paintTool==='line'||_paintTool==='rect'||_paintTool==='ellipse'){
-      ctx.putImageData(_paintSnapshot,0,0);
-      ctx.beginPath(); ctx.globalCompositeOperation='source-over';
-      ctx.strokeStyle=pc.value; ctx.lineWidth=parseInt(ps.value);
-      if(_paintTool==='line'){ctx.moveTo(_paintStart.x,_paintStart.y);ctx.lineTo(p.x,p.y);}
-      else if(_paintTool==='rect'){ctx.rect(_paintStart.x,_paintStart.y,p.x-_paintStart.x,p.y-_paintStart.y);}
-      else{const rx=Math.abs(p.x-_paintStart.x)/2,ry=Math.abs(p.y-_paintStart.y)/2;ctx.ellipse(_paintStart.x+(p.x-_paintStart.x)/2,_paintStart.y+(p.y-_paintStart.y)/2,rx,ry,0,0,Math.PI*2);}
+  cv.addEventListener('pointermove', e => {
+    if (!_painting) return;
+    const p = getPos(e);
+    if (_paintTool === 'pencil' || _paintTool === 'eraser') {
+      ctx.beginPath(); ctx.moveTo(lastPt.x, lastPt.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      lastPt = p;
+    } else {
+      ctx.putImageData(_paintSnapshot, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = pc.value; ctx.lineWidth = parseInt(ps.value);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      if (_paintTool === 'line') {
+        ctx.moveTo(_paintStart.x, _paintStart.y); ctx.lineTo(p.x, p.y);
+      } else if (_paintTool === 'rect') {
+        ctx.rect(_paintStart.x, _paintStart.y, p.x - _paintStart.x, p.y - _paintStart.y);
+      } else {
+        const rx = Math.abs(p.x - _paintStart.x) / 2, ry = Math.abs(p.y - _paintStart.y) / 2;
+        ctx.ellipse(_paintStart.x + (p.x - _paintStart.x) / 2, _paintStart.y + (p.y - _paintStart.y) / 2, rx || 1, ry || 1, 0, 0, Math.PI * 2);
+      }
       ctx.stroke();
     }
   });
-  cv.addEventListener('pointerup',()=>{ _painting=false; ctx.globalCompositeOperation='source-over'; });
+  cv.addEventListener('pointerup', () => {
+    _painting = false; lastPt = null;
+    ctx.globalCompositeOperation = 'source-over';
+  });
   const tb=document.getElementById('paint-titlebar');
   let drag=null;
   tb.addEventListener('mousedown',e=>{

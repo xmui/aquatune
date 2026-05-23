@@ -1487,7 +1487,7 @@
       #kbd-hint { display: none; }
       #logo img { height: 26px; }
       /* hide center clock/weather on mobile — too cramped */
-      #hdr-center { display: none; }
+      #hdr-center { display: none !important; }
       #google-btn { font-size: 0; padding: 5px 9px; }
       #google-btn svg { width: 16px; height: 16px; }
       #user-nm { display: none; }
@@ -1798,15 +1798,6 @@
       filter: drop-shadow(0 8px 24px rgba(0,100,180,0.45)) drop-shadow(0 0 32px rgba(255,255,255,0.5));
       animation: spPulse 1.4s ease-in-out infinite alternate;
     }
-    #splash .sp-title {
-      margin-top: 18px; font-size: 28px; font-weight: 900; letter-spacing: 4px;
-      color: #fff; text-shadow: 0 3px 12px rgba(0,80,160,0.4), 0 0 40px rgba(255,255,255,0.6);
-      font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
-    }
-    #splash .sp-sub {
-      margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.75); letter-spacing: 2px;
-      font-weight: 600;
-    }
     #splash .sp-bar {
       margin-top: 28px; width: 140px; height: 4px; border-radius: 99px;
       background: rgba(255,255,255,0.25); overflow: hidden;
@@ -1851,8 +1842,6 @@
 <body>
 <div id="splash">
   <img class="sp-logo" src="/aquatune-logo-outline.png" alt="Aquatune">
-  <div class="sp-title">AQUATUNE</div>
-  <div class="sp-sub">YOUR MUSIC · YOUR VIBE</div>
   <div class="sp-bar"><div class="sp-fill"></div></div>
 </div>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>

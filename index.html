@@ -1508,7 +1508,7 @@
       #app {
         height: auto;
         min-height: 100dvh;
-        padding: 4px 5px calc(50px + 6px);
+        padding: 4px 5px calc(50px + 44px + 6px);
         gap: 5px;
       }
 
@@ -1530,8 +1530,8 @@
       #auth-area { gap: 4px; }
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
-      /* gear-btn hidden on mobile — apps-btn handles it */
-      #gear-btn { display: none !important; }
+      /* hide desktop-only header buttons on mobile */
+      #apps-menu-wrap, #gear-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -1658,8 +1658,8 @@
       /* Toast above tools bar */
       #toast { bottom: 104px; }
 
-      /* Mob tools bar hidden — apps button in header handles mini-apps */
-      #mob-tools-bar { display: none; }
+      /* Mob tools bar visible on mobile */
+      #mob-tools-bar { display: flex; }
 
       /* Modals */
       .modal { width: 94vw !important; max-width: 94vw !important; }
@@ -2065,9 +2065,6 @@ body.perf-mode #aqua-gun { display: none !important; }
   #paint-wrap { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; }
   #room-badge button.leave-btn span { display: none; }
   #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
-  /* Apps menu on mobile: 2-col grid, full-width-safe, hide Keys */
-  #apps-menu { grid-template-columns: 1fr 1fr; width: 168px; }
-  .apps-item-keys { display: none; }
 }
 [data-scheme=dark] #splash-room { background: rgba(14,28,60,0.96); border-color: rgba(56,160,255,0.3); }
 [data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code, [data-scheme=dark] #sp-create-code { background: rgba(8,20,50,0.9); color:#e8f0ff; border-color: rgba(56,160,255,0.35); }
@@ -2397,7 +2394,7 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=vapor] ::-webkit-scrollbar-track { background: rgba(255,45,120,0.05) !important; }
 [data-era=vapor] #splash { background: linear-gradient(135deg,#1a0030 0%,#0d0d2b 100%) !important; }
 
-    /* ── APPS MENU ──────────────────────────────────────── */
+    /* ── APPS MENU / LAUNCHER ───────────────────────────── */
     #apps-menu-wrap { position:relative; }
     #apps-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
@@ -2412,29 +2409,59 @@ body.perf-mode #aqua-gun { display: none !important; }
     #apps-menu {
       visibility:hidden; opacity:0; pointer-events:none;
       position:absolute; top:calc(100% + 8px); right:0;
-      background: linear-gradient(170deg, rgba(255,255,255,0.96) 0%, rgba(228,242,255,0.94) 100%);
-      border:1.5px solid rgba(255,255,255,0.85);
-      border-radius:18px; padding:8px;
-      box-shadow: 0 16px 48px rgba(0,60,160,0.22), 0 4px 12px rgba(0,80,180,0.14), inset 0 1.5px 0 rgba(255,255,255,1);
-      backdrop-filter:blur(20px) saturate(1.3);
-      display:grid; grid-template-columns:1fr 1fr 1fr;
-      gap:6px; z-index:600; width:220px;
-      transform:translateY(-6px) scale(0.96);
-      transition: opacity .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1), visibility .18s;
+      width:240px;
+      background: rgba(255,255,255,0.97);
+      border:1.5px solid rgba(180,220,245,0.6);
+      border-radius:16px; overflow:hidden;
+      box-shadow: 0 20px 60px rgba(0,50,140,0.26), 0 4px 16px rgba(0,80,180,0.14);
+      backdrop-filter:blur(24px) saturate(1.4);
+      display:flex; flex-direction:column;
+      z-index:600;
+      transform:translateY(-8px) scale(0.97);
+      transition: opacity .2s ease, transform .2s cubic-bezier(.34,1.4,.64,1), visibility .2s;
     }
     #apps-menu.open { visibility:visible; opacity:1; pointer-events:auto; transform:translateY(0) scale(1); }
-    .apps-item {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:5px; padding:12px 6px 10px; border-radius:13px;
-      background:linear-gradient(170deg,rgba(255,255,255,0.92) 0%,rgba(220,238,255,0.80) 100%);
-      border:1.5px solid rgba(120,200,240,0.28);
-      color:var(--text); font-size:22px; cursor:pointer;
-      transition:all .14s; user-select:none;
-      box-shadow: 0 1px 5px rgba(0,100,180,0.08), inset 0 1.5px 0 rgba(255,255,255,0.95);
+    /* Launcher header */
+    .apps-menu-hdr {
+      background: var(--hdr-bg);
+      padding: 10px 14px 9px;
+      display:flex; align-items:center; gap:9px;
+      position:relative; overflow:hidden; flex-shrink:0;
     }
-    .apps-item span { font-size:9px; font-weight:800; color:var(--text2); white-space:nowrap; font-family:var(--font-ui); letter-spacing:.3px; text-transform:uppercase; }
-    .apps-item:hover { background:linear-gradient(170deg,rgba(255,255,255,1) 0%,rgba(200,232,255,0.92) 100%); border-color:var(--accent); transform:translateY(-2px) scale(1.04); box-shadow:0 4px 14px rgba(0,120,200,0.18),inset 0 1.5px 0 rgba(255,255,255,1); }
-    .apps-item:active { transform:scale(0.97); }
+    .apps-menu-hdr::after {
+      content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0) 100%);
+    }
+    .apps-menu-hdr-icon { font-size:18px; position:relative; z-index:1; }
+    .apps-menu-hdr-label {
+      font-size:12px; font-weight:800; color:#fff; letter-spacing:.4px;
+      text-shadow:0 1px 3px rgba(0,0,80,0.45); position:relative; z-index:1;
+    }
+    /* App list */
+    .apps-list { padding:6px; display:flex; flex-direction:column; gap:2px; flex:1; }
+    .apps-item {
+      display:flex; align-items:center; gap:11px; padding:9px 10px;
+      border-radius:10px; border:none; background:transparent;
+      color:var(--text); cursor:pointer; transition:all .12s; text-align:left;
+      width:100%; user-select:none;
+    }
+    .apps-item-icon { font-size:22px; flex-shrink:0; width:32px; text-align:center; }
+    .apps-item-info { flex:1; min-width:0; }
+    .apps-item-name { font-size:12px; font-weight:700; color:var(--text); line-height:1.3; }
+    .apps-item-desc { font-size:10px; color:var(--text2); margin-top:1px; line-height:1.3; }
+    .apps-item:hover { background:linear-gradient(90deg,rgba(0,160,220,0.10),rgba(0,180,240,0.05)); }
+    .apps-item:hover .apps-item-name { color:var(--accent); }
+    .apps-item:active { background:rgba(0,160,220,0.15); transform:scale(0.99); }
+    /* Divider + footer */
+    .apps-menu-div { height:1px; background:var(--border); margin:4px 10px; flex-shrink:0; }
+    .apps-footer { padding:6px; flex-shrink:0; }
+    .apps-footer-btn {
+      display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:10px;
+      border:none; background:transparent; color:var(--text2); cursor:pointer;
+      transition:all .12s; width:100%; text-align:left; font-size:11px; font-weight:700;
+    }
+    .apps-footer-btn:hover { background:rgba(0,160,220,0.08); color:var(--text); }
+    .apps-footer-btn span:first-child { font-size:16px; width:32px; text-align:center; flex-shrink:0; }
 
   </style>
 </head>
@@ -2520,11 +2547,34 @@ body.perf-mode #aqua-gun { display: none !important; }
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
         </button>
         <div id="apps-menu">
-          <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" title="Slots" id="slots-btn">🎰<span>Slots</span></button>
-          <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" title="Synth" id="synth-btn">🎹<span>Synth</span></button>
-          <button class="apps-item" onclick="openPaint();toggleAppsMenu()" title="AquaPaint" id="paint-btn">🎨<span>Paint</span></button>
-          <button class="apps-item apps-item-settings" onclick="toggleThemePanel();toggleAppsMenu()" title="Settings">⚙️<span>Settings</span></button>
-          <button class="apps-item apps-item-keys" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
+          <div class="apps-menu-hdr">
+            <span class="apps-menu-hdr-icon">&#9835;</span>
+            <span class="apps-menu-hdr-label">Aquatune Apps</span>
+          </div>
+          <div class="apps-list">
+            <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" id="slots-btn">
+              <span class="apps-item-icon">🎰</span>
+              <div class="apps-item-info"><div class="apps-item-name">AquaSlots</div><div class="apps-item-desc">Spin the reels</div></div>
+            </button>
+            <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" id="synth-btn">
+              <span class="apps-item-icon">🎹</span>
+              <div class="apps-item-info"><div class="apps-item-name">AquaSynth</div><div class="apps-item-desc">Step sequencer &amp; synth</div></div>
+            </button>
+            <button class="apps-item" onclick="openPaint();toggleAppsMenu()" id="paint-btn">
+              <span class="apps-item-icon">🎨</span>
+              <div class="apps-item-info"><div class="apps-item-name">AquaPaint</div><div class="apps-item-desc">Pixel art canvas</div></div>
+            </button>
+            <button class="apps-item apps-item-keys" onclick="toggleKbdHint();toggleAppsMenu()" id="kbd-btn">
+              <span class="apps-item-icon">⌨️</span>
+              <div class="apps-item-info"><div class="apps-item-name">Shortcuts</div><div class="apps-item-desc">Keyboard reference</div></div>
+            </button>
+          </div>
+          <div class="apps-menu-div"></div>
+          <div class="apps-footer">
+            <button class="apps-footer-btn" onclick="toggleThemePanel();toggleAppsMenu()">
+              <span>⚙️</span><span>Settings &amp; Themes</span>
+            </button>
+          </div>
         </div>
       </div>
       <button id="gear-btn" onclick="toggleThemePanel()" title="Customize theme">&#9881;</button>

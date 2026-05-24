@@ -480,15 +480,22 @@
     }
     .click-ripple {
       position:fixed; border-radius:50%; pointer-events:none; z-index:9998;
-      width:18px; height:18px; margin:-9px 0 0 -9px;
-      border:2px solid rgba(0,180,230,0.7);
-      background:rgba(0,180,230,0.12);
-      animation:clickRippleOut .55s cubic-bezier(.2,.8,.3,1) forwards;
+      width:28px; height:28px; margin:-14px 0 0 -14px;
+      border:1.5px solid rgba(0,180,230,0.55);
+      background:radial-gradient(circle, rgba(0,200,240,0.18) 0%, rgba(0,180,230,0.06) 55%, transparent 100%);
+      animation:clickRippleOut .7s cubic-bezier(.15,.7,.25,1) forwards;
+    }
+    .click-ripple.r2 {
+      width:20px; height:20px; margin:-10px 0 0 -10px;
+      border-color:rgba(0,200,240,0.35);
+      background:none;
+      animation-duration:.9s;
+      animation-delay:.06s;
     }
     @keyframes clickRippleOut {
-      0%   { opacity:1; transform:scale(0.2); }
-      60%  { opacity:0.6; }
-      100% { opacity:0; transform:scale(4); }
+      0%   { opacity:1; transform:scale(0.1); }
+      30%  { opacity:0.7; }
+      100% { opacity:0; transform:scale(5.5); }
     }
 
     /* ── SHORT VIEWPORT (MacBook Touch Bar etc.) ─────────── */
@@ -1794,8 +1801,8 @@
     }
     #splash.fade-out { opacity: 0; visibility: hidden; }
     #splash .sp-logo {
-      width: 120px; height: 120px; object-fit: contain;
-      filter: drop-shadow(0 8px 24px rgba(0,100,180,0.45)) drop-shadow(0 0 32px rgba(255,255,255,0.5));
+      width: 200px; height: 200px; object-fit: contain;
+      filter: drop-shadow(0 10px 30px rgba(0,100,180,0.45)) drop-shadow(0 0 48px rgba(255,255,255,0.55));
       animation: spPulse 1.4s ease-in-out infinite alternate;
     }
     #splash .sp-bar {
@@ -6473,12 +6480,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Click ripple
   document.addEventListener('click', e => {
     if (!_rippleEnabled) return;
-    const r = document.createElement('div');
-    r.className = 'click-ripple';
-    r.style.left = e.clientX + 'px';
-    r.style.top  = e.clientY + 'px';
-    document.body.appendChild(r);
-    r.addEventListener('animationend', () => r.remove(), { once: true });
+    const spawnRing = (cls) => {
+      const r = document.createElement('div');
+      r.className = cls;
+      r.style.left = e.clientX + 'px';
+      r.style.top  = e.clientY + 'px';
+      document.body.appendChild(r);
+      r.addEventListener('animationend', () => r.remove(), { once: true });
+    };
+    spawnRing('click-ripple');
+    spawnRing('click-ripple r2');
   });
   // Service worker for background audio
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

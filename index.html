@@ -2516,54 +2516,163 @@ body.perf-mode #aqua-gun { display: none !important; }
       #picross-wrap { width:96vw; }
     }
 
+    /* ── SHARED WIN95 ─── */
+    .win95-btn {
+      background:#d4d0c8;
+      border:2px solid;
+      border-color:#fff #808080 #808080 #fff;
+      padding:2px 12px;
+      font-family:Arial,sans-serif;
+      font-size:12px;
+      cursor:pointer;
+      min-height:22px;
+    }
+    .win95-btn:active { border-color:#808080 #fff #fff #808080; }
+    .sol-titlebar {
+      background:linear-gradient(90deg,#000080,#1084d0);
+      color:#fff;
+      font-family:Arial,sans-serif;
+      font-size:12px;
+      font-weight:bold;
+      padding:3px 4px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-shrink:0;
+      cursor:move;
+      user-select:none;
+    }
+    .sol-titlebtn {
+      background:#d4d0c8;
+      border:1px solid;
+      border-color:#fff #808080 #808080 #fff;
+      color:#000;
+      font-size:10px;
+      width:16px;
+      height:14px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      font-family:Arial,sans-serif;
+    }
+    .sol-titlebtn.sol-close { font-weight:bold; }
     /* ── SOLITAIRE ─── */
     #solitaire-wrap {
       display:none; flex-direction:column; position:fixed;
       top:55px; left:50%; transform:translateX(-50%);
-      width:560px; border-radius:12px 12px 8px 8px;
-      background:#076324; border:1.5px solid #054e1c;
-      box-shadow:0 20px 60px rgba(0,0,0,0.5); z-index:500;
+      width:580px; background:#c0c0c0;
+      border:2px solid; border-color:#fff #808080 #808080 #fff;
+      box-shadow:2px 2px 0 #000; border-radius:0;
+      font-family:Arial,sans-serif; z-index:500;
     }
     #solitaire-wrap.open { display:flex; }
-    #solitaire-titlebar {
-      background:var(--hdr-bg); padding:7px 10px; flex-shrink:0;
-      display:flex; align-items:center; gap:8px; border-radius:10px 10px 0 0;
-      position:relative; overflow:hidden;
+    #sol-status { font-size:11px; padding:2px 6px; background:#c0c0c0; border-bottom:1px solid #808080; color:#000; }
+    #sol-area { background:#006400; padding:8px; display:flex; flex-direction:column; gap:8px; }
+    #sol-top-row { display:flex; gap:6px; align-items:flex-start; }
+    #sol-tableau { display:flex; gap:4px; margin-top:4px; }
+    .sol-foundation, #sol-stock, #sol-waste {
+      width:71px; height:96px; border:1px solid #555;
+      background:rgba(0,80,0,0.4); position:relative; flex-shrink:0;
+      box-sizing:border-box; cursor:pointer;
     }
-    #solitaire-titlebar::after { content:'';position:absolute;inset:0;bottom:50%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%); }
-    #solitaire-body { padding:10px; display:flex; flex-direction:column; gap:8px; min-height:300px; }
-    #sol-top { display:flex; align-items:flex-start; gap:7px; }
-    #sol-foundations { display:flex; gap:7px; margin-left:auto; }
-    #sol-tableau { display:flex; gap:7px; }
-    .sol-slot {
-      width:62px; height:88px; border-radius:7px;
-      border:2px dashed rgba(255,255,255,0.22);
-      flex-shrink:0; position:relative; cursor:pointer;
+    .sol-foundation { border:1px dashed rgba(255,255,255,0.4); }
+    .sol-col {
+      width:71px; position:relative; flex-shrink:0;
+      min-height:96px;
     }
-    .sol-slot.highlight { border-color:rgba(255,220,0,0.7); box-shadow:0 0 0 2px rgba(255,220,0,0.4); }
     .sol-card {
-      position:absolute; width:62px; height:88px; border-radius:7px;
-      background:#fff; border:1px solid rgba(0,0,0,0.2);
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);
-      cursor:pointer; padding:3px 5px; box-sizing:border-box;
+      position:absolute; width:71px; height:96px; border-radius:2px;
+      border:1px solid #000; background:#fff;
+      cursor:pointer; padding:2px 4px; box-sizing:border-box;
       display:flex; flex-direction:column; user-select:none;
+      font-family:Arial,sans-serif;
     }
     .sol-card.face-down {
-      background:linear-gradient(135deg,#1a3a8a 0%,#0a2060 100%);
-      background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,0.04) 5px,rgba(255,255,255,0.04) 6px);
+      background:#1050b0;
+      background-image:
+        repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.07) 4px,rgba(255,255,255,0.07) 5px),
+        repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,0.07) 4px,rgba(255,255,255,0.07) 5px);
       cursor:default;
     }
-    .sol-card.selected { box-shadow:0 0 0 2px #ffd700, 0 4px 14px rgba(0,0,0,0.5); z-index:20 !important; }
-    .sol-card-top { font-size:13px; font-weight:800; line-height:1; }
-    .sol-card-suit { font-size:12px; line-height:1; margin-top:1px; }
+    .sol-card.selected { outline:2px solid #ffd700; z-index:20 !important; }
+    .sol-card.dragging { opacity:0.5; }
+    .sol-card-top { font-size:13px; font-weight:bold; line-height:1.1; }
+    .sol-card-suit { font-size:16px; line-height:1; text-align:center; margin-top:2px; }
     .sol-card.red .sol-card-top, .sol-card.red .sol-card-suit { color:#c00; }
     .sol-card.black .sol-card-top, .sol-card.black .sol-card-suit { color:#111; }
-    .sol-col { position:relative; min-height:88px; flex:1; }
-    #sol-score-row { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; padding:0 2px; }
+    #sol-ghost {
+      position:fixed; pointer-events:none; z-index:9999;
+      display:flex; flex-direction:column; gap:0;
+    }
+    #sol-ghost .sol-card { position:relative; top:auto; left:auto; }
     @media (max-width:768px) {
-      #solitaire-wrap { width:98vw; top:8px; }
-      .sol-card,.sol-slot { width:46px; height:66px; }
+      #solitaire-wrap { width:100vw; height:100vh; top:0; left:0; transform:none; overflow:auto; }
+      .sol-card, .sol-foundation, #sol-stock, #sol-waste { width:46px; height:66px; }
+      .sol-col { width:46px; }
       .sol-card-top { font-size:10px; }
+      .sol-card-suit { font-size:12px; }
+    }
+    /* ── MINESWEEPER ─── */
+    #mines-wrap {
+      position:fixed; top:70px; left:calc(50% + 20px); transform:translateX(-50%);
+      background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff;
+      box-shadow:2px 2px 0 #000; border-radius:0; font-family:Arial,sans-serif;
+      z-index:510; flex-direction:column;
+    }
+    #mines-wrap.open { display:flex; }
+    #mines-controls { padding:4px 6px; display:flex; gap:4px; }
+    #mines-hud {
+      background:#c0c0c0; border:2px inset #808080; display:flex;
+      justify-content:space-between; align-items:center; padding:4px 8px; margin:4px;
+    }
+    .mines-7seg {
+      background:#300; color:#f00; font-family:'Courier New',monospace;
+      font-weight:bold; padding:2px 6px; border:1px inset; min-width:40px; text-align:right;
+      font-size:18px; letter-spacing:2px;
+    }
+    #mines-smiley { font-size:18px; background:#d4d0c8; border:2px solid; border-color:#fff #808080 #808080 #fff; width:28px; height:28px; cursor:pointer; padding:0; }
+    #mines-board { display:inline-block; margin:4px; border:2px solid; border-color:#808080 #fff #fff #808080; }
+    .mines-row { display:flex; }
+    .mines-cell {
+      width:22px; height:22px; border:2px solid; border-color:#fff #808080 #808080 #fff;
+      background:#c0c0c0; font-family:Arial,sans-serif; font-size:13px; font-weight:bold;
+      cursor:default; display:flex; align-items:center; justify-content:center;
+      box-sizing:border-box; user-select:none; flex-shrink:0;
+    }
+    .mines-cell.revealed { border-color:#808080 #fff #fff #808080; border-width:1px; background:#c0c0c0; }
+    .mines-cell.mine-hit { background:#f00; }
+    .mines-n1 { color:#00f; }
+    .mines-n2 { color:#008000; }
+    .mines-n3 { color:#f00; }
+    .mines-n4 { color:#000080; }
+    .mines-n5 { color:#800000; }
+    .mines-n6 { color:#008080; }
+    .mines-n7 { color:#000; }
+    .mines-n8 { color:#808080; }
+    @media (max-width:768px) {
+      #mines-wrap { left:0; top:0; transform:none; width:100vw; height:100vh; overflow:auto; }
+    }
+    /* ── BLACKJACK ─── */
+    #blackjack-wrap {
+      position:fixed; top:80px; left:calc(50% - 20px); transform:translateX(-50%);
+      background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff;
+      box-shadow:2px 2px 0 #000; border-radius:0; font-family:Arial,sans-serif;
+      z-index:505; flex-direction:column; width:360px;
+    }
+    #blackjack-wrap.open { display:flex; }
+    #bj-area { background:#006400; padding:12px; color:#fff; display:flex; flex-direction:column; gap:8px; }
+    .bj-label { font-size:11px; font-weight:bold; color:#afffaf; margin-bottom:2px; }
+    #bj-dealer-cards, #bj-player-cards { display:flex; gap:4px; flex-wrap:wrap; min-height:96px; }
+    #bj-dealer-score, #bj-player-score { font-size:11px; color:#dfd; min-height:14px; }
+    #bj-status { font-size:14px; font-weight:bold; text-align:center; min-height:20px; color:#ffd700; }
+    #bj-balance { font-size:12px; text-align:center; }
+    #bj-bet-area { display:flex; gap:6px; align-items:center; justify-content:center; font-size:12px; }
+    #bj-actions { display:flex; gap:6px; justify-content:center; }
+    #bj-bet { font-family:Arial; font-size:12px; }
+    @media (max-width:768px) {
+      #blackjack-wrap { width:100vw; top:0; left:0; transform:none; }
     }
 
   </style>
@@ -2667,6 +2776,12 @@ body.perf-mode #aqua-gun { display: none !important; }
             </button>
             <button class="apps-game-btn" onclick="openPicross();toggleAppsMenu()">
               <span class="agb-icon">◼</span><span class="agb-name">Picross</span>
+            </button>
+            <button class="apps-game-btn" onclick="openMines();toggleAppsMenu()">
+              <span class="agb-icon">💣</span><span class="agb-name">Minesweeper</span>
+            </button>
+            <button class="apps-game-btn" onclick="openBlackjack();toggleAppsMenu()">
+              <span class="agb-icon">🃏</span><span class="agb-name">Blackjack</span>
             </button>
           </div>
           <div class="apps-menu-div"></div>
@@ -6444,8 +6559,8 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>
-  <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
-  <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🎨<span>Paint</span></button>
+  <button class="mob-tool-btn" onclick="openMines()" title="Minesweeper">💣<span>Mines</span></button>
+  <button class="mob-tool-btn" onclick="openBlackjack()" title="Blackjack">🃏<span>Blackjack</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
 
@@ -8543,33 +8658,79 @@ function solRemoveCards(pile,idx){
 
 <!-- SOLITAIRE -->
 <div id="solitaire-wrap">
-  <div id="solitaire-titlebar">
-    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">♠ AquaSolitaire</span>
-    <span id="sol-moves-disp" style="font-size:10px;color:rgba(255,255,255,0.8);font-weight:700;position:relative;z-index:1"></span>
-    <button onclick="newSolitaireGame()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;cursor:pointer;font-weight:700;position:relative;z-index:1">New Game</button>
-    <button onclick="openSolitaire(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1;margin-left:4px">✕</button>
-  </div>
-  <div id="solitaire-body">
-    <div id="sol-top">
-      <div id="sol-stock-area">
-        <div class="sol-slot" id="sol-stock" onclick="solDrawCard()" title="Draw"></div>
-        <div class="sol-slot" id="sol-waste"></div>
-      </div>
-      <div id="sol-foundations">
-        <div class="sol-slot" id="sol-f0" data-pile="f0" onclick="solClickPile(this)"></div>
-        <div class="sol-slot" id="sol-f1" data-pile="f1" onclick="solClickPile(this)"></div>
-        <div class="sol-slot" id="sol-f2" data-pile="f2" onclick="solClickPile(this)"></div>
-        <div class="sol-slot" id="sol-f3" data-pile="f3" onclick="solClickPile(this)"></div>
-      </div>
+  <div class="sol-titlebar" id="solitaire-titlebar">
+    <span>Solitaire</span>
+    <div style="display:flex;gap:4px;align-items:center">
+      <select id="sol-diff" onchange="solSetDifficulty(this.value)" style="font-size:10px;padding:1px 2px;font-family:Arial">
+        <option value="1">Draw 1</option>
+        <option value="3">Draw 3</option>
+        <option value="hard">Hard</option>
+      </select>
+      <button class="sol-titlebtn" onclick="newSolitaireGame()">New</button>
+      <button class="sol-titlebtn sol-close" onclick="openSolitaire(false)">×</button>
     </div>
-    <div id="sol-tableau">
-      <div class="sol-col sol-slot" id="sol-t0" data-pile="t0" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t1" data-pile="t1" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t2" data-pile="t2" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t3" data-pile="t3" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t4" data-pile="t4" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t5" data-pile="t5" onclick="solClickPile(this)"></div>
-      <div class="sol-col sol-slot" id="sol-t6" data-pile="t6" onclick="solClickPile(this)"></div>
+  </div>
+  <div id="sol-status">Moves: 0</div>
+  <div id="sol-area">
+    <div id="sol-top-row">
+      <div id="sol-stock" onclick="solDrawCard()"></div>
+      <div id="sol-waste"></div>
+      <div style="flex:1"></div>
+      <div id="sol-f0" class="sol-foundation" onclick="solClickFoundation(0)"></div>
+      <div id="sol-f1" class="sol-foundation" onclick="solClickFoundation(1)"></div>
+      <div id="sol-f2" class="sol-foundation" onclick="solClickFoundation(2)"></div>
+      <div id="sol-f3" class="sol-foundation" onclick="solClickFoundation(3)"></div>
+    </div>
+    <div id="sol-tableau"></div>
+  </div>
+</div>
+
+<!-- MINESWEEPER -->
+<div id="mines-wrap" style="display:none">
+  <div class="sol-titlebar" id="mines-titlebar">
+    <span>Minesweeper</span>
+    <button class="sol-titlebtn sol-close" onclick="openMines(false)">×</button>
+  </div>
+  <div id="mines-controls">
+    <button class="win95-btn" onclick="setMinesDiff(0)">Beginner</button>
+    <button class="win95-btn" onclick="setMinesDiff(1)">Intermediate</button>
+    <button class="win95-btn" onclick="setMinesDiff(2)">Expert</button>
+  </div>
+  <div id="mines-hud">
+    <div id="mines-counter" class="mines-7seg">000</div>
+    <button id="mines-smiley" onclick="newMinesGame()">🙂</button>
+    <div id="mines-timer" class="mines-7seg">000</div>
+  </div>
+  <div id="mines-board"></div>
+</div>
+
+<!-- BLACKJACK -->
+<div id="blackjack-wrap" style="display:none">
+  <div class="sol-titlebar" id="blackjack-titlebar">
+    <span>Blackjack</span>
+    <button class="sol-titlebtn sol-close" onclick="openBlackjack(false)">×</button>
+  </div>
+  <div id="bj-area">
+    <div id="bj-dealer-area">
+      <div class="bj-label">Dealer</div>
+      <div id="bj-dealer-cards"></div>
+      <div id="bj-dealer-score"></div>
+    </div>
+    <div id="bj-player-area">
+      <div class="bj-label">Player</div>
+      <div id="bj-player-cards"></div>
+      <div id="bj-player-score"></div>
+    </div>
+    <div id="bj-status"></div>
+    <div id="bj-balance">Credits: <span id="bj-bal">100</span></div>
+    <div id="bj-bet-area">
+      Bet: <input id="bj-bet" type="number" value="10" min="1" max="100" style="width:60px">
+      <button class="win95-btn" onclick="bjDeal()">Deal</button>
+    </div>
+    <div id="bj-actions" style="display:none">
+      <button class="win95-btn" onclick="bjHit()">Hit</button>
+      <button class="win95-btn" onclick="bjStand()">Stand</button>
+      <button class="win95-btn" id="bj-double-btn" onclick="bjDouble()">Double</button>
     </div>
   </div>
 </div>

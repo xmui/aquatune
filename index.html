@@ -1530,8 +1530,8 @@
       #auth-area { gap: 4px; }
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
-      /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
-      #apps-menu-wrap, #gear-btn { display: none !important; }
+      /* gear-btn hidden on mobile — apps-btn handles it */
+      #gear-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -1658,8 +1658,8 @@
       /* Toast above tools bar */
       #toast { bottom: 104px; }
 
-      /* Mob tools bar visible */
-      #mob-tools-bar { display: flex; }
+      /* Mob tools bar hidden — apps button in header handles mini-apps */
+      #mob-tools-bar { display: none; }
 
       /* Modals */
       .modal { width: 94vw !important; max-width: 94vw !important; }
@@ -2065,6 +2065,9 @@ body.perf-mode #aqua-gun { display: none !important; }
   #paint-wrap { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; }
   #room-badge button.leave-btn span { display: none; }
   #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
+  /* Apps menu on mobile: 2-col grid, full-width-safe, hide Keys */
+  #apps-menu { grid-template-columns: 1fr 1fr; width: 168px; }
+  .apps-item-keys { display: none; }
 }
 [data-scheme=dark] #splash-room { background: rgba(14,28,60,0.96); border-color: rgba(56,160,255,0.3); }
 [data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code, [data-scheme=dark] #sp-create-code { background: rgba(8,20,50,0.9); color:#e8f0ff; border-color: rgba(56,160,255,0.35); }
@@ -2405,25 +2408,33 @@ body.perf-mode #aqua-gun { display: none !important; }
       position:relative;
     }
     #apps-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
+    #apps-btn.open { background:rgba(255,255,255,0.32); border-color:rgba(255,255,255,0.75); }
     #apps-menu {
-      display:none; position:absolute; top:calc(100% + 10px); right:0;
-      background:var(--panel); border:1.5px solid var(--border);
-      border-radius:16px; padding:10px;
-      box-shadow: 0 12px 40px rgba(0,80,160,0.22), 0 2px 8px rgba(0,80,160,0.12);
-      backdrop-filter:blur(16px);
-      flex-direction:row; gap:6px; z-index:600; min-width:200px;
+      visibility:hidden; opacity:0; pointer-events:none;
+      position:absolute; top:calc(100% + 8px); right:0;
+      background: linear-gradient(170deg, rgba(255,255,255,0.96) 0%, rgba(228,242,255,0.94) 100%);
+      border:1.5px solid rgba(255,255,255,0.85);
+      border-radius:18px; padding:8px;
+      box-shadow: 0 16px 48px rgba(0,60,160,0.22), 0 4px 12px rgba(0,80,180,0.14), inset 0 1.5px 0 rgba(255,255,255,1);
+      backdrop-filter:blur(20px) saturate(1.3);
+      display:grid; grid-template-columns:1fr 1fr 1fr;
+      gap:6px; z-index:600; width:220px;
+      transform:translateY(-6px) scale(0.96);
+      transition: opacity .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1), visibility .18s;
     }
-    #apps-menu.open { display:flex; }
+    #apps-menu.open { visibility:visible; opacity:1; pointer-events:auto; transform:translateY(0) scale(1); }
     .apps-item {
-      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:4px; padding:10px 6px; border-radius:12px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.97),rgba(220,240,255,0.88));
-      border:1.5px solid var(--border); color:var(--text); font-size:18px; cursor:pointer;
-      transition:all .15s; min-width:44px;
-      box-shadow: 0 1px 4px rgba(0,100,180,0.1), inset 0 1.5px 0 rgba(255,255,255,0.9);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:5px; padding:12px 6px 10px; border-radius:13px;
+      background:linear-gradient(170deg,rgba(255,255,255,0.92) 0%,rgba(220,238,255,0.80) 100%);
+      border:1.5px solid rgba(120,200,240,0.28);
+      color:var(--text); font-size:22px; cursor:pointer;
+      transition:all .14s; user-select:none;
+      box-shadow: 0 1px 5px rgba(0,100,180,0.08), inset 0 1.5px 0 rgba(255,255,255,0.95);
     }
-    .apps-item span { font-size:8px; font-weight:700; color:var(--text2); white-space:nowrap; font-family:var(--font-ui); }
-    .apps-item:hover { background:linear-gradient(180deg,rgba(255,255,255,1),rgba(200,235,255,0.95)); border-color:var(--accent); transform:translateY(-1px); }
+    .apps-item span { font-size:9px; font-weight:800; color:var(--text2); white-space:nowrap; font-family:var(--font-ui); letter-spacing:.3px; text-transform:uppercase; }
+    .apps-item:hover { background:linear-gradient(170deg,rgba(255,255,255,1) 0%,rgba(200,232,255,0.92) 100%); border-color:var(--accent); transform:translateY(-2px) scale(1.04); box-shadow:0 4px 14px rgba(0,120,200,0.18),inset 0 1.5px 0 rgba(255,255,255,1); }
+    .apps-item:active { transform:scale(0.97); }
 
   </style>
 </head>
@@ -2512,7 +2523,8 @@ body.perf-mode #aqua-gun { display: none !important; }
           <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" title="Slots" id="slots-btn">🎰<span>Slots</span></button>
           <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" title="Synth" id="synth-btn">🎹<span>Synth</span></button>
           <button class="apps-item" onclick="openPaint();toggleAppsMenu()" title="AquaPaint" id="paint-btn">🎨<span>Paint</span></button>
-          <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
+          <button class="apps-item apps-item-settings" onclick="toggleThemePanel();toggleAppsMenu()" title="Settings">⚙️<span>Settings</span></button>
+          <button class="apps-item apps-item-keys" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
         </div>
       </div>
       <button id="gear-btn" onclick="toggleThemePanel()" title="Customize theme">&#9881;</button>
@@ -2679,10 +2691,10 @@ body.perf-mode #aqua-gun { display: none !important; }
   <div class="theme-label" style="margin-bottom:6px">Theme</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">macOS</button>
-    <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">DS / 3DS</button>
-    <button class="theme-swatch"   data-theme="retro"     onclick="selectTheme('retro',this)">Retro 95</button>
-    <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Dark Glass</button>
+    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
+    <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
+    <button class="theme-swatch"   data-theme="retro"     onclick="selectTheme('retro',this)">Classic</button>
+    <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
     <button class="theme-swatch"   data-theme="vapor"     onclick="selectTheme('vapor',this)">Vaporwave</button>
   </div>
   <div class="theme-section">
@@ -3151,12 +3163,16 @@ function applyTheme(name, customAccent) {
   currentTheme = name;
 }
 function toggleAppsMenu() {
-  document.getElementById('apps-menu').classList.toggle('open');
+  const menu = document.getElementById('apps-menu');
+  const btn  = document.getElementById('apps-btn');
+  const isOpen = menu.classList.toggle('open');
+  btn?.classList.toggle('open', isOpen);
 }
 document.addEventListener('click', function(e) {
   const wrap = document.getElementById('apps-menu-wrap');
   if (wrap && !wrap.contains(e.target)) {
     document.getElementById('apps-menu')?.classList.remove('open');
+    document.getElementById('apps-btn')?.classList.remove('open');
   }
 });
 function focusSearch() {

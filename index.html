@@ -8130,20 +8130,31 @@ const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SOL_RED   = new Set(['♥','♦']);
 let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
 let solSelected=null, solMoves=0;
+let solDrawCount=1, solMaxPasses=999, solStockPasses=0;
+let solDragState=null;
 let _solitaireInited=false;
 
-function openSolitaire(show=true) {
+function openSolitaire(show=true){
   const w=document.getElementById('solitaire-wrap');
   if(show===false){w.classList.remove('open');return;}
   w.classList.toggle('open');
   if(w.classList.contains('open')&&!_solitaireInited){_solitaireInited=true;newSolitaireGame();}
 }
+
+function solSetDifficulty(v){
+  if(v==='1'||v===1){solDrawCount=1;solMaxPasses=999;}
+  else if(v==='3'||v===3){solDrawCount=3;solMaxPasses=999;}
+  else if(v==='hard'){solDrawCount=3;solMaxPasses=3;}
+  newSolitaireGame();
+}
+
 function solMakeDeck(){
   const d=[];
   SOL_SUITS.forEach(s=>SOL_VALS.forEach(v=>d.push({s,v,face:false})));
   for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
   return d;
 }
+
 function newSolitaireGame(){
   const deck=solMakeDeck();
   solTableau=[];
@@ -8151,50 +8162,81 @@ function newSolitaireGame(){
     const pile=[];
     for(let r=0;r<=c;r++){
       const card=deck.pop();
-      card.face=r===c;
+      card.face=(r===c);
       pile.push(card);
     }
     solTableau.push(pile);
   }
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
-  solSelected=null; solMoves=0;
+  solSelected=null; solMoves=0; solStockPasses=0;
   solRender();
 }
-function solCardEl(card, idx, pileId, zBase){
+
+function solCardEl(card, idx, pileType, pileIdx, zBase){
   const d=document.createElement('div');
   d.className='sol-card'+(card.face?'':' face-down');
-  if(card.face) d.classList.remove('face-down');
   if(card.face) d.classList.add(SOL_RED.has(card.s)?'red':'black');
   if(card.face){
-    d.innerHTML=`<span class="sol-card-top">${card.v}</span><span class="sol-card-suit">${card.s}</span>`;
+    d.innerHTML='<span class="sol-card-top">'+card.v+'<br>'+card.s+'</span>';
   }
   d.style.zIndex=zBase+idx;
-  d.dataset.pile=pileId;
-  d.dataset.idx=idx;
-  if(solSelected&&solSelected.pile===pileId&&solSelected.idx===idx) d.classList.add('selected');
-  d.addEventListener('click',e=>{e.stopPropagation();solClickCard(pileId,idx,card);});
+  d.dataset.ptype=pileType;
+  d.dataset.pidx=pileIdx;
+  d.dataset.cidx=idx;
+  const selOk=solSelected&&solSelected.ptype===pileType&&solSelected.pidx===pileIdx&&solSelected.cidx===idx;
+  if(selOk) d.classList.add('selected');
+  d.addEventListener('click',function(e){e.stopPropagation();solClickCard(pileType,pileIdx,idx);});
+  d.addEventListener('mousedown',function(e){
+    if(e.button!==0) return;
+    if(!card.face) return;
+    e.stopPropagation();
+    solStartDrag(pileType,pileIdx,idx,e);
+  });
   return d;
 }
+
 function solRender(){
   // Stock
   const stockEl=document.getElementById('sol-stock');
   stockEl.innerHTML='';
+  const stockDisabled=solStockPasses>=solMaxPasses&&solStock.length===0;
   if(solStock.length){
     const c=document.createElement('div');
     c.className='sol-card face-down';
     c.style.zIndex=1;
     stockEl.appendChild(c);
+  } else if(!stockDisabled){
+    stockEl.innerHTML='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22px;opacity:.5;color:#fff">↺</span>';
+  } else {
+    stockEl.innerHTML='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:#faa;text-align:center">No more passes</span>';
   }
-  // Waste
+
+  // Waste - draw-3 fan
   const wasteEl=document.getElementById('sol-waste');
   wasteEl.innerHTML='';
-  if(solWaste.length){
-    const card=solWaste[solWaste.length-1];
-    const d=solCardEl(card,solWaste.length-1,'waste',1);
-    d.style.position='absolute'; d.style.top='0'; d.style.left='0';
-    wasteEl.appendChild(d);
+  wasteEl.style.position='relative';
+  if(solDrawCount===1){
+    if(solWaste.length){
+      const card=solWaste[solWaste.length-1];
+      const d=solCardEl(card,solWaste.length-1,'waste',0,1);
+      d.style.position='absolute'; d.style.top='0'; d.style.left='0';
+      wasteEl.appendChild(d);
+    }
+  } else {
+    const show=Math.min(3,solWaste.length);
+    const startI=solWaste.length-show;
+    for(let i=0;i<show;i++){
+      const ci=startI+i;
+      const card=solWaste[ci];
+      const d=solCardEl(card,ci,'waste',0,i+1);
+      d.style.position='absolute'; d.style.top='0'; d.style.left=(i*18)+'px';
+      if(i<show-1){ d.style.pointerEvents='none'; }
+      wasteEl.appendChild(d);
+    }
+    if(show>0) wasteEl.style.width=(71+(show-1)*18)+'px';
   }
+
   // Foundations
   for(let f=0;f<4;f++){
     const el=document.getElementById('sol-f'+f);
@@ -8202,164 +8244,795 @@ function solRender(){
     const pile=solFoundations[f];
     if(pile.length){
       const card=pile[pile.length-1];
-      const d=solCardEl(card,pile.length-1,'f'+f,1);
+      const d=solCardEl(card,pile.length-1,'foundation',f,1);
       d.style.position='absolute'; d.style.top='0'; d.style.left='0';
       el.appendChild(d);
     } else {
-      el.innerHTML=`<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3">${SOL_SUITS[f]}</span>`;
+      el.innerHTML='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3">'+SOL_SUITS[f]+'</span>';
     }
   }
+
   // Tableau
+  const tabEl=document.getElementById('sol-tableau');
+  tabEl.innerHTML='';
   for(let t=0;t<7;t++){
-    const el=document.getElementById('sol-t'+t);
-    el.innerHTML='';
+    const col=document.createElement('div');
+    col.className='sol-col';
+    col.id='sol-t'+t;
+    col.dataset.ptype='tableau';
+    col.dataset.pidx=t;
     const pile=solTableau[t];
-    el.style.minHeight=(88+Math.max(0,pile.length-1)*22)+'px';
-    pile.forEach((card,i)=>{
-      const d=solCardEl(card,i,'t'+t,i);
+    const minH=96+Math.max(0,pile.length-1)*22;
+    col.style.minHeight=minH+'px';
+    col.style.position='relative';
+    col.addEventListener('click',function(e){
+      if(e.target===col) solClickEmptyTableau(t);
+    });
+    pile.forEach(function(card,i){
+      const d=solCardEl(card,i,'tableau',t,i);
       d.style.position='absolute';
       d.style.top=(i*22)+'px'; d.style.left='0';
-      el.appendChild(d);
+      col.appendChild(d);
     });
+    tabEl.appendChild(col);
   }
-  // Score
-  const mv=document.getElementById('sol-moves-disp');
-  if(mv) mv.textContent='Moves: '+solMoves;
-  // Highlight valid drops
-  document.querySelectorAll('.sol-slot').forEach(s=>s.classList.remove('highlight'));
-  if(solSelected) solHighlightValid();
+
+  // Status
+  const st=document.getElementById('sol-status');
+  if(st) st.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
+
   // Win check
-  if(solFoundations.every(f=>f.length===13)){
-    setTimeout(()=>alert('🎉 You win! '+ solMoves+' moves'),100);
+  if(solFoundations.every(function(f){return f.length===13;})){
+    setTimeout(function(){solOnWin();},100);
   }
 }
-function solHighlightValid(){
+
+function solClickEmptyTableau(t){
   if(!solSelected) return;
-  const {pile,idx}=solSelected;
-  const cards=solGetCards(pile,idx);
-  if(!cards||!cards.length) return;
-  const top=cards[0];
-  // Check foundations
-  for(let f=0;f<4;f++){
-    if(cards.length===1&&solCanFoundation(top,f)) document.getElementById('sol-f'+f).classList.add('highlight');
-  }
-  // Check tableau
-  for(let t=0;t<7;t++){
-    if(solCanTableau(top, solTableau[t])) document.getElementById('sol-t'+t).classList.add('highlight');
-  }
+  solTryMove(solSelected.ptype,solSelected.pidx,solSelected.cidx,'tableau',t);
 }
-function solGetCards(pile,idx){
-  if(pile==='waste') return idx===solWaste.length-1?[solWaste[idx]]:null;
-  if(pile.startsWith('f')) return idx===(solFoundations[+pile[1]].length-1)?[solFoundations[+pile[1]][idx]]:null;
-  if(pile.startsWith('t')) return solTableau[+pile[1]].slice(idx);
+
+function solClickFoundation(idx){
+  if(!solSelected) return;
+  solTryMove(solSelected.ptype,solSelected.pidx,solSelected.cidx,'foundation',idx);
+}
+
+function solGetCards(ptype,pidx,cidx){
+  if(ptype==='waste'){
+    if(cidx===solWaste.length-1) return [solWaste[cidx]];
+    return null;
+  }
+  if(ptype==='foundation'){
+    const pile=solFoundations[pidx];
+    if(cidx===pile.length-1) return [pile[cidx]];
+    return null;
+  }
+  if(ptype==='tableau'){
+    return solTableau[pidx].slice(cidx);
+  }
   return null;
 }
+
 function solCanFoundation(card,f){
   const pile=solFoundations[f];
   if(!pile.length) return card.v==='A';
   const top=pile[pile.length-1];
   return top.s===card.s && SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)+1;
 }
+
+function solCanStack(card,targetCard){
+  if(!targetCard) return card.v==='K';
+  const colOk=SOL_RED.has(card.s)!==SOL_RED.has(targetCard.s);
+  const valOk=SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(targetCard.v)-1;
+  return colOk&&valOk;
+}
+
 function solCanTableau(card,pile){
   if(!pile.length) return card.v==='K';
   const top=pile[pile.length-1];
   if(!top.face) return false;
-  const colOk=SOL_RED.has(card.s)!==SOL_RED.has(top.s);
-  const valOk=SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)-1;
-  return colOk&&valOk;
+  return solCanStack(card,top);
 }
+
 function solDrawCard(){
+  if(solStockPasses>=solMaxPasses&&solStock.length===0){
+    return;
+  }
   if(!solStock.length){
-    solStock=[...solWaste].reverse().map(c=>({...c,face:false}));
+    solStock=[...solWaste].reverse().map(function(c){return Object.assign({},c,{face:false});});
     solWaste=[];
+    solStockPasses++;
   } else {
-    const c=solStock.pop();
-    c.face=true;
-    solWaste.push(c);
+    const toDraw=Math.min(solDrawCount,solStock.length);
+    for(let i=0;i<toDraw;i++){
+      const c=solStock.pop();
+      c.face=true;
+      solWaste.push(c);
+    }
     solMoves++;
   }
   solSelected=null;
   solRender();
 }
-function solClickCard(pile,idx,card){
+
+function solClickCard(ptype,pidx,cidx){
+  const pile= ptype==='waste'?solWaste: ptype==='foundation'?solFoundations[pidx]:solTableau[pidx];
+  const card=pile[cidx];
+  if(!card) return;
   if(!card.face){
-    // flip last card in tableau
-    if(pile.startsWith('t')){
-      const t=solTableau[+pile[1]];
-      if(idx===t.length-1){t[idx].face=true;solMoves++;solRender();}
+    if(ptype==='tableau'&&cidx===pile.length-1){
+      pile[cidx].face=true; solMoves++; solSelected=null; solRender();
     }
     return;
   }
-  if(solSelected&&solSelected.pile===pile&&solSelected.idx===idx){
+  if(solSelected&&solSelected.ptype===ptype&&solSelected.pidx===pidx&&solSelected.cidx===cidx){
     solSelected=null; solRender(); return;
   }
   if(solSelected){
-    // try to move
-    const moved=solTryMove(solSelected.pile,solSelected.idx,pile,idx);
-    if(!moved){ solSelected={pile,idx}; solRender(); }
+    const moved=solTryMove(solSelected.ptype,solSelected.pidx,solSelected.cidx,ptype,pidx);
+    if(!moved){ solSelected={ptype,pidx,cidx}; solRender(); }
     return;
   }
-  solSelected={pile,idx};
+  solSelected={ptype,pidx,cidx};
   solRender();
 }
-function solClickPile(el){
-  const pile=el.dataset.pile;
-  if(!solSelected) return;
-  solTryMove(solSelected.pile,solSelected.idx,pile,null);
-}
-function solTryMove(fromPile,fromIdx,toPile,toIdx){
-  const cards=solGetCards(fromPile,fromIdx);
+
+function solTryMove(fromPtype,fromPidx,fromCidx,toPtype,toPidx){
+  const cards=solGetCards(fromPtype,fromPidx,fromCidx);
   if(!cards||!cards.length){solSelected=null;solRender();return false;}
   const top=cards[0];
   let moved=false;
-  if(toPile.startsWith('f')&&cards.length===1){
-    const f=+toPile[1];
-    if(solCanFoundation(top,f)){
-      solRemoveCards(fromPile,fromIdx);
-      solFoundations[f].push(top);
+
+  if(toPtype==='foundation'&&cards.length===1){
+    if(solCanFoundation(top,toPidx)){
+      solRemoveCards(fromPtype,fromPidx,fromCidx);
+      solFoundations[toPidx].push(top);
       moved=true;
     }
-  } else if(toPile.startsWith('t')){
-    const t=+toPile[1];
-    if(solCanTableau(top,solTableau[t])){
-      solRemoveCards(fromPile,fromIdx);
-      solTableau[t].push(...cards);
+  } else if(toPtype==='tableau'){
+    const tPile=solTableau[toPidx];
+    if(solCanTableau(top,tPile)){
+      solRemoveCards(fromPtype,fromPidx,fromCidx);
+      tPile.push.apply(tPile,cards);
       moved=true;
     }
   }
+
   if(moved){
     solMoves++;
-    // flip new last card in source tableau
-    if(fromPile.startsWith('t')){
-      const t=solTableau[+fromPile[1]];
-      if(t.length&&!t[t.length-1].face) t[t.length-1].face=true;
+    if(fromPtype==='tableau'){
+      const src=solTableau[fromPidx];
+      if(src.length&&!src[src.length-1].face) src[src.length-1].face=true;
     }
   }
   solSelected=null;
   solRender();
   return moved;
 }
-function solRemoveCards(pile,idx){
-  if(pile==='waste'){ solWaste.splice(idx,1); }
-  else if(pile.startsWith('f')){ solFoundations[+pile[1]].splice(idx,1); }
-  else if(pile.startsWith('t')){ solTableau[+pile[1]].splice(idx); }
+
+function solRemoveCards(ptype,pidx,cidx){
+  if(ptype==='waste'){ solWaste.splice(cidx,1); }
+  else if(ptype==='foundation'){ solFoundations[pidx].splice(cidx,1); }
+  else if(ptype==='tableau'){ solTableau[pidx].splice(cidx); }
 }
-// drag solitaire window
+
+function solOnWin(){
+  console.log('sol-win');
+  alert('You win! Completed in '+solMoves+' moves.');
+}
+
+// ── SOLITAIRE DRAG ────────────────────────────────────
+function solStartDrag(ptype,pidx,cidx,e){
+  const cards=solGetCards(ptype,pidx,cidx);
+  if(!cards||!cards.length) return;
+  e.preventDefault();
+  solSelected=null;
+
+  const ghost=document.createElement('div');
+  ghost.id='sol-ghost';
+  ghost.style.cssText='position:fixed;pointer-events:none;z-index:9999;display:flex;flex-direction:column;';
+  cards.forEach(function(card,i){
+    const d=document.createElement('div');
+    d.className='sol-card '+(SOL_RED.has(card.s)?'red':'black');
+    d.style.cssText='position:relative;top:auto;left:auto;margin-top:'+(i===0?'0':'-74px')+';';
+    d.innerHTML='<span class="sol-card-top">'+card.v+'<br>'+card.s+'</span>';
+    ghost.appendChild(d);
+  });
+  document.body.appendChild(ghost);
+
+  const rect={left:e.clientX-20,top:e.clientY-20};
+  ghost.style.left=rect.left+'px';
+  ghost.style.top=rect.top+'px';
+
+  solDragState={ptype,pidx,cidx,cards,ghostEl:ghost,offX:20,offY:20};
+
+  // Mark source cards as dragging
+  solRender();
+  // Fade source
+  if(ptype==='tableau'){
+    const col=document.getElementById('sol-t'+pidx);
+    if(col){
+      const childs=col.children;
+      for(let i=0;i<childs.length;i++){
+        if(parseInt(childs[i].dataset.cidx)>=cidx) childs[i].classList.add('dragging');
+      }
+    }
+  }
+}
+
+document.addEventListener('mousemove',function(e){
+  if(!solDragState) return;
+  solDragState.ghostEl.style.left=(e.clientX-solDragState.offX)+'px';
+  solDragState.ghostEl.style.top=(e.clientY-solDragState.offY)+'px';
+});
+
+document.addEventListener('mouseup',function(e){
+  if(!solDragState) return;
+  const ds=solDragState;
+  solDragState=null;
+  // Remove ghost
+  if(ds.ghostEl&&ds.ghostEl.parentNode) ds.ghostEl.parentNode.removeChild(ds.ghostEl);
+
+  // Find drop target
+  const els=document.elementsFromPoint(e.clientX,e.clientY);
+  let target=null;
+  for(let i=0;i<els.length;i++){
+    const el=els[i];
+    if(el.id&&el.id.startsWith('sol-f')){
+      target={toPtype:'foundation',toPidx:+el.id[5]};
+      break;
+    }
+    if(el.id&&el.id.startsWith('sol-t')){
+      target={toPtype:'tableau',toPidx:+el.id[5]};
+      break;
+    }
+    if(el.dataset&&el.dataset.ptype==='foundation'){
+      target={toPtype:'foundation',toPidx:+el.dataset.pidx};
+      break;
+    }
+    if(el.dataset&&el.dataset.ptype==='tableau'){
+      target={toPtype:'tableau',toPidx:+el.dataset.pidx};
+      break;
+    }
+  }
+  if(target){
+    solTryMove(ds.ptype,ds.pidx,ds.cidx,target.toPtype,target.toPidx);
+  } else {
+    solRender();
+  }
+});
+
+// ── SOLITAIRE WINDOW DRAG ────────────────────────────────────
 (function(){
   let drag=null;
-  document.addEventListener('mousedown',e=>{
+  document.addEventListener('mousedown',function(e){
     if(!e.target.closest('#solitaire-titlebar')) return;
+    if(e.target.tagName==='BUTTON'||e.target.tagName==='SELECT') return;
     const w=document.getElementById('solitaire-wrap');
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
   });
-  document.addEventListener('mousemove',e=>{
+  document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('solitaire-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',()=>{drag=null;});
+  document.addEventListener('mouseup',function(){drag=null;});
+})();
+
+// ── MINESWEEPER ────────────────────────────────────────
+let minesGrid=[], minesRevealed=[], minesFlagged=[];
+let minesW=9, minesH=9, minesCt=10;
+let minesStarted=false, minesOver=false, minesTimerInt=null, minesSeconds=0, minesFlagCount=0;
+
+function openMines(show=true){
+  const w=document.getElementById('mines-wrap');
+  if(show===false){w.classList.remove('open');w.style.display='none';minesStopTimer();return;}
+  const wasOpen=w.classList.contains('open');
+  w.classList.toggle('open');
+  if(w.classList.contains('open')){w.style.display='flex';if(!wasOpen) newMinesGame();}
+  else{w.style.display='none';}
+}
+
+function setMinesDiff(d){
+  if(d===0){minesW=9;minesH=9;minesCt=10;}
+  else if(d===1){minesW=16;minesH=16;minesCt=40;}
+  else if(d===2){minesW=30;minesH=16;minesCt=99;}
+  newMinesGame();
+}
+
+function newMinesGame(){
+  minesGrid=[];
+  minesRevealed=[];
+  minesFlagged=[];
+  for(let y=0;y<minesH;y++){
+    minesGrid.push(new Array(minesW).fill(0));
+    minesRevealed.push(new Array(minesW).fill(false));
+    minesFlagged.push(new Array(minesW).fill(false));
+  }
+  minesStarted=false;
+  minesOver=false;
+  minesFlagCount=0;
+  minesStopTimer();
+  minesSeconds=0;
+  const smiley=document.getElementById('mines-smiley');
+  if(smiley) smiley.textContent='🙂';
+  const timer=document.getElementById('mines-timer');
+  if(timer) timer.textContent='000';
+  minesUpdateCounter();
+  minesRenderBoard();
+}
+
+function minesPlaceMines(safeX,safeY){
+  let placed=0;
+  while(placed<minesCt){
+    const x=Math.floor(Math.random()*minesW);
+    const y=Math.floor(Math.random()*minesH);
+    if(minesGrid[y][x]===-1) continue;
+    if(Math.abs(x-safeX)<=1&&Math.abs(y-safeY)<=1) continue;
+    minesGrid[y][x]=-1;
+    placed++;
+  }
+  // Count neighbors
+  for(let y=0;y<minesH;y++){
+    for(let x=0;x<minesW;x++){
+      if(minesGrid[y][x]===-1) continue;
+      let cnt=0;
+      for(let dy=-1;dy<=1;dy++){
+        for(let dx=-1;dx<=1;dx++){
+          const ny=y+dy, nx=x+dx;
+          if(ny>=0&&ny<minesH&&nx>=0&&nx<minesW&&minesGrid[ny][nx]===-1) cnt++;
+        }
+      }
+      minesGrid[y][x]=cnt;
+    }
+  }
+}
+
+function minesRenderBoard(){
+  const board=document.getElementById('mines-board');
+  board.innerHTML='';
+  board.addEventListener('mousedown',function(){
+    if(!minesOver){
+      const s=document.getElementById('mines-smiley');
+      if(s) s.textContent='😮';
+    }
+  });
+  board.addEventListener('mouseup',function(){
+    if(!minesOver){
+      const s=document.getElementById('mines-smiley');
+      if(s&&s.textContent==='😮') s.textContent='🙂';
+    }
+  });
+  for(let y=0;y<minesH;y++){
+    const row=document.createElement('div');
+    row.className='mines-row';
+    for(let x=0;x<minesW;x++){
+      const cell=document.createElement('div');
+      cell.className='mines-cell';
+      cell.dataset.x=x;
+      cell.dataset.y=y;
+      cell.addEventListener('click',function(e){minesLeftClick(x,y);});
+      cell.addEventListener('contextmenu',function(e){e.preventDefault();minesRightClick(x,y);});
+      cell.addEventListener('dblclick',function(e){minesChord(x,y);});
+      row.appendChild(cell);
+    }
+    board.appendChild(row);
+  }
+}
+
+function minesGetCell(x,y){
+  const board=document.getElementById('mines-board');
+  return board.querySelector('[data-x="'+x+'"][data-y="'+y+'"]');
+}
+
+function minesUpdateCell(x,y){
+  const cell=minesGetCell(x,y);
+  if(!cell) return;
+  cell.className='mines-cell';
+  cell.textContent='';
+  if(minesFlagged[y][x]){
+    cell.textContent='🚩';
+    return;
+  }
+  if(!minesRevealed[y][x]) return;
+  cell.classList.add('revealed');
+  const v=minesGrid[y][x];
+  if(v===-1){
+    cell.textContent='💣';
+    cell.classList.add('mine');
+  } else if(v>0){
+    cell.textContent=v;
+    cell.classList.add('mines-n'+v);
+  }
+}
+
+function minesLeftClick(x,y){
+  if(minesOver) return;
+  if(minesFlagged[y][x]) return;
+  if(minesRevealed[y][x]) return;
+  if(!minesStarted){
+    minesStarted=true;
+    minesPlaceMines(x,y);
+    minesStartTimer();
+  }
+  minesReveal(x,y);
+  minesCheckWin();
+}
+
+function minesRightClick(x,y){
+  if(minesOver) return;
+  if(minesRevealed[y][x]) return;
+  minesFlagged[y][x]=!minesFlagged[y][x];
+  minesFlagCount+=minesFlagged[y][x]?1:-1;
+  minesUpdateCounter();
+  minesUpdateCell(x,y);
+}
+
+function minesReveal(x,y){
+  if(x<0||x>=minesW||y<0||y>=minesH) return;
+  if(minesRevealed[y][x]) return;
+  if(minesFlagged[y][x]) return;
+  minesRevealed[y][x]=true;
+  minesUpdateCell(x,y);
+  if(minesGrid[y][x]===-1){
+    minesGameOver(x,y);
+    return;
+  }
+  if(minesGrid[y][x]===0){
+    for(let dy=-1;dy<=1;dy++){
+      for(let dx=-1;dx<=1;dx++){
+        if(dx===0&&dy===0) continue;
+        minesReveal(x+dx,y+dy);
+      }
+    }
+  }
+}
+
+function minesChord(x,y){
+  if(!minesRevealed[y][x]) return;
+  const v=minesGrid[y][x];
+  if(v<=0) return;
+  let flagAdj=0;
+  for(let dy=-1;dy<=1;dy++){
+    for(let dx=-1;dx<=1;dx++){
+      const ny=y+dy,nx=x+dx;
+      if(ny>=0&&ny<minesH&&nx>=0&&nx<minesW&&minesFlagged[ny][nx]) flagAdj++;
+    }
+  }
+  if(flagAdj===v){
+    for(let dy=-1;dy<=1;dy++){
+      for(let dx=-1;dx<=1;dx++){
+        const ny=y+dy,nx=x+dx;
+        if(ny>=0&&ny<minesH&&nx>=0&&nx<minesW&&!minesFlagged[ny][nx]) minesReveal(nx,ny);
+      }
+    }
+    minesCheckWin();
+  }
+}
+
+function minesGameOver(hx,hy){
+  minesOver=true;
+  minesStopTimer();
+  const s=document.getElementById('mines-smiley');
+  if(s) s.textContent='😵';
+  // Reveal all mines
+  for(let y=0;y<minesH;y++){
+    for(let x=0;x<minesW;x++){
+      if(minesGrid[y][x]===-1&&!minesFlagged[y][x]){
+        minesRevealed[y][x]=true;
+        minesUpdateCell(x,y);
+      }
+    }
+  }
+  const hit=minesGetCell(hx,hy);
+  if(hit) hit.classList.add('mine-hit');
+}
+
+function minesCheckWin(){
+  let unrevealed=0;
+  for(let y=0;y<minesH;y++){
+    for(let x=0;x<minesW;x++){
+      if(!minesRevealed[y][x]&&minesGrid[y][x]!==-1) unrevealed++;
+    }
+  }
+  if(unrevealed===0&&!minesOver){
+    minesOver=true;
+    minesStopTimer();
+    const s=document.getElementById('mines-smiley');
+    if(s) s.textContent='😎';
+    // Flag all remaining mines
+    for(let y=0;y<minesH;y++){
+      for(let x=0;x<minesW;x++){
+        if(minesGrid[y][x]===-1) minesFlagged[y][x]=true;
+      }
+    }
+    minesFlagCount=minesCt;
+    minesUpdateCounter();
+    setTimeout(function(){alert('You win! Time: '+minesSeconds+'s');},100);
+  }
+}
+
+function minesStartTimer(){
+  minesStopTimer();
+  minesTimerInt=setInterval(function(){
+    minesSeconds++;
+    const t=document.getElementById('mines-timer');
+    if(t) t.textContent=String(Math.min(minesSeconds,999)).padStart(3,'0');
+  },1000);
+}
+
+function minesStopTimer(){
+  if(minesTimerInt){clearInterval(minesTimerInt);minesTimerInt=null;}
+}
+
+function minesUpdateCounter(){
+  const c=document.getElementById('mines-counter');
+  if(c) c.textContent=String(Math.max(0,minesCt-minesFlagCount)).padStart(3,'0');
+}
+
+// Draggable mines window
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('#mines-titlebar')) return;
+    if(e.target.tagName==='BUTTON') return;
+    const w=document.getElementById('mines-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag) return;
+    const w=document.getElementById('mines-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',function(){drag=null;});
+})();
+
+// ── BLACKJACK ────────────────────────────────────────
+const BJ_SUITS=['♠','♥','♦','♣'];
+const BJ_VALS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let bjDeck=[], bjDealerHand=[], bjPlayerHand=[];
+let bjBalance=100, bjBet=10, bjGameOver=true;
+let bjDealerHoleShown=false;
+
+function openBlackjack(show=true){
+  const w=document.getElementById('blackjack-wrap');
+  if(show===false){w.classList.remove('open');w.style.display='none';return;}
+  const wasOpen=w.classList.contains('open');
+  w.classList.toggle('open');
+  if(w.classList.contains('open')){
+    w.style.display='flex';
+    if(!wasOpen){
+      bjBalance=100;
+      bjUpdateBalance();
+      bjSetStatus('');
+      bjRender();
+    }
+  } else {
+    w.style.display='none';
+  }
+}
+
+function bjMakeDeck(){
+  const d=[];
+  BJ_SUITS.forEach(function(s){BJ_VALS.forEach(function(v){d.push({s,v,hidden:false});});});
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  return d;
+}
+
+function bjEnsureDeck(){
+  if(bjDeck.length<15) bjDeck=bjMakeDeck();
+}
+
+function bjCardVal(card){
+  if(card.v==='A') return 11;
+  if(['J','Q','K'].includes(card.v)) return 10;
+  return parseInt(card.v);
+}
+
+function bjHandTotal(hand){
+  let total=0, aces=0;
+  hand.forEach(function(c){
+    if(c.hidden) return;
+    total+=bjCardVal(c);
+    if(c.v==='A') aces++;
+  });
+  while(total>21&&aces>0){total-=10;aces--;}
+  return total;
+}
+
+function bjDeal(){
+  const betInp=document.getElementById('bj-bet');
+  bjBet=Math.max(1,Math.min(bjBalance,parseInt(betInp?betInp.value:10)||10));
+  if(bjBet>bjBalance){bjSetStatus('Not enough credits!');return;}
+  bjEnsureDeck();
+  bjDealerHand=[];
+  bjPlayerHand=[];
+  bjDealerHoleShown=false;
+  bjGameOver=false;
+  bjPlayerHand.push(bjDeck.pop(),bjDeck.pop());
+  const hole=bjDeck.pop();
+  hole.hidden=true;
+  bjDealerHand.push(hole,bjDeck.pop());
+  bjSetStatus('');
+  bjRender();
+  // Check natural BJ
+  const pt=bjHandTotal(bjPlayerHand);
+  // Reveal for check
+  bjDealerHand[0].hidden=false;
+  const dt=bjHandTotal(bjDealerHand);
+  bjDealerHand[0].hidden=true;
+  if(pt===21&&dt===21){
+    bjDealerHoleShown=true;
+    bjDealerHand[0].hidden=false;
+    bjGameOver=true;
+    bjSetStatus('Push! Both Blackjack');
+    bjShowActions(false);
+    bjRender();
+    return;
+  }
+  if(pt===21){
+    bjDealerHoleShown=true;
+    bjDealerHand[0].hidden=false;
+    bjGameOver=true;
+    bjBalance+=Math.floor(bjBet*1.5);
+    bjUpdateBalance();
+    bjSetStatus('Blackjack! You win '+Math.floor(bjBet*1.5)+' credits!');
+    bjShowActions(false);
+    bjRender();
+    return;
+  }
+  if(dt===21){
+    bjDealerHoleShown=true;
+    bjDealerHand[0].hidden=false;
+    bjGameOver=true;
+    bjBalance-=bjBet;
+    bjUpdateBalance();
+    bjSetStatus('Dealer Blackjack! You lose.');
+    bjShowActions(false);
+    bjRender();
+    return;
+  }
+  bjShowActions(true);
+  const dblBtn=document.getElementById('bj-double-btn');
+  if(dblBtn) dblBtn.style.display=(bjBalance>=bjBet)?'':'none';
+}
+
+function bjHit(){
+  if(bjGameOver) return;
+  bjEnsureDeck();
+  bjPlayerHand.push(bjDeck.pop());
+  const total=bjHandTotal(bjPlayerHand);
+  if(total>21){
+    bjDealerHoleShown=true;
+    bjDealerHand[0].hidden=false;
+    bjGameOver=true;
+    bjBalance-=bjBet;
+    bjUpdateBalance();
+    bjSetStatus('Bust! You lose '+bjBet+' credits.');
+    bjShowActions(false);
+  } else if(total===21){
+    bjStand();
+    return;
+  }
+  bjRender();
+}
+
+function bjStand(){
+  if(bjGameOver) return;
+  bjDealerHoleShown=true;
+  bjDealerHand[0].hidden=false;
+  // Dealer plays
+  while(bjHandTotal(bjDealerHand)<17){
+    bjEnsureDeck();
+    bjDealerHand.push(bjDeck.pop());
+  }
+  const pt=bjHandTotal(bjPlayerHand);
+  const dt=bjHandTotal(bjDealerHand);
+  bjGameOver=true;
+  bjShowActions(false);
+  if(dt>21||pt>dt){
+    bjBalance+=bjBet;
+    bjUpdateBalance();
+    bjSetStatus('You win '+bjBet+' credits! (Player: '+pt+', Dealer: '+dt+')');
+  } else if(pt===dt){
+    bjSetStatus('Push! ('+pt+' vs '+dt+')');
+  } else {
+    bjBalance-=bjBet;
+    bjUpdateBalance();
+    bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
+  }
+  bjRender();
+}
+
+function bjDouble(){
+  if(bjGameOver) return;
+  if(bjBalance<bjBet){bjSetStatus('Not enough credits to double!');return;}
+  bjBet*=2;
+  bjEnsureDeck();
+  bjPlayerHand.push(bjDeck.pop());
+  const total=bjHandTotal(bjPlayerHand);
+  if(total>21){
+    bjDealerHoleShown=true;
+    bjDealerHand[0].hidden=false;
+    bjGameOver=true;
+    bjBalance-=bjBet;
+    bjUpdateBalance();
+    bjSetStatus('Doubled & Bust! You lose '+bjBet+' credits.');
+    bjShowActions(false);
+    bjRender();
+    return;
+  }
+  bjStand();
+}
+
+function bjCardEl(card){
+  const d=document.createElement('div');
+  if(card.hidden){
+    d.className='sol-card face-down';
+    d.style.width='71px'; d.style.height='96px';
+    d.style.display='inline-flex';
+    return d;
+  }
+  const isRed=SOL_RED.has(card.s);
+  d.className='sol-card '+(isRed?'red':'black');
+  d.style.cssText='width:71px;height:96px;display:inline-flex;flex-direction:column;position:relative;';
+  d.innerHTML='<span class="sol-card-top">'+card.v+'<br>'+card.s+'</span>';
+  return d;
+}
+
+function bjRender(){
+  const dc=document.getElementById('bj-dealer-cards');
+  const pc=document.getElementById('bj-player-cards');
+  if(!dc||!pc) return;
+  dc.innerHTML=''; pc.innerHTML='';
+  bjDealerHand.forEach(function(c){dc.appendChild(bjCardEl(c));});
+  bjPlayerHand.forEach(function(c){pc.appendChild(bjCardEl(c));});
+  const ds=document.getElementById('bj-dealer-score');
+  const ps=document.getElementById('bj-player-score');
+  if(ds) ds.textContent=bjDealerHoleShown?'Total: '+bjHandTotal(bjDealerHand):'Showing: '+bjCardVal(bjDealerHand[1]||{v:'0',s:''});
+  if(ps) ps.textContent='Total: '+bjHandTotal(bjPlayerHand);
+}
+
+function bjSetStatus(msg){
+  const el=document.getElementById('bj-status');
+  if(el) el.textContent=msg;
+}
+
+function bjShowActions(show){
+  const el=document.getElementById('bj-actions');
+  if(el) el.style.display=show?'flex':'none';
+}
+
+function bjUpdateBalance(){
+  const el=document.getElementById('bj-bal');
+  if(el) el.textContent=bjBalance;
+  if(bjBalance<=0){
+    bjSetStatus('Out of credits! Resetting...');
+    setTimeout(function(){bjBalance=100;bjUpdateBalance();bjSetStatus('');bjRender();},1500);
+  }
+}
+
+// Draggable blackjack window
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('#blackjack-titlebar')) return;
+    if(e.target.tagName==='BUTTON') return;
+    const w=document.getElementById('blackjack-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag) return;
+    const w=document.getElementById('blackjack-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',function(){drag=null;});
 })();
 </script>
 

@@ -89,7 +89,7 @@
       background: var(--hdr-bg);
       border-radius: var(--r);
       box-shadow: 0 6px 24px rgba(0,100,180,0.38), 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
-      position:relative; overflow:hidden;
+      position:relative;
     }
     /* top-half gloss shine — the defining 2000s Aqua look */
     #hdr::after {
@@ -3735,6 +3735,8 @@ function setSearchMode(mode) {
     ? 'Search playlists or paste a playlist URL...'
     : 'Search, paste URL, video ID, or playlist ID...';
   document.getElementById('q').focus();
+  const q = document.getElementById('q').value.trim();
+  if (q) doSearch();
 }
 function toggleSmMenu(e) {
   e.stopPropagation();

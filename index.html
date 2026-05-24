@@ -1531,7 +1531,7 @@
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
       /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
-      #slots-btn, #synth-btn, #kbd-btn, #paint-btn, #gear-btn, #board-btn { display: none !important; }
+      #apps-menu-wrap, #gear-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -2122,6 +2122,59 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=web90] #board-wrap { border: 2px solid #000080 !important; border-radius: 0 !important; }
 [data-era=web90] .board-titlebar { background: linear-gradient(180deg,#000080,#0000bb) !important; border-radius: 0 !important; }
 [data-era=web90] a, [data-era=web90] .board-menu-item { color: #0000cc !important; text-decoration: underline; }
+
+    /* ── APPS MENU ──────────────────────────────────────── */
+    #apps-menu-wrap { position:relative; }
+    #apps-btn {
+      background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
+      border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
+      width:30px; height:30px; cursor:pointer; color:#fff; font-size:13px;
+      display:flex; align-items:center; justify-content:center; transition:all .18s;
+      box-shadow: 0 2px 8px rgba(0,80,160,0.2), inset 0 1px 0 rgba(255,255,255,0.45);
+      position:relative;
+    }
+    #apps-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
+    #apps-menu {
+      display:none; position:absolute; top:calc(100% + 10px); right:0;
+      background:var(--panel); border:1.5px solid var(--border);
+      border-radius:16px; padding:10px;
+      box-shadow: 0 12px 40px rgba(0,80,160,0.22), 0 2px 8px rgba(0,80,160,0.12);
+      backdrop-filter:blur(16px);
+      flex-direction:row; gap:6px; z-index:600; min-width:200px;
+    }
+    #apps-menu.open { display:flex; }
+    .apps-item {
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:4px; padding:10px 6px; border-radius:12px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.97),rgba(220,240,255,0.88));
+      border:1.5px solid var(--border); color:var(--text); font-size:18px; cursor:pointer;
+      transition:all .15s; min-width:44px;
+      box-shadow: 0 1px 4px rgba(0,100,180,0.1), inset 0 1.5px 0 rgba(255,255,255,0.9);
+    }
+    .apps-item span { font-size:8px; font-weight:700; color:var(--text2); white-space:nowrap; font-family:var(--font-ui); }
+    .apps-item:hover { background:linear-gradient(180deg,rgba(255,255,255,1),rgba(200,235,255,0.95)); border-color:var(--accent); transform:translateY(-1px); }
+
+    /* ── SEARCH FAB ─────────────────────────────────────── */
+    #search-fab {
+      position:fixed; bottom:28px; right:28px;
+      width:58px; height:58px; border-radius:50%;
+      background: linear-gradient(180deg, #6cd8f8 0%, #1898d8 45%, #0068b8 100%);
+      border:2.5px solid rgba(255,255,255,0.72);
+      box-shadow: 0 8px 28px rgba(0,100,200,0.5), 0 2px 8px rgba(0,0,0,0.18), inset 0 3px 0 rgba(255,255,255,0.52);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      z-index:500; transition:all .22s; overflow:hidden; color:#fff;
+      padding:0;
+    }
+    #search-fab::before {
+      content:''; position:absolute; top:0; left:0; right:0; bottom:55%;
+      background:linear-gradient(180deg,rgba(255,255,255,0.48) 0%,rgba(255,255,255,0) 100%);
+      border-radius:50% 50% 0 0 / 50% 50% 0 0; pointer-events:none;
+    }
+    #search-fab:hover { transform:translateY(-3px) scale(1.07); box-shadow:0 14px 36px rgba(0,100,200,0.6), 0 4px 12px rgba(0,0,0,0.22), inset 0 3px 0 rgba(255,255,255,0.52); }
+    #search-fab:active { transform:translateY(0) scale(0.97); }
+    @media (max-width:768px) {
+      #search-fab { bottom:calc(50px + 44px + 18px); right:16px; width:50px; height:50px; }
+    }
   </style>
 </head>
 <body>
@@ -2200,11 +2253,19 @@ body.perf-mode #aqua-gun { display: none !important; }
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
-      <button id="board-btn" onclick="toggleBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
-      <button id="slots-btn" onclick="toggleSlots()" title="Slot Machine 🎰" style="background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.10));border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.2),inset 0 1px 0 rgba(255,255,255,0.45)">🎰</button>
-      <button id="synth-btn" onclick="toggleSynthFlyout()" title="Synth &amp; Drum pad">🎹</button>
-      <button id="kbd-btn" onclick="toggleKbdHint()" title="Keyboard shortcuts">&#9000;</button>
-      <button id="paint-btn" onclick="openPaint()" title="AquaPaint 🎨" style="background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0.10));border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 8px rgba(0,80,160,0.2),inset 0 1px 0 rgba(255,255,255,0.45)">🎨</button>
+      <div id="apps-menu-wrap">
+        <button id="apps-btn" onclick="toggleAppsMenu()" title="Apps">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
+          <span id="chat-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:1px 4px;min-width:14px;text-align:center;pointer-events:none"></span>
+        </button>
+        <div id="apps-menu">
+          <button class="apps-item" onclick="toggleBoard();toggleAppsMenu()" title="AquaChat" id="board-btn">💬<span>Chat</span></button>
+          <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" title="Slots" id="slots-btn">🎰<span>Slots</span></button>
+          <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" title="Synth" id="synth-btn">🎹<span>Synth</span></button>
+          <button class="apps-item" onclick="openPaint();toggleAppsMenu()" title="AquaPaint" id="paint-btn">🎨<span>Paint</span></button>
+          <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
+        </div>
+      </div>
       <button id="gear-btn" onclick="toggleThemePanel()" title="Customize theme">&#9881;</button>
       <button id="google-btn" onclick="toggleGoogleMode()" title="Sign in with Google for full search (optional)">
         <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
@@ -2365,23 +2426,23 @@ body.perf-mode #aqua-gun { display: none !important; }
     <span>Customize</span>
     <button class="theme-close" onclick="toggleThemePanel()">&#215;</button>
   </div>
-  <div class="theme-label" style="margin-bottom:6px">Color</div>
+  <div class="theme-label" style="margin-bottom:6px">Style</div>
   <div class="theme-presets" id="theme-presets">
-    <button class="theme-swatch on" data-theme="blue" onclick="selectTheme('blue',this)">Blue</button>
-    <button class="theme-swatch" data-theme="aqua" onclick="selectTheme('aqua',this)">Aqua</button>
-    <button class="theme-swatch" data-theme="purple" onclick="selectTheme('purple',this)">Purple</button>
+    <button class="theme-swatch on" data-theme="blue" onclick="selectTheme('blue',this)">Sky</button>
+    <button class="theme-swatch" data-theme="aqua" onclick="selectTheme('aqua',this)">Teal</button>
+    <button class="theme-swatch" data-theme="purple" onclick="selectTheme('purple',this)">Violet</button>
     <button class="theme-swatch" data-theme="sunset" onclick="selectTheme('sunset',this)">Sunset</button>
     <button class="theme-swatch" data-theme="forest" onclick="selectTheme('forest',this)">Forest</button>
     <button class="theme-swatch" data-theme="dark" onclick="selectTheme('dark',this)">Dark</button>
   </div>
   <div class="theme-section">
-    <div class="theme-label">Era</div>
+    <div class="theme-label">Era Style</div>
     <div class="theme-presets" style="grid-template-columns:1fr 1fr">
-      <button class="theme-swatch" data-theme="win98"  onclick="selectTheme('win98',this)">Win 98</button>
-      <button class="theme-swatch" data-theme="blue"   onclick="selectTheme('blue',this)">XP Aqua</button>
-      <button class="theme-swatch" data-theme="aero"   onclick="selectTheme('aero',this)">Vista Aero</button>
-      <button class="theme-swatch" data-theme="y2k"    onclick="selectTheme('y2k',this)">Y2K</button>
-      <button class="theme-swatch" data-theme="web90"  onclick="selectTheme('web90',this)">90s Web</button>
+      <button class="theme-swatch" data-theme="win98"  onclick="selectTheme('win98',this)">Classic</button>
+      <button class="theme-swatch" data-theme="blue"   onclick="selectTheme('blue',this)">Bubble</button>
+      <button class="theme-swatch" data-theme="aero"   onclick="selectTheme('aero',this)">Glass</button>
+      <button class="theme-swatch" data-theme="y2k"    onclick="selectTheme('y2k',this)">Millennium</button>
+      <button class="theme-swatch" data-theme="web90"  onclick="selectTheme('web90',this)">Retro</button>
     </div>
   </div>
   <div class="theme-section">
@@ -2745,17 +2806,57 @@ async function freeSearch(q) {
 //  THEMES
 // ─────────────────────────────────────────────────────────
 const THEMES = {
-  blue:   { accent:'#0068b8', accent2:'#38a8e8', text:'#0a1828', text2:'#3a5880', bg:'linear-gradient(160deg,#d4e8f8,#e8f2fc,#dce8f8)', hdr:'linear-gradient(180deg,#1468c8,#0850b0)', panel:'rgba(255,255,255,0.94)', border:'rgba(0,80,160,0.15)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
-  aqua:   { accent:'#0a9bbf', accent2:'#12c4a2', text:'#0f3040', text2:'#4a7a90', bg:'linear-gradient(160deg,#c8f0f8,#d8f8f0,#b8e8f8)', hdr:'linear-gradient(180deg,#0a9bbf,#0880a8)', panel:'rgba(255,255,255,0.94)', border:'rgba(10,155,191,0.18)', font:"'M PLUS Rounded 1c',Tahoma,Arial,sans-serif", era:'xp' },
-  purple: { accent:'#7c3aed', accent2:'#a78bfa', text:'#1e1040', text2:'#5a4080', bg:'linear-gradient(160deg,#ede9fe,#ddd6fe,#c4b5fd)', hdr:'linear-gradient(180deg,#7c3aed,#5b21b6)', panel:'rgba(255,255,255,0.94)', border:'rgba(124,58,237,0.18)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
-  sunset: { accent:'#c84820', accent2:'#f08040', text:'#3a1008', text2:'#804030', bg:'linear-gradient(160deg,#fde8d8,#fdd0c8,#f8e0d0)', hdr:'linear-gradient(180deg,#c84820,#a83810)', panel:'rgba(255,255,255,0.94)', border:'rgba(200,72,32,0.15)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
-  forest: { accent:'#15803d', accent2:'#4ade80', text:'#0a2014', text2:'#2d6040', bg:'linear-gradient(160deg,#d1fae5,#a7f3d0,#d4eddf)', hdr:'linear-gradient(180deg,#15803d,#0f5c2a)', panel:'rgba(255,255,255,0.94)', border:'rgba(21,128,61,0.18)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
-  dark:   { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0', bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)', hdr:'linear-gradient(180deg,#0a2040,#05101e)', panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)', font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
-  // Era themes
-  win98:  { accent:'#000080', accent2:'#4040c8', text:'#000000', text2:'#444444', bg:'#008080', hdr:'linear-gradient(180deg,#0a0aaa,#0000aa)', panel:'#d4d0c8', border:'rgba(0,0,0,0.35)', font:'Arial,Helvetica,sans-serif', era:'win98' },
-  aero:   { accent:'#3a78d8', accent2:'#6aa0f0', text:'#1a1a2e', text2:'#5a6080', bg:'linear-gradient(160deg,#e8ecf8,#d8e4f4,#c8d8f0)', hdr:'linear-gradient(180deg,rgba(170,195,240,0.9),rgba(130,165,225,0.88))', panel:'rgba(240,245,255,0.88)', border:'rgba(100,140,200,0.3)', font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
-  y2k:    { accent:'#9900cc', accent2:'#cc0066', text:'#1a001a', text2:'#660066', bg:'linear-gradient(135deg,#200040,#000080,#004080)', hdr:'linear-gradient(180deg,#9900cc,#6600aa)', panel:'rgba(255,255,255,0.95)', border:'rgba(153,0,204,0.25)', font:'Verdana,Geneva,sans-serif', era:'y2k' },
-  web90:  { accent:'#0000cc', accent2:'#cc0000', text:'#000000', text2:'#333333', bg:'#c0c0c0', hdr:'linear-gradient(180deg,#000080,#0000bb)', panel:'#ffffff', border:'rgba(0,0,128,0.45)', font:"'Comic Sans MS',cursive,sans-serif", era:'web90' },
+  blue:   { accent:'#0068b8', accent2:'#38a8e8', text:'#0a1828', text2:'#3a5880',
+            bg:'linear-gradient(160deg,#d4e8f8,#e8f2fc,#dce8f8)',
+            hdr:'linear-gradient(180deg,#1468c8,#0850b0)',
+            panel:'rgba(255,255,255,0.94)', border:'rgba(0,80,160,0.15)',
+            font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  aqua:   { accent:'#0a9bbf', accent2:'#12c4a2', text:'#0f3040', text2:'#4a7a90',
+            bg:'linear-gradient(160deg,#c8f0f8,#d8f8f0,#b8e8f8)',
+            hdr:'linear-gradient(180deg,#0a9bbf,#0880a8)',
+            panel:'rgba(255,255,255,0.94)', border:'rgba(10,155,191,0.18)',
+            font:"'M PLUS Rounded 1c',Tahoma,Arial,sans-serif", era:'xp' },
+  purple: { accent:'#7c3aed', accent2:'#a78bfa', text:'#1e1040', text2:'#5a4080',
+            bg:'linear-gradient(160deg,#ede9fe,#ddd6fe,#c4b5fd)',
+            hdr:'linear-gradient(180deg,#7c3aed,#5b21b6)',
+            panel:'rgba(255,255,255,0.94)', border:'rgba(124,58,237,0.18)',
+            font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  sunset: { accent:'#c84820', accent2:'#f08040', text:'#3a1008', text2:'#804030',
+            bg:'linear-gradient(160deg,#fde8d8,#fdd0c8,#f8e0d0)',
+            hdr:'linear-gradient(180deg,#c84820,#a83810)',
+            panel:'rgba(255,255,255,0.94)', border:'rgba(200,72,32,0.15)',
+            font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  forest: { accent:'#15803d', accent2:'#4ade80', text:'#0a2014', text2:'#2d6040',
+            bg:'linear-gradient(160deg,#d1fae5,#a7f3d0,#d4eddf)',
+            hdr:'linear-gradient(180deg,#15803d,#0f5c2a)',
+            panel:'rgba(255,255,255,0.94)', border:'rgba(21,128,61,0.18)',
+            font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  dark:   { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0',
+            bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)',
+            hdr:'linear-gradient(180deg,#0a2040,#05101e)',
+            panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)',
+            font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
+
+  win98:  { accent:'#000080', accent2:'#3c5fa8', text:'#000000', text2:'#444444',
+            bg:'#008080',
+            hdr:'linear-gradient(180deg,#1a1ab0,#0000a8)',
+            panel:'#d4d0c8', border:'rgba(0,0,0,0.22)',
+            font:'Arial,Helvetica,sans-serif', era:'win98' },
+  aero:   { accent:'#2e6cc4', accent2:'#5a9ae0', text:'#1a2040', text2:'#4a5878',
+            bg:'linear-gradient(160deg,#eaf0fa,#d8e8f8,#c4d4ee)',
+            hdr:'linear-gradient(180deg,rgba(160,192,240,0.93),rgba(116,158,224,0.91))',
+            panel:'rgba(236,244,255,0.92)', border:'rgba(80,130,210,0.22)',
+            font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
+  y2k:    { accent:'#7700bb', accent2:'#aa00ee', text:'#160022', text2:'#550077',
+            bg:'linear-gradient(135deg,#160030,#0a0060,#001860)',
+            hdr:'linear-gradient(180deg,#8800cc,#5500aa)',
+            panel:'rgba(250,245,255,0.97)', border:'rgba(120,0,180,0.22)',
+            font:'Verdana,Geneva,sans-serif', era:'y2k' },
+  web90:  { accent:'#0000bb', accent2:'#cc0000', text:'#000000', text2:'#333333',
+            bg:'#c0c0c0',
+            hdr:'linear-gradient(180deg,#000080,#0000aa)',
+            panel:'#ffffff', border:'rgba(0,0,128,0.35)',
+            font:"'Comic Sans MS',cursive,sans-serif", era:'web90' },
 };
 let currentTheme = 'blue';
 
@@ -2830,6 +2931,24 @@ function applyTheme(name, customAccent) {
     r.setProperty('--seq-label-white-color', 'var(--text)');
   }
   currentTheme = name;
+}
+function toggleAppsMenu() {
+  document.getElementById('apps-menu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('apps-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('apps-menu')?.classList.remove('open');
+  }
+});
+function focusSearch() {
+  if (window.innerWidth <= 768) {
+    if (typeof switchMobPanel === 'function') switchMobPanel('search');
+  } else {
+    const left = document.getElementById('left');
+    if (left?.classList.contains('collapsed') && typeof toggleCollapse === 'function') toggleCollapse('left');
+    setTimeout(() => document.getElementById('q')?.focus(), 60);
+  }
 }
 function selectTheme(name, btn) {
   applyTheme(name, null);
@@ -5921,6 +6040,12 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
+<button id="search-fab" onclick="focusSearch()" title="Search music">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="7.5"/>
+    <line x1="17" y1="17" x2="22" y2="22"/>
+  </svg>
+</button>
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
     💬<span>Chat</span>

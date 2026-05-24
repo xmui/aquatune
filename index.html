@@ -1687,6 +1687,29 @@
       font-family:'M PLUS Rounded 1c',system-ui,sans-serif; overflow:hidden;
     }
     #paint-wrap.open { display:flex; }
+    #paint-canvas-wrap {
+      flex:1; min-height:0; display:flex; align-items:center; justify-content:center;
+      overflow:hidden; background:#808080;
+    }
+    #paint-canvas {
+      display:block; height:100%; width:auto; max-width:100%;
+      aspect-ratio:320/200; cursor:crosshair; touch-action:none;
+      image-rendering:pixelated; image-rendering:crisp-edges; background:#fff;
+    }
+    #paint-send-menu {
+      display:none; position:absolute; top:36px; right:68px; z-index:900;
+      background:var(--panel); border:1.5px solid var(--border); border-radius:10px;
+      padding:6px; box-shadow:0 8px 24px rgba(0,80,160,0.22);
+      flex-direction:column; gap:4px; min-width:140px;
+    }
+    #paint-send-menu.open { display:flex; }
+    .paint-send-opt {
+      padding:7px 12px; border-radius:7px; border:1.5px solid var(--border);
+      background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(220,240,255,.88));
+      color:var(--text); font-size:11px; font-weight:700; cursor:pointer;
+      text-align:left; transition:all .12s;
+    }
+    .paint-send-opt:hover { background:linear-gradient(180deg,#fff,rgba(200,235,255,.95)); border-color:var(--accent); }
     @media (max-width:768px) {
       #paint-wrap { width:98vw; height:70vh; max-height:70vh; top:15%; transform:translateX(-50%); }
     }
@@ -7095,6 +7118,7 @@ function splashCreate() {
   window.location.hash = roomId;
   closeSplash();
   window.initRoom?.(roomId, true);
+  updateRoomChatLabel(roomId);
 }
 function splashJoinToggle() {
   document.getElementById('sp-join-row').style.display = 'flex';
@@ -7108,6 +7132,7 @@ function splashJoinConfirm() {
   window.location.hash = code;
   closeSplash();
   window.initRoom?.(code, false);
+  updateRoomChatLabel(code);
 }
 function splashSolo() {
   const name = document.getElementById('sp-name').value.trim();
@@ -7203,20 +7228,38 @@ function sendRoomChatMsg() {
 }
 
 /* ── PAINT: SEND TO CHAT ── */
-function sendPaintToChat() {
+function togglePaintSendMenu() {
+  const menu = document.getElementById('paint-send-menu');
+  const roomBtn = document.getElementById('paint-send-room-btn');
+  const inRoom = !!window._currentRoomId;
+  if (roomBtn) roomBtn.style.display = inRoom ? '' : 'none';
+  if (!inRoom) { sendPaintTo('global'); return; }
+  menu.classList.toggle('open');
+}
+function sendPaintTo(target) {
+  document.getElementById('paint-send-menu').classList.remove('open');
   const cv = document.getElementById('paint-canvas');
   const dataUrl = cv.toDataURL('image/jpeg', 0.72);
-  if (window._currentRoomId) {
+  if (target === 'room' && window._currentRoomId) {
     window.sendRoomMessage?.('[sent a drawing]', dataUrl);
-    toggleBoard();
-    switchBoardTab('room');
+    toggleBoard(); switchBoardTab('room');
   } else {
     window.sendGlobalMessage?.('[sent a drawing]', dataUrl);
-    toggleBoard();
-    switchBoardTab('global');
+    toggleBoard(); switchBoardTab('global');
   }
   toast('Drawing sent to chat!');
 }
+function updateRoomChatLabel(roomId) {
+  const lbl = document.getElementById('room-chat-tab-label');
+  const bar = document.getElementById('room-chat-id-bar');
+  if (lbl) lbl.textContent = roomId ? `#${roomId}` : 'Room';
+  if (bar) { bar.textContent = roomId ? `🏠 Room  ·  ${roomId}` : ''; bar.style.display = roomId ? 'block' : 'none'; }
+}
+// Close paint send menu on outside click
+document.addEventListener('click', e => {
+  const m = document.getElementById('paint-send-menu');
+  if (m && !e.target.closest('#paint-titlebar')) m.classList.remove('open');
+});
 
 /* ── DOMContentLoaded setup ── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -7342,7 +7385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Chat tabs -->
     <div class="board-chat-tabs">
       <button class="board-chat-tab active" id="bctab-global" onclick="switchBoardTab('global')">🌐 Global</button>
-      <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 Room</button>
+      <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 <span id="room-chat-tab-label">Room</span></button>
     </div>
 
     <!-- Global chat pane -->
@@ -7360,6 +7403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- Room chat pane -->
     <div class="board-chat-pane" id="bpane-room">
+      <div id="room-chat-id-bar" style="display:none;padding:4px 10px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:var(--hdr-bg);letter-spacing:.5px;flex-shrink:0"></div>
       <div id="room-log" class="board-log" style="flex:1;overflow-y:auto">
         <div class="board-empty-log">Join or create a room to use room chat</div>
       </div>
@@ -7382,12 +7426,16 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- ── PAINT TOOL ─────────────────────────────────────────── -->
 <div id="paint-overlay" style="display:none;position:fixed;inset:0;z-index:800;pointer-events:none"></div>
 <div id="paint-wrap">
-  <div id="paint-titlebar">
+  <div id="paint-titlebar" style="position:relative">
     <span style="font-size:16px;position:relative;z-index:1">🎨</span>
     <span class="pt-label">AQUAPAINT</span>
     <button onclick="clearPaint()">Clear</button>
     <button onclick="savePaint()">Save PNG</button>
-    <button onclick="sendPaintToChat()" title="Send drawing to chat">📤 Send</button>
+    <button onclick="togglePaintSendMenu()" title="Send drawing to chat">📤 Send</button>
+    <div id="paint-send-menu">
+      <button class="paint-send-opt" onclick="sendPaintTo('global')">🌐 Global Chat</button>
+      <button class="paint-send-opt" id="paint-send-room-btn" onclick="sendPaintTo('room')">🏠 Room Chat</button>
+    </div>
     <button class="pt-close" onclick="closePaint()">×</button>
   </div>
   <div id="paint-toolbar">
@@ -7404,7 +7452,9 @@ document.addEventListener('DOMContentLoaded', () => {
     <input type="color" id="paint-color" value="#0068b8" style="width:26px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:0">
     <div id="paint-palette" style="display:flex;gap:3px;flex-wrap:wrap;max-width:160px"></div>
   </div>
-  <canvas id="paint-canvas" style="flex:1;cursor:crosshair;display:block;background:#fff;touch-action:none;image-rendering:pixelated;image-rendering:crisp-edges"></canvas>
+  <div id="paint-canvas-wrap">
+    <canvas id="paint-canvas" touch-action="none"></canvas>
+  </div>
 </div>
 
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->

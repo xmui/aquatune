@@ -2173,7 +2173,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #search-fab:hover { transform:translateY(-3px) scale(1.07); box-shadow:0 14px 36px rgba(0,100,200,0.6), 0 4px 12px rgba(0,0,0,0.22), inset 0 3px 0 rgba(255,255,255,0.52); }
     #search-fab:active { transform:translateY(0) scale(0.97); }
     @media (max-width:768px) {
-      #search-fab { bottom:calc(50px + 44px + 18px); right:16px; width:50px; height:50px; }
+      #search-fab { display:none !important; }
     }
   </style>
 </head>
@@ -6040,11 +6040,11 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
-<button id="search-fab" onclick="focusSearch()" title="Search music">
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="11" cy="11" r="7.5"/>
-    <line x1="17" y1="17" x2="22" y2="22"/>
+<button id="search-fab" onclick="toggleBoard()" title="AquaChat">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.02 2 11c0 2.7 1.18 5.13 3.07 6.84L4 22l4.35-1.4A10.1 10.1 0 0 0 12 21c5.52 0 10-4.02 10-9s-4.48-9-10-9z"/>
   </svg>
+  <span id="chat-fab-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:1px 4px;min-width:14px;text-align:center;pointer-events:none"></span>
 </button>
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
@@ -6381,13 +6381,16 @@ function updateChatBadge(posts) {
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
   const mobBadge = document.getElementById('mob-chat-badge');
+  const fabBadge = document.getElementById('chat-fab-badge');
   if (unseen > 0) {
     const txt = unseen > 9 ? '9+' : String(unseen);
     badge.textContent = txt; badge.style.display = 'inline-block';
     if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
+    if (fabBadge) { fabBadge.textContent = txt; fabBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
     if (mobBadge) mobBadge.style.display = 'none';
+    if (fabBadge) fabBadge.style.display = 'none';
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);

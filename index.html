@@ -6020,10 +6020,6 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
-  <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
-    💬<span>Chat</span>
-    <span id="mob-chat-badge" style="display:none;position:absolute;top:4px;right:calc(50% - 18px);background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:0 4px;min-width:14px;text-align:center;line-height:14px"></span>
-  </button>
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Synth">🎹<span>Synth</span></button>
   <button class="mob-tool-btn" onclick="openPaint()" title="AquaPaint">🎨<span>Paint</span></button>
@@ -6360,7 +6356,7 @@ function updateChatBadge(posts) {
   const isOpen = document.getElementById('board-overlay').classList.contains('show');
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
-  const mobBadge = document.getElementById('mob-chat-badge');
+  const mobBadge = document.getElementById('mob-chat-tab-badge');
   const tabBadge = document.getElementById('chat-badge-tab');
   const mobTabBadge = document.getElementById('mob-chat-tab-badge');
   if (unseen > 0) {

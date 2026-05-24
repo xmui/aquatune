@@ -760,7 +760,7 @@
 
     /* ── /aq/ BOARD — MSN Messenger × 4chan ─────────────── */
     #board-btn {
-      display:flex; align-items:center; gap:5px;
+      display:flex; align-items:center; gap:5px; position:relative;
       background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%,rgba(255,255,255,0.12) 100%);
       border:1.5px solid rgba(255,255,255,0.5);border-radius:var(--r-btn);
       color:#fff;padding:4px 12px;cursor:pointer;font-size:10px;font-weight:700;
@@ -1531,7 +1531,7 @@
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
       /* hide desktop-only header buttons on mobile */
-      #apps-menu-wrap, #gear-btn { display: none !important; }
+      #apps-menu-wrap, #gear-btn, #board-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -2409,7 +2409,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #apps-menu {
       visibility:hidden; opacity:0; pointer-events:none;
       position:absolute; top:calc(100% + 8px); right:0;
-      width:240px;
+      width:268px;
       background: rgba(255,255,255,0.97);
       border:1.5px solid rgba(180,220,245,0.6);
       border-radius:16px; overflow:hidden;
@@ -2462,6 +2462,109 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
     .apps-footer-btn:hover { background:rgba(0,160,220,0.08); color:var(--text); }
     .apps-footer-btn span:first-child { font-size:16px; width:32px; text-align:center; flex-shrink:0; }
+    .apps-section-lbl { font-size:9px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text2); padding:7px 14px 3px; }
+    .apps-games-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; padding:2px 8px 6px; }
+    .apps-game-btn {
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:9px 4px 8px; border-radius:12px; border:none; background:transparent;
+      cursor:pointer; transition:all .12s; text-align:center; width:100%;
+    }
+    .apps-game-btn:hover { background:rgba(0,160,220,0.10); }
+    .apps-game-btn:active { background:rgba(0,160,220,0.18); transform:scale(0.97); }
+    .apps-game-btn .agb-icon { font-size:26px; line-height:1; }
+    .apps-game-btn .agb-name { font-size:10px; font-weight:700; color:var(--text); line-height:1.2; }
+
+    /* ── PICROSS ─── */
+    #picross-wrap {
+      display:none; flex-direction:column; position:fixed;
+      top:70px; left:50%; transform:translateX(-50%);
+      width:380px; border-radius:12px 12px 8px 8px;
+      background:var(--panel); border:1.5px solid var(--border);
+      box-shadow:0 20px 60px rgba(0,40,120,0.2); z-index:500;
+    }
+    #picross-wrap.open { display:flex; }
+    #picross-titlebar {
+      background:var(--hdr-bg); padding:7px 10px; flex-shrink:0;
+      display:flex; align-items:center; gap:8px; border-radius:10px 10px 0 0;
+      position:relative; overflow:hidden;
+    }
+    #picross-titlebar::after { content:'';position:absolute;inset:0;bottom:50%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%); }
+    #picross-body { padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+    #picross-grid-area { display:flex; flex-direction:column; align-items:flex-start; }
+    #picross-col-clues-row { display:flex; }
+    #picross-col-clues-spacer { flex-shrink:0; }
+    #picross-col-clues { display:flex; }
+    .pc-col-clue { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; font-size:9px; font-weight:700; color:var(--text2); padding-bottom:2px; line-height:1.4; }
+    #picross-main-row { display:flex; }
+    #picross-row-clues { display:flex; flex-direction:column; justify-content:flex-start; }
+    .pc-row-clue { display:flex; align-items:center; justify-content:flex-end; gap:3px; font-size:9px; font-weight:700; color:var(--text2); padding-right:4px; white-space:nowrap; }
+    #picross-cells { display:grid; }
+    .pc-cell {
+      border:1px solid var(--border); background:rgba(255,255,255,0.6);
+      cursor:pointer; box-sizing:border-box; transition:background .08s;
+    }
+    .pc-cell.filled { background:var(--accent); border-color:var(--accent2); }
+    .pc-cell.marked { background:rgba(220,50,50,0.12); position:relative; }
+    .pc-cell.marked::after { content:'✕'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#c00; font-weight:800; }
+    .pc-cell.wrong { background:#f44 !important; }
+    #picross-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center; }
+    #picross-status { font-size:11px; font-weight:700; color:var(--text2); min-height:16px; text-align:center; }
+    .pc-puzzle-sel { font-size:11px; padding:3px 8px; border:1.5px solid var(--border); border-radius:8px; background:var(--panel); color:var(--text); cursor:pointer; }
+    [data-scheme=dark] .pc-cell { background:rgba(255,255,255,0.08); }
+    [data-scheme=dark] .pc-cell.filled { background:var(--accent); }
+    @media (max-width:768px) {
+      #picross-wrap { width:96vw; }
+    }
+
+    /* ── SOLITAIRE ─── */
+    #solitaire-wrap {
+      display:none; flex-direction:column; position:fixed;
+      top:55px; left:50%; transform:translateX(-50%);
+      width:560px; border-radius:12px 12px 8px 8px;
+      background:#076324; border:1.5px solid #054e1c;
+      box-shadow:0 20px 60px rgba(0,0,0,0.5); z-index:500;
+    }
+    #solitaire-wrap.open { display:flex; }
+    #solitaire-titlebar {
+      background:var(--hdr-bg); padding:7px 10px; flex-shrink:0;
+      display:flex; align-items:center; gap:8px; border-radius:10px 10px 0 0;
+      position:relative; overflow:hidden;
+    }
+    #solitaire-titlebar::after { content:'';position:absolute;inset:0;bottom:50%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%); }
+    #solitaire-body { padding:10px; display:flex; flex-direction:column; gap:8px; min-height:300px; }
+    #sol-top { display:flex; align-items:flex-start; gap:7px; }
+    #sol-foundations { display:flex; gap:7px; margin-left:auto; }
+    #sol-tableau { display:flex; gap:7px; }
+    .sol-slot {
+      width:62px; height:88px; border-radius:7px;
+      border:2px dashed rgba(255,255,255,0.22);
+      flex-shrink:0; position:relative; cursor:pointer;
+    }
+    .sol-slot.highlight { border-color:rgba(255,220,0,0.7); box-shadow:0 0 0 2px rgba(255,220,0,0.4); }
+    .sol-card {
+      position:absolute; width:62px; height:88px; border-radius:7px;
+      background:#fff; border:1px solid rgba(0,0,0,0.2);
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      cursor:pointer; padding:3px 5px; box-sizing:border-box;
+      display:flex; flex-direction:column; user-select:none;
+    }
+    .sol-card.face-down {
+      background:linear-gradient(135deg,#1a3a8a 0%,#0a2060 100%);
+      background-image:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,0.04) 5px,rgba(255,255,255,0.04) 6px);
+      cursor:default;
+    }
+    .sol-card.selected { box-shadow:0 0 0 2px #ffd700, 0 4px 14px rgba(0,0,0,0.5); z-index:20 !important; }
+    .sol-card-top { font-size:13px; font-weight:800; line-height:1; }
+    .sol-card-suit { font-size:12px; line-height:1; margin-top:1px; }
+    .sol-card.red .sol-card-top, .sol-card.red .sol-card-suit { color:#c00; }
+    .sol-card.black .sol-card-top, .sol-card.black .sol-card-suit { color:#111; }
+    .sol-col { position:relative; min-height:88px; flex:1; }
+    #sol-score-row { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.7); font-weight:700; padding:0 2px; }
+    @media (max-width:768px) {
+      #solitaire-wrap { width:98vw; top:8px; }
+      .sol-card,.sol-slot { width:46px; height:66px; }
+      .sol-card-top { font-size:10px; }
+    }
 
   </style>
 </head>
@@ -2542,6 +2645,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
+      <button id="board-btn" onclick="toggleBoard()" title="Chat">
+        💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
+      </button>
       <div id="apps-menu-wrap">
         <button id="apps-btn" onclick="toggleAppsMenu()" title="Apps">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
@@ -2551,20 +2657,30 @@ body.perf-mode #aqua-gun { display: none !important; }
             <span class="apps-menu-hdr-icon">&#9835;</span>
             <span class="apps-menu-hdr-label">Aquatune Apps</span>
           </div>
-          <div class="apps-list">
-            <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" id="slots-btn">
-              <span class="apps-item-icon">🎰</span>
-              <div class="apps-item-info"><div class="apps-item-name">AquaSlots</div><div class="apps-item-desc">Spin the reels</div></div>
+          <div class="apps-section-lbl">Games</div>
+          <div class="apps-games-grid">
+            <button class="apps-game-btn" onclick="toggleSlots();toggleAppsMenu()">
+              <span class="agb-icon">🎰</span><span class="agb-name">Slots</span>
             </button>
-            <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" id="synth-btn">
+            <button class="apps-game-btn" onclick="openSolitaire();toggleAppsMenu()">
+              <span class="agb-icon">♠️</span><span class="agb-name">Solitaire</span>
+            </button>
+            <button class="apps-game-btn" onclick="openPicross();toggleAppsMenu()">
+              <span class="agb-icon">◼</span><span class="agb-name">Picross</span>
+            </button>
+          </div>
+          <div class="apps-menu-div"></div>
+          <div class="apps-section-lbl">Tools</div>
+          <div class="apps-list">
+            <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()">
               <span class="apps-item-icon">🎹</span>
               <div class="apps-item-info"><div class="apps-item-name">AquaSynth</div><div class="apps-item-desc">Step sequencer &amp; synth</div></div>
             </button>
-            <button class="apps-item" onclick="openPaint();toggleAppsMenu()" id="paint-btn">
+            <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
               <div class="apps-item-info"><div class="apps-item-name">AquaPaint</div><div class="apps-item-desc">Pixel art canvas</div></div>
             </button>
-            <button class="apps-item apps-item-keys" onclick="toggleKbdHint();toggleAppsMenu()" id="kbd-btn">
+            <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()">
               <span class="apps-item-icon">⌨️</span>
               <div class="apps-item-info"><div class="apps-item-name">Shortcuts</div><div class="apps-item-desc">Keyboard reference</div></div>
             </button>
@@ -2699,7 +2815,6 @@ body.perf-mode #aqua-gun { display: none !important; }
           <button class="tab"    onclick="switchTab('related',this)">Discover</button>
           <button class="tab"    onclick="switchTab('channel',this)">Artist</button>
           <button class="tab"    onclick="switchTab('history',this)">History</button>
-          <button class="tab" id="chat-tab-btn" onclick="toggleBoard()" style="position:relative">💬<span id="chat-badge-tab" style="display:none;position:absolute;top:2px;right:2px;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center;pointer-events:none"></span></button>
         </div>
         <div id="tab-queue" class="tp on" style="padding:0;gap:0;">
           <div id="queue-top">
@@ -6328,8 +6443,9 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
-  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Synth">🎹<span>Synth</span></button>
-  <button class="mob-tool-btn" onclick="openPaint()" title="AquaPaint">🎨<span>Paint</span></button>
+  <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>
+  <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
+  <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🎨<span>Paint</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
 
@@ -6666,17 +6782,20 @@ function updateChatBadge(posts) {
   const mobBadge = document.getElementById('mob-chat-tab-badge');
   const tabBadge = document.getElementById('chat-badge-tab');
   const mobTabBadge = document.getElementById('mob-chat-tab-badge');
+  const hdrBadge = document.getElementById('chat-badge-hdr');
   if (unseen > 0) {
     const txt = unseen > 9 ? '9+' : String(unseen);
     badge.textContent = txt; badge.style.display = 'inline-block';
     if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
     if (tabBadge) { tabBadge.textContent = txt; tabBadge.style.display = 'inline-block'; }
     if (mobTabBadge) { mobTabBadge.textContent = txt; mobTabBadge.style.display = 'inline-block'; }
+    if (hdrBadge) { hdrBadge.textContent = txt; hdrBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
     if (mobBadge) mobBadge.style.display = 'none';
     if (tabBadge) tabBadge.style.display = 'none';
     if (mobTabBadge) mobTabBadge.style.display = 'none';
+    if (hdrBadge) hdrBadge.style.display = 'none';
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);
@@ -7297,6 +7416,17 @@ function initPaint() {
     if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
     ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
     const sz = parseInt(ps.value);
+    if (_paintTool === 'spray') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = pc.value;
+      const radius = 12;
+      for (let i = 0; i < 30; i++) {
+        const dx = (Math.random() - 0.5) * radius * 2;
+        const dy = (Math.random() - 0.5) * radius * 2;
+        if (dx*dx + dy*dy <= radius*radius) ctx.fillRect(p.x + dx, p.y + dy, 1, 1);
+      }
+      return;
+    }
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
       ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
       ctx.globalCompositeOperation = 'source-over';
@@ -7310,6 +7440,18 @@ function initPaint() {
     if (!_painting) return;
     const p = getPos(e);
     const sz = parseInt(ps.value);
+    if (_paintTool === 'spray') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = pc.value;
+      const radius = 12;
+      for (let i = 0; i < 30; i++) {
+        const dx = (Math.random() - 0.5) * radius * 2;
+        const dy = (Math.random() - 0.5) * radius * 2;
+        if (dx*dx + dy*dy <= radius*radius) ctx.fillRect(p.x + dx, p.y + dy, 1, 1);
+      }
+      lastPt = p;
+      return;
+    }
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
@@ -7664,6 +7806,446 @@ document.addEventListener('DOMContentLoaded', () => {
   const perfChk = document.getElementById('perf-mode-chk');
   if (perfChk) perfChk.checked = _perfMode;
 });
+
+// ── PICROSS ──────────────────────────────────────────
+const PC_PUZZLES = [
+  { name:'Heart', size:8, grid:[
+    0,1,1,0,0,1,1,0,
+    1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,0,1,1,1,1,0,0,
+    0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'Music Note', size:8, grid:[
+    0,0,1,1,1,1,0,0,
+    0,0,1,0,0,1,1,0,
+    0,0,1,0,0,0,1,0,
+    0,0,1,0,0,0,0,0,
+    0,1,1,0,0,0,0,0,
+    1,1,1,0,0,0,0,0,
+    0,1,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'Star', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,0,1,1,1,1,0,0,
+    0,1,1,0,0,1,1,0,
+    1,1,0,0,0,0,1,1,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'House', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,0,1,1,1,1,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,1,1,0,0,1,1,0,
+    0,1,1,0,0,1,1,0,
+    0,1,1,1,1,1,1,0,
+  ]},
+  { name:'Diamond', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,0,1,1,1,1,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,0,1,1,1,1,0,0,
+    0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+];
+let _pcPuzzle = 0, _pcUserGrid = [], _pcSize = 8, _pcSolution = [];
+let _picrossInited = false;
+
+function openPicross(show = true) {
+  const w = document.getElementById('picross-wrap');
+  if (show === false) { w.classList.remove('open'); return; }
+  w.classList.toggle('open');
+  if (w.classList.contains('open') && !_picrossInited) {
+    _picrossInited = true;
+    const sel = document.getElementById('picross-puzzle-sel');
+    PC_PUZZLES.forEach((p, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = (i+1) + '. ' + p.name;
+      sel.appendChild(o);
+    });
+    loadPicrossPuzzle(0);
+  }
+}
+function loadPicrossPuzzle(idx) {
+  _pcPuzzle = idx;
+  const p = PC_PUZZLES[idx];
+  _pcSize = p.size;
+  _pcSolution = p.grid.slice();
+  _pcUserGrid = new Array(_pcSize * _pcSize).fill(0); // 0=empty,1=filled,2=marked
+  renderPicrossGrid();
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+}
+function pcGetClues(arr, size, isRow) {
+  const clues = [];
+  for (let i = 0; i < size; i++) {
+    const line = [];
+    for (let j = 0; j < size; j++) {
+      line.push(isRow ? arr[i*size+j] : arr[j*size+i]);
+    }
+    const runs = [];
+    let run = 0;
+    for (const v of line) { if (v) run++; else if (run) { runs.push(run); run=0; } }
+    if (run) runs.push(run);
+    clues.push(runs.length ? runs : [0]);
+  }
+  return clues;
+}
+function renderPicrossGrid() {
+  const CELL = 32;
+  const rowClues = pcGetClues(_pcSolution, _pcSize, true);
+  const colClues = pcGetClues(_pcSolution, _pcSize, false);
+  const maxRowClueLen = Math.max(...rowClues.map(r=>r.length));
+  const maxColClueLen = Math.max(...colClues.map(c=>c.length));
+  const rowClueW = maxRowClueLen * 18 + 4;
+  const colClueH = maxColClueLen * 14 + 4;
+
+  // Spacer
+  const spacer = document.getElementById('picross-col-clues-spacer');
+  spacer.style.width = rowClueW + 'px';
+  spacer.style.height = colClueH + 'px';
+
+  // Col clues
+  const colCluesEl = document.getElementById('picross-col-clues');
+  colCluesEl.innerHTML = '';
+  colClues.forEach(cc => {
+    const d = document.createElement('div');
+    d.className = 'pc-col-clue';
+    d.style.width = CELL + 'px';
+    d.style.height = colClueH + 'px';
+    // pad top with empty spans
+    const pad = maxColClueLen - cc.length;
+    for (let p=0;p<pad;p++) { const s=document.createElement('span');s.innerHTML='&nbsp;';d.appendChild(s); }
+    cc.forEach(n => { const s=document.createElement('span');s.textContent=n;d.appendChild(s); });
+    colCluesEl.appendChild(d);
+  });
+
+  // Row clues
+  const rowCluesEl = document.getElementById('picross-row-clues');
+  rowCluesEl.innerHTML = '';
+  rowClues.forEach(rc => {
+    const d = document.createElement('div');
+    d.className = 'pc-row-clue';
+    d.style.height = CELL + 'px';
+    d.style.width = rowClueW + 'px';
+    const pad = maxRowClueLen - rc.length;
+    for (let p=0;p<pad;p++) { const s=document.createElement('span');s.style.minWidth='14px';s.innerHTML='';d.appendChild(s); }
+    rc.forEach(n => { const s=document.createElement('span');s.style.minWidth='14px';s.style.textAlign='right';s.textContent=n;d.appendChild(s); });
+    rowCluesEl.appendChild(d);
+  });
+
+  // Cells
+  const cellsEl = document.getElementById('picross-cells');
+  cellsEl.innerHTML = '';
+  cellsEl.style.gridTemplateColumns = `repeat(${_pcSize},${CELL}px)`;
+  for (let i=0;i<_pcSize*_pcSize;i++) {
+    const c = document.createElement('div');
+    c.className = 'pc-cell';
+    c.style.width = CELL + 'px';
+    c.style.height = CELL + 'px';
+    c.dataset.idx = i;
+    if (_pcUserGrid[i]===1) c.classList.add('filled');
+    if (_pcUserGrid[i]===2) c.classList.add('marked');
+    c.addEventListener('click', () => {
+      _pcUserGrid[i] = _pcUserGrid[i]===1 ? 0 : 1;
+      renderPicrossGrid();
+    });
+    c.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      _pcUserGrid[i] = _pcUserGrid[i]===2 ? 0 : 2;
+      renderPicrossGrid();
+    });
+    cellsEl.appendChild(c);
+  }
+}
+function checkPicross() {
+  let allCorrect = true;
+  const cells = document.querySelectorAll('.pc-cell');
+  cells.forEach((c, i) => {
+    c.classList.remove('wrong');
+    const userFilled = _pcUserGrid[i]===1;
+    const solFilled = _pcSolution[i]===1;
+    if (userFilled && !solFilled) { c.classList.add('wrong'); allCorrect=false; }
+    else if (!userFilled && solFilled) allCorrect=false;
+  });
+  const status = document.getElementById('picross-status');
+  if (allCorrect && _pcUserGrid.filter((v,i)=>v===1&&_pcSolution[i]===1).length===_pcSolution.filter(v=>v===1).length) {
+    status.textContent = '🎉 Puzzle solved!';
+  } else {
+    status.textContent = allCorrect ? '✓ No errors so far!' : '✗ Some squares are wrong';
+  }
+}
+function resetPicross() {
+  _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
+  renderPicrossGrid();
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+}
+// drag for picross
+(function() {
+  let drag = null;
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('#picross-titlebar')) return;
+    const w = document.getElementById('picross-wrap');
+    const r = w.getBoundingClientRect();
+    w.style.transform='none'; w.style.left=r.left+'px'; w.style.top=r.top+'px';
+    drag = {sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const w = document.getElementById('picross-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px'; w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup', ()=>{ drag=null; });
+})();
+
+// ── SOLITAIRE ────────────────────────────────────────
+const SOL_SUITS = ['♠','♥','♦','♣'];
+const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SOL_RED   = new Set(['♥','♦']);
+let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
+let solSelected=null, solMoves=0;
+let _solitaireInited=false;
+
+function openSolitaire(show=true) {
+  const w=document.getElementById('solitaire-wrap');
+  if(show===false){w.classList.remove('open');return;}
+  w.classList.toggle('open');
+  if(w.classList.contains('open')&&!_solitaireInited){_solitaireInited=true;newSolitaireGame();}
+}
+function solMakeDeck(){
+  const d=[];
+  SOL_SUITS.forEach(s=>SOL_VALS.forEach(v=>d.push({s,v,face:false})));
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  return d;
+}
+function newSolitaireGame(){
+  const deck=solMakeDeck();
+  solTableau=[];
+  for(let c=0;c<7;c++){
+    const pile=[];
+    for(let r=0;r<=c;r++){
+      const card=deck.pop();
+      card.face=r===c;
+      pile.push(card);
+    }
+    solTableau.push(pile);
+  }
+  solStock=[...deck].map(c=>({...c,face:false}));
+  solWaste=[]; solFoundations=[[],[],[],[]];
+  solSelected=null; solMoves=0;
+  solRender();
+}
+function solCardEl(card, idx, pileId, zBase){
+  const d=document.createElement('div');
+  d.className='sol-card'+(card.face?'',' face-down'.trim():' face-down');
+  if(card.face) d.classList.remove('face-down');
+  if(card.face) d.classList.add(SOL_RED.has(card.s)?'red':'black');
+  if(card.face){
+    d.innerHTML=`<span class="sol-card-top">${card.v}</span><span class="sol-card-suit">${card.s}</span>`;
+  }
+  d.style.zIndex=zBase+idx;
+  d.dataset.pile=pileId;
+  d.dataset.idx=idx;
+  if(solSelected&&solSelected.pile===pileId&&solSelected.idx===idx) d.classList.add('selected');
+  d.addEventListener('click',e=>{e.stopPropagation();solClickCard(pileId,idx,card);});
+  return d;
+}
+function solRender(){
+  // Stock
+  const stockEl=document.getElementById('sol-stock');
+  stockEl.innerHTML='';
+  if(solStock.length){
+    const c=document.createElement('div');
+    c.className='sol-card face-down';
+    c.style.zIndex=1;
+    stockEl.appendChild(c);
+  }
+  // Waste
+  const wasteEl=document.getElementById('sol-waste');
+  wasteEl.innerHTML='';
+  if(solWaste.length){
+    const card=solWaste[solWaste.length-1];
+    const d=solCardEl(card,solWaste.length-1,'waste',1);
+    d.style.position='absolute'; d.style.top='0'; d.style.left='0';
+    wasteEl.appendChild(d);
+  }
+  // Foundations
+  for(let f=0;f<4;f++){
+    const el=document.getElementById('sol-f'+f);
+    el.innerHTML='';
+    const pile=solFoundations[f];
+    if(pile.length){
+      const card=pile[pile.length-1];
+      const d=solCardEl(card,pile.length-1,'f'+f,1);
+      d.style.position='absolute'; d.style.top='0'; d.style.left='0';
+      el.appendChild(d);
+    } else {
+      el.innerHTML=`<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3">${SOL_SUITS[f]}</span>`;
+    }
+  }
+  // Tableau
+  for(let t=0;t<7;t++){
+    const el=document.getElementById('sol-t'+t);
+    el.innerHTML='';
+    const pile=solTableau[t];
+    el.style.minHeight=(88+Math.max(0,pile.length-1)*22)+'px';
+    pile.forEach((card,i)=>{
+      const d=solCardEl(card,i,'t'+t,i);
+      d.style.position='absolute';
+      d.style.top=(i*22)+'px'; d.style.left='0';
+      el.appendChild(d);
+    });
+  }
+  // Score
+  const mv=document.getElementById('sol-moves-disp');
+  if(mv) mv.textContent='Moves: '+solMoves;
+  // Highlight valid drops
+  document.querySelectorAll('.sol-slot').forEach(s=>s.classList.remove('highlight'));
+  if(solSelected) solHighlightValid();
+  // Win check
+  if(solFoundations.every(f=>f.length===13)){
+    setTimeout(()=>alert('🎉 You win! '+ solMoves+' moves'),100);
+  }
+}
+function solHighlightValid(){
+  if(!solSelected) return;
+  const {pile,idx}=solSelected;
+  const cards=solGetCards(pile,idx);
+  if(!cards||!cards.length) return;
+  const top=cards[0];
+  // Check foundations
+  for(let f=0;f<4;f++){
+    if(cards.length===1&&solCanFoundation(top,f)) document.getElementById('sol-f'+f).classList.add('highlight');
+  }
+  // Check tableau
+  for(let t=0;t<7;t++){
+    if(solCanTableau(top, solTableau[t])) document.getElementById('sol-t'+t).classList.add('highlight');
+  }
+}
+function solGetCards(pile,idx){
+  if(pile==='waste') return idx===solWaste.length-1?[solWaste[idx]]:null;
+  if(pile.startsWith('f')) return idx===(solFoundations[+pile[1]].length-1)?[solFoundations[+pile[1]][idx]]:null;
+  if(pile.startsWith('t')) return solTableau[+pile[1]].slice(idx);
+  return null;
+}
+function solCanFoundation(card,f){
+  const pile=solFoundations[f];
+  if(!pile.length) return card.v==='A';
+  const top=pile[pile.length-1];
+  return top.s===card.s && SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)+1;
+}
+function solCanTableau(card,pile){
+  if(!pile.length) return card.v==='K';
+  const top=pile[pile.length-1];
+  if(!top.face) return false;
+  const colOk=SOL_RED.has(card.s)!==SOL_RED.has(top.s);
+  const valOk=SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)-1;
+  return colOk&&valOk;
+}
+function solDrawCard(){
+  if(!solStock.length){
+    solStock=[...solWaste].reverse().map(c=>({...c,face:false}));
+    solWaste=[];
+  } else {
+    const c=solStock.pop();
+    c.face=true;
+    solWaste.push(c);
+    solMoves++;
+  }
+  solSelected=null;
+  solRender();
+}
+function solClickCard(pile,idx,card){
+  if(!card.face){
+    // flip last card in tableau
+    if(pile.startsWith('t')){
+      const t=solTableau[+pile[1]];
+      if(idx===t.length-1){t[idx].face=true;solMoves++;solRender();}
+    }
+    return;
+  }
+  if(solSelected&&solSelected.pile===pile&&solSelected.idx===idx){
+    solSelected=null; solRender(); return;
+  }
+  if(solSelected){
+    // try to move
+    const moved=solTryMove(solSelected.pile,solSelected.idx,pile,idx);
+    if(!moved){ solSelected={pile,idx}; solRender(); }
+    return;
+  }
+  solSelected={pile,idx};
+  solRender();
+}
+function solClickPile(el){
+  const pile=el.dataset.pile;
+  if(!solSelected) return;
+  solTryMove(solSelected.pile,solSelected.idx,pile,null);
+}
+function solTryMove(fromPile,fromIdx,toPile,toIdx){
+  const cards=solGetCards(fromPile,fromIdx);
+  if(!cards||!cards.length){solSelected=null;solRender();return false;}
+  const top=cards[0];
+  let moved=false;
+  if(toPile.startsWith('f')&&cards.length===1){
+    const f=+toPile[1];
+    if(solCanFoundation(top,f)){
+      solRemoveCards(fromPile,fromIdx);
+      solFoundations[f].push(top);
+      moved=true;
+    }
+  } else if(toPile.startsWith('t')){
+    const t=+toPile[1];
+    if(solCanTableau(top,solTableau[t])){
+      solRemoveCards(fromPile,fromIdx);
+      solTableau[t].push(...cards);
+      moved=true;
+    }
+  }
+  if(moved){
+    solMoves++;
+    // flip new last card in source tableau
+    if(fromPile.startsWith('t')){
+      const t=solTableau[+fromPile[1]];
+      if(t.length&&!t[t.length-1].face) t[t.length-1].face=true;
+    }
+  }
+  solSelected=null;
+  solRender();
+  return moved;
+}
+function solRemoveCards(pile,idx){
+  if(pile==='waste'){ solWaste.splice(idx,1); }
+  else if(pile.startsWith('f')){ solFoundations[+pile[1]].splice(idx,1); }
+  else if(pile.startsWith('t')){ solTableau[+pile[1]].splice(idx); }
+}
+// drag solitaire window
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',e=>{
+    if(!e.target.closest('#solitaire-titlebar')) return;
+    const w=document.getElementById('solitaire-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    const w=document.getElementById('solitaire-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',()=>{drag=null;});
+})();
 </script>
 
 <!-- /aq/ BOARD OVERLAY — Floating AquaChat panel -->
@@ -7746,6 +8328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <button class="ptool" id="ptool-line" onclick="setPaintTool('line')" title="Line">╱</button>
     <button class="ptool" id="ptool-rect" onclick="setPaintTool('rect')" title="Rectangle">▭</button>
     <button class="ptool" id="ptool-ellipse" onclick="setPaintTool('ellipse')" title="Ellipse">⬭</button>
+    <button class="ptool" id="ptool-spray" onclick="setPaintTool('spray')" title="Spray Can">💨</button>
     <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
     <label style="font-size:9px;font-weight:700;color:var(--text2)">SIZE</label>
     <input type="range" id="paint-size" min="1" max="40" value="4" style="width:60px">
@@ -7928,6 +8511,65 @@ document.addEventListener('DOMContentLoaded', () => {
       <span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span><span>💎💎💎 = 15×</span>
       <span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span><span>Any 3 match = 3×</span>
       <span>2 match = 1×</span>
+    </div>
+  </div>
+</div>
+
+<!-- PICROSS -->
+<div id="picross-wrap">
+  <div id="picross-titlebar">
+    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
+    <select id="picross-puzzle-sel" class="pc-puzzle-sel" onchange="loadPicrossPuzzle(+this.value)" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1"></select>
+    <button onclick="openPicross(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1">✕</button>
+  </div>
+  <div id="picross-body">
+    <div id="picross-grid-area">
+      <div id="picross-col-clues-row">
+        <div id="picross-col-clues-spacer"></div>
+        <div id="picross-col-clues"></div>
+      </div>
+      <div id="picross-main-row">
+        <div id="picross-row-clues"></div>
+        <div id="picross-cells"></div>
+      </div>
+    </div>
+    <div id="picross-status">Left-click: fill &nbsp;|&nbsp; Right-click: mark</div>
+    <div id="picross-controls">
+      <button class="mbtn p" onclick="checkPicross()">Check</button>
+      <button class="mbtn s" onclick="resetPicross()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOLITAIRE -->
+<div id="solitaire-wrap">
+  <div id="solitaire-titlebar">
+    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">♠ AquaSolitaire</span>
+    <span id="sol-moves-disp" style="font-size:10px;color:rgba(255,255,255,0.8);font-weight:700;position:relative;z-index:1"></span>
+    <button onclick="newSolitaireGame()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;cursor:pointer;font-weight:700;position:relative;z-index:1">New Game</button>
+    <button onclick="openSolitaire(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1;margin-left:4px">✕</button>
+  </div>
+  <div id="solitaire-body">
+    <div id="sol-top">
+      <div id="sol-stock-area">
+        <div class="sol-slot" id="sol-stock" onclick="solDrawCard()" title="Draw"></div>
+        <div class="sol-slot" id="sol-waste"></div>
+      </div>
+      <div id="sol-foundations">
+        <div class="sol-slot" id="sol-f0" data-pile="f0" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f1" data-pile="f1" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f2" data-pile="f2" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f3" data-pile="f3" onclick="solClickPile(this)"></div>
+      </div>
+    </div>
+    <div id="sol-tableau">
+      <div class="sol-col sol-slot" id="sol-t0" data-pile="t0" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t1" data-pile="t1" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t2" data-pile="t2" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t3" data-pile="t3" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t4" data-pile="t4" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t5" data-pile="t5" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t6" data-pile="t6" onclick="solClickPile(this)"></div>
     </div>
   </div>
 </div>

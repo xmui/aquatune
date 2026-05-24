@@ -3083,11 +3083,13 @@ body.perf-mode #aqua-gun { display: none !important; }
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
     <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
-    <button class="theme-swatch"   data-theme="retro"     onclick="selectTheme('retro',this)">Classic</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
     <button class="theme-swatch"   data-theme="vapor"     onclick="selectTheme('vapor',this)">Vaporwave</button>
     <button class="theme-swatch"   data-theme="frost"     onclick="selectTheme('frost',this)">Frost</button>
     <button class="theme-swatch"   data-theme="glass"     onclick="selectTheme('glass',this)">Glass</button>
+    <button class="theme-swatch"   data-theme="retro"     data-unlock-label="Classic" onclick="selectTheme('retro',this)">Classic</button>
+    <button class="theme-swatch"   data-theme="neon"      data-unlock-label="Neon"    onclick="selectTheme('neon',this)">Neon</button>
+    <button class="theme-swatch"   data-theme="pixel"     data-unlock-label="Pixel"   onclick="selectTheme('pixel',this)">Pixel</button>
   </div>
   <div class="theme-section">
     <div class="theme-label">Weather location</div>
@@ -3490,6 +3492,22 @@ const THEMES = {
              hdr:'linear-gradient(180deg, rgba(80,140,240,0.55) 0%, rgba(40,100,210,0.45) 100%)',
              panel:'rgba(20,50,110,0.35)', border:'rgba(100,160,255,0.3)',
              font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
+  neon:    { accent:'#ff00ff', accent2:'#00ffff',
+             text:'#ffffff', text2:'#cc88ff',
+             bg:'linear-gradient(135deg, #0a0015 0%, #150030 50%, #000a20 100%)',
+             hdr:'linear-gradient(180deg, rgba(255,0,255,0.6), rgba(0,200,255,0.5))',
+             panel:'rgba(10,0,30,0.88)',
+             border:'rgba(255,0,255,0.35)',
+             font:"'Courier New',monospace",
+             era:'neon', scheme:'dark' },
+  pixel:   { accent:'#44bb44', accent2:'#88ff88',
+             text:'#002200', text2:'#228822',
+             bg:'#001100',
+             hdr:'linear-gradient(180deg, #006600, #004400)',
+             panel:'rgba(0,30,0,0.92)',
+             border:'rgba(0,180,0,0.4)',
+             font:"'Courier New',Courier,monospace",
+             era:'pixel', scheme:'dark' },
 };
 let currentTheme = 'default';
 
@@ -3612,6 +3630,39 @@ function loadSavedTheme() {
       if (s.customAccent) document.getElementById('custom-accent-inp').value = s.customAccent;
     }
   } catch {}
+}
+
+// ── WIN-UNLOCK THEMES ────────────────────────────────────
+function getUnlockedThemes() {
+  try { return JSON.parse(localStorage.getItem('aq_unlocked_themes') || '[]'); } catch { return []; }
+}
+function unlockTheme(name) {
+  const unlocked = getUnlockedThemes();
+  if (unlocked.includes(name)) return;
+  unlocked.push(name);
+  localStorage.setItem('aq_unlocked_themes', JSON.stringify(unlocked));
+  showThemeUnlockToast(name);
+  renderThemeSwatches();
+}
+function showThemeUnlockToast(themeName) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 20px;border-radius:20px;z-index:9999;font-size:13px;pointer-events:none;transition:opacity .5s';
+  t.textContent = '🔓 Theme unlocked: ' + themeName + '!';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 600); }, 3000);
+}
+function renderThemeSwatches() {
+  const unlocked = getUnlockedThemes();
+  ['retro', 'neon', 'pixel'].forEach(name => {
+    const btn = document.querySelector('.theme-swatch[data-theme="' + name + '"]');
+    if (!btn) return;
+    const isUnlocked = unlocked.includes(name);
+    btn.disabled = !isUnlocked;
+    btn.style.opacity = isUnlocked ? '1' : '0.45';
+    btn.title = isUnlocked ? name : 'Win a game to unlock!';
+    btn.dataset.unlockLabel = btn.dataset.unlockLabel || btn.textContent;
+    btn.textContent = isUnlocked ? (btn.dataset.unlockLabel || name) : ('🔒 ' + (btn.dataset.unlockLabel || name));
+  });
 }
 
 // ─────────────────────────────────────────────────────────
@@ -6938,6 +6989,7 @@ function evaluateSlots(syms) {
     const mult = SLOT_PAYS[a] || 3;
     win = slotsBet * mult;
     msg = `JACKPOT! ${a}${b}${c} +${win}`;
+    unlockTheme('neon');
     // Announce jackpot in global chat
     setTimeout(() => {
       const uname = localStorage.getItem('aq_username') || 'Someone';
@@ -8318,7 +8370,7 @@ function picrossNewPuzzle() {
   loadPicrossPuzzle(generatePicross(size));
 }
 function picrossOnWin() {
-  // Reserved for future theme unlock
+  unlockTheme('pixel');
 }
 function pcGetClues(arr, size, isRow) {
   const clues = [];
@@ -8736,6 +8788,7 @@ function solRemoveCards(ptype,pidx,cidx){
 
 function solOnWin(){
   console.log('sol-win');
+  unlockTheme('retro');
   alert('You win! Completed in '+solMoves+' moves.');
 }
 

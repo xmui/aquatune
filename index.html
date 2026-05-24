@@ -1692,21 +1692,20 @@
       overflow:hidden; background:#808080;
     }
     #paint-canvas {
-      display:block; height:100%; width:auto; max-width:100%;
-      aspect-ratio:320/200; cursor:crosshair; touch-action:none;
+      display:block; cursor:crosshair; touch-action:none;
       image-rendering:pixelated; image-rendering:crisp-edges; background:#fff;
     }
     #paint-send-menu {
-      display:none; position:absolute; top:36px; right:68px; z-index:900;
-      background:var(--panel); border:1.5px solid var(--border); border-radius:10px;
-      padding:6px; box-shadow:0 8px 24px rgba(0,80,160,0.22);
-      flex-direction:column; gap:4px; min-width:140px;
+      display:none; position:fixed; z-index:920;
+      background:var(--panel); border:1.5px solid var(--border); border-radius:12px;
+      padding:7px; box-shadow:0 10px 32px rgba(0,80,160,0.28);
+      flex-direction:column; gap:5px; min-width:150px;
     }
     #paint-send-menu.open { display:flex; }
     .paint-send-opt {
-      padding:7px 12px; border-radius:7px; border:1.5px solid var(--border);
+      padding:9px 14px; border-radius:8px; border:1.5px solid var(--border);
       background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(220,240,255,.88));
-      color:var(--text); font-size:11px; font-weight:700; cursor:pointer;
+      color:var(--text); font-size:12px; font-weight:700; cursor:pointer;
       text-align:left; transition:all .12s;
     }
     .paint-send-opt:hover { background:linear-gradient(180deg,#fff,rgba(200,235,255,.95)); border-color:var(--accent); }
@@ -6966,6 +6965,19 @@ function initPaint() {
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, PX_W, PX_H);
   }
   resize();
+  function fitCanvas() {
+    const wrap = document.getElementById('paint-canvas-wrap');
+    if (!wrap) return;
+    const wW = wrap.clientWidth, wH = wrap.clientHeight;
+    if (!wW || !wH) return;
+    const aspect = PX_W / PX_H;
+    let dW = wW, dH = wW / aspect;
+    if (dH > wH) { dH = wH; dW = wH * aspect; }
+    cv.style.width = Math.round(dW) + 'px';
+    cv.style.height = Math.round(dH) + 'px';
+  }
+  fitCanvas();
+  new ResizeObserver(fitCanvas).observe(document.getElementById('paint-canvas-wrap'));
 
   function getPos(e) {
     const r=cv.getBoundingClientRect();
@@ -7234,7 +7246,15 @@ function togglePaintSendMenu() {
   const inRoom = !!window._currentRoomId;
   if (roomBtn) roomBtn.style.display = inRoom ? '' : 'none';
   if (!inRoom) { sendPaintTo('global'); return; }
-  menu.classList.toggle('open');
+  if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+  const btn = document.getElementById('paint-send-btn');
+  if (btn) {
+    const r = btn.getBoundingClientRect();
+    menu.style.top = (r.bottom + 6) + 'px';
+    const left = Math.min(r.left, window.innerWidth - 165);
+    menu.style.left = Math.max(8, left) + 'px';
+  }
+  menu.classList.add('open');
 }
 function sendPaintTo(target) {
   document.getElementById('paint-send-menu').classList.remove('open');
@@ -7258,7 +7278,7 @@ function updateRoomChatLabel(roomId) {
 // Close paint send menu on outside click
 document.addEventListener('click', e => {
   const m = document.getElementById('paint-send-menu');
-  if (m && !e.target.closest('#paint-titlebar')) m.classList.remove('open');
+  if (m && !e.target.closest('#paint-send-btn') && !e.target.closest('#paint-send-menu')) m.classList.remove('open');
 });
 
 /* ── DOMContentLoaded setup ── */
@@ -7426,16 +7446,12 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- ── PAINT TOOL ─────────────────────────────────────────── -->
 <div id="paint-overlay" style="display:none;position:fixed;inset:0;z-index:800;pointer-events:none"></div>
 <div id="paint-wrap">
-  <div id="paint-titlebar" style="position:relative">
+  <div id="paint-titlebar">
     <span style="font-size:16px;position:relative;z-index:1">🎨</span>
     <span class="pt-label">AQUAPAINT</span>
     <button onclick="clearPaint()">Clear</button>
     <button onclick="savePaint()">Save PNG</button>
-    <button onclick="togglePaintSendMenu()" title="Send drawing to chat">📤 Send</button>
-    <div id="paint-send-menu">
-      <button class="paint-send-opt" onclick="sendPaintTo('global')">🌐 Global Chat</button>
-      <button class="paint-send-opt" id="paint-send-room-btn" onclick="sendPaintTo('room')">🏠 Room Chat</button>
-    </div>
+    <button id="paint-send-btn" onclick="togglePaintSendMenu()" title="Send drawing to chat">📤 Send</button>
     <button class="pt-close" onclick="closePaint()">×</button>
   </div>
   <div id="paint-toolbar">
@@ -7455,6 +7471,10 @@ document.addEventListener('DOMContentLoaded', () => {
   <div id="paint-canvas-wrap">
     <canvas id="paint-canvas" touch-action="none"></canvas>
   </div>
+</div>
+<div id="paint-send-menu">
+  <button class="paint-send-opt" onclick="sendPaintTo('global')">🌐 Global Chat</button>
+  <button class="paint-send-opt" id="paint-send-room-btn" onclick="sendPaintTo('room')">🏠 Room Chat</button>
 </div>
 
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->

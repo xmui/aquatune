@@ -6443,8 +6443,9 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
-  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Synth">🎹<span>Synth</span></button>
-  <button class="mob-tool-btn" onclick="openPaint()" title="AquaPaint">🎨<span>Paint</span></button>
+  <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>
+  <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
+  <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🎨<span>Paint</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
 
@@ -7415,6 +7416,17 @@ function initPaint() {
     if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
     ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
     const sz = parseInt(ps.value);
+    if (_paintTool === 'spray') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = pc.value;
+      const radius = 12;
+      for (let i = 0; i < 30; i++) {
+        const dx = (Math.random() - 0.5) * radius * 2;
+        const dy = (Math.random() - 0.5) * radius * 2;
+        if (dx*dx + dy*dy <= radius*radius) ctx.fillRect(p.x + dx, p.y + dy, 1, 1);
+      }
+      return;
+    }
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
       ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
       ctx.globalCompositeOperation = 'source-over';
@@ -7428,6 +7440,18 @@ function initPaint() {
     if (!_painting) return;
     const p = getPos(e);
     const sz = parseInt(ps.value);
+    if (_paintTool === 'spray') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = pc.value;
+      const radius = 12;
+      for (let i = 0; i < 30; i++) {
+        const dx = (Math.random() - 0.5) * radius * 2;
+        const dy = (Math.random() - 0.5) * radius * 2;
+        if (dx*dx + dy*dy <= radius*radius) ctx.fillRect(p.x + dx, p.y + dy, 1, 1);
+      }
+      lastPt = p;
+      return;
+    }
     if (_paintTool === 'pencil' || _paintTool === 'eraser') {
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = _paintTool === 'eraser' ? '#ffffff' : pc.value;
@@ -7782,6 +7806,446 @@ document.addEventListener('DOMContentLoaded', () => {
   const perfChk = document.getElementById('perf-mode-chk');
   if (perfChk) perfChk.checked = _perfMode;
 });
+
+// ── PICROSS ──────────────────────────────────────────
+const PC_PUZZLES = [
+  { name:'Heart', size:8, grid:[
+    0,1,1,0,0,1,1,0,
+    1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,0,1,1,1,1,0,0,
+    0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'Music Note', size:8, grid:[
+    0,0,1,1,1,1,0,0,
+    0,0,1,0,0,1,1,0,
+    0,0,1,0,0,0,1,0,
+    0,0,1,0,0,0,0,0,
+    0,1,1,0,0,0,0,0,
+    1,1,1,0,0,0,0,0,
+    0,1,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'Star', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,0,1,1,1,1,0,0,
+    0,1,1,0,0,1,1,0,
+    1,1,0,0,0,0,1,1,
+    0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+  { name:'House', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,0,1,1,1,1,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,1,1,0,0,1,1,0,
+    0,1,1,0,0,1,1,0,
+    0,1,1,1,1,1,1,0,
+  ]},
+  { name:'Diamond', size:8, grid:[
+    0,0,0,1,1,0,0,0,
+    0,0,1,1,1,1,0,0,
+    0,1,1,1,1,1,1,0,
+    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0,
+    0,0,1,1,1,1,0,0,
+    0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,
+  ]},
+];
+let _pcPuzzle = 0, _pcUserGrid = [], _pcSize = 8, _pcSolution = [];
+let _picrossInited = false;
+
+function openPicross(show = true) {
+  const w = document.getElementById('picross-wrap');
+  if (show === false) { w.classList.remove('open'); return; }
+  w.classList.toggle('open');
+  if (w.classList.contains('open') && !_picrossInited) {
+    _picrossInited = true;
+    const sel = document.getElementById('picross-puzzle-sel');
+    PC_PUZZLES.forEach((p, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = (i+1) + '. ' + p.name;
+      sel.appendChild(o);
+    });
+    loadPicrossPuzzle(0);
+  }
+}
+function loadPicrossPuzzle(idx) {
+  _pcPuzzle = idx;
+  const p = PC_PUZZLES[idx];
+  _pcSize = p.size;
+  _pcSolution = p.grid.slice();
+  _pcUserGrid = new Array(_pcSize * _pcSize).fill(0); // 0=empty,1=filled,2=marked
+  renderPicrossGrid();
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+}
+function pcGetClues(arr, size, isRow) {
+  const clues = [];
+  for (let i = 0; i < size; i++) {
+    const line = [];
+    for (let j = 0; j < size; j++) {
+      line.push(isRow ? arr[i*size+j] : arr[j*size+i]);
+    }
+    const runs = [];
+    let run = 0;
+    for (const v of line) { if (v) run++; else if (run) { runs.push(run); run=0; } }
+    if (run) runs.push(run);
+    clues.push(runs.length ? runs : [0]);
+  }
+  return clues;
+}
+function renderPicrossGrid() {
+  const CELL = 32;
+  const rowClues = pcGetClues(_pcSolution, _pcSize, true);
+  const colClues = pcGetClues(_pcSolution, _pcSize, false);
+  const maxRowClueLen = Math.max(...rowClues.map(r=>r.length));
+  const maxColClueLen = Math.max(...colClues.map(c=>c.length));
+  const rowClueW = maxRowClueLen * 18 + 4;
+  const colClueH = maxColClueLen * 14 + 4;
+
+  // Spacer
+  const spacer = document.getElementById('picross-col-clues-spacer');
+  spacer.style.width = rowClueW + 'px';
+  spacer.style.height = colClueH + 'px';
+
+  // Col clues
+  const colCluesEl = document.getElementById('picross-col-clues');
+  colCluesEl.innerHTML = '';
+  colClues.forEach(cc => {
+    const d = document.createElement('div');
+    d.className = 'pc-col-clue';
+    d.style.width = CELL + 'px';
+    d.style.height = colClueH + 'px';
+    // pad top with empty spans
+    const pad = maxColClueLen - cc.length;
+    for (let p=0;p<pad;p++) { const s=document.createElement('span');s.innerHTML='&nbsp;';d.appendChild(s); }
+    cc.forEach(n => { const s=document.createElement('span');s.textContent=n;d.appendChild(s); });
+    colCluesEl.appendChild(d);
+  });
+
+  // Row clues
+  const rowCluesEl = document.getElementById('picross-row-clues');
+  rowCluesEl.innerHTML = '';
+  rowClues.forEach(rc => {
+    const d = document.createElement('div');
+    d.className = 'pc-row-clue';
+    d.style.height = CELL + 'px';
+    d.style.width = rowClueW + 'px';
+    const pad = maxRowClueLen - rc.length;
+    for (let p=0;p<pad;p++) { const s=document.createElement('span');s.style.minWidth='14px';s.innerHTML='';d.appendChild(s); }
+    rc.forEach(n => { const s=document.createElement('span');s.style.minWidth='14px';s.style.textAlign='right';s.textContent=n;d.appendChild(s); });
+    rowCluesEl.appendChild(d);
+  });
+
+  // Cells
+  const cellsEl = document.getElementById('picross-cells');
+  cellsEl.innerHTML = '';
+  cellsEl.style.gridTemplateColumns = `repeat(${_pcSize},${CELL}px)`;
+  for (let i=0;i<_pcSize*_pcSize;i++) {
+    const c = document.createElement('div');
+    c.className = 'pc-cell';
+    c.style.width = CELL + 'px';
+    c.style.height = CELL + 'px';
+    c.dataset.idx = i;
+    if (_pcUserGrid[i]===1) c.classList.add('filled');
+    if (_pcUserGrid[i]===2) c.classList.add('marked');
+    c.addEventListener('click', () => {
+      _pcUserGrid[i] = _pcUserGrid[i]===1 ? 0 : 1;
+      renderPicrossGrid();
+    });
+    c.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      _pcUserGrid[i] = _pcUserGrid[i]===2 ? 0 : 2;
+      renderPicrossGrid();
+    });
+    cellsEl.appendChild(c);
+  }
+}
+function checkPicross() {
+  let allCorrect = true;
+  const cells = document.querySelectorAll('.pc-cell');
+  cells.forEach((c, i) => {
+    c.classList.remove('wrong');
+    const userFilled = _pcUserGrid[i]===1;
+    const solFilled = _pcSolution[i]===1;
+    if (userFilled && !solFilled) { c.classList.add('wrong'); allCorrect=false; }
+    else if (!userFilled && solFilled) allCorrect=false;
+  });
+  const status = document.getElementById('picross-status');
+  if (allCorrect && _pcUserGrid.filter((v,i)=>v===1&&_pcSolution[i]===1).length===_pcSolution.filter(v=>v===1).length) {
+    status.textContent = '🎉 Puzzle solved!';
+  } else {
+    status.textContent = allCorrect ? '✓ No errors so far!' : '✗ Some squares are wrong';
+  }
+}
+function resetPicross() {
+  _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
+  renderPicrossGrid();
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+}
+// drag for picross
+(function() {
+  let drag = null;
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('#picross-titlebar')) return;
+    const w = document.getElementById('picross-wrap');
+    const r = w.getBoundingClientRect();
+    w.style.transform='none'; w.style.left=r.left+'px'; w.style.top=r.top+'px';
+    drag = {sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const w = document.getElementById('picross-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px'; w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup', ()=>{ drag=null; });
+})();
+
+// ── SOLITAIRE ────────────────────────────────────────
+const SOL_SUITS = ['♠','♥','♦','♣'];
+const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SOL_RED   = new Set(['♥','♦']);
+let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
+let solSelected=null, solMoves=0;
+let _solitaireInited=false;
+
+function openSolitaire(show=true) {
+  const w=document.getElementById('solitaire-wrap');
+  if(show===false){w.classList.remove('open');return;}
+  w.classList.toggle('open');
+  if(w.classList.contains('open')&&!_solitaireInited){_solitaireInited=true;newSolitaireGame();}
+}
+function solMakeDeck(){
+  const d=[];
+  SOL_SUITS.forEach(s=>SOL_VALS.forEach(v=>d.push({s,v,face:false})));
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  return d;
+}
+function newSolitaireGame(){
+  const deck=solMakeDeck();
+  solTableau=[];
+  for(let c=0;c<7;c++){
+    const pile=[];
+    for(let r=0;r<=c;r++){
+      const card=deck.pop();
+      card.face=r===c;
+      pile.push(card);
+    }
+    solTableau.push(pile);
+  }
+  solStock=[...deck].map(c=>({...c,face:false}));
+  solWaste=[]; solFoundations=[[],[],[],[]];
+  solSelected=null; solMoves=0;
+  solRender();
+}
+function solCardEl(card, idx, pileId, zBase){
+  const d=document.createElement('div');
+  d.className='sol-card'+(card.face?'',' face-down'.trim():' face-down');
+  if(card.face) d.classList.remove('face-down');
+  if(card.face) d.classList.add(SOL_RED.has(card.s)?'red':'black');
+  if(card.face){
+    d.innerHTML=`<span class="sol-card-top">${card.v}</span><span class="sol-card-suit">${card.s}</span>`;
+  }
+  d.style.zIndex=zBase+idx;
+  d.dataset.pile=pileId;
+  d.dataset.idx=idx;
+  if(solSelected&&solSelected.pile===pileId&&solSelected.idx===idx) d.classList.add('selected');
+  d.addEventListener('click',e=>{e.stopPropagation();solClickCard(pileId,idx,card);});
+  return d;
+}
+function solRender(){
+  // Stock
+  const stockEl=document.getElementById('sol-stock');
+  stockEl.innerHTML='';
+  if(solStock.length){
+    const c=document.createElement('div');
+    c.className='sol-card face-down';
+    c.style.zIndex=1;
+    stockEl.appendChild(c);
+  }
+  // Waste
+  const wasteEl=document.getElementById('sol-waste');
+  wasteEl.innerHTML='';
+  if(solWaste.length){
+    const card=solWaste[solWaste.length-1];
+    const d=solCardEl(card,solWaste.length-1,'waste',1);
+    d.style.position='absolute'; d.style.top='0'; d.style.left='0';
+    wasteEl.appendChild(d);
+  }
+  // Foundations
+  for(let f=0;f<4;f++){
+    const el=document.getElementById('sol-f'+f);
+    el.innerHTML='';
+    const pile=solFoundations[f];
+    if(pile.length){
+      const card=pile[pile.length-1];
+      const d=solCardEl(card,pile.length-1,'f'+f,1);
+      d.style.position='absolute'; d.style.top='0'; d.style.left='0';
+      el.appendChild(d);
+    } else {
+      el.innerHTML=`<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.3">${SOL_SUITS[f]}</span>`;
+    }
+  }
+  // Tableau
+  for(let t=0;t<7;t++){
+    const el=document.getElementById('sol-t'+t);
+    el.innerHTML='';
+    const pile=solTableau[t];
+    el.style.minHeight=(88+Math.max(0,pile.length-1)*22)+'px';
+    pile.forEach((card,i)=>{
+      const d=solCardEl(card,i,'t'+t,i);
+      d.style.position='absolute';
+      d.style.top=(i*22)+'px'; d.style.left='0';
+      el.appendChild(d);
+    });
+  }
+  // Score
+  const mv=document.getElementById('sol-moves-disp');
+  if(mv) mv.textContent='Moves: '+solMoves;
+  // Highlight valid drops
+  document.querySelectorAll('.sol-slot').forEach(s=>s.classList.remove('highlight'));
+  if(solSelected) solHighlightValid();
+  // Win check
+  if(solFoundations.every(f=>f.length===13)){
+    setTimeout(()=>alert('🎉 You win! '+ solMoves+' moves'),100);
+  }
+}
+function solHighlightValid(){
+  if(!solSelected) return;
+  const {pile,idx}=solSelected;
+  const cards=solGetCards(pile,idx);
+  if(!cards||!cards.length) return;
+  const top=cards[0];
+  // Check foundations
+  for(let f=0;f<4;f++){
+    if(cards.length===1&&solCanFoundation(top,f)) document.getElementById('sol-f'+f).classList.add('highlight');
+  }
+  // Check tableau
+  for(let t=0;t<7;t++){
+    if(solCanTableau(top, solTableau[t])) document.getElementById('sol-t'+t).classList.add('highlight');
+  }
+}
+function solGetCards(pile,idx){
+  if(pile==='waste') return idx===solWaste.length-1?[solWaste[idx]]:null;
+  if(pile.startsWith('f')) return idx===(solFoundations[+pile[1]].length-1)?[solFoundations[+pile[1]][idx]]:null;
+  if(pile.startsWith('t')) return solTableau[+pile[1]].slice(idx);
+  return null;
+}
+function solCanFoundation(card,f){
+  const pile=solFoundations[f];
+  if(!pile.length) return card.v==='A';
+  const top=pile[pile.length-1];
+  return top.s===card.s && SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)+1;
+}
+function solCanTableau(card,pile){
+  if(!pile.length) return card.v==='K';
+  const top=pile[pile.length-1];
+  if(!top.face) return false;
+  const colOk=SOL_RED.has(card.s)!==SOL_RED.has(top.s);
+  const valOk=SOL_VALS.indexOf(card.v)===SOL_VALS.indexOf(top.v)-1;
+  return colOk&&valOk;
+}
+function solDrawCard(){
+  if(!solStock.length){
+    solStock=[...solWaste].reverse().map(c=>({...c,face:false}));
+    solWaste=[];
+  } else {
+    const c=solStock.pop();
+    c.face=true;
+    solWaste.push(c);
+    solMoves++;
+  }
+  solSelected=null;
+  solRender();
+}
+function solClickCard(pile,idx,card){
+  if(!card.face){
+    // flip last card in tableau
+    if(pile.startsWith('t')){
+      const t=solTableau[+pile[1]];
+      if(idx===t.length-1){t[idx].face=true;solMoves++;solRender();}
+    }
+    return;
+  }
+  if(solSelected&&solSelected.pile===pile&&solSelected.idx===idx){
+    solSelected=null; solRender(); return;
+  }
+  if(solSelected){
+    // try to move
+    const moved=solTryMove(solSelected.pile,solSelected.idx,pile,idx);
+    if(!moved){ solSelected={pile,idx}; solRender(); }
+    return;
+  }
+  solSelected={pile,idx};
+  solRender();
+}
+function solClickPile(el){
+  const pile=el.dataset.pile;
+  if(!solSelected) return;
+  solTryMove(solSelected.pile,solSelected.idx,pile,null);
+}
+function solTryMove(fromPile,fromIdx,toPile,toIdx){
+  const cards=solGetCards(fromPile,fromIdx);
+  if(!cards||!cards.length){solSelected=null;solRender();return false;}
+  const top=cards[0];
+  let moved=false;
+  if(toPile.startsWith('f')&&cards.length===1){
+    const f=+toPile[1];
+    if(solCanFoundation(top,f)){
+      solRemoveCards(fromPile,fromIdx);
+      solFoundations[f].push(top);
+      moved=true;
+    }
+  } else if(toPile.startsWith('t')){
+    const t=+toPile[1];
+    if(solCanTableau(top,solTableau[t])){
+      solRemoveCards(fromPile,fromIdx);
+      solTableau[t].push(...cards);
+      moved=true;
+    }
+  }
+  if(moved){
+    solMoves++;
+    // flip new last card in source tableau
+    if(fromPile.startsWith('t')){
+      const t=solTableau[+fromPile[1]];
+      if(t.length&&!t[t.length-1].face) t[t.length-1].face=true;
+    }
+  }
+  solSelected=null;
+  solRender();
+  return moved;
+}
+function solRemoveCards(pile,idx){
+  if(pile==='waste'){ solWaste.splice(idx,1); }
+  else if(pile.startsWith('f')){ solFoundations[+pile[1]].splice(idx,1); }
+  else if(pile.startsWith('t')){ solTableau[+pile[1]].splice(idx); }
+}
+// drag solitaire window
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',e=>{
+    if(!e.target.closest('#solitaire-titlebar')) return;
+    const w=document.getElementById('solitaire-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    const w=document.getElementById('solitaire-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',()=>{drag=null;});
+})();
 </script>
 
 <!-- /aq/ BOARD OVERLAY — Floating AquaChat panel -->
@@ -7864,6 +8328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <button class="ptool" id="ptool-line" onclick="setPaintTool('line')" title="Line">╱</button>
     <button class="ptool" id="ptool-rect" onclick="setPaintTool('rect')" title="Rectangle">▭</button>
     <button class="ptool" id="ptool-ellipse" onclick="setPaintTool('ellipse')" title="Ellipse">⬭</button>
+    <button class="ptool" id="ptool-spray" onclick="setPaintTool('spray')" title="Spray Can">💨</button>
     <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
     <label style="font-size:9px;font-weight:700;color:var(--text2)">SIZE</label>
     <input type="range" id="paint-size" min="1" max="40" value="4" style="width:60px">
@@ -8046,6 +8511,65 @@ document.addEventListener('DOMContentLoaded', () => {
       <span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span><span>💎💎💎 = 15×</span>
       <span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span><span>Any 3 match = 3×</span>
       <span>2 match = 1×</span>
+    </div>
+  </div>
+</div>
+
+<!-- PICROSS -->
+<div id="picross-wrap">
+  <div id="picross-titlebar">
+    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
+    <select id="picross-puzzle-sel" class="pc-puzzle-sel" onchange="loadPicrossPuzzle(+this.value)" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1"></select>
+    <button onclick="openPicross(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1">✕</button>
+  </div>
+  <div id="picross-body">
+    <div id="picross-grid-area">
+      <div id="picross-col-clues-row">
+        <div id="picross-col-clues-spacer"></div>
+        <div id="picross-col-clues"></div>
+      </div>
+      <div id="picross-main-row">
+        <div id="picross-row-clues"></div>
+        <div id="picross-cells"></div>
+      </div>
+    </div>
+    <div id="picross-status">Left-click: fill &nbsp;|&nbsp; Right-click: mark</div>
+    <div id="picross-controls">
+      <button class="mbtn p" onclick="checkPicross()">Check</button>
+      <button class="mbtn s" onclick="resetPicross()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOLITAIRE -->
+<div id="solitaire-wrap">
+  <div id="solitaire-titlebar">
+    <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">♠ AquaSolitaire</span>
+    <span id="sol-moves-disp" style="font-size:10px;color:rgba(255,255,255,0.8);font-weight:700;position:relative;z-index:1"></span>
+    <button onclick="newSolitaireGame()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;cursor:pointer;font-weight:700;position:relative;z-index:1">New Game</button>
+    <button onclick="openSolitaire(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1;margin-left:4px">✕</button>
+  </div>
+  <div id="solitaire-body">
+    <div id="sol-top">
+      <div id="sol-stock-area">
+        <div class="sol-slot" id="sol-stock" onclick="solDrawCard()" title="Draw"></div>
+        <div class="sol-slot" id="sol-waste"></div>
+      </div>
+      <div id="sol-foundations">
+        <div class="sol-slot" id="sol-f0" data-pile="f0" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f1" data-pile="f1" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f2" data-pile="f2" onclick="solClickPile(this)"></div>
+        <div class="sol-slot" id="sol-f3" data-pile="f3" onclick="solClickPile(this)"></div>
+      </div>
+    </div>
+    <div id="sol-tableau">
+      <div class="sol-col sol-slot" id="sol-t0" data-pile="t0" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t1" data-pile="t1" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t2" data-pile="t2" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t3" data-pile="t3" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t4" data-pile="t4" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t5" data-pile="t5" onclick="solClickPile(this)"></div>
+      <div class="sol-col sol-slot" id="sol-t6" data-pile="t6" onclick="solClickPile(this)"></div>
     </div>
   </div>
 </div>

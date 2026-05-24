@@ -1530,8 +1530,8 @@
       #auth-area { gap: 4px; }
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
-      /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
-      #apps-menu-wrap, #gear-btn { display: none !important; }
+      /* gear-btn hidden on mobile — apps-btn handles it */
+      #gear-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -1658,8 +1658,8 @@
       /* Toast above tools bar */
       #toast { bottom: 104px; }
 
-      /* Mob tools bar visible */
-      #mob-tools-bar { display: flex; }
+      /* Mob tools bar hidden — apps button in header handles mini-apps */
+      #mob-tools-bar { display: none; }
 
       /* Modals */
       .modal { width: 94vw !important; max-width: 94vw !important; }
@@ -2065,6 +2065,9 @@ body.perf-mode #aqua-gun { display: none !important; }
   #paint-wrap { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; }
   #room-badge button.leave-btn span { display: none; }
   #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
+  /* Apps menu on mobile: 2-col grid, full-width-safe, hide Keys */
+  #apps-menu { grid-template-columns: 1fr 1fr; width: 168px; }
+  .apps-item-keys { display: none; }
 }
 [data-scheme=dark] #splash-room { background: rgba(14,28,60,0.96); border-color: rgba(56,160,255,0.3); }
 [data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code, [data-scheme=dark] #sp-create-code { background: rgba(8,20,50,0.9); color:#e8f0ff; border-color: rgba(56,160,255,0.35); }
@@ -2414,8 +2417,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       border-radius:18px; padding:8px;
       box-shadow: 0 16px 48px rgba(0,60,160,0.22), 0 4px 12px rgba(0,80,180,0.14), inset 0 1.5px 0 rgba(255,255,255,1);
       backdrop-filter:blur(20px) saturate(1.3);
-      display:grid; grid-template-columns:1fr 1fr;
-      gap:6px; z-index:600; width:172px;
+      display:grid; grid-template-columns:1fr 1fr 1fr;
+      gap:6px; z-index:600; width:220px;
       transform:translateY(-6px) scale(0.96);
       transition: opacity .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1), visibility .18s;
     }
@@ -2520,7 +2523,8 @@ body.perf-mode #aqua-gun { display: none !important; }
           <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" title="Slots" id="slots-btn">🎰<span>Slots</span></button>
           <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" title="Synth" id="synth-btn">🎹<span>Synth</span></button>
           <button class="apps-item" onclick="openPaint();toggleAppsMenu()" title="AquaPaint" id="paint-btn">🎨<span>Paint</span></button>
-          <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
+          <button class="apps-item apps-item-settings" onclick="toggleThemePanel();toggleAppsMenu()" title="Settings">⚙️<span>Settings</span></button>
+          <button class="apps-item apps-item-keys" onclick="toggleKbdHint();toggleAppsMenu()" title="Shortcuts" id="kbd-btn">⌨<span>Keys</span></button>
         </div>
       </div>
       <button id="gear-btn" onclick="toggleThemePanel()" title="Customize theme">&#9881;</button>

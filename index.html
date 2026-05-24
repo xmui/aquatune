@@ -1514,7 +1514,11 @@
 
       #hdr {
         border-radius: 0 0 14px 14px;
+        border-top-left-radius: 0 !important;
+        border-top-right-radius: 0 !important;
         padding: 8px 12px;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        margin-top: 0;
         position: sticky;
         top: 0;
         z-index: 100;
@@ -2394,6 +2398,40 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=vapor] ::-webkit-scrollbar-track { background: rgba(255,45,120,0.05) !important; }
 [data-era=vapor] #splash { background: linear-gradient(135deg,#1a0030 0%,#0d0d2b 100%) !important; }
 
+/* ── FROST THEME (Snow Leopard-inspired) ── */
+[data-era=frost] #board-wrap, [data-era=frost] .panel,
+[data-era=frost] #theme-panel, [data-era=frost] #hdr {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(230,240,252,0.82));
+  border: 1px solid rgba(180,210,240,0.6);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 32px rgba(100,140,200,0.18);
+}
+[data-era=frost] .mbtn, [data-era=frost] button.mbtn {
+  background: linear-gradient(180deg, #f5f8fc, #ddeaf8);
+  border: 1px solid rgba(140,180,220,0.6);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+  border-radius: 6px;
+  color: #1a1a1a;
+}
+
+/* ── GLASS THEME (Vista Aero-inspired) ── */
+[data-era=glass] #board-wrap, [data-era=glass] #theme-panel,
+[data-era=glass] .panel {
+  backdrop-filter: blur(32px) saturate(1.6);
+  background: rgba(20,50,120,0.28) !important;
+  border: 1px solid rgba(120,180,255,0.35) !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 20px 60px rgba(0,20,80,0.5) !important;
+}
+[data-era=glass] #hdr {
+  backdrop-filter: blur(24px) saturate(1.4);
+  border-bottom: 1px solid rgba(120,180,255,0.25) !important;
+}
+[data-era=glass] .mbtn {
+  background: linear-gradient(180deg, rgba(80,140,255,0.4), rgba(40,100,220,0.3)) !important;
+  border: 1px solid rgba(140,200,255,0.4) !important;
+  color: #fff !important;
+  backdrop-filter: blur(8px);
+}
+
     /* ── APPS MENU / LAUNCHER ───────────────────────────── */
     #apps-menu-wrap { position:relative; }
     #apps-btn {
@@ -3048,6 +3086,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     <button class="theme-swatch"   data-theme="retro"     onclick="selectTheme('retro',this)">Classic</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
     <button class="theme-swatch"   data-theme="vapor"     onclick="selectTheme('vapor',this)">Vaporwave</button>
+    <button class="theme-swatch"   data-theme="frost"     onclick="selectTheme('frost',this)">Frost</button>
+    <button class="theme-swatch"   data-theme="glass"     onclick="selectTheme('glass',this)">Glass</button>
   </div>
   <div class="theme-section">
     <div class="theme-label">Weather location</div>
@@ -3440,6 +3480,16 @@ const THEMES = {
              hdr:'linear-gradient(180deg,#ff2d78 0%,#bf5af2 55%,#7a40e0 100%)',
              panel:'rgba(255,225,255,0.96)', border:'rgba(255,45,120,0.28)',
              font:"'Courier New',Courier,monospace", era:'vapor', scheme:'light' },
+  frost:   { accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
+             bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
+             hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
+             panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
+             font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light' },
+  glass:   { accent:'#2878d8', accent2:'#50a0f8', text:'#0a1428', text2:'#3a5888',
+             bg:'linear-gradient(135deg, #1a2a4a 0%, #0a1830 40%, #1a2848 100%)',
+             hdr:'linear-gradient(180deg, rgba(80,140,240,0.55) 0%, rgba(40,100,210,0.45) 100%)',
+             panel:'rgba(20,50,110,0.35)', border:'rgba(100,160,255,0.3)',
+             font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
 };
 let currentTheme = 'default';
 

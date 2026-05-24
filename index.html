@@ -2784,6 +2784,21 @@ body.perf-mode #aqua-gun { display: none !important; }
     #th-theater-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
     #th-theater-btn.active { background:rgba(255,255,255,0.32); border-color:rgba(255,255,255,0.75); }
 
+    /* Remote mode indicator */
+    body.remote-mode::after {
+      content: '📡 REMOTE';
+      position: fixed;
+      top: 8px; right: 8px;
+      background: rgba(200,40,40,0.85);
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 10px;
+      z-index: 9998;
+      pointer-events: none;
+    }
+
   </style>
 </head>
 <body>
@@ -2864,6 +2879,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
+      <button id="remote-mode-btn" onclick="setRemoteMode(!_remoteMode)" title="Remote mode (mute, control only)">📡</button>
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
@@ -3116,6 +3132,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
       </label>
     </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
@@ -3663,6 +3684,29 @@ function renderThemeSwatches() {
     btn.dataset.unlockLabel = btn.dataset.unlockLabel || btn.textContent;
     btn.textContent = isUnlocked ? (btn.dataset.unlockLabel || name) : ('🔒 ' + (btn.dataset.unlockLabel || name));
   });
+}
+
+// ── REMOTE MODE ──────────────────────────────────────────
+let _remoteMode = localStorage.getItem('aq_remote') === '1';
+
+function setRemoteMode(on) {
+  _remoteMode = on;
+  localStorage.setItem('aq_remote', on ? '1' : '0');
+  document.body.classList.toggle('remote-mode', on);
+  if (on) {
+    try { player.setVolume(0); } catch(e) {}
+    try { if (scWidget && scReady) scWidget.setVolume(0); } catch(e) {}
+  } else {
+    const vol = parseInt(localStorage.getItem('aq_vol') || '80');
+    try { player.setVolume(vol); } catch(e) {}
+    try { if (scWidget && scReady) scWidget.setVolume(vol); } catch(e) {}
+    const volSlider = document.getElementById('vol');
+    if (volSlider) volSlider.value = vol;
+  }
+  const btn = document.getElementById('remote-mode-btn');
+  if (btn) btn.style.background = on ? 'rgba(255,80,80,0.3)' : '';
+  const chk = document.getElementById('remote-mode-chk');
+  if (chk) chk.checked = on;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -4383,16 +4427,75 @@ function popQueue() {
   const v = queue.shift(); playVideo(v); renderQueue();
 }
 let dragSrcIdx = null;
+let queueSelected = new Set();
+
+function toggleQueueSelect(idx, e) {
+  if (e.shiftKey && queueSelected.size > 0) {
+    const last = [...queueSelected].pop();
+    const from = Math.min(last, idx), to = Math.max(last, idx);
+    for (let i = from; i <= to; i++) queueSelected.add(i);
+  } else {
+    if (queueSelected.has(idx)) queueSelected.delete(idx);
+    else queueSelected.add(idx);
+  }
+  renderQueue();
+}
+
+function moveQueueSelection(dir) {
+  const indices = [...queueSelected].sort((a,b) => dir > 0 ? b-a : a-b);
+  if (!indices.length) return;
+  if (dir < 0 && indices[0] === 0) return;
+  if (dir > 0 && indices[indices.length-1] === queue.length-1) return;
+  indices.forEach(idx => {
+    const newIdx = idx + dir;
+    [queue[idx], queue[newIdx]] = [queue[newIdx], queue[idx]];
+    queueSelected.delete(idx);
+    queueSelected.add(newIdx);
+  });
+  saveSession?.();
+  renderQueue();
+}
+
 function renderQueue() {
   const box = document.getElementById('queue-list');
-  if (!queue.length) { box.innerHTML = '<div class="empty">Queue is empty</div>'; return; }
+  if (!queue.length) {
+    queueSelected.clear();
+    box.innerHTML = '<div class="empty">Queue is empty</div>';
+    const bar = document.getElementById('queue-select-bar');
+    if (bar) bar.style.display = 'none';
+    return;
+  }
+  // Render selection toolbar
+  let bar = document.getElementById('queue-select-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'queue-select-bar';
+    bar.style.cssText = 'padding:4px 8px;background:rgba(0,0,0,0.1);display:flex;gap:4px;align-items:center;flex-shrink:0;font-size:11px;';
+    bar.innerHTML = '<span id="queue-sel-count">0 selected</span><button onclick="moveQueueSelection(-1)" title="Move up" style="padding:1px 6px;cursor:pointer">&#8593;</button><button onclick="moveQueueSelection(1)" title="Move down" style="padding:1px 6px;cursor:pointer">&#8595;</button><button onclick="queueSelected.clear();renderQueue()" title="Clear selection" style="padding:1px 6px;cursor:pointer">&#10005;</button>';
+    const queueTop = document.getElementById('queue-top');
+    if (queueTop) queueTop.after(bar);
+    else box.before(bar);
+  }
+  bar.style.display = queueSelected.size > 0 ? 'flex' : 'none';
+  const countEl = document.getElementById('queue-sel-count');
+  if (countEl) countEl.textContent = queueSelected.size + ' selected';
+
   box.innerHTML = '';
   queue.forEach((v,i) => {
     const el = document.createElement('div'); el.className = 'v-item'; el.draggable = true;
     el.dataset.idx = i;
+    if (queueSelected.has(i)) el.style.background = 'rgba(0,180,220,0.2)';
     el.innerHTML = `<span class="drag-handle" title="Drag to reorder">&#8801;</span><img class="vt" src="${esc(v.thumbnail)}" loading="lazy" alt=""><div class="vi2"><div class="vtt">${esc(v.title)}</div><div class="vch">${esc(v.channelTitle||'')}</div></div><button class="vx" title="Remove">x</button>`;
-    el.querySelector('.vx').onclick = e => { e.stopPropagation(); queue.splice(i,1); renderQueue(); };
-    el.onclick = e => { if (e.target.classList.contains('vx')||e.target.classList.contains('drag-handle')) return; queue.splice(i,1); playVideo(v); renderQueue(); };
+    el.querySelector('.vx').onclick = e => { e.stopPropagation(); queueSelected.delete(i); queue.splice(i,1); renderQueue(); };
+    el.onclick = e => {
+      if (e.target.classList.contains('vx') || e.target.classList.contains('drag-handle')) return;
+      if (e.shiftKey || queueSelected.size > 0) {
+        toggleQueueSelect(i, e);
+        return;
+      }
+      queue.splice(i,1); playVideo(v); renderQueue();
+    };
+    el.addEventListener('contextmenu', e => { e.preventDefault(); toggleQueueSelect(i, e); });
     el.addEventListener('dragstart', e => { dragSrcIdx=i; el.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
     el.addEventListener('dragend',   () => { el.classList.remove('dragging'); box.querySelectorAll('.v-item').forEach(x=>x.classList.remove('drag-over')); });
     el.addEventListener('dragover',  e => { e.preventDefault(); e.dataTransfer.dropEffect='move'; el.classList.add('drag-over'); });
@@ -5240,6 +5343,8 @@ function toggleAutomix() {
   if (automix && window.abSayAutomix) abSayAutomix();
 }
 function setVol(v) {
+  localStorage.setItem('aq_vol', String(+v));
+  if (_remoteMode) return; // Remote mode: keep muted
   if (ready) player.setVolume(+v);
   if (scWidget && scReady) scWidget.setVolume(+v);
 }
@@ -8315,6 +8420,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init perf mode checkbox
   const perfChk = document.getElementById('perf-mode-chk');
   if (perfChk) perfChk.checked = _perfMode;
+
+  // Init remote mode
+  const remoteChk = document.getElementById('remote-mode-chk');
+  if (remoteChk) remoteChk.checked = _remoteMode;
+  if (_remoteMode) {
+    document.body.classList.add('remote-mode');
+    const rBtn = document.getElementById('remote-mode-btn');
+    if (rBtn) rBtn.style.background = 'rgba(255,80,80,0.3)';
+  }
+
+  // Init theme swatches (locked state)
+  renderThemeSwatches();
 });
 
 // ── PICROSS ──────────────────────────────────────────

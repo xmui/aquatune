@@ -8048,7 +8048,7 @@ function newSolitaireGame(){
 }
 function solCardEl(card, idx, pileId, zBase){
   const d=document.createElement('div');
-  d.className='sol-card'+(card.face?'',' face-down'.trim():' face-down');
+  d.className='sol-card'+(card.face?'':' face-down');
   if(card.face) d.classList.remove('face-down');
   if(card.face) d.classList.add(SOL_RED.has(card.s)?'red':'black');
   if(card.face){

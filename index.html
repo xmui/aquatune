@@ -480,15 +480,22 @@
     }
     .click-ripple {
       position:fixed; border-radius:50%; pointer-events:none; z-index:9998;
-      width:18px; height:18px; margin:-9px 0 0 -9px;
-      border:2px solid rgba(0,180,230,0.7);
-      background:rgba(0,180,230,0.12);
-      animation:clickRippleOut .55s cubic-bezier(.2,.8,.3,1) forwards;
+      width:28px; height:28px; margin:-14px 0 0 -14px;
+      border:1.5px solid rgba(0,180,230,0.55);
+      background:radial-gradient(circle, rgba(0,200,240,0.18) 0%, rgba(0,180,230,0.06) 55%, transparent 100%);
+      animation:clickRippleOut .7s cubic-bezier(.15,.7,.25,1) forwards;
+    }
+    .click-ripple.r2 {
+      width:20px; height:20px; margin:-10px 0 0 -10px;
+      border-color:rgba(0,200,240,0.35);
+      background:none;
+      animation-duration:.9s;
+      animation-delay:.06s;
     }
     @keyframes clickRippleOut {
-      0%   { opacity:1; transform:scale(0.2); }
-      60%  { opacity:0.6; }
-      100% { opacity:0; transform:scale(4); }
+      0%   { opacity:1; transform:scale(0.1); }
+      30%  { opacity:0.7; }
+      100% { opacity:0; transform:scale(5.5); }
     }
 
     /* ── SHORT VIEWPORT (MacBook Touch Bar etc.) ─────────── */
@@ -847,6 +854,9 @@
     #board-wrap.minimized .board-menubar,
     #board-wrap.minimized .board-threadhdr,
     #board-wrap.minimized #board-log,
+    #board-wrap.minimized .board-log,
+    #board-wrap.minimized .board-chat-tabs,
+    #board-wrap.minimized .board-chat-pane,
     #board-wrap.minimized .board-input-area { display:none; }
     #board-wrap.minimized { height:auto; }
     /* Menu bar */
@@ -877,13 +887,13 @@
     }
     .board-fb-badge.local { background:#888; }
     /* Chat log */
-    #board-log {
+    #board-log, .board-log {
       flex:1; overflow-y:auto; padding:8px 10px;
       background:rgba(245,250,255,0.9); min-height:0;
     }
-    #board-log::-webkit-scrollbar { width:12px; }
-    #board-log::-webkit-scrollbar-track { background:#F0EDE4; border-left:1px solid #C8C4B8; }
-    #board-log::-webkit-scrollbar-thumb { background:linear-gradient(180deg,#A8C8E8,#80A8D0); border:1px solid #6888A8; border-radius:2px; }
+    #board-log::-webkit-scrollbar, .board-log::-webkit-scrollbar { width:12px; }
+    #board-log::-webkit-scrollbar-track, .board-log::-webkit-scrollbar-track { background:#F0EDE4; border-left:1px solid #C8C4B8; }
+    #board-log::-webkit-scrollbar-thumb, .board-log::-webkit-scrollbar-thumb { background:linear-gradient(180deg,#A8C8E8,#80A8D0); border:1px solid #6888A8; border-radius:2px; }
     .board-day-sep {
       text-align:center; font-size:10px; color:#888; margin:8px 0 4px;
       display:flex; align-items:center; gap:6px;
@@ -912,6 +922,9 @@
       white-space:pre-wrap; word-break:break-word;
       box-shadow:1px 2px 4px rgba(0,0,80,0.08);
       color:#000;
+    }
+    .bmsg-text {
+      font-size:12px; line-height:1.65; white-space:pre-wrap; word-break:break-word; color:#222;
     }
     .bmsg-del {
       background:none; border:none; cursor:pointer; font-size:10px;
@@ -1794,8 +1807,8 @@
     }
     #splash.fade-out { opacity: 0; visibility: hidden; }
     #splash .sp-logo {
-      width: 120px; height: 120px; object-fit: contain;
-      filter: drop-shadow(0 8px 24px rgba(0,100,180,0.45)) drop-shadow(0 0 32px rgba(255,255,255,0.5));
+      width: 200px; height: 200px; object-fit: contain;
+      filter: drop-shadow(0 10px 30px rgba(0,100,180,0.45)) drop-shadow(0 0 48px rgba(255,255,255,0.55));
       animation: spPulse 1.4s ease-in-out infinite alternate;
     }
     #splash .sp-bar {
@@ -1837,12 +1850,121 @@
     #admin-login { padding: 20px; }
     #admin-pw-inp { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 12px; color: var(--text); background: #fff; outline: none; }
     #admin-pw-inp:focus { border-color: var(--accent); }
+
+/* ── ROOM BADGE ─────────────────────────────────── */
+#room-badge {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.18); border-radius: var(--r-btn);
+  border: 1px solid rgba(255,255,255,0.3); padding: 3px 10px 3px 8px;
+  color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+#room-badge-code { font-size: 12px; letter-spacing: 1px; }
+#room-badge-members { opacity: 0.85; font-size: 10px; }
+#room-badge button {
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35);
+  color: #fff; border-radius: var(--r-btn); padding: 2px 7px; cursor: pointer;
+  font-size: 10px; transition: background .14s;
+}
+#room-badge button:hover { background: rgba(255,255,255,0.35); }
+
+/* ── GUEST PLAYER LOCK ──────────────────────────── */
+#guest-player-lock {
+  display: none; position: absolute; inset: 0; z-index: 10;
+  background: rgba(0,0,0,0.15); border-radius: inherit;
+  align-items: center; justify-content: center; cursor: not-allowed;
+}
+#guest-player-lock span {
+  background: rgba(0,0,0,0.55); color: #fff; padding: 6px 14px;
+  border-radius: var(--r-btn); font-size: 11px; font-weight: 700;
+}
+
+/* ── SPLASH ROOM SELECTION ─────────────────────── */
+#splash-room {
+  display: none; flex-direction: column; align-items: center; gap: 12px;
+  margin-top: 20px; width: min(340px, 90vw); animation: splashRoomIn .4s ease forwards;
+}
+@keyframes splashRoomIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+#sp-name {
+  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
+  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
+  outline: none; backdrop-filter: blur(8px); box-sizing: border-box;
+}
+#sp-name::placeholder { color: rgba(255,255,255,0.6); }
+#sp-name:focus { border-color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.3); }
+.sp-btn {
+  width: 100%; padding: 12px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  transition: all .15s; backdrop-filter: blur(8px);
+}
+.sp-btn.primary { background: rgba(255,255,255,0.28); color: #fff; }
+.sp-btn.primary:hover { background: rgba(255,255,255,0.42); transform: translateY(-1px); }
+.sp-btn.secondary { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
+.sp-btn.secondary:hover { background: rgba(255,255,255,0.22); }
+#sp-join-row {
+  display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
+}
+#sp-code {
+  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
+  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
+  outline: none; text-transform: uppercase; letter-spacing: 2px;
+  box-sizing: border-box;
+}
+#sp-code::placeholder { color: rgba(255,255,255,0.5); text-transform: none; letter-spacing:0; }
+
+/* ── BOARD CHAT TABS ────────────────────────────── */
+.board-chat-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.board-chat-tab {
+  flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 700;
+  color: var(--text2); cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s;
+}
+.board-chat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.board-chat-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+.board-chat-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.board-chat-pane.active { display: flex; }
+
+/* ── CHAT IMAGE ─────────────────────────────────── */
+.chat-img { max-width: 220px; max-height: 160px; border-radius: 6px; margin-top: 5px; display: block; cursor: zoom-in; }
+.chat-img:hover { opacity: 0.9; }
+
+/* ── PERFORMANCE MODE ───────────────────────────── */
+body.perf-mode .orb { animation: none !important; }
+body.perf-mode #aqua-buddy { display: none !important; }
+body.perf-mode #aqua-gun { display: none !important; }
+
+/* ── PAINT IMPROVEMENTS ─────────────────────────── */
+#paint-canvas { touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+.paint-tools-row { display: flex; gap: 4px; flex-wrap: wrap; padding: 4px 0; }
+.ptool.active { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+
+@media (max-width: 768px) {
+  #paint-wrap { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; }
+  #room-badge button.leave-btn span { display: none; }
+  #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
+}
+[data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code { background: rgba(0,0,0,0.3); }
+[data-scheme=dark] #room-badge { background: rgba(0,0,0,0.35); }
   </style>
 </head>
 <body>
 <div id="splash">
   <img class="sp-logo" src="/aquatune-logo-outline.png" alt="Aquatune">
   <div class="sp-bar"><div class="sp-fill"></div></div>
+  <div id="splash-room">
+    <input id="sp-name" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="sp-btn primary" onclick="splashCreate()">🎬 Create Room</button>
+      <button class="sp-btn secondary" id="sp-join-toggle-btn" onclick="splashJoinToggle()">🔗 Join Room</button>
+      <div id="sp-join-row">
+        <input id="sp-code" type="text" placeholder="Room code..." maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
+        <button class="sp-btn primary" onclick="splashJoinConfirm()">Join →</button>
+      </div>
+      <button class="sp-btn secondary" onclick="splashSolo()" style="opacity:0.7">▶ Solo Mode</button>
+    </div>
+  </div>
 </div>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
@@ -1865,6 +1987,12 @@
         <span id="wx-icon">🌤️</span>
         <span id="wx-temp">--°F</span>
       </div>
+    </div>
+    <div id="room-badge">
+      <span id="room-badge-code"></span>
+      <span id="room-badge-members">👤 1</span>
+      <button onclick="copyRoomLink()" title="Copy room link">🔗</button>
+      <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
       <button id="board-btn" onclick="toggleBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
@@ -1935,6 +2063,7 @@
       <div id="player-bubble">
         <div id="yt-player"></div>
         <div id="sc-player"><iframe id="sc-frame" scrolling="no" allow="autoplay"></iframe></div>
+        <div id="guest-player-lock"><span>👑 Host is in control</span></div>
         <div id="ph">
           <div id="ph-txt">Search for a song, paste a YouTube link,<br>or enter a video ID to begin</div>
         </div>
@@ -2059,6 +2188,11 @@
         <input type="checkbox" id="ripple-chk" onchange="setRippleEnabled(this.checked)" style="cursor:pointer"> Click ripple
       </label>
       <button onclick="setRippleEnabled(true);document.getElementById('ripple-chk').checked=true" style="font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.1);border:1px solid rgba(0,100,200,0.25);color:var(--accent);cursor:pointer">↺ reset</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
+      </label>
     </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
       <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
@@ -2699,6 +2833,12 @@ async function loadYtPlaylist(plId) {
 let player = null, ready = false;
 let current = null, queue = [], origQueue = [];
 let currentSource = 'youtube'; // 'youtube' | 'soundcloud'
+// Expose key globals for module scripts (room-sync.js etc.)
+// (function declarations like renderQueue/playVideo are already global; let vars need explicit exposure)
+Object.defineProperty(window, 'current', { get: () => current, set: v => { current = v; }, configurable: true });
+Object.defineProperty(window, 'playing', { get: () => playing, set: v => { playing = v; }, configurable: true });
+Object.defineProperty(window, 'queue', { get: () => queue, set: v => { queue = v; }, configurable: true });
+Object.defineProperty(window, 'player', { get: () => player, set: v => { player = v; }, configurable: true });
 let scWidget = null, scReady = false;
 let playlists = JSON.parse(localStorage.getItem('yt_pls') || '[]');
 let activePlId = null;
@@ -2798,9 +2938,11 @@ function onState(e) {
   if (e.data === S.PLAYING) {
     playing = true; document.getElementById('play-btn').classList.add('playing'); startProg();
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
+    if (window._isRoomHost && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
+    if (window._isRoomHost && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
@@ -2976,6 +3118,9 @@ function playVideo(v) {
     navigator.mediaSession.setActionHandler('play',      () => player?.playVideo?.());
     navigator.mediaSession.setActionHandler('pause',     () => player?.pauseVideo?.());
     navigator.mediaSession.setActionHandler('nexttrack', () => { if (queue.length) popQueue(); });
+  }
+  if (window._isRoomHost && !window._applyingRemote) {
+    setTimeout(() => window.broadcastRoomState?.(), 800);
   }
 }
 function addToHistory(v) {
@@ -3170,7 +3315,14 @@ function makePlaylistResult(it) {
 // ─────────────────────────────────────────────────────────
 //  QUEUE
 // ─────────────────────────────────────────────────────────
-function addToQueue(v) { queue.push(v); renderQueue(); toast('Added: ' + v.title.slice(0,40)); saveSession(); }
+function addToQueue(v) {
+  if (window._currentRoomId && !window._isRoomHost) {
+    window.guestAddToRoomQueue?.(v);
+    return;
+  }
+  queue.push(v); renderQueue(); toast('Added: ' + v.title.slice(0,40)); saveSession();
+  if (window._isRoomHost) window.broadcastRoomState?.();
+}
 function popQueue() {
   if (!queue.length) return;
   const v = queue.shift(); playVideo(v); renderQueue();
@@ -6439,6 +6591,163 @@ function initPaint() {
   document.addEventListener('mouseup',()=>{ drag=null; });
 }
 
+/* ── PERFORMANCE MODE ── */
+let _perfMode = localStorage.getItem('aq_perf') === '1';
+function setPerfMode(on) {
+  _perfMode = !!on;
+  localStorage.setItem('aq_perf', on ? '1' : '0');
+  document.body.classList.toggle('perf-mode', on);
+  if (on) {
+    setBubblesEnabled(false);
+    const bchk = document.getElementById('bubbles-chk');
+    if (bchk) bchk.checked = false;
+    setRippleEnabled(false);
+    const rchk = document.getElementById('ripple-chk');
+    if (rchk) rchk.checked = false;
+    document.getElementById('aqua-buddy')?.style.setProperty('display','none','important');
+    document.getElementById('aqua-gun')?.style.setProperty('display','none','important');
+  } else {
+    const bubblesOn = localStorage.getItem('aq_bubbles') !== '0';
+    setBubblesEnabled(bubblesOn);
+    const bchk = document.getElementById('bubbles-chk');
+    if (bchk) bchk.checked = bubblesOn;
+    const rippleOn = localStorage.getItem('aq_ripple') !== '0';
+    setRippleEnabled(rippleOn);
+    const rchk = document.getElementById('ripple-chk');
+    if (rchk) rchk.checked = rippleOn;
+    document.getElementById('aqua-buddy')?.style.removeProperty('display');
+    document.getElementById('aqua-gun')?.style.removeProperty('display');
+  }
+  const chk = document.getElementById('perf-mode-chk');
+  if (chk) chk.checked = on;
+}
+// Apply perf mode on load before DOM settles
+if (_perfMode) document.body.classList.add('perf-mode');
+
+/* ── SPLASH & ROOM FUNCTIONS ── */
+function splashCreate() {
+  const name = document.getElementById('sp-name').value.trim();
+  if (!name) {
+    document.getElementById('sp-name').focus();
+    document.getElementById('sp-name').style.borderColor='rgba(255,120,120,0.8)';
+    return;
+  }
+  localStorage.setItem('aq_username', name);
+  const hostId = localStorage.getItem('aq_host_id') || (() => {
+    const id = Array.from({length:12},()=>'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*36)]).join('');
+    localStorage.setItem('aq_host_id', id);
+    return id;
+  })();
+  const roomId = Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
+  window.location.hash = roomId;
+  closeSplash();
+  window.initRoom?.(roomId, true);
+}
+function splashJoinToggle() {
+  const row = document.getElementById('sp-join-row');
+  const showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  if (!showing) document.getElementById('sp-code').focus();
+}
+function splashJoinConfirm() {
+  const name = document.getElementById('sp-name').value.trim();
+  if (!name) { document.getElementById('sp-name').focus(); return; }
+  const code = document.getElementById('sp-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  if (!code) { document.getElementById('sp-code').focus(); return; }
+  localStorage.setItem('aq_username', name);
+  window.location.hash = code;
+  closeSplash();
+  window.initRoom?.(code, false);
+}
+function splashSolo() {
+  const name = document.getElementById('sp-name').value.trim();
+  if (name) localStorage.setItem('aq_username', name);
+  closeSplash();
+}
+function closeSplash() {
+  const sp = document.getElementById('splash');
+  if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
+}
+function copyRoomLink() {
+  const url = window.location.href;
+  navigator.clipboard?.writeText(url).then(() => toast('Room link copied!')).catch(() => toast(url));
+}
+
+/* ── BOARD CHAT TABS ── */
+function switchBoardTab(tab) {
+  ['global','room','local'].forEach(t => {
+    document.getElementById('bctab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('bpane-'+t)?.classList.toggle('active', t===tab);
+  });
+}
+
+/* ── CHAT MESSAGE RENDERING ── */
+function renderChatMsg(logEl, p) {
+  const div = document.createElement('div');
+  div.className = 'bmsg';
+  const name = p.username || p.name || 'Anonymous';
+  const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
+  const initl = name[0].toUpperCase();
+  const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(p.timestamp || p.ts || Date.now()) : '';
+  div.innerHTML = `
+    <div class="bmsg-av" style="background:${color}">${esc(initl)}</div>
+    <div class="bmsg-body">
+      <div class="bmsg-meta">
+        <span class="bmsg-name" style="color:${color}">${esc(name)}</span>
+        <span class="bmsg-time">${timeStr}</span>
+      </div>
+      <div class="bmsg-text">${esc(p.message || p.com || '')}</div>
+      ${p.imageData ? `<img class="chat-img" src="${p.imageData}" loading="lazy" onclick="window.open(this.src)">` : ''}
+    </div>`;
+  logEl.appendChild(div);
+  logEl.scrollTop = 99999;
+}
+
+window.appendRoomChatMsg = function(p) {
+  const log = document.getElementById('room-log');
+  if (log) {
+    // Remove placeholder if present
+    const placeholder = log.querySelector('div[style]');
+    if (placeholder) placeholder.remove();
+    renderChatMsg(log, p);
+  }
+};
+
+function sendGlobalChatMsg() {
+  const msgEl = document.getElementById('global-msg');
+  const nameEl = document.getElementById('global-name');
+  const msg = msgEl?.value.trim();
+  if (!msg) return;
+  const name = nameEl?.value.trim() || localStorage.getItem('aq_username') || 'Anonymous';
+  localStorage.setItem('aq_username', name);
+  window.sendGlobalMessage?.(msg);
+  if (msgEl) msgEl.value = '';
+}
+
+function sendRoomChatMsg() {
+  const msgEl = document.getElementById('room-msg');
+  const msg = msgEl?.value.trim();
+  if (!msg || !window._currentRoomId) return;
+  window.sendRoomMessage?.(msg);
+  if (msgEl) msgEl.value = '';
+}
+
+/* ── PAINT: SEND TO CHAT ── */
+function sendPaintToChat() {
+  const cv = document.getElementById('paint-canvas');
+  const dataUrl = cv.toDataURL('image/jpeg', 0.72);
+  if (window._currentRoomId) {
+    window.sendRoomMessage?.('[sent a drawing]', dataUrl);
+    toggleBoard();
+    switchBoardTab('room');
+  } else {
+    window.sendGlobalMessage?.('[sent a drawing]', dataUrl);
+    toggleBoard();
+    switchBoardTab('global');
+  }
+  toast('Drawing sent to chat!');
+}
+
 /* ── DOMContentLoaded setup ── */
 document.addEventListener('DOMContentLoaded', () => {
   const bchk = document.getElementById('bubbles-chk');
@@ -6473,20 +6782,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // Click ripple
   document.addEventListener('click', e => {
     if (!_rippleEnabled) return;
-    const r = document.createElement('div');
-    r.className = 'click-ripple';
-    r.style.left = e.clientX + 'px';
-    r.style.top  = e.clientY + 'px';
-    document.body.appendChild(r);
-    r.addEventListener('animationend', () => r.remove(), { once: true });
+    const spawnRing = (cls) => {
+      const r = document.createElement('div');
+      r.className = cls;
+      r.style.left = e.clientX + 'px';
+      r.style.top  = e.clientY + 'px';
+      document.body.appendChild(r);
+      r.addEventListener('animationend', () => r.remove(), { once: true });
+    };
+    spawnRing('click-ripple');
+    spawnRing('click-ripple r2');
   });
   // Service worker for background audio
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  // Splash dismiss
+  // Splash: show room selection UI instead of auto-dismiss
   setTimeout(() => {
-    const sp = document.getElementById('splash');
-    if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
-  }, 2000);
+    const roomUi = document.getElementById('splash-room');
+    if (roomUi) {
+      roomUi.style.display = 'flex';
+      // Pre-fill name from localStorage
+      const savedName = localStorage.getItem('aq_username');
+      const nameInp = document.getElementById('sp-name');
+      if (savedName && nameInp) nameInp.value = savedName;
+      // If URL has a room hash, pre-fill join
+      const hash = window.location.hash.slice(1);
+      if (hash && hash !== 'solo') {
+        const codeInp = document.getElementById('sp-code');
+        const joinRow = document.getElementById('sp-join-row');
+        if (codeInp) codeInp.value = hash;
+        if (joinRow) joinRow.style.display = 'flex';
+      }
+    }
+  }, 1200);
+
+  // Listen to global chat
+  window.listenGlobalChat?.((p) => {
+    const log = document.getElementById('global-log');
+    if (log) renderChatMsg(log, p);
+  });
+
+  // Init perf mode checkbox
+  const perfChk = document.getElementById('perf-mode-chk');
+  if (perfChk) perfChk.checked = _perfMode;
 });
 </script>
 
@@ -6511,36 +6848,74 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="board-status" id="board-fb-badge" class="board-fb-badge local">● Local</span>
     </div>
 
-    <!-- Thread header -->
-    <div class="board-threadhdr">
-      <span class="board-threadhdr-icon">🎵</span>
-      <div class="board-threadhdr-text">
-        <div class="board-threadhdr-name">Aquatune /aq/</div>
-        <div class="board-threadhdr-sub">Music player suggestions, bug reports &amp; general chat &nbsp;·&nbsp; Start line with &gt; for greentext &nbsp;·&nbsp; &gt;&gt;no to quote</div>
+    <!-- Chat tabs -->
+    <div class="board-chat-tabs">
+      <button class="board-chat-tab active" id="bctab-global" onclick="switchBoardTab('global')">🌐 Global</button>
+      <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 Room</button>
+      <button class="board-chat-tab" id="bctab-local" onclick="switchBoardTab('local')">📋 Local</button>
+    </div>
+
+    <!-- Global chat pane -->
+    <div class="board-chat-pane active" id="bpane-global">
+      <div id="global-log" class="board-log" style="flex:1;overflow-y:auto"></div>
+      <div class="board-input-area" id="global-input-area">
+        <div class="board-input-toolbar">
+          <span class="board-tlabel">Name:</span>
+          <input id="global-name" class="board-name-inp" type="text" placeholder="Anonymous" maxlength="40">
+        </div>
+        <div class="board-msg-wrap">
+          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global message... (Ctrl+Enter)"></textarea>
+          <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
+        </div>
       </div>
     </div>
 
-    <!-- Chat log -->
-    <div id="board-log"></div>
+    <!-- Room chat pane -->
+    <div class="board-chat-pane" id="bpane-room">
+      <div id="room-log" class="board-log" style="flex:1;overflow-y:auto">
+        <div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Join or create a room to use room chat</div>
+      </div>
+      <div class="board-input-area" id="room-input-area">
+        <div class="board-msg-wrap">
+          <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room message... (Ctrl+Enter)"></textarea>
+          <button class="board-send-btn" onclick="sendRoomChatMsg()">Send</button>
+        </div>
+      </div>
+    </div>
 
-    <!-- Input area -->
-    <div class="board-input-area">
-      <div class="board-input-toolbar">
-        <span class="board-tlabel">Name:</span>
-        <input id="bf-name" class="board-name-inp" type="text" placeholder="Anonymous" maxlength="40">
-        <span class="board-tlabel">Subject:</span>
-        <input id="bf-subject" class="board-sub-inp" type="text" maxlength="120" placeholder="(optional)">
+    <!-- Local board pane (existing functionality) -->
+    <div class="board-chat-pane" id="bpane-local">
+      <!-- Thread header -->
+      <div class="board-threadhdr">
+        <span class="board-threadhdr-icon">🎵</span>
+        <div class="board-threadhdr-text">
+          <div class="board-threadhdr-name">Aquatune /aq/</div>
+          <div class="board-threadhdr-sub">Music player suggestions, bug reports &amp; general chat &nbsp;·&nbsp; Start line with &gt; for greentext &nbsp;·&nbsp; &gt;&gt;no to quote</div>
+        </div>
       </div>
-      <div class="board-msg-wrap">
-        <textarea id="bf-msg" class="board-msg-inp" maxlength="2000" placeholder="Type a message... (Ctrl+Enter to send)"></textarea>
-        <button id="board-send-btn" class="board-send-btn" onclick="boardPost(event)">Send</button>
-      </div>
-      <!-- Firebase config bar -->
-      <div class="board-fb-bar">
-        <span>Firebase URL:</span>
-        <input id="board-fb-inp" class="board-fb-inp" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" value="">
-        <button class="board-fb-connect" onclick="boardSaveFirebase()">Connect</button>
-        <span style="color:#aaa">· <a href="https://firebase.google.com/docs/database/web/start" target="_blank" rel="noopener" style="color:#316AC5;text-decoration:none">Setup guide</a></span>
+
+      <!-- Chat log -->
+      <div id="board-log"></div>
+
+      <!-- Input area -->
+      <div class="board-input-area">
+        <div class="board-input-toolbar">
+          <span class="board-tlabel">Name:</span>
+          <input id="bf-name" class="board-name-inp" type="text" placeholder="Anonymous" maxlength="40">
+          <span class="board-tlabel">Subject:</span>
+          <input id="bf-subject" class="board-sub-inp" type="text" maxlength="120" placeholder="(optional)">
+        </div>
+        <div class="board-msg-wrap">
+          <textarea id="bf-msg" class="board-msg-inp" maxlength="2000" placeholder="Type a message... (Ctrl+Enter to send)"></textarea>
+          <button id="board-send-btn" class="board-send-btn" onclick="boardPost(event)">Send</button>
+        </div>
+        <!-- Firebase config bar -->
+        <div class="board-fb-bar">
+          <span>Firebase URL:</span>
+          <input id="board-fb-inp" class="board-fb-inp" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" value="">
+          <button class="board-fb-connect" onclick="boardSaveFirebase()">Connect</button>
+          <span style="color:#aaa">· <a href="https://firebase.google.com/docs/database/web/start" target="_blank" rel="noopener" style="color:#316AC5;text-decoration:none">Setup guide</a></span>
+        </div>
       </div>
     </div>
 
@@ -6555,6 +6930,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <span class="pt-label">AQUAPAINT</span>
     <button onclick="clearPaint()">Clear</button>
     <button onclick="savePaint()">Save PNG</button>
+    <button onclick="sendPaintToChat()" title="Send drawing to chat">📤 Send</button>
     <button class="pt-close" onclick="closePaint()">×</button>
   </div>
   <div id="paint-toolbar">
@@ -6711,6 +7087,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <script type="module" src="/src/chat-firebase.js"></script>
+<script type="module" src="/src/room-sync.js"></script>
 
 <!-- SLOT MACHINE -->
 <div id="slots-wrap">

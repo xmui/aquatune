@@ -16,6 +16,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap"></noscript>
   <style>
     :root {
+      --font-ui: Tahoma, 'Segoe UI', Arial, sans-serif;
       --panel:   rgba(255,255,255,0.93);
       --border:  rgba(0,180,220,0.28);
       --accent:  #00b4e0;
@@ -36,7 +37,9 @@
       --seq-label-white-color: var(--text);
     }
     *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-    html,body { height:100%; overflow:hidden; font-family:'M PLUS Rounded 1c',system-ui,sans-serif; color:var(--text); font-size:13px; }
+    html,body { height:100%; overflow:hidden; font-family:var(--font-ui); color:var(--text); font-size:13px; }
+    /* Keep M PLUS Rounded 1c only for branded/logo elements */
+    #logo, #sp-room-titlebar { font-family:'M PLUS Rounded 1c',var(--font-ui); }
 
     /* ── BACKGROUND ─────────────────────────────────────── */
     #bg {
@@ -996,7 +999,7 @@
     }
     .board-emoji-btn:hover { background:rgba(0,104,184,0.12); }
     [data-scheme=dark] .board-emoji-bar { background:rgba(8,18,45,0.7); }
-    .msn-em { width:18px; height:18px; vertical-align:middle; display:inline-block; image-rendering:pixelated; }
+    .msn-em { width:18px; height:18px; vertical-align:middle; display:inline-block; }
     .emoji-toggle-btn {
       flex-shrink:0; background:none; border:1.5px solid var(--border); border-radius:6px;
       cursor:pointer; padding:3px 6px; font-size:14px; line-height:1; color:var(--text2);
@@ -1859,23 +1862,27 @@
     @keyframes spPulse { from { transform: scale(1); } to { transform: scale(1.04); } }
     #sp-logo-lit.done { animation: spPulse 2s ease-in-out infinite alternate; clip-path: inset(0 0% 0 0); }
 
-    /* Splash room card layout */
-    .sp-cards { display: flex; gap: 8px; }
-    .sp-card {
-      flex: 1; padding: 10px 6px; cursor: pointer; text-align: center;
-      background: linear-gradient(180deg, #f0f6ff, #dde8f8);
-      border: 1.5px solid var(--border); border-radius: var(--r-btn);
-      transition: all .15s; user-select: none;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    /* Splash option buttons (XP dialog row style) */
+    .sp-options { display: flex; flex-direction: column; gap: 6px; }
+    .sp-opt-btn {
+      width: 100%; display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border: 1.5px solid var(--border);
+      background: linear-gradient(180deg, #ffffff, #eef4ff);
+      border-radius: 8px; cursor: pointer; text-align: left;
+      transition: all .14s; box-sizing: border-box; font-family: inherit;
     }
-    .sp-card:hover { background: linear-gradient(180deg,#e4f0ff,#c8ddf5); transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,60,160,0.14); }
-    .sp-card:active { transform: scale(.97); }
-    .sp-card.create { background: linear-gradient(180deg,#2080d0,#0060b0); border-color:#004fa0; }
-    .sp-card.create .sp-card-label { color:#fff; }
-    .sp-card.create .sp-card-sub { color:rgba(255,255,255,0.75); }
-    .sp-card-icon { font-size: 22px; line-height: 1.3; }
-    .sp-card-label { font-size: 11px; font-weight: 800; color: var(--text); letter-spacing: 0.5px; }
-    .sp-card-sub { font-size: 9px; color: var(--text2); }
+    .sp-opt-btn:hover { border-color: var(--accent); background: linear-gradient(180deg,#f0f8ff,#ddeeff); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,60,160,0.12); }
+    .sp-opt-btn:active { transform: scale(.98); }
+    .sp-opt-btn.sp-opt-create {
+      background: linear-gradient(180deg,#2080d0,#0060b0); border-color:#004fa0; color:#fff;
+      box-shadow: 0 2px 8px rgba(0,60,160,0.3);
+    }
+    .sp-opt-btn.sp-opt-create:hover { background: linear-gradient(180deg,#2898e8,#0870c8); }
+    .sp-opt-icon { font-size: 18px; line-height: 1; flex-shrink: 0; width: 22px; text-align: center; }
+    .sp-opt-label { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .sp-opt-btn.sp-opt-create .sp-opt-label { color: #fff; }
+    .sp-opt-sub { font-size: 10px; color: var(--text2); margin-top: 1px; }
+    .sp-opt-btn.sp-opt-create .sp-opt-sub { color: rgba(255,255,255,0.78); }
     #sp-create-row {
       display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
       animation: splashRoomIn .3s ease forwards;
@@ -1948,11 +1955,12 @@
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
   display: none; flex-direction: column; align-items: stretch; gap: 0;
-  margin-top: 22px; width: min(340px, 90vw);
+  margin-top: 22px; width: min(360px, 92vw);
   background: var(--panel); border: 1.5px solid var(--border);
   border-radius: 12px 12px 8px 8px;
   box-shadow: 0 24px 64px rgba(0,40,120,0.28), inset 0 1px 0 rgba(255,255,255,0.8);
   overflow: hidden; animation: splashRoomIn .38s cubic-bezier(.34,1.56,.64,1) forwards;
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
 }
 @keyframes splashRoomIn { from { opacity:0; transform:translateY(20px) scale(.96); } to { opacity:1; transform:none; } }
 /* XP-style dialog title bar */
@@ -2038,12 +2046,82 @@ body.perf-mode #aqua-gun { display: none !important; }
 }
 [data-scheme=dark] #splash-room { background: rgba(14,28,60,0.96); border-color: rgba(56,160,255,0.3); }
 [data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code, [data-scheme=dark] #sp-create-code { background: rgba(8,20,50,0.9); color:#e8f0ff; border-color: rgba(56,160,255,0.35); }
-[data-scheme=dark] .sp-card { background: linear-gradient(180deg,rgba(20,40,90,0.9),rgba(10,25,70,0.9)); border-color:rgba(56,160,255,0.25); }
-[data-scheme=dark] .sp-card.create { background: linear-gradient(180deg,#1868b8,#0050a0); }
-[data-scheme=dark] .sp-card-label { color:#e8f0ff; }
-[data-scheme=dark] .sp-card-sub { color:rgba(180,210,255,0.7); }
+[data-scheme=dark] .sp-opt-btn { background: linear-gradient(180deg,rgba(20,40,90,0.9),rgba(10,25,70,0.9)); border-color:rgba(56,160,255,0.25); }
+[data-scheme=dark] .sp-opt-btn.sp-opt-create { background: linear-gradient(180deg,#1868b8,#0050a0); }
+[data-scheme=dark] .sp-opt-label { color:#e8f0ff; }
+[data-scheme=dark] .sp-opt-sub { color:rgba(180,210,255,0.7); }
+[data-scheme=dark] .sp-opt-btn.sp-opt-create .sp-opt-label { color:#fff; }
+[data-scheme=dark] .sp-opt-btn.sp-opt-create .sp-opt-sub { color:rgba(255,255,255,0.78); }
 [data-scheme=dark] .sp-btn.secondary { background: linear-gradient(180deg,rgba(20,45,100,0.9),rgba(10,30,80,0.9)); color:#e8f0ff; }
 [data-scheme=dark] #room-badge { background: rgba(0,0,0,0.35); }
+
+/* ── ERA-SPECIFIC OVERRIDES ─────────────────────────── */
+/* Win 98: 3D raised borders, flat chrome */
+[data-era=win98] #board-wrap,
+[data-era=win98] #theme-panel,
+[data-era=win98] #admin-wrap {
+  border: 2px solid !important;
+  border-color: #ffffff #808080 #808080 #ffffff !important;
+  border-radius: 0 !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+  backdrop-filter: none !important;
+}
+[data-era=win98] #hdr {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=win98] .board-titlebar,
+[data-era=win98] .board-titlebar::after,
+[data-era=win98] #hdr::after {
+  border-radius: 0 !important;
+}
+[data-era=win98] .mbtn, [data-era=win98] .cb,
+[data-era=win98] .sp-btn, [data-era=win98] .sp-opt-btn {
+  border: 2px solid !important;
+  border-color: #ffffff #808080 #808080 #ffffff !important;
+  border-radius: 2px !important;
+  background: #d4d0c8 !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+[data-era=win98] .sp-opt-btn.sp-opt-create { background: #d4d0c8 !important; color:#000 !important; }
+[data-era=win98] input, [data-era=win98] textarea {
+  border: 2px solid !important;
+  border-color: #808080 #ffffff #ffffff #808080 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+}
+[data-era=win98] #splash-room { font-family: Arial, Helvetica, sans-serif !important; }
+[data-era=win98] #splash { background: #008080 !important; }
+/* Win 98 scrollbar emulation */
+[data-era=win98] ::-webkit-scrollbar-thumb { background: #d4d0c8 !important; border: 2px solid; border-color: #fff #808080 #808080 #fff !important; border-radius: 0 !important; }
+[data-era=win98] ::-webkit-scrollbar-track { background: #d4d0c8 !important; }
+
+/* Vista Aero: stronger glass effect */
+[data-era=aero] #board-wrap,
+[data-era=aero] #theme-panel {
+  backdrop-filter: blur(28px) saturate(1.8) !important;
+  background: rgba(220,235,255,0.55) !important;
+  border-color: rgba(255,255,255,0.6) !important;
+}
+[data-era=aero] .board-titlebar {
+  background: linear-gradient(180deg,rgba(210,225,255,0.85),rgba(170,195,240,0.75)) !important;
+  color: #1a2860 !important;
+}
+[data-era=aero] #hdr {
+  background: linear-gradient(180deg,rgba(170,195,240,0.92),rgba(130,165,225,0.88)) !important;
+  backdrop-filter: blur(16px) saturate(1.5) !important;
+}
+
+/* Y2K: bold vivid */
+[data-era=y2k] #hdr { background: linear-gradient(180deg,#cc00ff,#6600aa) !important; }
+[data-era=y2k] .mbtn.p, [data-era=y2k] .sp-opt-btn.sp-opt-create { background: linear-gradient(180deg,#cc00ff,#9900cc) !important; }
+
+/* 90s Web: classic table-era look */
+[data-era=web90] #hdr { border-bottom: 3px solid #ffff00 !important; }
+[data-era=web90] #board-wrap { border: 2px solid #000080 !important; border-radius: 0 !important; }
+[data-era=web90] .board-titlebar { background: linear-gradient(180deg,#000080,#0000bb) !important; border-radius: 0 !important; }
+[data-era=web90] a, [data-era=web90] .board-menu-item { color: #0000cc !important; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -2054,27 +2132,33 @@ body.perf-mode #aqua-gun { display: none !important; }
   </div>
   <div id="splash-room">
     <div id="sp-room-titlebar">
-      <span style="position:relative;z-index:1;font-size:14px">🎵</span>
-      <span style="position:relative;z-index:1">Aquatune — Choose Your Mode</span>
+      <span style="position:relative;z-index:1;font-size:14px">&#9835;</span>
+      <span style="position:relative;z-index:1">Aquatune</span>
     </div>
     <div id="sp-room-body">
       <input id="sp-name" type="text" placeholder="Your display name…" maxlength="30" autocomplete="off">
-      <div class="sp-cards">
-        <div class="sp-card create" onclick="splashShowCreate()">
-          <span class="sp-card-icon">🎬</span>
-          <span class="sp-card-label">Create</span>
-          <span class="sp-card-sub">Start a room</span>
-        </div>
-        <div class="sp-card join" onclick="splashJoinToggle()">
-          <span class="sp-card-icon">🔗</span>
-          <span class="sp-card-label">Join</span>
-          <span class="sp-card-sub">Enter a code</span>
-        </div>
-        <div class="sp-card solo" onclick="splashSolo()">
-          <span class="sp-card-icon">▶</span>
-          <span class="sp-card-label">Solo</span>
-          <span class="sp-card-sub">Just me</span>
-        </div>
+      <div class="sp-options">
+        <button class="sp-opt-btn sp-opt-create" onclick="splashShowCreate()">
+          <span class="sp-opt-icon">&#9654;</span>
+          <div class="sp-opt-content">
+            <div class="sp-opt-label">Create a Room</div>
+            <div class="sp-opt-sub">You'll be the host &amp; control playback</div>
+          </div>
+        </button>
+        <button class="sp-opt-btn" onclick="splashJoinToggle()">
+          <span class="sp-opt-icon">&#8594;</span>
+          <div class="sp-opt-content">
+            <div class="sp-opt-label">Join a Room</div>
+            <div class="sp-opt-sub">Enter a room code to sync with others</div>
+          </div>
+        </button>
+        <button class="sp-opt-btn" onclick="splashSolo()">
+          <span class="sp-opt-icon">&#9834;</span>
+          <div class="sp-opt-content">
+            <div class="sp-opt-label">Solo Mode</div>
+            <div class="sp-opt-sub">Just me — no sync, no room</div>
+          </div>
+        </button>
       </div>
       <div id="sp-create-row">
         <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
@@ -2281,6 +2365,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     <span>Customize</span>
     <button class="theme-close" onclick="toggleThemePanel()">&#215;</button>
   </div>
+  <div class="theme-label" style="margin-bottom:6px">Color</div>
   <div class="theme-presets" id="theme-presets">
     <button class="theme-swatch on" data-theme="blue" onclick="selectTheme('blue',this)">Blue</button>
     <button class="theme-swatch" data-theme="aqua" onclick="selectTheme('aqua',this)">Aqua</button>
@@ -2288,6 +2373,16 @@ body.perf-mode #aqua-gun { display: none !important; }
     <button class="theme-swatch" data-theme="sunset" onclick="selectTheme('sunset',this)">Sunset</button>
     <button class="theme-swatch" data-theme="forest" onclick="selectTheme('forest',this)">Forest</button>
     <button class="theme-swatch" data-theme="dark" onclick="selectTheme('dark',this)">Dark</button>
+  </div>
+  <div class="theme-section">
+    <div class="theme-label">Era</div>
+    <div class="theme-presets" style="grid-template-columns:1fr 1fr">
+      <button class="theme-swatch" data-theme="win98"  onclick="selectTheme('win98',this)">Win 98</button>
+      <button class="theme-swatch" data-theme="blue"   onclick="selectTheme('blue',this)">XP Aqua</button>
+      <button class="theme-swatch" data-theme="aero"   onclick="selectTheme('aero',this)">Vista Aero</button>
+      <button class="theme-swatch" data-theme="y2k"    onclick="selectTheme('y2k',this)">Y2K</button>
+      <button class="theme-swatch" data-theme="web90"  onclick="selectTheme('web90',this)">90s Web</button>
+    </div>
   </div>
   <div class="theme-section">
     <div class="theme-label">Weather location</div>
@@ -2650,12 +2745,17 @@ async function freeSearch(q) {
 //  THEMES
 // ─────────────────────────────────────────────────────────
 const THEMES = {
-  blue:   { accent:'#0068b8', accent2:'#38a8e8', text:'#0a1828', text2:'#3a5880', bg:'linear-gradient(160deg,#d4e8f8,#e8f2fc,#dce8f8)', hdr:'linear-gradient(180deg,#1468c8,#0850b0)', panel:'rgba(255,255,255,0.94)', border:'rgba(0,80,160,0.15)' },
-  aqua:   { accent:'#0a9bbf', accent2:'#12c4a2', text:'#0f3040', text2:'#4a7a90', bg:'linear-gradient(160deg,#c8f0f8,#d8f8f0,#b8e8f8)', hdr:'linear-gradient(180deg,#0a9bbf,#0880a8)', panel:'rgba(255,255,255,0.94)', border:'rgba(10,155,191,0.18)' },
-  purple: { accent:'#7c3aed', accent2:'#a78bfa', text:'#1e1040', text2:'#5a4080', bg:'linear-gradient(160deg,#ede9fe,#ddd6fe,#c4b5fd)', hdr:'linear-gradient(180deg,#7c3aed,#5b21b6)', panel:'rgba(255,255,255,0.94)', border:'rgba(124,58,237,0.18)' },
-  sunset: { accent:'#c84820', accent2:'#f08040', text:'#3a1008', text2:'#804030', bg:'linear-gradient(160deg,#fde8d8,#fdd0c8,#f8e0d0)', hdr:'linear-gradient(180deg,#c84820,#a83810)', panel:'rgba(255,255,255,0.94)', border:'rgba(200,72,32,0.15)' },
-  forest: { accent:'#15803d', accent2:'#4ade80', text:'#0a2014', text2:'#2d6040', bg:'linear-gradient(160deg,#d1fae5,#a7f3d0,#d4eddf)', hdr:'linear-gradient(180deg,#15803d,#0f5c2a)', panel:'rgba(255,255,255,0.94)', border:'rgba(21,128,61,0.18)' },
-  dark:   { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0', bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)', hdr:'linear-gradient(180deg,#0a2040,#05101e)', panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)' },
+  blue:   { accent:'#0068b8', accent2:'#38a8e8', text:'#0a1828', text2:'#3a5880', bg:'linear-gradient(160deg,#d4e8f8,#e8f2fc,#dce8f8)', hdr:'linear-gradient(180deg,#1468c8,#0850b0)', panel:'rgba(255,255,255,0.94)', border:'rgba(0,80,160,0.15)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  aqua:   { accent:'#0a9bbf', accent2:'#12c4a2', text:'#0f3040', text2:'#4a7a90', bg:'linear-gradient(160deg,#c8f0f8,#d8f8f0,#b8e8f8)', hdr:'linear-gradient(180deg,#0a9bbf,#0880a8)', panel:'rgba(255,255,255,0.94)', border:'rgba(10,155,191,0.18)', font:"'M PLUS Rounded 1c',Tahoma,Arial,sans-serif", era:'xp' },
+  purple: { accent:'#7c3aed', accent2:'#a78bfa', text:'#1e1040', text2:'#5a4080', bg:'linear-gradient(160deg,#ede9fe,#ddd6fe,#c4b5fd)', hdr:'linear-gradient(180deg,#7c3aed,#5b21b6)', panel:'rgba(255,255,255,0.94)', border:'rgba(124,58,237,0.18)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  sunset: { accent:'#c84820', accent2:'#f08040', text:'#3a1008', text2:'#804030', bg:'linear-gradient(160deg,#fde8d8,#fdd0c8,#f8e0d0)', hdr:'linear-gradient(180deg,#c84820,#a83810)', panel:'rgba(255,255,255,0.94)', border:'rgba(200,72,32,0.15)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  forest: { accent:'#15803d', accent2:'#4ade80', text:'#0a2014', text2:'#2d6040', bg:'linear-gradient(160deg,#d1fae5,#a7f3d0,#d4eddf)', hdr:'linear-gradient(180deg,#15803d,#0f5c2a)', panel:'rgba(255,255,255,0.94)', border:'rgba(21,128,61,0.18)', font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'xp' },
+  dark:   { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0', bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)', hdr:'linear-gradient(180deg,#0a2040,#05101e)', panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)', font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
+  // Era themes
+  win98:  { accent:'#000080', accent2:'#4040c8', text:'#000000', text2:'#444444', bg:'#008080', hdr:'linear-gradient(180deg,#0a0aaa,#0000aa)', panel:'#d4d0c8', border:'rgba(0,0,0,0.35)', font:'Arial,Helvetica,sans-serif', era:'win98' },
+  aero:   { accent:'#3a78d8', accent2:'#6aa0f0', text:'#1a1a2e', text2:'#5a6080', bg:'linear-gradient(160deg,#e8ecf8,#d8e4f4,#c8d8f0)', hdr:'linear-gradient(180deg,rgba(170,195,240,0.9),rgba(130,165,225,0.88))', panel:'rgba(240,245,255,0.88)', border:'rgba(100,140,200,0.3)', font:"'Segoe UI',system-ui,sans-serif", era:'aero' },
+  y2k:    { accent:'#9900cc', accent2:'#cc0066', text:'#1a001a', text2:'#660066', bg:'linear-gradient(135deg,#200040,#000080,#004080)', hdr:'linear-gradient(180deg,#9900cc,#6600aa)', panel:'rgba(255,255,255,0.95)', border:'rgba(153,0,204,0.25)', font:'Verdana,Geneva,sans-serif', era:'y2k' },
+  web90:  { accent:'#0000cc', accent2:'#cc0000', text:'#000000', text2:'#333333', bg:'#c0c0c0', hdr:'linear-gradient(180deg,#000080,#0000bb)', panel:'#ffffff', border:'rgba(0,0,128,0.45)', font:"'Comic Sans MS',cursive,sans-serif", era:'web90' },
 };
 let currentTheme = 'blue';
 
@@ -2710,6 +2810,8 @@ function applyTheme(name, customAccent) {
     }
   }
   document.documentElement.dataset.scheme = (name === 'dark') ? 'dark' : 'light';
+  document.documentElement.dataset.era = t.era || 'xp';
+  r.setProperty('--font-ui', t.font || "Tahoma,'Segoe UI',Arial,sans-serif");
   if (name === 'dark') {
     r.setProperty('--synth-bg', 'rgba(20,30,50,0.97)');
     r.setProperty('--synth-step-off', 'rgba(20,40,80,0.6)');
@@ -6175,7 +6277,8 @@ function msnColor(name) {
 }
 /* SVG-based proto-emoji (MSN Messenger style) */
 function _sv(body) {
-  return 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">' + body + '</svg>');
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">' + body + '</svg>';
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 const _yb = '<circle cx="10" cy="10" r="9" fill="#FFD700" stroke="#C8A000" stroke-width="1.2"/>';
 const _ey = '<circle cx="7" cy="8.5" r="1.4" fill="#333"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>';
@@ -6945,7 +7048,8 @@ function renderChatMsg(logEl, p) {
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
   const initl = name[0].toUpperCase();
   const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(ts || Date.now()) : '';
-  const msgHtml = msnEmoji(esc(p.message || p.com || ''));
+  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, ''); // strip stale HTML tags
+  const msgHtml = msnEmoji(esc(rawMsg));
   div.innerHTML = `
     <div class="bmsg-av" style="background:${color}">${esc(initl)}</div>
     <div class="bmsg-body">

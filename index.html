@@ -1531,7 +1531,7 @@
       /* hide AquaChat label text — icon only on mobile */
       #board-btn span:first-of-type { display: none; }
       /* move mini-app + chat buttons off header — shown in #mob-tools-bar instead */
-      #apps-menu-wrap, #gear-btn, #board-btn { display: none !important; }
+      #apps-menu-wrap, #gear-btn { display: none !important; }
 
       #main {
         display: flex;
@@ -2232,9 +2232,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
-      <button id="board-btn" onclick="toggleBoard()" title="AquaChat" style="position:relative">💬
-        <span id="chat-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:1px 4px;min-width:14px;text-align:center;pointer-events:none"></span>
-      </button>
+      <span id="chat-badge" style="display:none"></span>
       <div id="apps-menu-wrap">
         <button id="apps-btn" onclick="toggleAppsMenu()" title="Apps">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
@@ -2368,6 +2366,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           <button class="tab"    onclick="switchTab('related',this)">Discover</button>
           <button class="tab"    onclick="switchTab('channel',this)">Artist</button>
           <button class="tab"    onclick="switchTab('history',this)">History</button>
+          <button class="tab" id="chat-tab-btn" onclick="toggleBoard()" style="position:relative">💬<span id="chat-badge-tab" style="display:none;position:absolute;top:2px;right:2px;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center;pointer-events:none"></span></button>
         </div>
         <div id="tab-queue" class="tp on" style="padding:0;gap:0;">
           <div id="queue-top">
@@ -6056,6 +6055,13 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
     </svg>
     <span>Queue</span>
   </button>
+  <button class="mob-tab" id="mob-chat-tab" onclick="toggleBoard()" style="position:relative">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+      <path d="M12 2C6.48 2 2 6.02 2 11c0 2.7 1.18 5.13 3.07 6.84L4 22l4.35-1.4A10.1 10.1 0 0 0 12 21c5.52 0 10-4.02 10-9s-4.48-9-10-9z"/>
+    </svg>
+    <span>Chat</span>
+    <span id="mob-chat-tab-badge" style="display:none;position:absolute;top:4px;right:calc(50% - 14px);background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center;line-height:14px"></span>
+  </button>
 </div>
 
 <script>
@@ -6355,13 +6361,19 @@ function updateChatBadge(posts) {
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
   const mobBadge = document.getElementById('mob-chat-badge');
+  const tabBadge = document.getElementById('chat-badge-tab');
+  const mobTabBadge = document.getElementById('mob-chat-tab-badge');
   if (unseen > 0) {
     const txt = unseen > 9 ? '9+' : String(unseen);
     badge.textContent = txt; badge.style.display = 'inline-block';
     if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
+    if (tabBadge) { tabBadge.textContent = txt; tabBadge.style.display = 'inline-block'; }
+    if (mobTabBadge) { mobTabBadge.textContent = txt; mobTabBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
     if (mobBadge) mobBadge.style.display = 'none';
+    if (tabBadge) tabBadge.style.display = 'none';
+    if (mobTabBadge) mobTabBadge.style.display = 'none';
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);

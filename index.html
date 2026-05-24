@@ -1273,7 +1273,7 @@
 
     /* ── AQUA BUDDY ─────────────────────────────────────── */
     #aqua-buddy {
-      position:fixed; bottom:90px; right:24px; z-index:500; width:80px;
+      position:fixed; bottom:110px; right:24px; z-index:500; width:80px;
       padding-top:34px; /* extends hover zone upward so controls are reachable */
       cursor:grab; user-select:none; touch-action:none;
       filter: drop-shadow(0 6px 16px rgba(0,80,160,0.42)) drop-shadow(0 2px 6px rgba(0,110,190,0.25));
@@ -2154,27 +2154,6 @@ body.perf-mode #aqua-gun { display: none !important; }
     .apps-item span { font-size:8px; font-weight:700; color:var(--text2); white-space:nowrap; font-family:var(--font-ui); }
     .apps-item:hover { background:linear-gradient(180deg,rgba(255,255,255,1),rgba(200,235,255,0.95)); border-color:var(--accent); transform:translateY(-1px); }
 
-    /* ── SEARCH FAB ─────────────────────────────────────── */
-    #search-fab {
-      position:fixed; bottom:28px; right:28px;
-      width:58px; height:58px; border-radius:50%;
-      background: linear-gradient(180deg, #6cd8f8 0%, #1898d8 45%, #0068b8 100%);
-      border:2.5px solid rgba(255,255,255,0.72);
-      box-shadow: 0 8px 28px rgba(0,100,200,0.5), 0 2px 8px rgba(0,0,0,0.18), inset 0 3px 0 rgba(255,255,255,0.52);
-      cursor:pointer; display:flex; align-items:center; justify-content:center;
-      z-index:500; transition:all .22s; overflow:hidden; color:#fff;
-      padding:0;
-    }
-    #search-fab::before {
-      content:''; position:absolute; top:0; left:0; right:0; bottom:55%;
-      background:linear-gradient(180deg,rgba(255,255,255,0.48) 0%,rgba(255,255,255,0) 100%);
-      border-radius:50% 50% 0 0 / 50% 50% 0 0; pointer-events:none;
-    }
-    #search-fab:hover { transform:translateY(-3px) scale(1.07); box-shadow:0 14px 36px rgba(0,100,200,0.6), 0 4px 12px rgba(0,0,0,0.22), inset 0 3px 0 rgba(255,255,255,0.52); }
-    #search-fab:active { transform:translateY(0) scale(0.97); }
-    @media (max-width:768px) {
-      #search-fab { bottom:calc(50px + 44px + 18px); right:16px; width:50px; height:50px; }
-    }
   </style>
 </head>
 <body>
@@ -2253,13 +2232,12 @@ body.perf-mode #aqua-gun { display: none !important; }
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
+      <span id="chat-badge" style="display:none"></span>
       <div id="apps-menu-wrap">
         <button id="apps-btn" onclick="toggleAppsMenu()" title="Apps">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
-          <span id="chat-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#FF4757;color:#fff;border-radius:999px;font-size:8px;font-weight:800;padding:1px 4px;min-width:14px;text-align:center;pointer-events:none"></span>
         </button>
         <div id="apps-menu">
-          <button class="apps-item" onclick="toggleBoard();toggleAppsMenu()" title="AquaChat" id="board-btn">💬<span>Chat</span></button>
           <button class="apps-item" onclick="toggleSlots();toggleAppsMenu()" title="Slots" id="slots-btn">🎰<span>Slots</span></button>
           <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()" title="Synth" id="synth-btn">🎹<span>Synth</span></button>
           <button class="apps-item" onclick="openPaint();toggleAppsMenu()" title="AquaPaint" id="paint-btn">🎨<span>Paint</span></button>
@@ -2388,6 +2366,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           <button class="tab"    onclick="switchTab('related',this)">Discover</button>
           <button class="tab"    onclick="switchTab('channel',this)">Artist</button>
           <button class="tab"    onclick="switchTab('history',this)">History</button>
+          <button class="tab" id="chat-tab-btn" onclick="toggleBoard()" style="position:relative">💬<span id="chat-badge-tab" style="display:none;position:absolute;top:2px;right:2px;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center;pointer-events:none"></span></button>
         </div>
         <div id="tab-queue" class="tp on" style="padding:0;gap:0;">
           <div id="queue-top">
@@ -4715,7 +4694,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
     try {
       const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
       s.buddyRight  = parseFloat(buddy.style.right)  || 24;
-      s.buddyBottom = parseFloat(buddy.style.bottom) || 90;
+      s.buddyBottom = parseFloat(buddy.style.bottom) || 110;
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
     } catch {}
   }
@@ -6040,12 +6019,6 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
 </script>
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
-<button id="search-fab" onclick="focusSearch()" title="Search music">
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="11" cy="11" r="7.5"/>
-    <line x1="17" y1="17" x2="22" y2="22"/>
-  </svg>
-</button>
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="toggleBoard()" title="AquaChat">
     💬<span>Chat</span>
@@ -6081,6 +6054,13 @@ setTimeout(()=>{ const el=document.getElementById('wx-zip-inp'); if(el)el.value=
       <line x1="3" y1="18" x2="3.01" y2="18"/>
     </svg>
     <span>Queue</span>
+  </button>
+  <button class="mob-tab" id="mob-chat-tab" onclick="toggleBoard()" style="position:relative">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+      <path d="M12 2C6.48 2 2 6.02 2 11c0 2.7 1.18 5.13 3.07 6.84L4 22l4.35-1.4A10.1 10.1 0 0 0 12 21c5.52 0 10-4.02 10-9s-4.48-9-10-9z"/>
+    </svg>
+    <span>Chat</span>
+    <span id="mob-chat-tab-badge" style="display:none;position:absolute;top:4px;right:calc(50% - 14px);background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center;line-height:14px"></span>
   </button>
 </div>
 
@@ -6381,13 +6361,19 @@ function updateChatBadge(posts) {
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
   const mobBadge = document.getElementById('mob-chat-badge');
+  const tabBadge = document.getElementById('chat-badge-tab');
+  const mobTabBadge = document.getElementById('mob-chat-tab-badge');
   if (unseen > 0) {
     const txt = unseen > 9 ? '9+' : String(unseen);
     badge.textContent = txt; badge.style.display = 'inline-block';
     if (mobBadge) { mobBadge.textContent = txt; mobBadge.style.display = 'inline-block'; }
+    if (tabBadge) { tabBadge.textContent = txt; tabBadge.style.display = 'inline-block'; }
+    if (mobTabBadge) { mobTabBadge.textContent = txt; mobTabBadge.style.display = 'inline-block'; }
   } else {
     badge.style.display = 'none';
     if (mobBadge) mobBadge.style.display = 'none';
+    if (tabBadge) tabBadge.style.display = 'none';
+    if (mobTabBadge) mobTabBadge.style.display = 'none';
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);

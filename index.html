@@ -1844,12 +1844,121 @@
     #admin-login { padding: 20px; }
     #admin-pw-inp { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 12px; color: var(--text); background: #fff; outline: none; }
     #admin-pw-inp:focus { border-color: var(--accent); }
+
+/* ── ROOM BADGE ─────────────────────────────────── */
+#room-badge {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.18); border-radius: var(--r-btn);
+  border: 1px solid rgba(255,255,255,0.3); padding: 3px 10px 3px 8px;
+  color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+#room-badge-code { font-size: 12px; letter-spacing: 1px; }
+#room-badge-members { opacity: 0.85; font-size: 10px; }
+#room-badge button {
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35);
+  color: #fff; border-radius: var(--r-btn); padding: 2px 7px; cursor: pointer;
+  font-size: 10px; transition: background .14s;
+}
+#room-badge button:hover { background: rgba(255,255,255,0.35); }
+
+/* ── GUEST PLAYER LOCK ──────────────────────────── */
+#guest-player-lock {
+  display: none; position: absolute; inset: 0; z-index: 10;
+  background: rgba(0,0,0,0.15); border-radius: inherit;
+  align-items: center; justify-content: center; cursor: not-allowed;
+}
+#guest-player-lock span {
+  background: rgba(0,0,0,0.55); color: #fff; padding: 6px 14px;
+  border-radius: var(--r-btn); font-size: 11px; font-weight: 700;
+}
+
+/* ── SPLASH ROOM SELECTION ─────────────────────── */
+#splash-room {
+  display: none; flex-direction: column; align-items: center; gap: 12px;
+  margin-top: 20px; width: min(340px, 90vw); animation: splashRoomIn .4s ease forwards;
+}
+@keyframes splashRoomIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+#sp-name {
+  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
+  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
+  outline: none; backdrop-filter: blur(8px); box-sizing: border-box;
+}
+#sp-name::placeholder { color: rgba(255,255,255,0.6); }
+#sp-name:focus { border-color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.3); }
+.sp-btn {
+  width: 100%; padding: 12px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  transition: all .15s; backdrop-filter: blur(8px);
+}
+.sp-btn.primary { background: rgba(255,255,255,0.28); color: #fff; }
+.sp-btn.primary:hover { background: rgba(255,255,255,0.42); transform: translateY(-1px); }
+.sp-btn.secondary { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
+.sp-btn.secondary:hover { background: rgba(255,255,255,0.22); }
+#sp-join-row {
+  display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
+}
+#sp-code {
+  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
+  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
+  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
+  outline: none; text-transform: uppercase; letter-spacing: 2px;
+  box-sizing: border-box;
+}
+#sp-code::placeholder { color: rgba(255,255,255,0.5); text-transform: none; letter-spacing:0; }
+
+/* ── BOARD CHAT TABS ────────────────────────────── */
+.board-chat-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.board-chat-tab {
+  flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 700;
+  color: var(--text2); cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s;
+}
+.board-chat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.board-chat-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+.board-chat-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.board-chat-pane.active { display: flex; }
+
+/* ── CHAT IMAGE ─────────────────────────────────── */
+.chat-img { max-width: 220px; max-height: 160px; border-radius: 6px; margin-top: 5px; display: block; cursor: zoom-in; }
+.chat-img:hover { opacity: 0.9; }
+
+/* ── PERFORMANCE MODE ───────────────────────────── */
+body.perf-mode .orb { animation: none !important; }
+body.perf-mode #aqua-buddy { display: none !important; }
+body.perf-mode #aqua-gun { display: none !important; }
+
+/* ── PAINT IMPROVEMENTS ─────────────────────────── */
+#paint-canvas { touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+.paint-tools-row { display: flex; gap: 4px; flex-wrap: wrap; padding: 4px 0; }
+.ptool.active { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+
+@media (max-width: 768px) {
+  #paint-wrap { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; }
+  #room-badge button.leave-btn span { display: none; }
+  #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
+}
+[data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code { background: rgba(0,0,0,0.3); }
+[data-scheme=dark] #room-badge { background: rgba(0,0,0,0.35); }
   </style>
 </head>
 <body>
 <div id="splash">
   <img class="sp-logo" src="/aquatune-logo-outline.png" alt="Aquatune">
   <div class="sp-bar"><div class="sp-fill"></div></div>
+  <div id="splash-room">
+    <input id="sp-name" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="sp-btn primary" onclick="splashCreate()">🎬 Create Room</button>
+      <button class="sp-btn secondary" id="sp-join-toggle-btn" onclick="splashJoinToggle()">🔗 Join Room</button>
+      <div id="sp-join-row">
+        <input id="sp-code" type="text" placeholder="Room code..." maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
+        <button class="sp-btn primary" onclick="splashJoinConfirm()">Join →</button>
+      </div>
+      <button class="sp-btn secondary" onclick="splashSolo()" style="opacity:0.7">▶ Solo Mode</button>
+    </div>
+  </div>
 </div>
 <div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
@@ -1872,6 +1981,12 @@
         <span id="wx-icon">🌤️</span>
         <span id="wx-temp">--°F</span>
       </div>
+    </div>
+    <div id="room-badge">
+      <span id="room-badge-code"></span>
+      <span id="room-badge-members">👤 1</span>
+      <button onclick="copyRoomLink()" title="Copy room link">🔗</button>
+      <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
       <button id="board-btn" onclick="toggleBoard()" title="AquaChat">💬 <span>AquaChat</span><span id="chat-badge" style="display:none;background:#FF4757;color:#fff;border-radius:999px;font-size:9px;font-weight:800;padding:1px 5px;margin-left:3px;min-width:16px;text-align:center"></span></button>
@@ -1942,6 +2057,7 @@
       <div id="player-bubble">
         <div id="yt-player"></div>
         <div id="sc-player"><iframe id="sc-frame" scrolling="no" allow="autoplay"></iframe></div>
+        <div id="guest-player-lock"><span>👑 Host is in control</span></div>
         <div id="ph">
           <div id="ph-txt">Search for a song, paste a YouTube link,<br>or enter a video ID to begin</div>
         </div>

@@ -984,6 +984,17 @@
       flex:1; font-size:11px; border:1px solid #A8A8A8; padding:2px 5px;
       background:#fff; font-family:Tahoma,sans-serif;
     }
+    /* ── MSN EMOJI BAR ──────────────────────────────── */
+    .board-emoji-bar {
+      display:flex; flex-wrap:wrap; gap:2px; padding:4px 8px 2px;
+      border-top:1px solid var(--border); background:rgba(240,246,255,0.7);
+    }
+    .board-emoji-btn {
+      font-size:17px; line-height:1; background:none; border:none; cursor:pointer;
+      border-radius:5px; padding:2px 3px; transition:background .1s;
+    }
+    .board-emoji-btn:hover { background:rgba(0,104,184,0.12); }
+    [data-scheme=dark] .board-emoji-bar { background:rgba(8,18,45,0.7); }
     .board-fb-inp:focus { outline:1px solid #316AC5; border-color:#316AC5; }
     .board-fb-connect {
       background:linear-gradient(180deg,#F0F8FF,#C8E0F8); border:1px solid #4878B8;
@@ -1802,26 +1813,100 @@
     #splash {
       position: fixed; inset: 0; z-index: 9999;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: linear-gradient(155deg, #7ec8f0 0%, #a8e0fb 28%, #c0eeff 52%, #9ad8f4 76%, #7ac8ec 100%);
-      transition: opacity .6s ease, visibility .6s ease;
+      background: radial-gradient(ellipse at 30% 30%, #5ad0f8 0%, #1898d8 35%, #0870b8 65%, #054888 100%);
+      transition: opacity .65s ease, visibility .65s ease;
+      overflow: hidden;
+    }
+    /* Wii-style background channel dots */
+    #splash::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    /* Bottom gradient bar like Wii menu */
+    #splash::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 100px;
+      background: linear-gradient(0deg, rgba(0,30,80,0.45) 0%, transparent 100%);
+      pointer-events: none;
     }
     #splash.fade-out { opacity: 0; visibility: hidden; }
-    #splash .sp-logo {
-      width: 200px; height: 200px; object-fit: contain;
-      filter: drop-shadow(0 10px 30px rgba(0,100,180,0.45)) drop-shadow(0 0 48px rgba(255,255,255,0.55));
-      animation: spPulse 1.4s ease-in-out infinite alternate;
+
+    /* Logo glow-fill loading effect */
+    #sp-logo-wrap {
+      position: relative; width: 220px; height: 220px; flex-shrink: 0;
     }
-    #splash .sp-bar {
-      margin-top: 28px; width: 140px; height: 4px; border-radius: 99px;
-      background: rgba(255,255,255,0.25); overflow: hidden;
+    #sp-logo-dark {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+      filter: brightness(0) invert(1) opacity(0.18);
     }
-    #splash .sp-fill {
-      height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.95));
-      animation: spLoad 1.8s ease-in-out forwards;
+    #sp-logo-lit {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+      filter: drop-shadow(0 0 28px rgba(255,255,255,0.7)) drop-shadow(0 8px 24px rgba(0,120,220,0.5));
+      clip-path: inset(0 100% 0 0);
+      animation: logoLightUp 1.4s cubic-bezier(.4,0,.2,1) forwards;
     }
-    @keyframes spPulse { from { transform: scale(1); } to { transform: scale(1.06); } }
-    @keyframes spLoad { from { width: 0%; } to { width: 100%; } }
+    @keyframes logoLightUp {
+      0%   { clip-path: inset(0 100% 0 0); }
+      80%  { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 40px rgba(255,255,255,0.9)) drop-shadow(0 8px 24px rgba(0,120,220,0.5)); }
+      100% { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 28px rgba(255,255,255,0.7)) drop-shadow(0 8px 24px rgba(0,120,220,0.5)); }
+    }
+    @keyframes spPulse { from { transform: scale(1); } to { transform: scale(1.04); } }
+    #sp-logo-lit.done { animation: spPulse 2s ease-in-out infinite alternate; }
+
+    /* Room selection cards */
+    #splash-room {
+      display: none; flex-direction: column; align-items: center; gap: 14px;
+      margin-top: 24px; width: min(360px, 90vw);
+      animation: splashRoomIn .45s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    @keyframes splashRoomIn { from { opacity:0; transform:translateY(18px) scale(.96); } to { opacity:1; transform:none; } }
+    #sp-name {
+      width: 100%; padding: 11px 18px; border-radius: var(--r-btn);
+      border: 2px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.16);
+      color: #fff; font-size: 15px; font-weight: 800; text-align: center;
+      outline: none; backdrop-filter: blur(12px); letter-spacing: 0.5px;
+    }
+    #sp-name::placeholder { color: rgba(255,255,255,0.5); font-weight: 400; }
+    #sp-name:focus { border-color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.26); box-shadow: 0 0 0 4px rgba(255,255,255,0.12); }
+    .sp-cards { display: flex; gap: 10px; width: 100%; }
+    .sp-card {
+      flex: 1; padding: 14px 10px; border-radius: 16px; cursor: pointer; text-align: center;
+      border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(14px);
+      transition: all .18s cubic-bezier(.34,1.56,.64,1); user-select: none;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .sp-card:hover { transform: translateY(-3px) scale(1.03); border-color: rgba(255,255,255,0.7); }
+    .sp-card:active { transform: scale(.97); }
+    .sp-card.create { background: rgba(255,255,255,0.22); }
+    .sp-card.join   { background: rgba(255,255,255,0.12); }
+    .sp-card.solo   { background: rgba(0,0,0,0.14); }
+    .sp-card-icon { font-size: 26px; line-height: 1; }
+    .sp-card-label { font-size: 11px; font-weight: 800; color: #fff; letter-spacing: 1px; text-transform: uppercase; }
+    .sp-card-sub   { font-size: 9px; color: rgba(255,255,255,0.65); font-weight: 500; }
+    #sp-join-row {
+      display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
+      animation: splashRoomIn .3s ease forwards;
+    }
+    #sp-create-row {
+      display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
+      animation: splashRoomIn .3s ease forwards;
+    }
+    #sp-code, #sp-create-code {
+      width: 100%; padding: 11px 18px; border-radius: var(--r-btn);
+      border: 2px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.16);
+      color: #fff; font-size: 15px; font-weight: 800; text-align: center;
+      outline: none; text-transform: uppercase; letter-spacing: 3px;
+    }
+    #sp-code::placeholder, #sp-create-code::placeholder { text-transform: none; letter-spacing:0; color: rgba(255,255,255,0.45); font-weight:400; font-size:13px; }
+    .sp-btn {
+      width: 100%; padding: 12px; border-radius: var(--r-btn);
+      border: 2px solid rgba(255,255,255,0.45); cursor: pointer;
+      font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+      transition: all .15s; backdrop-filter: blur(8px);
+    }
+    .sp-btn.primary { background: rgba(255,255,255,0.28); color: #fff; }
+    .sp-btn.primary:hover { background: rgba(255,255,255,0.42); transform: translateY(-1px); }
+    .sp-btn.secondary { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
 
     /* ── ADMIN PANEL ─────────────────────────────────── */
     #admin-overlay {
@@ -1951,18 +2036,36 @@ body.perf-mode #aqua-gun { display: none !important; }
 </head>
 <body>
 <div id="splash">
-  <img class="sp-logo" src="/aquatune-logo-outline.png" alt="Aquatune">
-  <div class="sp-bar"><div class="sp-fill"></div></div>
+  <div id="sp-logo-wrap">
+    <img id="sp-logo-dark" src="/aquatune-logo-outline.png" alt="">
+    <img id="sp-logo-lit"  src="/aquatune-logo-outline.png" alt="Aquatune">
+  </div>
   <div id="splash-room">
-    <input id="sp-name" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
-    <div style="display:flex;flex-direction:column;gap:8px;width:100%">
-      <button class="sp-btn primary" onclick="splashCreate()">🎬 Create Room</button>
-      <button class="sp-btn secondary" id="sp-join-toggle-btn" onclick="splashJoinToggle()">🔗 Join Room</button>
-      <div id="sp-join-row">
-        <input id="sp-code" type="text" placeholder="Room code..." maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
-        <button class="sp-btn primary" onclick="splashJoinConfirm()">Join →</button>
+    <input id="sp-name" type="text" placeholder="Enter your name…" maxlength="30" autocomplete="off">
+    <div class="sp-cards">
+      <div class="sp-card create" onclick="splashShowCreate()">
+        <span class="sp-card-icon">🎬</span>
+        <span class="sp-card-label">Create</span>
+        <span class="sp-card-sub">Start a room</span>
       </div>
-      <button class="sp-btn secondary" onclick="splashSolo()" style="opacity:0.7">▶ Solo Mode</button>
+      <div class="sp-card join" onclick="splashJoinToggle()">
+        <span class="sp-card-icon">🔗</span>
+        <span class="sp-card-label">Join</span>
+        <span class="sp-card-sub">Enter a code</span>
+      </div>
+      <div class="sp-card solo" onclick="splashSolo()">
+        <span class="sp-card-icon">▶</span>
+        <span class="sp-card-label">Solo</span>
+        <span class="sp-card-sub">Just me</span>
+      </div>
+    </div>
+    <div id="sp-create-row">
+      <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
+      <button class="sp-btn primary" onclick="splashCreate()">Create Room →</button>
+    </div>
+    <div id="sp-join-row">
+      <input id="sp-code" type="text" placeholder="Room code" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
+      <button class="sp-btn primary" onclick="splashJoinConfirm()">Join Room →</button>
     </div>
   </div>
 </div>
@@ -2008,6 +2111,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       <div id="user-chip">
         <img id="user-av" src="" alt="">
         <span id="user-nm"></span>
+        <span id="aq-username-chip" style="font-size:10px;color:rgba(255,255,255,0.88);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none"></span>
         <button id="signout-btn" onclick="signOut()">Sign out</button>
       </div>
     </div>
@@ -2702,6 +2806,12 @@ async function fetchUserInfo() {
     const u = await r.json();
     document.getElementById('google-btn').style.display = 'none';
     document.getElementById('user-chip').style.display = 'flex';
+    // Chosen username takes priority; Google name is fallback shown in smaller chip
+    const aqName = localStorage.getItem('aq_username');
+    if (aqName) {
+      document.getElementById('aq-username-chip').textContent = aqName;
+      document.getElementById('aq-username-chip').style.display = 'inline';
+    }
     const av = document.getElementById('user-av');
     if (u.picture) { av.src = u.picture; av.style.display = 'block'; } else { av.style.display = 'none'; }
     document.getElementById('user-nm').textContent = u.given_name || u.name || u.email || '';
@@ -6040,10 +6150,44 @@ function msnColor(name) {
   let h = 0; for (let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
   return MSN_COLORS[h % MSN_COLORS.length];
 }
+/* Full MSN Messenger emoticon set */
+const MSN_EMOJIS = [
+  [':)',  '😊'], [':D',  '😄'], [';)',  '😉'], [':-O','😮'], [':P',  '😛'],
+  ['(H)', '😎'], [':@',  '😠'], [':S',  '😕'], [':\\$','😳'], [':(',  '😔'],
+  [":'(",'😢'], [':|',  '😐'], ['(A)', '😇'], ['8o|','😤'], ['8-|','🤓'],
+  ['+o(','🤢'], ['<:o)','🥳'], ['|-)', '😴'], ['*-)', '🤔'], [':-#','🤐'],
+  [':-*','😘'], ['^o)', '😏'], ['8-)', '🤓'], ['(L)', '❤️'], ['(U)', '💔'],
+  ['(M)', '💬'], ['(@)', '🐱'], ['(&)', '🐶'], ['(sn)','🐌'], ['(bah)','🐑'],
+  ['(S)', '🌙'], ['(*)', '⭐'], ['(#)', '☀️'], ['(R)', '🌈'], ['({)', '🤗'],
+  ['(})', '🤗'], ['(K)', '💋'], ['(F)', '🌸'], ['(W)', '🥀'], ['(O)', '🕐'],
+];
 function msnEmoji(s) {
-  return s.replace(/:\)/g,'😊').replace(/:\(/g,'😔').replace(/:D/g,'😄').replace(/:P/g,'😛')
-    .replace(/;\)/g,'😉').replace(/:\|/g,'😐').replace(/:o/gi,'😮').replace(/&lt;3/g,'❤️')
-    .replace(/xD/gi,'😂').replace(/lol/gi,'😂').replace(/:\*/g,'😘');
+  let out = s;
+  MSN_EMOJIS.forEach(([code, em]) => {
+    out = out.split(code).join(em);
+  });
+  // Extra common ones
+  return out.replace(/&lt;3/g,'❤️').replace(/xD/gi,'😂').replace(/:o\b/gi,'😮');
+}
+function buildEmojiBar(barId, textareaId) {
+  const bar = document.getElementById(barId);
+  if (!bar || bar.dataset.built) return;
+  bar.dataset.built = '1';
+  MSN_EMOJIS.forEach(([code, em]) => {
+    const btn = document.createElement('button');
+    btn.className = 'board-emoji-btn';
+    btn.title = code;
+    btn.textContent = em;
+    btn.onclick = () => {
+      const ta = document.getElementById(textareaId);
+      if (!ta) return;
+      const s = ta.selectionStart, e = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + code + ta.value.slice(e);
+      ta.selectionStart = ta.selectionEnd = s + code.length;
+      ta.focus();
+    };
+    bar.appendChild(btn);
+  });
 }
 
 function boardFbEnabled() { return !!boardFbUrl.trim(); }
@@ -6625,36 +6769,43 @@ function setPerfMode(on) {
 if (_perfMode) document.body.classList.add('perf-mode');
 
 /* ── SPLASH & ROOM FUNCTIONS ── */
-function splashCreate() {
+function _requireName() {
   const name = document.getElementById('sp-name').value.trim();
   if (!name) {
-    document.getElementById('sp-name').focus();
-    document.getElementById('sp-name').style.borderColor='rgba(255,120,120,0.8)';
-    return;
+    const inp = document.getElementById('sp-name');
+    inp.focus(); inp.style.borderColor = 'rgba(255,120,120,0.8)';
+    inp.placeholder = 'Name required!';
+    return null;
   }
   localStorage.setItem('aq_username', name);
+  return name;
+}
+function splashShowCreate() {
+  document.getElementById('sp-create-row').style.display = 'flex';
+  document.getElementById('sp-join-row').style.display = 'none';
+  document.getElementById('sp-create-code').focus();
+}
+function splashCreate() {
+  if (!_requireName()) return;
   const hostId = localStorage.getItem('aq_host_id') || (() => {
     const id = Array.from({length:12},()=>'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*36)]).join('');
-    localStorage.setItem('aq_host_id', id);
-    return id;
+    localStorage.setItem('aq_host_id', id); return id;
   })();
-  const roomId = Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
+  const custom = document.getElementById('sp-create-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  const roomId = custom || Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
   window.location.hash = roomId;
   closeSplash();
   window.initRoom?.(roomId, true);
 }
 function splashJoinToggle() {
-  const row = document.getElementById('sp-join-row');
-  const showing = row.style.display === 'flex';
-  row.style.display = showing ? 'none' : 'flex';
-  if (!showing) document.getElementById('sp-code').focus();
+  document.getElementById('sp-join-row').style.display = 'flex';
+  document.getElementById('sp-create-row').style.display = 'none';
+  document.getElementById('sp-code').focus();
 }
 function splashJoinConfirm() {
-  const name = document.getElementById('sp-name').value.trim();
-  if (!name) { document.getElementById('sp-name').focus(); return; }
+  if (!_requireName()) return;
   const code = document.getElementById('sp-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   if (!code) { document.getElementById('sp-code').focus(); return; }
-  localStorage.setItem('aq_username', name);
   window.location.hash = code;
   closeSplash();
   window.initRoom?.(code, false);
@@ -6675,7 +6826,7 @@ function copyRoomLink() {
 
 /* ── BOARD CHAT TABS ── */
 function switchBoardTab(tab) {
-  ['global','room','local'].forEach(t => {
+  ['global','room'].forEach(t => {
     document.getElementById('bctab-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('bpane-'+t)?.classList.toggle('active', t===tab);
   });
@@ -6750,6 +6901,20 @@ function sendPaintToChat() {
 
 /* ── DOMContentLoaded setup ── */
 document.addEventListener('DOMContentLoaded', () => {
+  // Show saved username in header (priority over Google)
+  const savedUname = localStorage.getItem('aq_username');
+  if (savedUname) {
+    const chip = document.getElementById('aq-username-chip');
+    if (chip) { chip.textContent = savedUname; chip.style.display = 'inline'; }
+    // Show user-chip even without Google sign-in
+    const userChip = document.getElementById('user-chip');
+    const userNm = document.getElementById('user-nm');
+    if (userChip && userNm && !userNm.textContent) {
+      userChip.style.display = 'flex';
+      document.getElementById('user-av').style.display = 'none';
+    }
+  }
+
   const bchk = document.getElementById('bubbles-chk');
   if (bchk) bchk.checked = _bubblesEnabled;
   const rchk = document.getElementById('ripple-chk');
@@ -6795,25 +6960,32 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // Service worker for background audio
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  // Splash: show room selection UI instead of auto-dismiss
+  // Splash: logo lights up, then show room selection
   setTimeout(() => {
+    // Switch lit logo to pulse animation
+    const lit = document.getElementById('sp-logo-lit');
+    if (lit) lit.classList.add('done');
     const roomUi = document.getElementById('splash-room');
     if (roomUi) {
       roomUi.style.display = 'flex';
-      // Pre-fill name from localStorage
       const savedName = localStorage.getItem('aq_username');
       const nameInp = document.getElementById('sp-name');
       if (savedName && nameInp) nameInp.value = savedName;
-      // If URL has a room hash, pre-fill join
+      // If URL already has a room hash, pre-fill join
       const hash = window.location.hash.slice(1);
-      if (hash && hash !== 'solo') {
+      if (hash) {
         const codeInp = document.getElementById('sp-code');
         const joinRow = document.getElementById('sp-join-row');
         if (codeInp) codeInp.value = hash;
         if (joinRow) joinRow.style.display = 'flex';
       }
     }
-  }, 1200);
+  }, 1500);
+  // Build emoji bars lazily (after DOM ready)
+  setTimeout(() => {
+    buildEmojiBar('global-emoji-bar', 'global-msg');
+    buildEmojiBar('room-emoji-bar', 'room-msg');
+  }, 100);
 
   // Listen to global chat
   window.listenGlobalChat?.((p) => {
@@ -6852,19 +7024,15 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="board-chat-tabs">
       <button class="board-chat-tab active" id="bctab-global" onclick="switchBoardTab('global')">🌐 Global</button>
       <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 Room</button>
-      <button class="board-chat-tab" id="bctab-local" onclick="switchBoardTab('local')">📋 Local</button>
     </div>
 
     <!-- Global chat pane -->
     <div class="board-chat-pane active" id="bpane-global">
       <div id="global-log" class="board-log" style="flex:1;overflow-y:auto"></div>
-      <div class="board-input-area" id="global-input-area">
-        <div class="board-input-toolbar">
-          <span class="board-tlabel">Name:</span>
-          <input id="global-name" class="board-name-inp" type="text" placeholder="Anonymous" maxlength="40">
-        </div>
+      <div class="board-input-area">
+        <div class="board-emoji-bar" id="global-emoji-bar"></div>
         <div class="board-msg-wrap">
-          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global message... (Ctrl+Enter)"></textarea>
+          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Ctrl+Enter)"></textarea>
           <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
         </div>
       </div>
@@ -6873,51 +7041,19 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Room chat pane -->
     <div class="board-chat-pane" id="bpane-room">
       <div id="room-log" class="board-log" style="flex:1;overflow-y:auto">
-        <div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Join or create a room to use room chat</div>
+        <div class="board-empty-log">Join or create a room to use room chat</div>
       </div>
-      <div class="board-input-area" id="room-input-area">
+      <div class="board-input-area">
+        <div class="board-emoji-bar" id="room-emoji-bar"></div>
         <div class="board-msg-wrap">
-          <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room message... (Ctrl+Enter)"></textarea>
+          <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room chat… (Ctrl+Enter)"></textarea>
           <button class="board-send-btn" onclick="sendRoomChatMsg()">Send</button>
         </div>
       </div>
     </div>
 
-    <!-- Local board pane (existing functionality) -->
-    <div class="board-chat-pane" id="bpane-local">
-      <!-- Thread header -->
-      <div class="board-threadhdr">
-        <span class="board-threadhdr-icon">🎵</span>
-        <div class="board-threadhdr-text">
-          <div class="board-threadhdr-name">Aquatune /aq/</div>
-          <div class="board-threadhdr-sub">Music player suggestions, bug reports &amp; general chat &nbsp;·&nbsp; Start line with &gt; for greentext &nbsp;·&nbsp; &gt;&gt;no to quote</div>
-        </div>
-      </div>
-
-      <!-- Chat log -->
-      <div id="board-log"></div>
-
-      <!-- Input area -->
-      <div class="board-input-area">
-        <div class="board-input-toolbar">
-          <span class="board-tlabel">Name:</span>
-          <input id="bf-name" class="board-name-inp" type="text" placeholder="Anonymous" maxlength="40">
-          <span class="board-tlabel">Subject:</span>
-          <input id="bf-subject" class="board-sub-inp" type="text" maxlength="120" placeholder="(optional)">
-        </div>
-        <div class="board-msg-wrap">
-          <textarea id="bf-msg" class="board-msg-inp" maxlength="2000" placeholder="Type a message... (Ctrl+Enter to send)"></textarea>
-          <button id="board-send-btn" class="board-send-btn" onclick="boardPost(event)">Send</button>
-        </div>
-        <!-- Firebase config bar -->
-        <div class="board-fb-bar">
-          <span>Firebase URL:</span>
-          <input id="board-fb-inp" class="board-fb-inp" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" value="">
-          <button class="board-fb-connect" onclick="boardSaveFirebase()">Connect</button>
-          <span style="color:#aaa">· <a href="https://firebase.google.com/docs/database/web/start" target="_blank" rel="noopener" style="color:#316AC5;text-decoration:none">Setup guide</a></span>
-        </div>
-      </div>
-    </div>
+    <!-- Hidden elements kept for admin panel compatibility -->
+    <div style="display:none"><div id="board-log"></div><input id="bf-name"><input id="bf-subject"><textarea id="bf-msg"></textarea><button id="board-send-btn"></button><input id="board-fb-inp"><div id="board-fb-badge"></div></div>
 
   </div>
 </div>

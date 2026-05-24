@@ -7601,6 +7601,111 @@ function exportMidi() {
 /* ── PAINT TOOL ── */
 let _paintTool='pencil', _painting=false, _paintStart=null, _paintSnapshot=null;
 
+/* Paint undo/redo */
+let paintUndoStack = [], paintRedoStack = [];
+const PAINT_MAX_UNDO = 20;
+function paintSaveState() {
+  const canvas = document.getElementById('paint-canvas');
+  paintUndoStack.push(canvas.toDataURL());
+  if (paintUndoStack.length > PAINT_MAX_UNDO) paintUndoStack.shift();
+  paintRedoStack = [];
+}
+function paintUndo() {
+  if (paintUndoStack.length === 0) return;
+  const canvas = document.getElementById('paint-canvas');
+  const ctx = canvas.getContext('2d');
+  paintRedoStack.push(canvas.toDataURL());
+  const img = new Image();
+  img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
+  img.src = paintUndoStack.pop();
+}
+function paintRedo() {
+  if (paintRedoStack.length === 0) return;
+  const canvas = document.getElementById('paint-canvas');
+  const ctx = canvas.getContext('2d');
+  paintUndoStack.push(canvas.toDataURL());
+  const img = new Image();
+  img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
+  img.src = paintRedoStack.pop();
+}
+
+/* Paint selection tool */
+let paintSelection = null;
+let paintSelecting = false, paintSelStart = null;
+let paintClipboard = null;
+let _paintSelDragging = false, _paintSelDragStart = null, _paintSelOrigin = null;
+
+function paintStartSelect(x, y) { paintSelStart = {x,y}; paintSelecting = true; paintSelection = null; renderPaintSelectionOverlay(); }
+function paintUpdateSelect(x, y) {
+  if (!paintSelecting) return;
+  const x0 = Math.min(paintSelStart.x, x), y0 = Math.min(paintSelStart.y, y);
+  const w = Math.abs(x - paintSelStart.x), h = Math.abs(y - paintSelStart.y);
+  paintSelection = {x:x0, y:y0, w, h};
+  renderPaintSelectionOverlay();
+}
+function paintEndSelect() { paintSelecting = false; }
+function renderPaintSelectionOverlay() {
+  const canvas = document.getElementById('paint-canvas');
+  let overlay = document.getElementById('paint-sel-overlay');
+  if (!paintSelection || (paintSelection.w < 2 && paintSelection.h < 2)) {
+    if (overlay) overlay.style.display = 'none';
+    return;
+  }
+  const r = canvas.getBoundingClientRect();
+  const scaleX = r.width / canvas.width, scaleY = r.height / canvas.height;
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'paint-sel-overlay';
+    overlay.style.cssText = 'position:absolute;border:2px dashed #000;pointer-events:none;box-sizing:border-box;z-index:10;outline:1px dashed #fff;';
+    canvas.parentElement.style.position = 'relative';
+    canvas.parentElement.appendChild(overlay);
+  }
+  overlay.style.display = 'block';
+  overlay.style.left = Math.round(paintSelection.x * scaleX) + 'px';
+  overlay.style.top = Math.round(paintSelection.y * scaleY) + 'px';
+  overlay.style.width = Math.round(paintSelection.w * scaleX) + 'px';
+  overlay.style.height = Math.round(paintSelection.h * scaleY) + 'px';
+}
+function paintClearSelectionOverlay() {
+  paintSelection = null;
+  const overlay = document.getElementById('paint-sel-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+function paintCopy() {
+  if (!paintSelection || paintSelection.w < 1 || paintSelection.h < 1) return;
+  const canvas = document.getElementById('paint-canvas');
+  const ctx = canvas.getContext('2d');
+  paintClipboard = ctx.getImageData(paintSelection.x, paintSelection.y, paintSelection.w, paintSelection.h);
+}
+function paintPaste(x=0, y=0) {
+  if (!paintClipboard) return;
+  const canvas = document.getElementById('paint-canvas');
+  const ctx = canvas.getContext('2d');
+  paintSaveState();
+  ctx.putImageData(paintClipboard, x, y);
+}
+
+/* Paint paste album cover */
+function paintPasteAlbumCover() {
+  const thumb = (current || {}).thumbnail;
+  if (!thumb) { toast('No track playing'); return; }
+  const canvas = document.getElementById('paint-canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    paintSaveState();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, 64, 64);
+  };
+  img.onerror = () => {
+    const img2 = new Image();
+    img2.onload = () => { paintSaveState(); ctx.imageSmoothingEnabled = false; ctx.drawImage(img2, 0, 0, 64, 64); };
+    img2.src = thumb;
+  };
+  img.src = thumb;
+}
+
 function openPaint() {
   const w = document.getElementById('paint-wrap');
   w.classList.add('open');
@@ -7690,6 +7795,11 @@ function initPaint() {
   cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId);
     const p = getPos(e);
+    if (_paintTool === 'select') {
+      paintStartSelect(p.x, p.y);
+      return;
+    }
+    paintClearSelectionOverlay();
     _painting = true; _paintStart = p; lastPt = p;
     _paintSnapshot = ctx.getImageData(0, 0, cv.width, cv.height);
     if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
@@ -7716,6 +7826,10 @@ function initPaint() {
     }
   });
   cv.addEventListener('pointermove', e => {
+    if (_paintTool === 'select' && paintSelecting) {
+      paintUpdateSelect(getPos(e).x, getPos(e).y);
+      return;
+    }
     if (!_painting) return;
     const p = getPos(e);
     const sz = parseInt(ps.value);
@@ -7759,9 +7873,24 @@ function initPaint() {
     }
   });
   cv.addEventListener('pointerup', () => {
+    if (_paintTool === 'select' && paintSelecting) {
+      paintEndSelect();
+      return;
+    }
+    if (_painting) paintSaveState();
     _painting = false; lastPt = null;
     ctx.globalCompositeOperation = 'source-over';
   });
+  // Keyboard shortcuts for paint window
+  document.addEventListener('keydown', e => {
+    const w = document.getElementById('paint-wrap');
+    if (!w.classList.contains('open')) return;
+    if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); paintUndo(); }
+    else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); paintRedo(); }
+    else if (e.ctrlKey && e.key === 'c' && _paintTool === 'select') { e.preventDefault(); paintCopy(); }
+    else if (e.ctrlKey && e.key === 'v') { e.preventDefault(); paintPaste(0, 0); }
+  });
+
   const tb=document.getElementById('paint-titlebar');
   let drag=null;
   tb.addEventListener('mousedown',e=>{
@@ -8087,60 +8216,34 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── PICROSS ──────────────────────────────────────────
-const PC_PUZZLES = [
-  { name:'Heart', size:8, grid:[
-    0,1,1,0,0,1,1,0,
-    1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,
-    0,1,1,1,1,1,1,0,
-    0,0,1,1,1,1,0,0,
-    0,0,0,1,1,0,0,0,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-  ]},
-  { name:'Music Note', size:8, grid:[
-    0,0,1,1,1,1,0,0,
-    0,0,1,0,0,1,1,0,
-    0,0,1,0,0,0,1,0,
-    0,0,1,0,0,0,0,0,
-    0,1,1,0,0,0,0,0,
-    1,1,1,0,0,0,0,0,
-    0,1,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-  ]},
-  { name:'Star', size:8, grid:[
-    0,0,0,1,1,0,0,0,
-    0,1,1,1,1,1,1,0,
-    1,1,1,1,1,1,1,1,
-    0,0,1,1,1,1,0,0,
-    0,1,1,0,0,1,1,0,
-    1,1,0,0,0,0,1,1,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-  ]},
-  { name:'House', size:8, grid:[
-    0,0,0,1,1,0,0,0,
-    0,0,1,1,1,1,0,0,
-    0,1,1,1,1,1,1,0,
-    1,1,1,1,1,1,1,1,
-    0,1,1,1,1,1,1,0,
-    0,1,1,0,0,1,1,0,
-    0,1,1,0,0,1,1,0,
-    0,1,1,1,1,1,1,0,
-  ]},
-  { name:'Diamond', size:8, grid:[
-    0,0,0,1,1,0,0,0,
-    0,0,1,1,1,1,0,0,
-    0,1,1,1,1,1,1,0,
-    1,1,1,1,1,1,1,1,
-    0,1,1,1,1,1,1,0,
-    0,0,1,1,1,1,0,0,
-    0,0,0,1,1,0,0,0,
-    0,0,0,0,0,0,0,0,
-  ]},
-];
-let _pcPuzzle = 0, _pcUserGrid = [], _pcSize = 8, _pcSolution = [];
+let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
 let _picrossInited = false;
+
+function generatePicross(size) {
+  const density = 0.5 + Math.random() * 0.2;
+  const grid = Array.from({length: size*size}, () => Math.random() < density ? 1 : 0);
+  function getRowClue(row) {
+    const clues = []; let run = 0;
+    for (let c = 0; c < size; c++) {
+      if (grid[row*size+c]) run++;
+      else if (run) { clues.push(run); run = 0; }
+    }
+    if (run) clues.push(run);
+    return clues.length ? clues : [0];
+  }
+  function getColClue(col) {
+    const clues = []; let run = 0;
+    for (let r = 0; r < size; r++) {
+      if (grid[r*size+col]) run++;
+      else if (run) { clues.push(run); run = 0; }
+    }
+    if (run) clues.push(run);
+    return clues.length ? clues : [0];
+  }
+  const rowClues = Array.from({length: size}, (_,r) => getRowClue(r));
+  const colClues = Array.from({length: size}, (_,c) => getColClue(c));
+  return { size, grid, rowClues, colClues, name: `${size}×${size}` };
+}
 
 function openPicross(show = true) {
   const w = document.getElementById('picross-wrap');
@@ -8148,23 +8251,24 @@ function openPicross(show = true) {
   w.classList.toggle('open');
   if (w.classList.contains('open') && !_picrossInited) {
     _picrossInited = true;
-    const sel = document.getElementById('picross-puzzle-sel');
-    PC_PUZZLES.forEach((p, i) => {
-      const o = document.createElement('option');
-      o.value = i; o.textContent = (i+1) + '. ' + p.name;
-      sel.appendChild(o);
-    });
-    loadPicrossPuzzle(0);
+    const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
+    loadPicrossPuzzle(generatePicross(size));
   }
 }
-function loadPicrossPuzzle(idx) {
-  _pcPuzzle = idx;
-  const p = PC_PUZZLES[idx];
-  _pcSize = p.size;
-  _pcSolution = p.grid.slice();
-  _pcUserGrid = new Array(_pcSize * _pcSize).fill(0); // 0=empty,1=filled,2=marked
+function loadPicrossPuzzle(puzzle) {
+  _pcPuzzle = puzzle;
+  _pcSize = puzzle.size;
+  _pcSolution = puzzle.grid.slice();
+  _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+}
+function picrossNewPuzzle() {
+  const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
+  loadPicrossPuzzle(generatePicross(size));
+}
+function picrossOnWin() {
+  // Reserved for future theme unlock
 }
 function pcGetClues(arr, size, isRow) {
   const clues = [];
@@ -9281,6 +9385,11 @@ function bjUpdateBalance(){
     <button class="ptool" id="ptool-rect" onclick="setPaintTool('rect')" title="Rectangle">▭</button>
     <button class="ptool" id="ptool-ellipse" onclick="setPaintTool('ellipse')" title="Ellipse">⬭</button>
     <button class="ptool" id="ptool-spray" onclick="setPaintTool('spray')" title="Spray Can">💨</button>
+    <button class="ptool" id="ptool-select" onclick="setPaintTool('select')" title="Selection">⬚ Sel</button>
+    <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
+    <button class="ptool" onclick="paintUndo()" title="Undo (Ctrl+Z)">↩ Undo</button>
+    <button class="ptool" onclick="paintRedo()" title="Redo (Ctrl+Y)">↪ Redo</button>
+    <button class="ptool" onclick="paintPasteAlbumCover()" title="Paste album cover">🖼 Cover</button>
     <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
     <label style="font-size:9px;font-weight:700;color:var(--text2)">SIZE</label>
     <input type="range" id="paint-size" min="1" max="40" value="4" style="width:60px">

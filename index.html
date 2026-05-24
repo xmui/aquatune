@@ -990,11 +990,19 @@
       border-top:1px solid var(--border); background:rgba(240,246,255,0.7);
     }
     .board-emoji-btn {
-      font-size:17px; line-height:1; background:none; border:none; cursor:pointer;
+      line-height:1; background:none; border:none; cursor:pointer;
       border-radius:5px; padding:2px 3px; transition:background .1s;
+      display:inline-flex; align-items:center;
     }
     .board-emoji-btn:hover { background:rgba(0,104,184,0.12); }
     [data-scheme=dark] .board-emoji-bar { background:rgba(8,18,45,0.7); }
+    .msn-em { width:18px; height:18px; vertical-align:middle; display:inline-block; image-rendering:pixelated; }
+    .emoji-toggle-btn {
+      flex-shrink:0; background:none; border:1.5px solid var(--border); border-radius:6px;
+      cursor:pointer; padding:3px 6px; font-size:14px; line-height:1; color:var(--text2);
+      transition:background .12s; align-self:flex-end; margin-bottom:2px;
+    }
+    .emoji-toggle-btn:hover { background:rgba(0,104,184,0.1); color:var(--accent); }
     .board-fb-inp:focus { outline:1px solid #316AC5; border-color:#316AC5; }
     .board-fb-connect {
       background:linear-gradient(180deg,#F0F8FF,#C8E0F8); border:1px solid #4878B8;
@@ -1813,20 +1821,18 @@
     #splash {
       position: fixed; inset: 0; z-index: 9999;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(ellipse at 30% 30%, #5ad0f8 0%, #1898d8 35%, #0870b8 65%, #054888 100%);
+      background: linear-gradient(160deg, #d6eeff 0%, #b8d8f8 30%, #7ab8e8 65%, #3a8ad4 100%);
       transition: opacity .65s ease, visibility .65s ease;
       overflow: hidden;
     }
-    /* Wii-style background channel dots */
+    /* XP-style bottom taskbar gradient */
     #splash::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
-      background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
-      background-size: 32px 32px;
+      background: radial-gradient(ellipse at 50% 120%, rgba(0,80,180,0.25) 0%, transparent 60%);
     }
-    /* Bottom gradient bar like Wii menu */
     #splash::after {
-      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 100px;
-      background: linear-gradient(0deg, rgba(0,30,80,0.45) 0%, transparent 100%);
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+      background: linear-gradient(0deg, rgba(0,50,140,0.18) 0%, transparent 100%);
       pointer-events: none;
     }
     #splash.fade-out { opacity: 0; visibility: hidden; }
@@ -1837,76 +1843,52 @@
     }
     #sp-logo-dark {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-      filter: brightness(0) invert(1) opacity(0.18);
+      filter: brightness(0) invert(1) opacity(0.28);
     }
     #sp-logo-lit {
       position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-      filter: drop-shadow(0 0 28px rgba(255,255,255,0.7)) drop-shadow(0 8px 24px rgba(0,120,220,0.5));
+      filter: drop-shadow(0 0 20px rgba(255,255,255,0.9)) drop-shadow(0 6px 18px rgba(0,80,200,0.5));
       clip-path: inset(0 100% 0 0);
       animation: logoLightUp 1.4s cubic-bezier(.4,0,.2,1) forwards;
     }
     @keyframes logoLightUp {
       0%   { clip-path: inset(0 100% 0 0); }
-      80%  { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 40px rgba(255,255,255,0.9)) drop-shadow(0 8px 24px rgba(0,120,220,0.5)); }
-      100% { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 28px rgba(255,255,255,0.7)) drop-shadow(0 8px 24px rgba(0,120,220,0.5)); }
+      80%  { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 32px rgba(255,255,255,1)) drop-shadow(0 6px 20px rgba(0,80,200,0.6)); }
+      100% { clip-path: inset(0 0% 0 0); filter: drop-shadow(0 0 20px rgba(255,255,255,0.9)) drop-shadow(0 6px 18px rgba(0,80,200,0.5)); }
     }
     @keyframes spPulse { from { transform: scale(1); } to { transform: scale(1.04); } }
-    #sp-logo-lit.done { animation: spPulse 2s ease-in-out infinite alternate; }
+    #sp-logo-lit.done { animation: spPulse 2s ease-in-out infinite alternate; clip-path: inset(0 0% 0 0); }
 
-    /* Room selection cards */
-    #splash-room {
-      display: none; flex-direction: column; align-items: center; gap: 14px;
-      margin-top: 24px; width: min(360px, 90vw);
-      animation: splashRoomIn .45s cubic-bezier(.34,1.56,.64,1) forwards;
-    }
-    @keyframes splashRoomIn { from { opacity:0; transform:translateY(18px) scale(.96); } to { opacity:1; transform:none; } }
-    #sp-name {
-      width: 100%; padding: 11px 18px; border-radius: var(--r-btn);
-      border: 2px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.16);
-      color: #fff; font-size: 15px; font-weight: 800; text-align: center;
-      outline: none; backdrop-filter: blur(12px); letter-spacing: 0.5px;
-    }
-    #sp-name::placeholder { color: rgba(255,255,255,0.5); font-weight: 400; }
-    #sp-name:focus { border-color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.26); box-shadow: 0 0 0 4px rgba(255,255,255,0.12); }
-    .sp-cards { display: flex; gap: 10px; width: 100%; }
+    /* Splash room card layout */
+    .sp-cards { display: flex; gap: 8px; }
     .sp-card {
-      flex: 1; padding: 14px 10px; border-radius: 16px; cursor: pointer; text-align: center;
-      border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(14px);
-      transition: all .18s cubic-bezier(.34,1.56,.64,1); user-select: none;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      flex: 1; padding: 10px 6px; cursor: pointer; text-align: center;
+      background: linear-gradient(180deg, #f0f6ff, #dde8f8);
+      border: 1.5px solid var(--border); border-radius: var(--r-btn);
+      transition: all .15s; user-select: none;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
     }
-    .sp-card:hover { transform: translateY(-3px) scale(1.03); border-color: rgba(255,255,255,0.7); }
+    .sp-card:hover { background: linear-gradient(180deg,#e4f0ff,#c8ddf5); transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,60,160,0.14); }
     .sp-card:active { transform: scale(.97); }
-    .sp-card.create { background: rgba(255,255,255,0.22); }
-    .sp-card.join   { background: rgba(255,255,255,0.12); }
-    .sp-card.solo   { background: rgba(0,0,0,0.14); }
-    .sp-card-icon { font-size: 26px; line-height: 1; }
-    .sp-card-label { font-size: 11px; font-weight: 800; color: #fff; letter-spacing: 1px; text-transform: uppercase; }
-    .sp-card-sub   { font-size: 9px; color: rgba(255,255,255,0.65); font-weight: 500; }
-    #sp-join-row {
-      display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
-      animation: splashRoomIn .3s ease forwards;
-    }
+    .sp-card.create { background: linear-gradient(180deg,#2080d0,#0060b0); border-color:#004fa0; }
+    .sp-card.create .sp-card-label { color:#fff; }
+    .sp-card.create .sp-card-sub { color:rgba(255,255,255,0.75); }
+    .sp-card-icon { font-size: 22px; line-height: 1.3; }
+    .sp-card-label { font-size: 11px; font-weight: 800; color: var(--text); letter-spacing: 0.5px; }
+    .sp-card-sub { font-size: 9px; color: var(--text2); }
     #sp-create-row {
       display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
       animation: splashRoomIn .3s ease forwards;
     }
-    #sp-code, #sp-create-code {
-      width: 100%; padding: 11px 18px; border-radius: var(--r-btn);
-      border: 2px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.16);
-      color: #fff; font-size: 15px; font-weight: 800; text-align: center;
+    #sp-create-code {
+      width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
+      border: 1.5px solid var(--border); background: #fff;
+      color: var(--text); font-size: 14px; font-weight: 800; text-align: center;
       outline: none; text-transform: uppercase; letter-spacing: 3px;
+      box-sizing: border-box; font-family: inherit;
     }
-    #sp-code::placeholder, #sp-create-code::placeholder { text-transform: none; letter-spacing:0; color: rgba(255,255,255,0.45); font-weight:400; font-size:13px; }
-    .sp-btn {
-      width: 100%; padding: 12px; border-radius: var(--r-btn);
-      border: 2px solid rgba(255,255,255,0.45); cursor: pointer;
-      font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
-      transition: all .15s; backdrop-filter: blur(8px);
-    }
-    .sp-btn.primary { background: rgba(255,255,255,0.28); color: #fff; }
-    .sp-btn.primary:hover { background: rgba(255,255,255,0.42); transform: translateY(-1px); }
-    .sp-btn.secondary { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
+    #sp-create-code:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,104,184,0.12); }
+    #sp-create-code::placeholder { text-transform: none; letter-spacing:0; font-weight:400; font-size:12px; color:var(--text2); }
 
     /* ── ADMIN PANEL ─────────────────────────────────── */
     #admin-overlay {
@@ -1965,39 +1947,63 @@
 
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
-  display: none; flex-direction: column; align-items: center; gap: 12px;
-  margin-top: 20px; width: min(340px, 90vw); animation: splashRoomIn .4s ease forwards;
+  display: none; flex-direction: column; align-items: stretch; gap: 0;
+  margin-top: 22px; width: min(340px, 90vw);
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 12px 12px 8px 8px;
+  box-shadow: 0 24px 64px rgba(0,40,120,0.28), inset 0 1px 0 rgba(255,255,255,0.8);
+  overflow: hidden; animation: splashRoomIn .38s cubic-bezier(.34,1.56,.64,1) forwards;
 }
-@keyframes splashRoomIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes splashRoomIn { from { opacity:0; transform:translateY(20px) scale(.96); } to { opacity:1; transform:none; } }
+/* XP-style dialog title bar */
+#sp-room-titlebar {
+  background: var(--hdr-bg); color: #fff; padding: 7px 12px;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 7px;
+  flex-shrink: 0; position: relative; overflow: hidden; letter-spacing: 0.3px;
+}
+#sp-room-titlebar::after {
+  content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+  background: linear-gradient(180deg,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0) 100%);
+}
+#sp-room-body {
+  padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px;
+}
 #sp-name {
-  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
-  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
-  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
-  outline: none; backdrop-filter: blur(8px); box-sizing: border-box;
+  width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
+  border: 1.5px solid var(--border); background: #fff;
+  color: var(--text); font-size: 13px; font-weight: 700; text-align: center;
+  outline: none; box-sizing: border-box; font-family: inherit;
 }
-#sp-name::placeholder { color: rgba(255,255,255,0.6); }
-#sp-name:focus { border-color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.3); }
+#sp-name::placeholder { color: var(--text2); font-weight: 400; }
+#sp-name:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,104,184,0.12); }
 .sp-btn {
-  width: 100%; padding: 12px; border-radius: var(--r-btn);
-  border: 2px solid rgba(255,255,255,0.45); cursor: pointer;
-  font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
-  transition: all .15s; backdrop-filter: blur(8px);
+  width: 100%; padding: 9px 12px; border-radius: var(--r-btn);
+  border: 1.5px solid #004fa0; cursor: pointer;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.3px;
+  transition: all .14s; font-family: inherit;
 }
-.sp-btn.primary { background: rgba(255,255,255,0.28); color: #fff; }
-.sp-btn.primary:hover { background: rgba(255,255,255,0.42); transform: translateY(-1px); }
-.sp-btn.secondary { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); }
-.sp-btn.secondary:hover { background: rgba(255,255,255,0.22); }
+.sp-btn.primary {
+  background: linear-gradient(180deg, #2080d0, #0060b0); color: #fff;
+  box-shadow: 0 2px 6px rgba(0,60,160,0.28);
+}
+.sp-btn.primary:hover { background: linear-gradient(180deg, #2898e8, #0870c8); transform: translateY(-1px); }
+.sp-btn.secondary {
+  background: linear-gradient(180deg, #f0f6ff, #dde8f8); color: var(--text);
+  border-color: var(--border);
+}
+.sp-btn.secondary:hover { background: linear-gradient(180deg, #e4f0ff, #c8ddf5); transform: translateY(-1px); }
 #sp-join-row {
   display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
 }
 #sp-code {
-  width: 100%; padding: 10px 16px; border-radius: var(--r-btn);
-  border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22);
-  color: #fff; font-size: 14px; font-weight: 700; text-align: center;
-  outline: none; text-transform: uppercase; letter-spacing: 2px;
-  box-sizing: border-box;
+  width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
+  border: 1.5px solid var(--border); background: #fff;
+  color: var(--text); font-size: 14px; font-weight: 800; text-align: center;
+  outline: none; text-transform: uppercase; letter-spacing: 3px;
+  box-sizing: border-box; font-family: inherit;
 }
-#sp-code::placeholder { color: rgba(255,255,255,0.5); text-transform: none; letter-spacing:0; }
+#sp-code:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,104,184,0.12); }
+#sp-code::placeholder { text-transform: none; letter-spacing:0; font-weight:400; font-size:12px; color:var(--text2); }
 
 /* ── BOARD CHAT TABS ────────────────────────────── */
 .board-chat-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -2030,7 +2036,13 @@ body.perf-mode #aqua-gun { display: none !important; }
   #room-badge button.leave-btn span { display: none; }
   #room-badge { font-size: 10px; padding: 2px 7px 2px 6px; }
 }
-[data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code { background: rgba(0,0,0,0.3); }
+[data-scheme=dark] #splash-room { background: rgba(14,28,60,0.96); border-color: rgba(56,160,255,0.3); }
+[data-scheme=dark] #sp-name, [data-scheme=dark] #sp-code, [data-scheme=dark] #sp-create-code { background: rgba(8,20,50,0.9); color:#e8f0ff; border-color: rgba(56,160,255,0.35); }
+[data-scheme=dark] .sp-card { background: linear-gradient(180deg,rgba(20,40,90,0.9),rgba(10,25,70,0.9)); border-color:rgba(56,160,255,0.25); }
+[data-scheme=dark] .sp-card.create { background: linear-gradient(180deg,#1868b8,#0050a0); }
+[data-scheme=dark] .sp-card-label { color:#e8f0ff; }
+[data-scheme=dark] .sp-card-sub { color:rgba(180,210,255,0.7); }
+[data-scheme=dark] .sp-btn.secondary { background: linear-gradient(180deg,rgba(20,45,100,0.9),rgba(10,30,80,0.9)); color:#e8f0ff; }
 [data-scheme=dark] #room-badge { background: rgba(0,0,0,0.35); }
   </style>
 </head>
@@ -2041,31 +2053,37 @@ body.perf-mode #aqua-gun { display: none !important; }
     <img id="sp-logo-lit"  src="/aquatune-logo-outline.png" alt="Aquatune">
   </div>
   <div id="splash-room">
-    <input id="sp-name" type="text" placeholder="Enter your name…" maxlength="30" autocomplete="off">
-    <div class="sp-cards">
-      <div class="sp-card create" onclick="splashShowCreate()">
-        <span class="sp-card-icon">🎬</span>
-        <span class="sp-card-label">Create</span>
-        <span class="sp-card-sub">Start a room</span>
-      </div>
-      <div class="sp-card join" onclick="splashJoinToggle()">
-        <span class="sp-card-icon">🔗</span>
-        <span class="sp-card-label">Join</span>
-        <span class="sp-card-sub">Enter a code</span>
-      </div>
-      <div class="sp-card solo" onclick="splashSolo()">
-        <span class="sp-card-icon">▶</span>
-        <span class="sp-card-label">Solo</span>
-        <span class="sp-card-sub">Just me</span>
-      </div>
+    <div id="sp-room-titlebar">
+      <span style="position:relative;z-index:1;font-size:14px">🎵</span>
+      <span style="position:relative;z-index:1">Aquatune — Choose Your Mode</span>
     </div>
-    <div id="sp-create-row">
-      <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
-      <button class="sp-btn primary" onclick="splashCreate()">Create Room →</button>
-    </div>
-    <div id="sp-join-row">
-      <input id="sp-code" type="text" placeholder="Room code" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
-      <button class="sp-btn primary" onclick="splashJoinConfirm()">Join Room →</button>
+    <div id="sp-room-body">
+      <input id="sp-name" type="text" placeholder="Your display name…" maxlength="30" autocomplete="off">
+      <div class="sp-cards">
+        <div class="sp-card create" onclick="splashShowCreate()">
+          <span class="sp-card-icon">🎬</span>
+          <span class="sp-card-label">Create</span>
+          <span class="sp-card-sub">Start a room</span>
+        </div>
+        <div class="sp-card join" onclick="splashJoinToggle()">
+          <span class="sp-card-icon">🔗</span>
+          <span class="sp-card-label">Join</span>
+          <span class="sp-card-sub">Enter a code</span>
+        </div>
+        <div class="sp-card solo" onclick="splashSolo()">
+          <span class="sp-card-icon">▶</span>
+          <span class="sp-card-label">Solo</span>
+          <span class="sp-card-sub">Just me</span>
+        </div>
+      </div>
+      <div id="sp-create-row">
+        <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
+        <button class="sp-btn primary" onclick="splashCreate()">Create Room</button>
+      </div>
+      <div id="sp-join-row">
+        <input id="sp-code" type="text" placeholder="Room code" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
+        <button class="sp-btn primary" onclick="splashJoinConfirm()">Join Room</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2211,7 +2229,7 @@ body.perf-mode #aqua-gun { display: none !important; }
         <div id="vol-row">
           <span class="vi">Vol</span>
           <input id="vol" type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
-          <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix">Automix</button>
+          <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix" style="display:none">Automix</button>
         </div>
       </div>
     </div>
@@ -2952,7 +2970,7 @@ Object.defineProperty(window, 'player', { get: () => player, set: v => { player 
 let scWidget = null, scReady = false;
 let playlists = JSON.parse(localStorage.getItem('yt_pls') || '[]');
 let activePlId = null;
-let playing = false, shuffle = false, repeat = false, automix = true, normalize = false, normalizeTarget = 80;
+let playing = false, shuffle = false, repeat = false, automix = false, normalize = false, normalizeTarget = 80;
 let progTimer = null, pendingAddPl = null, toastTmr;
 let sessionHistory = [];
 let searchMode = 'videos';
@@ -5965,6 +5983,11 @@ function evaluateSlots(syms) {
     const mult = SLOT_PAYS[a] || 3;
     win = slotsBet * mult;
     msg = `JACKPOT! ${a}${b}${c} +${win}`;
+    // Announce jackpot in global chat
+    setTimeout(() => {
+      const uname = localStorage.getItem('aq_username') || 'Someone';
+      window.sendGlobalMessage?.(`(*) JACKPOT! ${uname} hit ${a}${b}${c} for ${win} credits! (*)`);
+    }, 600);
   } else if (a === b || b === c || a === c) {
     win = slotsBet;
     msg = `Match! +${win}`;
@@ -6150,34 +6173,100 @@ function msnColor(name) {
   let h = 0; for (let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
   return MSN_COLORS[h % MSN_COLORS.length];
 }
-/* Full MSN Messenger emoticon set */
+/* SVG-based proto-emoji (MSN Messenger style) */
+function _sv(body) {
+  return 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">' + body + '</svg>');
+}
+const _yb = '<circle cx="10" cy="10" r="9" fill="#FFD700" stroke="#C8A000" stroke-width="1.2"/>';
+const _ey = '<circle cx="7" cy="8.5" r="1.4" fill="#333"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>';
+const _ew = '<circle cx="7" cy="8.5" r="1.4" fill="#333"/><path d="M11.2 7.8 Q12.5 9.2 13.8 7.8" fill="none" stroke="#333" stroke-width="1.3" stroke-linecap="round"/>';
+const _sm = '<path d="M7 13.5 Q10 16 13 13.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>';
+const _gr = '<path d="M6.5 12.5 Q10 16.5 13.5 12.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>';
+const _sd = '<path d="M7 14.5 Q10 12 13 14.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>';
+const _fl = '<path d="M7.5 13 L12.5 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>';
+const _ab = '<path d="M5.5 6.3 L8 7.8" fill="none" stroke="#333" stroke-width="1.4"/><path d="M12 7.8 L14.5 6.3" fill="none" stroke="#333" stroke-width="1.4"/>';
+const _glss = '<rect x="4" y="7.5" width="4.5" height="3.5" rx="1.8" fill="#333" opacity="0.8"/><rect x="11.5" y="7.5" width="4.5" height="3.5" rx="1.8" fill="#333" opacity="0.8"/><path d="M8.5 9.2 L11.5 9.2" stroke="#333" stroke-width="1"/>';
+
 const MSN_EMOJIS = [
-  [':)',  '😊'], [':D',  '😄'], [';)',  '😉'], [':-O','😮'], [':P',  '😛'],
-  ['(H)', '😎'], [':@',  '😠'], [':S',  '😕'], [':\\$','😳'], [':(',  '😔'],
-  [":'(",'😢'], [':|',  '😐'], ['(A)', '😇'], ['8o|','😤'], ['8-|','🤓'],
-  ['+o(','🤢'], ['<:o)','🥳'], ['|-)', '😴'], ['*-)', '🤔'], [':-#','🤐'],
-  [':-*','😘'], ['^o)', '😏'], ['8-)', '🤓'], ['(L)', '❤️'], ['(U)', '💔'],
-  ['(M)', '💬'], ['(@)', '🐱'], ['(&)', '🐶'], ['(sn)','🐌'], ['(bah)','🐑'],
-  ['(S)', '🌙'], ['(*)', '⭐'], ['(#)', '☀️'], ['(R)', '🌈'], ['({)', '🤗'],
-  ['(})', '🤗'], ['(K)', '💋'], ['(F)', '🌸'], ['(W)', '🥀'], ['(O)', '🕐'],
+  [':)',  _sv(_yb+_ey+_sm)],
+  [':D',  _sv(_yb+_ey+_gr)],
+  [';)',  _sv(_yb+_ew+_sm)],
+  [':-O', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/>')],
+  [':P',  _sv(_yb+_ey+'<path d="M6.5 12 Q10 15 13.5 12" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="10" cy="14.5" rx="2" ry="1.5" fill="#FF6B8A"/>')],
+  ['(H)', _sv(_yb+_glss+_sm)],
+  [':@',  _sv(_yb+_ab+_ey+'<path d="M7.5 14.5 Q10 12.5 12.5 14.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
+  [':S',  _sv(_yb+_ey+'<path d="M7 13 Q8.5 14.5 10 13 Q11.5 11.5 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
+  [':\\', _sv(_yb+_ey+'<path d="M7.5 13.5 Q10 13.5 12 12.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
+  [':(',  _sv(_yb+_ey+_sd)],
+  [":'(", _sv(_yb+_ey+_sd+'<ellipse cx="13.5" cy="11.5" rx="1" ry="2" fill="#88ccff" opacity="0.85"/>')],
+  [':|',  _sv(_yb+_ey+_fl)],
+  ['(A)', _sv(_yb+_ey+_sm+'<ellipse cx="10" cy="2.5" rx="4.5" ry="1.3" fill="none" stroke="#FFD700" stroke-width="1.8"/>')],
+  ['8o|', _sv(_yb+_ab+_ey+'<path d="M7 13.5 L13 13.5" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>')],
+  ['8-|', _sv(_yb+_glss+_fl)],
+  ['+o(', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#5aaa44"/><path d="M7 5.5 Q10 3 13 5.5" fill="none" stroke="#5aaa44" stroke-width="1.4" stroke-linecap="round"/>')],
+  ['<:o)', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/><path d="M3.5 8 Q2 6 4.5 5 Q7 4 6 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/><path d="M16.5 8 Q18 6 15.5 5 Q13 4 14 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/>')],
+  ['|-)', _sv(_yb+'<path d="M5 8.5 L8.5 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><path d="M11.5 8.5 L15 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/>'+_fl)],
+  ['*-)', _sv(_yb+'<path d="M5 6.5 L9 10.5 M9 6.5 L5 10.5" fill="none" stroke="#333" stroke-width="1.4"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm)],
+  [':-#', _sv(_yb+_ey+'<path d="M7.5 12.5 L12.5 12.5 M7.5 13.5 L12.5 13.5 M10 12 L10 14 M8.5 12 L8.5 14 M11.5 12 L11.5 14" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>')],
+  [':-*', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2" fill="#FF9090"/><path d="M8.5 13 Q10 15 11.5 13" fill="#FF6B8A"/>')],
+  ['^o)', _sv(_yb+'<path d="M4.5 9 Q5.5 7 7 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm)],
+  ['8-)', _sv(_yb+_glss+'<path d="M7 13 Q10 16 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
+  ['(L)', _sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="#f44" stroke="#c22" stroke-width="0.8"/>')],
+  ['(U)', _sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="none" stroke="#8899aa" stroke-width="1.8"/><path d="M9 12 L11 10 M11 12 L9 10" stroke="#8899aa" stroke-width="1.2"/>')],
+  ['(M)', _sv('<rect x="2" y="5.5" width="16" height="11" rx="2.5" fill="#1a78c2" stroke="#0a5a9a" stroke-width="1.2"/><path d="M2 8 L10 12.5 L18 8" fill="none" stroke="#fff" stroke-width="1.5"/>')],
+  ['(@)', _sv('<circle cx="10" cy="9.5" r="7.5" fill="#FFD700" stroke="#C8A000" stroke-width="1.2"/><circle cx="7.5" cy="9" r="1.2" fill="#333"/><circle cx="12.5" cy="9" r="1.2" fill="#333"/><path d="M7 12 Q10 14.5 13 12" fill="none" stroke="#333" stroke-width="1.3" stroke-linecap="round"/><path d="M6 5 Q10 2 14 5" fill="none" stroke="#C8A000" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 9 Q1.5 9.5 3.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/><path d="M16.5 9 Q18.5 9.5 16.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/>')],
+  ['(&)', _sv('<circle cx="10" cy="9" r="7" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><ellipse cx="10" cy="14.5" rx="5" ry="4" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><circle cx="7.2" cy="8.5" r="1.2" fill="#333"/><circle cx="12.8" cy="8.5" r="1.2" fill="#333"/><ellipse cx="10" cy="11" rx="2" ry="1.5" fill="#e8b880"/>')],
+  ['(sn)', _sv('<ellipse cx="10" cy="12.5" rx="7.5" ry="5.5" fill="#aaa" stroke="#888" stroke-width="1.2"/><circle cx="10" cy="7.5" r="4.5" fill="#bbb" stroke="#888" stroke-width="1.2"/><circle cx="8.2" cy="7.5" r="1" fill="#333"/><circle cx="11.8" cy="7.5" r="1" fill="#333"/><path d="M5.5 12 Q10 10 14.5 12" fill="none" stroke="#888" stroke-width="1.2"/>')],
+  ['(bah)', _sv('<ellipse cx="10" cy="12.5" rx="7" ry="6" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="7" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="13" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><circle cx="8" cy="13" r="1.2" fill="#333"/><circle cx="12" cy="13" r="1.2" fill="#333"/>')],
+  ['(S)', _sv('<circle cx="10" cy="10" r="7.5" fill="#FFFAAA" stroke="#D4C850" stroke-width="1.2"/><circle cx="13.5" cy="7" r="6" fill="#c8d8f8"/><circle cx="13" cy="6.5" r="5.2" fill="#dde8ff"/>')],
+  ['(*)', _sv('<polygon points="10,2.5 12.5,7.5 18,8 13.8,12 15.5,17.5 10,14 4.5,17.5 6.2,12 2,8 7.5,7.5" fill="#FFD700" stroke="#C8A000" stroke-width="0.8"/>')],
+  ['(#)', _sv('<circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#C8A000" stroke-width="1"/><line x1="10" y1="1" x2="10" y2="3.5" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16.5" x2="10" y2="19" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="10" x2="3.5" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="16.5" y1="10" x2="19" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="3.5" y1="3.5" x2="5.4" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="14.6" y1="14.6" x2="16.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="3.5" x2="14.6" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="5.4" y1="14.6" x2="3.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/>')],
+  ['(R)', _sv('<path d="M2 17 Q10 2 18 17" fill="none" stroke="#f00" stroke-width="4.5"/><path d="M2.8 17 Q10 3.5 17.2 17" fill="none" stroke="#ff7700" stroke-width="4"/><path d="M3.8 17 Q10 5.5 16.2 17" fill="none" stroke="#ffee00" stroke-width="3.5"/><path d="M4.8 17 Q10 7.5 15.2 17" fill="none" stroke="#00cc00" stroke-width="3"/><path d="M5.8 17 Q10 9.5 14.2 17" fill="none" stroke="#0055ff" stroke-width="2.5"/><path d="M6.8 17 Q10 11.5 13.2 17" fill="none" stroke="#8800ff" stroke-width="2"/>')],
+  ['({)', _sv(_yb+_ey+_sm+'<path d="M1.5 8 Q0 9.5 1.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>')],
+  ['(})', _sv(_yb+_ey+_sm+'<path d="M18.5 8 Q20 9.5 18.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>')],
+  ['(K)', _sv('<circle cx="10" cy="10" r="9" fill="#FFB0C8" stroke="#e07090" stroke-width="1.2"/><ellipse cx="10" cy="13.5" rx="3" ry="2" fill="#e04070"/><path d="M8.5 12.5 Q10 14.5 11.5 12.5" fill="#FF6090"/><circle cx="7.5" cy="8.5" r="1.2" fill="#333"/><circle cx="12.5" cy="8.5" r="1.2" fill="#333"/>')],
+  ['(F)', _sv('<circle cx="10" cy="11" r="5.5" fill="#FFD700" stroke="#e8c000" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#98d848" stroke="#70b030" stroke-width="0.8"/>')],
+  ['(W)', _sv('<circle cx="10" cy="11" r="5.5" fill="#cccc44" stroke="#aaaa22" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#667733" stroke="#445511" stroke-width="0.8"/>')],
+  ['(O)', _sv('<circle cx="10" cy="10" r="8" fill="none" stroke="#888" stroke-width="2"/><path d="M10 2.5 L10 10 L14 10" fill="none" stroke="#444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>')],
 ];
-function msnEmoji(s) {
-  let out = s;
-  MSN_EMOJIS.forEach(([code, em]) => {
-    out = out.split(code).join(em);
+function msnEmoji(html) {
+  let out = html;
+  MSN_EMOJIS.forEach(([code, src]) => {
+    const safe = code.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const img = `<img class="msn-em" src="${src}" title="${safe}" alt="${safe}">`;
+    out = out.split(code).join(img);
+    // Also match HTML-escaped version of the code
+    const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    if (escaped !== code) out = out.split(escaped).join(img);
   });
-  // Extra common ones
-  return out.replace(/&lt;3/g,'❤️').replace(/xD/gi,'😂').replace(/:o\b/gi,'😮');
+  // Extra shorthand codes (applied to HTML-escaped input)
+  const heartSrc = MSN_EMOJIS.find(e=>e[0]==='(L)')?.[1]||'';
+  const grinSrc  = MSN_EMOJIS.find(e=>e[0]===':D')?.[1]||'';
+  const supSrc   = MSN_EMOJIS.find(e=>e[0]===':-O')?.[1]||'';
+  out = out.replace(/&lt;3/g, `<img class="msn-em" src="${heartSrc}" title="&lt;3" alt="&lt;3">`);
+  out = out.replace(/xD/gi,   `<img class="msn-em" src="${grinSrc}"  title="xD" alt="xD">`);
+  out = out.replace(/:o\b/gi, `<img class="msn-em" src="${supSrc}"   title=":o" alt=":o">`);
+  return out;
+}
+function toggleEmojiBar(pane) {
+  const bar = document.getElementById(pane + '-emoji-bar');
+  if (!bar) return;
+  const shown = bar.style.display !== 'none';
+  bar.style.display = shown ? 'none' : 'flex';
 }
 function buildEmojiBar(barId, textareaId) {
   const bar = document.getElementById(barId);
   if (!bar || bar.dataset.built) return;
   bar.dataset.built = '1';
-  MSN_EMOJIS.forEach(([code, em]) => {
+  MSN_EMOJIS.forEach(([code, src]) => {
     const btn = document.createElement('button');
     btn.className = 'board-emoji-btn';
     btn.title = code;
-    btn.textContent = em;
+    const img = document.createElement('img');
+    img.className = 'msn-em';
+    img.src = src;
+    img.alt = code;
+    btn.appendChild(img);
     btn.onclick = () => {
       const ta = document.getElementById(textareaId);
       if (!ta) return;
@@ -6833,13 +6922,30 @@ function switchBoardTab(tab) {
 }
 
 /* ── CHAT MESSAGE RENDERING ── */
+function playChatTone() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(660, ac.currentTime + 0.15);
+    g.gain.setValueAtTime(0.15, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.45);
+    o.start(ac.currentTime); o.stop(ac.currentTime + 0.5);
+    setTimeout(() => ac.close(), 600);
+  } catch {}
+}
 function renderChatMsg(logEl, p) {
+  const ts = p.timestamp || p.ts || 0;
+  if (ts && ts < Date.now() - 3600000) return; // skip messages older than 1 hour
   const div = document.createElement('div');
   div.className = 'bmsg';
   const name = p.username || p.name || 'Anonymous';
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
   const initl = name[0].toUpperCase();
-  const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(p.timestamp || p.ts || Date.now()) : '';
+  const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(ts || Date.now()) : '';
+  const msgHtml = msnEmoji(esc(p.message || p.com || ''));
   div.innerHTML = `
     <div class="bmsg-av" style="background:${color}">${esc(initl)}</div>
     <div class="bmsg-body">
@@ -6847,7 +6953,7 @@ function renderChatMsg(logEl, p) {
         <span class="bmsg-name" style="color:${color}">${esc(name)}</span>
         <span class="bmsg-time">${timeStr}</span>
       </div>
-      <div class="bmsg-text">${esc(p.message || p.com || '')}</div>
+      <div class="bmsg-text">${msgHtml}</div>
       ${p.imageData ? `<img class="chat-img" src="${p.imageData}" loading="lazy" onclick="window.open(this.src)">` : ''}
     </div>`;
   logEl.appendChild(div);
@@ -6857,10 +6963,12 @@ function renderChatMsg(logEl, p) {
 window.appendRoomChatMsg = function(p) {
   const log = document.getElementById('room-log');
   if (log) {
-    // Remove placeholder if present
     const placeholder = log.querySelector('div[style]');
     if (placeholder) placeholder.remove();
     renderChatMsg(log, p);
+    // Play notification tone for others' messages
+    const myName = localStorage.getItem('aq_username');
+    if (p.username !== myName) playChatTone();
   }
 };
 
@@ -7006,7 +7114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Aero title bar -->
     <div class="board-titlebar">
       <span class="board-tb-icon">💬</span>
-      <span class="board-tb-title">AquaChat &nbsp;·&nbsp; /aq/ Suggestions &amp; Chat</span>
+      <span class="board-tb-title">AquaChat</span>
       <div class="board-tb-btns">
         <button class="board-tb-btn board-tb-min" onclick="minimizeBoard()" title="Minimize">─</button>
         <button class="board-tb-btn board-tb-close" onclick="closeBoard()">✕</button>
@@ -7030,8 +7138,9 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="board-chat-pane active" id="bpane-global">
       <div id="global-log" class="board-log" style="flex:1;overflow-y:auto"></div>
       <div class="board-input-area">
-        <div class="board-emoji-bar" id="global-emoji-bar"></div>
+        <div class="board-emoji-bar" id="global-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
+          <button class="emoji-toggle-btn" onclick="toggleEmojiBar('global')" title="Emoticons">☺</button>
           <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Ctrl+Enter)"></textarea>
           <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
         </div>
@@ -7044,8 +7153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="board-empty-log">Join or create a room to use room chat</div>
       </div>
       <div class="board-input-area">
-        <div class="board-emoji-bar" id="room-emoji-bar"></div>
+        <div class="board-emoji-bar" id="room-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
+          <button class="emoji-toggle-btn" onclick="toggleEmojiBar('room')" title="Emoticons">☺</button>
           <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room chat… (Ctrl+Enter)"></textarea>
           <button class="board-send-btn" onclick="sendRoomChatMsg()">Send</button>
         </div>

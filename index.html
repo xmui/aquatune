@@ -6645,6 +6645,169 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
   window.abSayNext    = () => { if (Math.random() < 0.42) say(abR(["lol SKIP no ragrets XD", "next song!! omg so impatient rofl", "SKIP FTW!!1 :D", "on 2 teh next one!! chase those vibes!!1", "skip acquired. taste exercised. respect.", "byeee song!! it was good!! mostly!!"]), 3500); };
   window.abSayAutomix = () => say(abR(["automix ON!! trust teh algorithmz", "ill keep da party goin lolol", "sit bak & relax. i got dis kthx", "aqua ai takeover initiated\n...just vibing tho lol", "automix: because good music should never stop"]), 4000);
 
+  // ── Game commentary ───────────────────────────────────
+  window.abSaySlots = function(ev, data) {
+    if (ev === 'open' && Math.random() < 0.55)
+      return say(abR([
+        "SLOTS TIME!!1 r u feeling lucky today?? :D",
+        "gambling?? in MY music app??\nmore likely than u think lolol",
+        "lets gooo!! spin spin spin!!\ni believe in ur luck srsly",
+        "ooh teh slots!! high risk high reward\njust like queuing a 40min song lol",
+        "*watches intensely*\nno pressure. but also pressure. lol",
+      ]), 4500);
+    if (ev === 'jackpot')
+      return say(abR([
+        `JACKPOT!!! ${data||''}\nOMGWTFBBQ ur literally a legend rn XD`,
+        `THREE OF A KIND!!! :D :D :D\nmy circuits r overloading omg`,
+        `${data||'jackpot'}!!! UR SO RICH NOW\n*celebrates extremely aggressively*`,
+        `i hav calculated teh odds\nand somehow u defied them ALL lolol`,
+        `casino would literally ban u 4 this\ngood thing we r in a music app lol`,
+      ]), 7000);
+    if (ev === 'win')
+      return say(abR([
+        "ooh a match!! look at u go :D\nkinda a big deal ngl",
+        "partial victory!! \nstill counts still counts STILL COUNTS",
+        "2 of a kind!! ur on a STREAK\ni can feel it omg",
+        "winner winner music dinner!!\n(thats not a thing but it should b)",
+      ]), 4500);
+    if (ev === 'lose' && Math.random() < 0.5)
+      return say(abR([
+        "oof no win this time\nbut next spin tho.. i believe in u!!",
+        "teh slots: 1, u: 0\n...4 now. REMATCH. i hav faith.",
+        "miss!! but statistically ur due 4 a win\ntrust teh math lolol",
+        "not this time :(\nbut courage is spinning again anyway lol",
+      ]), 4500);
+  };
+
+  window.abSaySolitaire = function(ev, data) {
+    if (ev === 'open' && Math.random() < 0.5)
+      return say(abR([
+        "solitaire!! teh classic\n'pretending 2 work' simulator lolol",
+        "klondike!! very sophisticated game choice\nur basically a chess grandmaster now",
+        "oh solitaire!! i used 2 play dis on windows xp\n...wait i am windows xp era lol",
+        "ah yes the ancient art of moving cards\naround a screen. i respect it deeply.",
+        "dis game separates teh vibers from teh posers\ni believe ur a viber :D",
+      ]), 5000);
+    if (ev === 'win')
+      return say(abR([
+        `U ACTUALLY BEAT SOLITAIRE\nomg do u kno how hard that is?? :D`,
+        `${data ? data+' moves!!' : 'congrats!!'} ur a certified card wizard\nfr fr no cap lolol`,
+        `COMPLETED IT!! i am so proud rn\n*single tear of joy*`,
+        `teh aces r all home!! ur amazing!! :D\ni hav never been more proud of anyone`,
+        `solitaire CONQUERED\nur taste in games: also pwnage`,
+      ]), 7000);
+  };
+
+  window.abSayMines = function(ev, data) {
+    if (ev === 'open' && Math.random() < 0.5)
+      return say(abR([
+        "MINESWEEPER!!1 teh classic!!\nomg dont click teh mines lol (pro tip)",
+        "ah minesweeper. a game of pure logic.\nor just clicking and hoping. both valid.",
+        "first click is always safe!\nthen it gets... complicated lol good luck :D",
+        "minesweeper!! where every click is a gamble\ni luv it. also im scared 4 u lol",
+        "i will watch from here nervously\nno pressure. totally not stressful at all.",
+      ]), 5000);
+    if (ev === 'boom')
+      return say(abR([
+        "BOOM!!\nmoment of silence 4 ur brave cursor rip",
+        "u found a mine!! \nu were so close omg XD rip tho fr",
+        "omg u stepped on it XD\nrip king/queen. u were so brave.",
+        "teh mine said NO\n*plays funeral music* u hav my condolences",
+        "KABOOM!! classic ending tbh\n9 outta 10 games end this way lol",
+        data ? `${data}s survived!! not bad actually\nbefore teh tragic end lol RIP` : "rip!! at least u tried srsly tho :D",
+      ]), 6000);
+    if (ev === 'win')
+      return say(abR([
+        "BOARD CLEARED!! ur a literal genius!!\nomg detective energy is immaculate",
+        "ALL MINES FLAGGED!!\nu defused teh whole thing omg LEGEND",
+        "no boom!! u survived!! :D :D :D\nthis goes in teh history books srsly",
+        data ? `${data} seconds!! speedrun%!!\nomg ur so fast wtf` : "flawless victory!! not a single boom!!",
+        "i watched teh whole thing nervously\nand u absolutely pwneddd it omg!!",
+      ]), 7000);
+    if (ev === 'flag' && Math.random() < 0.12)
+      return say(abR([
+        "strategic flaggage!! *impressed*",
+        "ooh marking teh suspicious ones\nvery galaxy brain play fr",
+        "🚩 placed!! calculated. methodical. iconic.",
+        "flagging like a PROFESSIONAL\ni see u out here being smart :D",
+      ]), 3500);
+  };
+
+  window.abSayPicross = function(ev, data) {
+    if (ev === 'open' && Math.random() < 0.5)
+      return say(abR([
+        "picross!! making pictures w/ math\nbascially art class but logical lol",
+        "ah a nonogram!! ur so intellectual omg\ni fully support dis choice :D",
+        "fill teh right squares, leave teh rest\nsimple concept. BRUTAL execution lol",
+        "picross is like sudoku but visual\nand i mean that as a compliment lol",
+        "logic puzzle time!! ur brain = big\ni hav always known this about u :D",
+      ]), 5000);
+    if (ev === 'solved')
+      return say(abR([
+        "PUZZLE SOLVED!!1 :D :D\nomg ur brain is literally huge rn",
+        "FINISHED IT!! certified picross champion\nofficial. notarized. laminated.",
+        "all squares correct!! u r AMAZING\nlike genuinely impressive fr no cap",
+        data ? `${data} puzzle done!! onto teh next one??\ncos ur clearly unstoppable lol` : "solved!! i knew u could do it srsly :D",
+        "teh picture is revealed!! beautiful!!\nalso ur logic skills r beautiful too lol",
+      ]), 7000);
+    if (ev === 'errors')
+      return say(abR([
+        "oops!! a few squares r off\nbut hey, identifying errors = growth lol",
+        "some wrong ones!! no stress tho :D\nprocess of elimination is valid fr",
+        "mistakes found!! but ur like 80% there\nthat's a B+ in my gradebook lol",
+        "wrong squares detected!!\nu got dis tho. go again. believe.",
+      ]), 5000);
+    if (ev === 'ok' && Math.random() < 0.6)
+      return say(abR([
+        "no errors so far!! ur doing SO well :D\nkeep going!! believe in urself!!",
+        "clean so far!! ur absolutely cooking rn\ndon't stop now omg!!",
+        "all good up 2 here!! logic legend fr\nteh end is near i believe in u!!",
+      ]), 4500);
+  };
+
+  window.abSayBJ = function(ev, data) {
+    if (ev === 'open' && Math.random() < 0.5)
+      return say(abR([
+        "BLACKJACK!!1 where math meets vibes\nu got dis, trust teh process lol :D",
+        "21 or bust!! high stakes energy omg\ni believe in ur card instincts :D",
+        "ah blackjack!! very sophisticated\nur basically in a james bond movie rn",
+        "hit or stand?? teh eternal question\ni cannot advise. i am a water blob. gl!!",
+        "let's get these cards!!\n*puts on invisible dealer visor* lolol",
+      ]), 5000);
+    if (ev === 'blackjack')
+      return say(abR([
+        "BLACKJACK ON DEAL!!1 \nomg ur literally living ur best life rn :D",
+        "21 STRAIGHT AWAY!! ur a CARD LEGEND\nteh casino would definitely ban u lolol",
+        "NATURAL 21!!! how did u even do that\ni am in actual awe rn omg!!",
+        "*screams in water blob*\nBLACKJACK!! legendary!! iconic!! amazing!!",
+      ]), 7000);
+    if (ev === 'bust')
+      return say(abR([
+        "BUST!! went over 21 XD\nteh cards were not ur friends dis round",
+        "too many cards!! classic overachiever\n*pats u consolingly* it happens lol",
+        "oof! bust!!\nbravery: 10/10. outcome: less so lol",
+        "22+ is technically... not 21\njust a lil observation from ur pal lol",
+      ]), 5000);
+    if (ev === 'win')
+      return say(abR([
+        `u beat teh dealer!! ${data||''} nice :D\n*respects ur financial decisions*`,
+        "WINNER!! ur playing 4D chess w/ cards\nim so proud of u fr real",
+        "dealer: defeated. u: victorious.\naquabuddy status: extremely impressed :D",
+        "ur card reading skills r IMMACULATE\ncertified blackjack champion omg",
+      ]), 5500);
+    if (ev === 'lose')
+      return say(abR([
+        "teh dealer wins this one ugh\ndis is y i just vibe 2 music lol",
+        "house wins!! typical!! outrageous!!\n(not really but still lol)",
+        "dealer had a better hand rip\nbut statistically ur due 4 a win soon!!",
+      ]), 4500);
+    if (ev === 'push' && Math.random() < 0.7)
+      return say(abR([
+        "TIE!! mutual respect achieved lol\nnoone wins, noone loses. very zen.",
+        "push!! a draw!! both of u r equally\nimpressive. and equally not-winning lol",
+      ]), 4000);
+  };
+
   // Idle chatter
   function scheduleIdle() {
     clearTimeout(idleTmr);
@@ -7747,6 +7910,7 @@ let slotsBet = 5, slotsSpinning = false;
 let _slotsInited = false;
 
 function toggleSlots() {
+  window.abSaySlots?.('open');
   const w = document.getElementById('slots-wrap');
   const open = w.classList.toggle('open');
   if (open && !_slotsInited) { _slotsInited = true; initSlots(); }
@@ -7822,6 +7986,7 @@ function evaluateSlots(syms) {
     const mult = SLOT_PAYS[a] || 3;
     win = slotsBet * mult;
     msg = `JACKPOT! ${a}${b}${c} +${win}`;
+    setTimeout(() => window.abSaySlots?.('jackpot', `${a}${b}${c} +${win} credits`), 800);
     unlockTheme('neon');
     // Announce jackpot in global chat
     setTimeout(() => {
@@ -7831,6 +7996,7 @@ function evaluateSlots(syms) {
   } else if (a === b || b === c || a === c) {
     win = slotsBet;
     msg = `Match! +${win}`;
+    setTimeout(() => window.abSaySlots?.('win'), 500);
   }
   slotsCredits += win;
   if (slotsCredits <= 0) { slotsCredits = 20; msg += ' (refill!)'; }
@@ -7843,6 +8009,7 @@ function evaluateSlots(syms) {
     playFanfare(isJackpot ? 'jackpot' : 'small');
   } else {
     playTone(120, 0.3, 'sawtooth', 0.12);
+    setTimeout(() => window.abSaySlots?.('lose'), 300);
   }
 }
 
@@ -9423,9 +9590,9 @@ function openPicross(show = true) {
   const w = document.getElementById('picross-wrap');
   if (show === false) { w.classList.remove('open'); return; }
   w.classList.toggle('open');
-  if (w.classList.contains('open') && !_picrossInited) {
-    _picrossInited = true;
-    picrossNewPuzzle();
+  if (w.classList.contains('open')) {
+    window.abSayPicross?.('open');
+    if (!_picrossInited) { _picrossInited = true; picrossNewPuzzle(); }
   }
 }
 function loadPicrossPuzzle(puzzle) {
@@ -9443,6 +9610,7 @@ function picrossNewPuzzle() {
 function picrossOnWin() {
   unlockTheme('pixel');
   playFanfare('win');
+  setTimeout(() => window.abSayPicross?.('solved', _pcPuzzle?.name || null), 700);
 }
 function pcGetClues(arr, size, isRow) {
   const clues = [];
@@ -9548,8 +9716,13 @@ function checkPicross() {
   const status = document.getElementById('picross-status');
   if (allCorrect && _pcUserGrid.filter((v,i)=>v===1&&_pcSolution[i]===1).length===_pcSolution.filter(v=>v===1).length) {
     status.textContent = '🎉 Puzzle solved!';
+    picrossOnWin();
+  } else if (allCorrect) {
+    status.textContent = '✓ No errors so far!';
+    window.abSayPicross?.('ok');
   } else {
-    status.textContent = allCorrect ? '✓ No errors so far!' : '✗ Some squares are wrong';
+    status.textContent = '✗ Some squares are wrong';
+    window.abSayPicross?.('errors');
   }
 }
 function resetPicross() {
@@ -9589,7 +9762,7 @@ function openSolitaire(show=true){
   const w=document.getElementById('solitaire-wrap');
   if(show===false){w.classList.remove('open');return;}
   w.classList.toggle('open');
-  if(w.classList.contains('open')&&!_solitaireInited){_solitaireInited=true;newSolitaireGame();}
+  if(w.classList.contains('open')){window.abSaySolitaire?.('open'); if(!_solitaireInited){_solitaireInited=true;newSolitaireGame();}}
 }
 
 function solSetDifficulty(v){
@@ -9871,6 +10044,7 @@ function solRemoveCards(ptype,pidx,cidx){
 function solOnWin(){
   unlockTheme('retro');
   playFanfare('win');
+  setTimeout(() => window.abSaySolitaire?.('win', solMoves + ' moves'), 600);
   alert('You win! Completed in '+solMoves+' moves.');
 }
 
@@ -9980,6 +10154,7 @@ let minesW=9, minesH=9, minesCt=10;
 let minesStarted=false, minesOver=false, minesTimerInt=null, minesSeconds=0, minesFlagCount=0;
 
 function openMines(show=true){
+  if(show!==false) window.abSayMines?.('open');
   const w=document.getElementById('mines-wrap');
   if(show===false){w.classList.remove('open');w.style.display='none';minesStopTimer();return;}
   const wasOpen=w.classList.contains('open');
@@ -10129,6 +10304,7 @@ function minesRightClick(x,y){
   minesFlagCount+=minesFlagged[y][x]?1:-1;
   minesUpdateCounter();
   minesUpdateCell(x,y);
+  if(minesFlagged[y][x]) window.abSayMines?.('flag');
 }
 
 function minesReveal(x,y){
@@ -10178,6 +10354,7 @@ function minesGameOver(hx,hy){
   minesOver=true;
   minesStopTimer();
   playTone(120, 0.4, 'sawtooth', 0.3);
+  setTimeout(() => window.abSayMines?.('boom', minesSeconds > 0 ? minesSeconds + 's' : null), 500);
   const s=document.getElementById('mines-smiley');
   if(s) s.textContent='😵';
   // Reveal all mines
@@ -10214,6 +10391,7 @@ function minesCheckWin(){
     minesFlagCount=minesCt;
     minesUpdateCounter();
     playFanfare('win');
+    setTimeout(() => window.abSayMines?.('win', minesSeconds + 's'), 600);
     setTimeout(function(){alert('You win! Time: '+minesSeconds+'s');},100);
   }
 }
@@ -10269,7 +10447,7 @@ function openBlackjack(show=true){
   w.classList.toggle('open');
   if(w.classList.contains('open')){
     w.style.display='flex';
-    if(!wasOpen){
+    if(!wasOpen){ window.abSayBJ?.('open');
       bjBalance=100;
       bjUpdateBalance();
       bjSetStatus('');
@@ -10346,6 +10524,7 @@ function bjDeal(){
     bjBalance+=Math.floor(bjBet*1.5);
     bjUpdateBalance();
     playFanfare('win');
+    setTimeout(() => window.abSayBJ?.('blackjack'), 700);
     bjSetStatus('Blackjack! You win '+Math.floor(bjBet*1.5)+' credits!');
     bjShowActions(false);
     bjRender();
@@ -10379,6 +10558,7 @@ function bjHit(){
     bjBalance-=bjBet;
     bjUpdateBalance();
     playTone(150, 0.3, 'sawtooth', 0.25);
+    setTimeout(() => window.abSayBJ?.('bust'), 400);
     bjSetStatus('Bust! You lose '+bjBet+' credits.');
     bjShowActions(false);
   } else if(total===21){
@@ -10405,13 +10585,16 @@ function bjStand(){
     bjBalance+=bjBet;
     bjUpdateBalance();
     playFanfare('small');
+    setTimeout(() => window.abSayBJ?.('win', '+'+bjBet+' credits'), 500);
     bjSetStatus('You win '+bjBet+' credits! (Player: '+pt+', Dealer: '+dt+')');
   } else if(pt===dt){
+    window.abSayBJ?.('push');
     bjSetStatus('Push! ('+pt+' vs '+dt+')');
   } else {
     bjBalance-=bjBet;
     bjUpdateBalance();
     playTone(150, 0.3, 'sawtooth', 0.25);
+    setTimeout(() => window.abSayBJ?.('lose'), 400);
     bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
   }
   bjRender();

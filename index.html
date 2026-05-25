@@ -2444,6 +2444,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
     #apps-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
     #apps-btn.open { background:rgba(255,255,255,0.32); border-color:rgba(255,255,255,0.75); }
+    #apps-menu-wrap { position:relative; z-index:1200; }
     #apps-menu {
       visibility:hidden; opacity:0; pointer-events:none;
       position:absolute; top:calc(100% + 8px); right:0;
@@ -2454,7 +2455,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       box-shadow: 0 20px 60px rgba(0,50,140,0.26), 0 4px 16px rgba(0,80,180,0.14);
       backdrop-filter:blur(24px) saturate(1.4);
       display:flex; flex-direction:column;
-      z-index:600;
+      z-index:1200;
       transform:translateY(-8px) scale(0.97);
       transition: opacity .2s ease, transform .2s cubic-bezier(.34,1.4,.64,1), visibility .2s;
     }
@@ -2714,30 +2715,54 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
-    body.theater-mode #main,
     body.theater-mode #hdr,
     body.theater-mode #board-wrap,
     body.theater-mode #mob-tools-bar,
-    body.theater-mode #mob-tab-bar {
+    body.theater-mode #mob-tab-bar,
+    body.theater-mode #left,
+    body.theater-mode #right {
       display: none !important;
     }
     body.theater-mode #app {
       padding: 0 !important;
       gap: 0 !important;
     }
-    body.theater-mode #player-bubble,
-    body.theater-mode #player-bubble > * {
+    body.theater-mode #main {
+      display: block !important;
+      padding: 0 !important;
+      gap: 0 !important;
+      height: 100vh !important;
+    }
+    body.theater-mode #center {
+      display: block !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: visible !important;
+    }
+    body.theater-mode #player-bubble {
       position: fixed !important;
       top: 0 !important; left: 0 !important;
       width: 100vw !important; height: 100vh !important;
       z-index: 500 !important;
       border-radius: 0 !important;
       max-height: none !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    body.theater-mode #player-bubble > * {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
     }
     body.theater-mode #yt-player iframe,
     body.theater-mode #yt-player {
       width: 100% !important;
       height: 100% !important;
+      flex: 1 !important;
       border-radius: 0 !important;
     }
     #theater-controls {

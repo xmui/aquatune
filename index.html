@@ -2953,6 +2953,16 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
     .sol-card.selected { outline:2px solid #ffd700; z-index:20 !important; }
     .sol-card.dragging { opacity:0.5; }
+    @keyframes cardFlip {
+      0%   { transform:perspective(300px) rotateY(-90deg); opacity:0.5; }
+      100% { transform:perspective(300px) rotateY(0deg); opacity:1; }
+    }
+    .sol-card.flip-anim { animation:cardFlip 0.18s ease-out; }
+    @keyframes bjDeal {
+      0%   { transform:perspective(300px) rotateY(-90deg) translateY(-8px); opacity:0; }
+      100% { transform:perspective(300px) rotateY(0deg) translateY(0); opacity:1; }
+    }
+    .sol-card.deal-anim { animation:bjDeal 0.22s ease-out; }
     .sol-card-top { font-size:13px; font-weight:bold; line-height:1.1; }
     .sol-card-suit { font-size:16px; line-height:1; text-align:center; margin-top:2px; }
     .sol-card.red .sol-card-top, .sol-card.red .sol-card-suit { color:#c00; }
@@ -9776,9 +9786,34 @@ const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SOL_RED   = new Set(['♥','♦']);
 let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
 let solSelected=null, solMoves=0;
-let solDrawCount=1, solMaxPasses=999, solStockPasses=0;
-let solDragState=null;
+let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
+let solDragState=null, solUndoStack=[], solFlipSet=new Set();
 let _solitaireInited=false;
+
+function solSaveState() {
+  solUndoStack.push({
+    stock:       solStock.map(c=>({...c})),
+    waste:       solWaste.map(c=>({...c})),
+    foundations: solFoundations.map(f=>f.map(c=>({...c}))),
+    tableau:     solTableau.map(t=>t.map(c=>({...c}))),
+    moves:  solMoves,
+    passes: solStockPasses,
+  });
+  if (solUndoStack.length > 60) solUndoStack.shift();
+}
+
+function solUndo() {
+  if (!solUndoStack.length) { playTone(200, 0.1, 'sine', 0.08); return; }
+  const s = solUndoStack.pop();
+  solStock       = s.stock;
+  solWaste       = s.waste;
+  solFoundations = s.foundations;
+  solTableau     = s.tableau;
+  solMoves       = s.moves;
+  solStockPasses = s.passes;
+  solSelected    = null;
+  solRender();
+}
 
 function openSolitaire(show=true){
   const w=document.getElementById('solitaire-wrap');
@@ -9815,7 +9850,7 @@ function newSolitaireGame(){
   }
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
-  solSelected=null; solMoves=0; solStockPasses=0;
+  solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
   solRender();
 }
 
@@ -9823,6 +9858,7 @@ function solCardEl(card, idx, pileType, pileIdx, zBase){
   const d=document.createElement('div');
   d.className='sol-card'+(card.face?'':' face-down');
   if(card.face) d.classList.add(SOL_RED.has(card.s)?'red':'black');
+  if(card.face && solFlipSet.has(card.s+card.v)) d.classList.add('flip-anim');
   if(card.face){
     d.innerHTML='<span class="sol-card-top">'+card.v+'<br>'+card.s+'</span>';
   }
@@ -9833,6 +9869,7 @@ function solCardEl(card, idx, pileType, pileIdx, zBase){
   const selOk=solSelected&&solSelected.ptype===pileType&&solSelected.pidx===pileIdx&&solSelected.cidx===idx;
   if(selOk) d.classList.add('selected');
   d.addEventListener('click',function(e){e.stopPropagation();solClickCard(pileType,pileIdx,idx);});
+  d.addEventListener('dblclick',function(e){e.stopPropagation();if(card.face)solAutoFoundation(pileType,pileIdx,idx);});
   d.addEventListener('mousedown',function(e){
     if(e.button!==0) return;
     if(!card.face) return;
@@ -9929,8 +9966,12 @@ function solRender(){
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){
-    setTimeout(function(){solOnWin();},100);
+    if(!_solAutoCompleting) setTimeout(function(){solOnWin();},100);
+    else { _solAutoCompleting=false; setTimeout(function(){solOnWin();},100); }
+  } else {
+    solCheckAutoComplete();
   }
+  setTimeout(function(){solFlipSet.clear();},50);
 }
 
 function solClickEmptyTableau(t){
@@ -9941,6 +9982,12 @@ function solClickEmptyTableau(t){
 function solClickFoundation(idx){
   if(!solSelected) return;
   solTryMove(solSelected.ptype,solSelected.pidx,solSelected.cidx,'foundation',idx);
+}
+
+function solAutoFoundation(ptype,pidx,cidx){
+  for(let f=0;f<4;f++){
+    if(solTryMove(ptype,pidx,cidx,'foundation',f)) return;
+  }
 }
 
 function solGetCards(ptype,pidx,cidx){
@@ -9984,6 +10031,7 @@ function solDrawCard(){
   if(solStockPasses>=solMaxPasses&&solStock.length===0){
     return;
   }
+  solSaveState();
   if(!solStock.length){
     solStock=[...solWaste].reverse().map(function(c){return Object.assign({},c,{face:false});});
     solWaste=[];
@@ -9993,6 +10041,7 @@ function solDrawCard(){
     for(let i=0;i<toDraw;i++){
       const c=solStock.pop();
       c.face=true;
+      solFlipSet.add(c.s+c.v);
       solWaste.push(c);
     }
     solMoves++;
@@ -10007,7 +10056,7 @@ function solClickCard(ptype,pidx,cidx){
   if(!card) return;
   if(!card.face){
     if(ptype==='tableau'&&cidx===pile.length-1){
-      pile[cidx].face=true; solMoves++; solSelected=null; solRender();
+      solSaveState(); pile[cidx].face=true; solFlipSet.add(pile[cidx].s+pile[cidx].v); solMoves++; solSelected=null; solRender();
     }
     return;
   }
@@ -10024,6 +10073,7 @@ function solClickCard(ptype,pidx,cidx){
 }
 
 function solTryMove(fromPtype,fromPidx,fromCidx,toPtype,toPidx){
+  solSaveState();
   const cards=solGetCards(fromPtype,fromPidx,fromCidx);
   if(!cards||!cards.length){solSelected=null;solRender();return false;}
   const top=cards[0];
@@ -10049,7 +10099,7 @@ function solTryMove(fromPtype,fromPidx,fromCidx,toPtype,toPidx){
     playTone(440, 0.05, 'sine', 0.1);
     if(fromPtype==='tableau'){
       const src=solTableau[fromPidx];
-      if(src.length&&!src[src.length-1].face) src[src.length-1].face=true;
+      if(src.length&&!src[src.length-1].face){ src[src.length-1].face=true; solFlipSet.add(src[src.length-1].s+src[src.length-1].v); }
     }
   }
   solSelected=null;
@@ -10063,11 +10113,58 @@ function solRemoveCards(ptype,pidx,cidx){
   else if(ptype==='tableau'){ solTableau[pidx].splice(cidx); }
 }
 
+let _solAutoCompleting=false;
+
+function solCheckAutoComplete(){
+  if(_solAutoCompleting) return;
+  if(solStock.length||solWaste.length) return;
+  const allFaceUp=solTableau.every(function(pile){return pile.every(function(c){return c.face;});});
+  if(!allFaceUp) return;
+  if(solFoundations.every(function(f){return f.length===13;})) return;
+  _solAutoCompleting=true;
+  const st=document.getElementById('sol-status');
+  if(st) st.textContent='Auto-completing…';
+  setTimeout(solRunAutoComplete,200);
+}
+
+function solRunAutoComplete(){
+  if(solFoundations.every(function(f){return f.length===13;})){
+    _solAutoCompleting=false;
+    solRender();
+    return;
+  }
+  let moved=false;
+  outer:for(let t=0;t<7;t++){
+    const pile=solTableau[t];
+    if(!pile.length) continue;
+    const card=pile[pile.length-1];
+    for(let f=0;f<4;f++){
+      if(solCanFoundation(card,f)){
+        pile.pop();
+        solFoundations[f].push(card);
+        solFlipSet.add(card.s+card.v);
+        solRender();
+        moved=true;
+        break outer;
+      }
+    }
+  }
+  if(!moved){
+    _solAutoCompleting=false;
+    return;
+  }
+  setTimeout(solRunAutoComplete,80);
+}
+
 function solOnWin(){
   unlockTheme('retro');
   playFanfare('win');
-  setTimeout(() => window.abSaySolitaire?.('win', solMoves + ' moves'), 600);
-  alert('You win! Completed in '+solMoves+' moves.');
+  setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
+  const banner=document.createElement('div');
+  banner.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);border-radius:inherit;z-index:200;color:#fff;font-size:22px;font-weight:bold;text-align:center;flex-direction:column;gap:8px;pointer-events:none;';
+  banner.innerHTML='<div>🎉 You Win!</div><div style="font-size:13px;opacity:.85">'+solMoves+' moves</div>';
+  const wrap=document.getElementById('solitaire-wrap');
+  if(wrap){wrap.style.position='relative';wrap.appendChild(banner);setTimeout(function(){banner.remove();},3500);}
 }
 
 // ── SOLITAIRE DRAG ────────────────────────────────────
@@ -10460,6 +10557,7 @@ const BJ_SUITS=['♠','♥','♦','♣'];
 const BJ_VALS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 let bjDeck=[], bjDealerHand=[], bjPlayerHand=[];
 let bjBalance=100, bjBet=10, bjGameOver=true;
+let _bjAnimDealer=0, _bjAnimPlayer=0;
 let bjDealerHoleShown=false;
 
 function openBlackjack(show=true){
@@ -10523,6 +10621,7 @@ function bjDeal(){
   bjDealerHand.push(hole,bjDeck.pop());
   bjSetStatus('');
   playTone(600, 0.06, 'sine', 0.12);
+  _bjAnimDealer=2; _bjAnimPlayer=2;
   bjRender();
   // Check natural BJ
   const pt=bjHandTotal(bjPlayerHand);
@@ -10572,6 +10671,7 @@ function bjHit(){
   if(bjGameOver) return;
   bjEnsureDeck();
   bjPlayerHand.push(bjDeck.pop());
+  _bjAnimPlayer=1;
   const total=bjHandTotal(bjPlayerHand);
   if(total>21){
     bjDealerHoleShown=true;
@@ -10594,11 +10694,13 @@ function bjStand(){
   if(bjGameOver) return;
   bjDealerHoleShown=true;
   bjDealerHand[0].hidden=false;
+  const _bjDealerPrev=bjDealerHand.length;
   // Dealer plays
   while(bjHandTotal(bjDealerHand)<17){
     bjEnsureDeck();
     bjDealerHand.push(bjDeck.pop());
   }
+  _bjAnimDealer=bjDealerHand.length-_bjDealerPrev+1;
   const pt=bjHandTotal(bjPlayerHand);
   const dt=bjHandTotal(bjDealerHand);
   bjGameOver=true;
@@ -10628,6 +10730,7 @@ function bjDouble(){
   bjBet*=2;
   bjEnsureDeck();
   bjPlayerHand.push(bjDeck.pop());
+  _bjAnimPlayer=1;
   const total=bjHandTotal(bjPlayerHand);
   if(total>21){
     bjDealerHoleShown=true;
@@ -10663,8 +10766,17 @@ function bjRender(){
   const pc=document.getElementById('bj-player-cards');
   if(!dc||!pc) return;
   dc.innerHTML=''; pc.innerHTML='';
-  bjDealerHand.forEach(function(c){dc.appendChild(bjCardEl(c));});
-  bjPlayerHand.forEach(function(c){pc.appendChild(bjCardEl(c));});
+  bjDealerHand.forEach(function(c,i){
+    const el=bjCardEl(c);
+    if(i>=bjDealerHand.length-_bjAnimDealer) el.classList.add('deal-anim');
+    dc.appendChild(el);
+  });
+  bjPlayerHand.forEach(function(c,i){
+    const el=bjCardEl(c);
+    if(i>=bjPlayerHand.length-_bjAnimPlayer) el.classList.add('deal-anim');
+    pc.appendChild(el);
+  });
+  _bjAnimDealer=0; _bjAnimPlayer=0;
   const ds=document.getElementById('bj-dealer-score');
   const ps=document.getElementById('bj-player-score');
   if(ds) ds.textContent=bjDealerHoleShown?'Total: '+bjHandTotal(bjDealerHand):'Showing: '+bjCardVal(bjDealerHand[1]||{v:'0',s:''});
@@ -11021,9 +11133,10 @@ function bjUpdateBalance(){
     <div style="display:flex;gap:4px;align-items:center">
       <select id="sol-diff" onchange="solSetDifficulty(this.value)" style="font-size:10px;padding:1px 2px;font-family:Arial">
         <option value="1">Draw 1</option>
-        <option value="3">Draw 3</option>
+        <option value="3" selected>Draw 3</option>
         <option value="hard">Hard</option>
       </select>
+      <button class="sol-titlebtn" onclick="solUndo()">↩</button>
       <button class="sol-titlebtn" onclick="newSolitaireGame()">New</button>
       <button class="sol-titlebtn sol-close" onclick="openSolitaire(false)">×</button>
     </div>

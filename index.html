@@ -4697,23 +4697,27 @@ function restoreSession() {
 setInterval(saveSession, 10000);
 window.addEventListener('beforeunload', saveSession);
 let _wasPlayingBeforeHide = false;
+let _resumeRetryTimer = null;
 document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     _wasPlayingBeforeHide = playing;
+    clearInterval(_resumeRetryTimer);
     if (window._canControl && window._currentRoomId) window.broadcastRoomState?.();
   } else {
-    // Resume playback if the browser auto-paused when the tab was hidden
+    // On return: retry until playback confirms — mobile JS was suspended so
+    // the in-flight 80ms counter never ran
     if (_wasPlayingBeforeHide) {
       _wasPlayingBeforeHide = false;
-      setTimeout(() => {
-        if (!playing) {
-          if (currentSource === 'soundcloud' && scWidget && scReady) {
-            try { scWidget.play(); } catch(e) {}
-          } else if (player && ready) {
-            try { player.playVideo(); } catch(e) {}
-          }
+      let attempts = 0;
+      clearInterval(_resumeRetryTimer);
+      _resumeRetryTimer = setInterval(() => {
+        if (playing || ++attempts > 15) { clearInterval(_resumeRetryTimer); return; }
+        if (currentSource === 'soundcloud' && scWidget && scReady) {
+          try { scWidget.play(); } catch(_) {}
+        } else if (player && ready) {
+          try { player.playVideo(); } catch(_) {}
         }
-      }, 250);
+      }, 150);
     }
   }
 });
@@ -4759,6 +4763,7 @@ function onState(e) {
     playing = true; document.getElementById('play-btn').classList.add('playing'); startProg();
     if (rBtn) rBtn.textContent = '⏸';
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     // If tab is hidden and we were playing, this is an unwanted auto-pause — fight it
@@ -4769,6 +4774,7 @@ function onState(e) {
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     if (window._canControl && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();

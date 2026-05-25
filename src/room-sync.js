@@ -86,7 +86,16 @@ function renderMembersPanel() {
   const list = document.getElementById('room-members-list');
   if (!list) return;
   list.innerHTML = '';
-  Object.entries(_presenceMap).forEach(([uid, info]) => {
+  // Filter out stale presence entries (no heartbeat for >90s)
+  const now = Date.now();
+  const activePresence = Object.fromEntries(
+    Object.entries(_presenceMap).filter(([, info]) => !info.lastSeen || (now - info.lastSeen) < 90000)
+  );
+  // Update badge count with active members only
+  const countEl = document.getElementById('room-badge-members');
+  if (countEl) countEl.textContent = `👤 ${Object.keys(activePresence).length}`;
+
+  Object.entries(activePresence).forEach(([uid, info]) => {
     const isSelf     = uid === myUserId;
     const isHost     = uid === _roomHostUserId;
     const hasControl = !!_permissionMap[uid]?.canControl || isHost;
@@ -96,9 +105,9 @@ function renderMembersPanel() {
     let actionHtml = '';
     if (window._isRoomHost && !isSelf && !isHost) {
       if (hasControl) {
-        actionHtml = `<button class="room-member-btn revoke" onclick="window.revokeControl('${uid}')">Revoke</button>`;
+        actionHtml = `<button class="room-member-btn revoke" onclick="window.revokeControl('${uid}')">Revoke</button><button class="room-member-btn revoke" onclick="window.kickUser('${uid}')">Kick</button>`;
       } else {
-        actionHtml = `<button class="room-member-btn" onclick="window.grantControl('${uid}')">Give DJ 🎮</button>`;
+        actionHtml = `<button class="room-member-btn" onclick="window.grantControl('${uid}')">DJ 🎮</button><button class="room-member-btn revoke" onclick="window.kickUser('${uid}')">Kick</button>`;
       }
     }
     row.innerHTML = `
@@ -130,10 +139,7 @@ window.initRoom = function(roomId, isHost) {
   // Watch presence for member count + panel
   onValue(ref(db, `rooms/${roomId}/presence`), snap => {
     _presenceMap = snap.exists() ? snap.val() : {};
-    const count = Object.keys(_presenceMap).length;
-    const el = document.getElementById('room-badge-members');
-    if (el) el.textContent = `👤 ${count}`;
-    renderMembersPanel();
+    renderMembersPanel(); // count update happens inside renderMembersPanel now
   });
 
   // Watch permissions
@@ -187,6 +193,25 @@ window.initRoom = function(roomId, isHost) {
     if (p && window.appendRoomChatMsg) window.appendRoomChatMsg(p);
   });
 
+  // Guests listen for being kicked
+  if (!isHost) {
+    onValue(ref(db, `rooms/${roomId}/kicked/${myUserId}`), snap => {
+      if (snap.exists()) {
+        if (window.toast) window.toast('You were removed from the room by the host.');
+        setTimeout(() => window.leaveRoom(), 1500);
+      }
+    });
+  }
+
+  // Host: periodic heartbeat broadcast for late-joiners and drift correction
+  if (isHost) {
+    setInterval(function() {
+      if (window._canControl && window._currentRoomId && !window._applyingRemote) {
+        window.broadcastRoomState?.();
+      }
+    }, 15000);
+  }
+
   // Update header badge
   const badge  = document.getElementById('room-badge');
   const codeEl = document.getElementById('room-badge-code');
@@ -204,6 +229,13 @@ window.grantControl = function(userId) {
 
 window.revokeControl = function(userId) {
   if (!window._isRoomHost || !window._currentRoomId) return;
+  remove(ref(db, `rooms/${window._currentRoomId}/permissions/${userId}`));
+};
+
+window.kickUser = function(userId) {
+  if (!window._isRoomHost || !window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/kicked/${userId}`), { kickedAt: Date.now() });
+  remove(ref(db, `rooms/${window._currentRoomId}/presence/${userId}`));
   remove(ref(db, `rooms/${window._currentRoomId}/permissions/${userId}`));
 };
 

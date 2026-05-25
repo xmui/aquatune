@@ -3724,6 +3724,11 @@ body.perf-mode #aqua-gun { display: none !important; }
         <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
       </label>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:8px">
+      <label style="white-space:nowrap;color:var(--text2);width:52px">🎮 SFX</label>
+      <input type="range" id="game-vol-rng" min="0" max="100" value="100" oninput="setGameVol(this.value/100);document.getElementById('game-vol-val').textContent=this.value+'%'" style="flex:1;accent-color:var(--accent)">
+      <span id="game-vol-val" style="width:30px;text-align:right;color:var(--text);font-weight:700">100%</span>
+    </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
       <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;align-items:center;gap:8px;font-size:11px">
@@ -9167,12 +9172,18 @@ function switchBoardTab(tab) {
 }
 
 /* ── GAME AUDIO HELPERS ── */
+let _gameVol = parseFloat(localStorage.getItem('aq_game_vol') ?? '1');
+function setGameVol(v) {
+  _gameVol = Math.max(0, Math.min(1, +v));
+  localStorage.setItem('aq_game_vol', _gameVol);
+}
 function playTone(freq, dur=0.1, type='sine', vol=0.18) {
+  if (_gameVol === 0) return;
   try {
     const cx = initActx();
     const osc = cx.createOscillator(), g = cx.createGain();
     osc.type = type; osc.frequency.value = freq;
-    g.gain.setValueAtTime(vol, cx.currentTime);
+    g.gain.setValueAtTime(vol * _gameVol, cx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, cx.currentTime + dur);
     osc.connect(g); g.connect(cx.destination);
     osc.start(); osc.stop(cx.currentTime + dur + 0.01);
@@ -9181,16 +9192,18 @@ function playTone(freq, dur=0.1, type='sine', vol=0.18) {
 
 // Tiered chiptune fanfare: 'small' | 'win' | 'jackpot'
 function playFanfare(level = 'win') {
+  if (_gameVol === 0) return;
   try {
     const cx = initActx();
     const t = cx.currentTime;
     const note = (freq, start, dur, type='square', vol=0.18, slide=0) => {
       const o = cx.createOscillator(), g = cx.createGain();
+      const v = vol * _gameVol;
       o.type = type; o.frequency.setValueAtTime(freq, t + start);
       if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
       g.gain.setValueAtTime(0, t + start);
-      g.gain.linearRampToValueAtTime(vol, t + start + 0.01);
-      g.gain.setValueAtTime(vol, t + start + dur * 0.7);
+      g.gain.linearRampToValueAtTime(v, t + start + 0.01);
+      g.gain.setValueAtTime(v, t + start + dur * 0.7);
       g.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
       o.connect(g); g.connect(cx.destination);
       o.start(t + start); o.stop(t + start + dur + 0.02);
@@ -9541,6 +9554,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init perf mode checkbox
   const perfChk = document.getElementById('perf-mode-chk');
   if (perfChk) perfChk.checked = _perfMode;
+
+  // Init game volume slider
+  const gvRng = document.getElementById('game-vol-rng');
+  const gvVal = document.getElementById('game-vol-val');
+  if (gvRng) { gvRng.value = Math.round(_gameVol * 100); }
+  if (gvVal) { gvVal.textContent = Math.round(_gameVol * 100) + '%'; }
 
   // Init remote mode
   const remoteChk = document.getElementById('remote-mode-chk');

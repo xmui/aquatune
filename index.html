@@ -7227,6 +7227,7 @@ function toggleTheater() {
     document.addEventListener('keydown', theaterEscKey);
     _theaterUpdateTimer = setInterval(updateTheaterControls, 500);
     updateTheaterControls();
+    updateTheaterChatLabel();
     // Show controls briefly on enter
     const ctrl = document.getElementById('theater-controls');
     if (ctrl) {
@@ -7265,6 +7266,14 @@ function toggleTheaterChat() {
   panel.classList.toggle('collapsed');
   const btn = panel.querySelector('button[onclick="toggleTheaterChat()"]');
   if (btn) btn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+function updateTheaterChatLabel() {
+  const title = document.getElementById('theater-chat-title');
+  const inp   = document.getElementById('theater-chat-input');
+  const inRoom = !!window._currentRoomId;
+  if (title) title.textContent = inRoom ? '💬 Chat (global + room)' : '💬 Chat';
+  if (inp)   inp.placeholder   = inRoom ? 'Message room…' : 'Message…';
 }
 
 function updateTheaterControls() {
@@ -8665,19 +8674,20 @@ function renderChatMsg(logEl, p) {
   logEl.scrollTop = 99999;
 }
 
-function renderTheaterChatMsg(p) {
+function renderTheaterChatMsg(p, isRoom) {
   const log = document.getElementById('theater-chat-log');
   if (!log) return;
   const name = p.username || p.name || 'Anonymous';
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
   const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '');
   const msgHtml = msnEmoji(esc(rawMsg));
+  const badge = isRoom ? `<span style="font-size:9px;background:rgba(0,180,100,0.35);color:#7fe;border-radius:4px;padding:0 4px;margin-left:4px;font-weight:700">room</span>` : '';
   const div = document.createElement('div');
   div.className = 'th-msg';
   div.innerHTML = `
     <div class="th-msg-av" style="background:${color}">${esc(name[0].toUpperCase())}</div>
     <div class="th-msg-body">
-      <div class="th-msg-name" style="color:${color}">${esc(name)}</div>
+      <div class="th-msg-name" style="color:${color}">${esc(name)}${badge}</div>
       <div class="th-msg-text">${msgHtml}${p.imageData ? `<br><img src="${p.imageData}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
     </div>`;
   log.appendChild(div);
@@ -8688,7 +8698,11 @@ function sendTheaterChatMsg() {
   const inp = document.getElementById('theater-chat-input');
   const msg = inp?.value.trim();
   if (!msg) return;
-  window.sendGlobalMessage?.(msg);
+  if (window._currentRoomId) {
+    window.sendRoomMessage?.(msg);
+  } else {
+    window.sendGlobalMessage?.(msg);
+  }
   if (inp) inp.value = '';
 }
 
@@ -8698,10 +8712,10 @@ window.appendRoomChatMsg = function(p) {
     const placeholder = log.querySelector('div[style]');
     if (placeholder) placeholder.remove();
     renderChatMsg(log, p);
-    // Play notification tone for others' messages
     const myName = localStorage.getItem('aq_username');
     if (p.username !== myName) playChatTone();
   }
+  renderTheaterChatMsg(p, true);
 };
 
 function sendGlobalChatMsg() {
@@ -10389,7 +10403,7 @@ function bjUpdateBalance(){
 </div>
 <div id="theater-chat-panel">
   <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-    <span class="th-chat-content" style="color:#fff;font-size:12px;font-weight:bold">💬 Chat</span>
+    <span id="theater-chat-title" class="th-chat-content" style="color:#fff;font-size:12px;font-weight:bold">💬 Chat</span>
     <button onclick="toggleTheaterChat()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:14px;line-height:1" title="Collapse chat">◀</button>
   </div>
   <div id="theater-chat-log" class="th-chat-content"></div>

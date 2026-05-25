@@ -4317,13 +4317,13 @@ function setRemoteMode(on) {
   if (on) {
     // Grant control so remote device can broadcast room commands
     if (window._currentRoomId) window._canControl = true;
-    try { player.setVolume(0); } catch(e) {}
+    try { player.mute(); player.setVolume(0); } catch(e) {}
     try { if (scWidget && scReady) scWidget.setVolume(0); } catch(e) {}
   } else {
     // Restore control flag based on actual room role
     if (window._currentRoomId) window._canControl = window._isRoomHost || false;
     const vol = parseInt(localStorage.getItem('aq_vol') || '80');
-    try { player.setVolume(vol); } catch(e) {}
+    try { player.unMute(); player.setVolume(vol); } catch(e) {}
     try { if (scWidget && scReady) scWidget.setVolume(vol); } catch(e) {}
     const volSlider = document.getElementById('vol');
     if (volSlider) volSlider.value = vol;
@@ -5981,9 +5981,8 @@ function toggleAutomix() {
 }
 function setVol(v) {
   localStorage.setItem('aq_vol', String(+v));
-  if (_remoteMode) return; // Remote mode: keep muted
-  if (ready) player.setVolume(+v);
-  if (scWidget && scReady) scWidget.setVolume(+v);
+  if (ready) { if (_remoteMode) { player.mute(); } else { player.setVolume(+v); } }
+  if (scWidget && scReady && !_remoteMode) scWidget.setVolume(+v);
 }
 function seekClick(e) {
   if (_guestBlocked()) return;

@@ -1002,7 +1002,7 @@
     }
     .board-emoji-btn:hover { background:rgba(0,104,184,0.12); }
     [data-scheme=dark] .board-emoji-bar { background:rgba(8,18,45,0.7); }
-    .msn-em { width:18px; height:18px; vertical-align:middle; display:inline-block; }
+    .msn-em { width:18px; height:18px; display:inline-block; vertical-align:middle; background-size:contain; background-repeat:no-repeat; background-position:center; flex-shrink:0; }
     .emoji-toggle-btn {
       flex-shrink:0; background:none; border:1.5px solid var(--border); border-radius:6px;
       cursor:pointer; padding:3px 6px; font-size:14px; line-height:1; color:var(--text2);
@@ -2942,8 +2942,9 @@ body.perf-mode #aqua-gun { display: none !important; }
       border:1px solid #000; background:#fff;
       cursor:pointer; padding:2px 4px; box-sizing:border-box;
       display:flex; flex-direction:column; user-select:none;
-      font-family:Arial,sans-serif;
+      font-family:Arial,sans-serif; touch-action:none;
     }
+    .sol-col { touch-action: none; }
     .sol-card.face-down {
       background:#1050b0;
       background-image:
@@ -3200,6 +3201,10 @@ body.perf-mode #aqua-gun { display: none !important; }
       z-index: 9998;
       pointer-events: none;
     }
+    body.remote-mode #player-bubble { display:none !important; }
+    body.remote-mode #ctrl-bubble { display:none !important; }
+    body.remote-mode #viz-wrap { display:none !important; }
+    body.remote-mode #remote-now-playing { display:flex !important; }
 
 /* ── FROST THEME — DARKER HEADER ── */
 [data-era=frost] #logo img {
@@ -3591,6 +3596,15 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     <!-- CENTER: player + info + visualizer + controls -->
     <div id="center">
+  <div id="remote-now-playing" style="display:none;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:10px;margin-bottom:6px;">
+    <img id="remote-thumb" style="width:52px;height:39px;border-radius:5px;object-fit:cover;flex-shrink:0" src="" alt="">
+    <div style="flex:1;min-width:0;">
+      <div id="remote-title" style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">Nothing playing</div>
+      <div id="remote-ch" style="font-size:10px;opacity:.65;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)"></div>
+    </div>
+    <button onclick="togglePlay()" style="font-size:18px;background:none;border:none;cursor:pointer;padding:2px 6px;" title="Play/Pause">⏯</button>
+    <button onclick="nextVid()" style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px 6px;" title="Next">⏭</button>
+  </div>
       <div id="player-bubble">
         <div id="yt-player"></div>
         <div id="sc-player"><iframe id="sc-frame" scrolling="no" allow="autoplay"></iframe></div>
@@ -4628,6 +4642,15 @@ function restoreSession() {
 }
 setInterval(saveSession, 10000);
 window.addEventListener('beforeunload', saveSession);
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden && window._canControl && window._currentRoomId) {
+    try { if (playing) player.pauseVideo(); } catch(e) {}
+    window.broadcastRoomState?.();
+  }
+});
+window.addEventListener('pagehide', function() {
+  if (window._canControl && window._currentRoomId) window.broadcastRoomState?.();
+});
 
 // ─────────────────────────────────────────────────────────
 //  YOUTUBE IFRAME API
@@ -4813,13 +4836,14 @@ async function playSoundCloud(v) {
     });
   });
   scWidget.bind(SC.Widget.Events.PAUSE,  () => { playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false); });
-  scWidget.bind(SC.Widget.Events.FINISH, () => { playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false); onEnded(); });
+  scWidget.bind(SC.Widget.Events.FINISH, () => { playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false); if (window._canControl) window.broadcastRoomState?.(); onEnded(); });
 }
 
 // ─────────────────────────────────────────────────────────
 //  PLAY VIDEO
 // ─────────────────────────────────────────────────────────
 function playVideo(v) {
+  if (!v || !v.id) return;
   if (v.source === 'soundcloud') { playSoundCloud(v); return; }
   // Switch back to YT player if coming from SC — pause SC first
   if (currentSource === 'soundcloud') {
@@ -4836,6 +4860,9 @@ function playVideo(v) {
   document.getElementById('np-title').textContent = v.title;
   document.getElementById('np-ch').textContent = v.channelTitle || '';
   const th = document.getElementById('np-thumb'); th.src = v.thumbnail || ''; th.style.display = v.thumbnail ? 'block' : 'none';
+  const rTitle = document.getElementById('remote-title'); if (rTitle) rTitle.textContent = v.title || '';
+  const rCh = document.getElementById('remote-ch'); if (rCh) rCh.textContent = v.channelTitle || '';
+  const rThumb = document.getElementById('remote-thumb'); if (rThumb) { rThumb.src = v.thumbnail || ''; rThumb.style.display = v.thumbnail ? 'block' : 'none'; }
   renderQueue(); fetchRelated(v.id); fetchChannel();
   addToHistory(v);
   fetchInfo(v);
@@ -5100,6 +5127,7 @@ function moveQueueSelection(dir) {
     queueSelected.add(newIdx);
   });
   saveSession?.();
+  if (window._canControl) window.broadcastRoomState?.();
   renderQueue();
 }
 
@@ -5133,13 +5161,14 @@ function renderQueue() {
     el.dataset.idx = i;
     if (queueSelected.has(i)) el.style.background = 'rgba(0,180,220,0.2)';
     el.innerHTML = `<span class="drag-handle" title="Drag to reorder">&#8801;</span><img class="vt" src="${esc(v.thumbnail)}" loading="lazy" alt=""><div class="vi2"><div class="vtt">${esc(v.title)}</div><div class="vch">${esc(v.channelTitle||'')}</div></div><button class="vx" title="Remove">x</button>`;
-    el.querySelector('.vx').onclick = e => { e.stopPropagation(); queueSelected.delete(i); queue.splice(i,1); renderQueue(); };
+    el.querySelector('.vx').onclick = e => { e.stopPropagation(); if (_guestBlocked()) return; queueSelected.delete(i); queue.splice(i,1); renderQueue(); };
     el.onclick = e => {
       if (e.target.classList.contains('vx') || e.target.classList.contains('drag-handle')) return;
       if (e.shiftKey || queueSelected.size > 0) {
         toggleQueueSelect(i, e);
         return;
       }
+      if (_guestBlocked()) return;
       queue.splice(i,1); playVideo(v); renderQueue();
     };
     el.addEventListener('contextmenu', e => { e.preventDefault(); toggleQueueSelect(i, e); });
@@ -5149,10 +5178,11 @@ function renderQueue() {
     el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
     el.addEventListener('drop',      e => {
       e.preventDefault(); el.classList.remove('drag-over');
+      if (_guestBlocked()) return;
       const dst=+el.dataset.idx;
       if (dragSrcIdx===null||dragSrcIdx===dst) return;
       const [moved]=queue.splice(dragSrcIdx,1); queue.splice(dst,0,moved);
-      dragSrcIdx=null; renderQueue();
+      dragSrcIdx=null; if (window._canControl) window.broadcastRoomState?.(); renderQueue();
     });
     box.appendChild(el);
   });
@@ -6011,7 +6041,7 @@ function seekClick(e) {
   const r = document.getElementById('prog').getBoundingClientRect();
   const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   if (currentSource === 'soundcloud' && scWidget) { scWidget.getDuration(dur => scWidget.seekTo(pct * dur)); return; }
-  if (ready) player.seekTo(pct * (player.getDuration() || 0));
+  if (ready) { player.seekTo(pct * (player.getDuration() || 0)); if (window._canControl) window.broadcastRoomState?.(300); }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -6081,8 +6111,8 @@ document.addEventListener('keydown', e => {
     case 'Space':      e.preventDefault(); togglePlay(); break;
     case 'KeyN':       nextVid(); break;
     case 'KeyP':       prevVid(); break;
-    case 'ArrowLeft':  if(ready && !_guestBlocked()) player.seekTo(Math.max(0,player.getCurrentTime()-5)); break;
-    case 'ArrowRight': if(ready && !_guestBlocked()) player.seekTo(player.getCurrentTime()+5); break;
+    case 'ArrowLeft':  if(ready && !_guestBlocked()){ player.seekTo(Math.max(0,player.getCurrentTime()-5)); if(window._canControl) window.broadcastRoomState?.(300); } break;
+    case 'ArrowRight': if(ready && !_guestBlocked()){ player.seekTo(player.getCurrentTime()+5); if(window._canControl) window.broadcastRoomState?.(300); } break;
     case 'ArrowUp':    e.preventDefault(); {const s=document.getElementById('vol');s.value=Math.min(100,+s.value+5);setVol(s.value);} break;
     case 'ArrowDown':  e.preventDefault(); {const s=document.getElementById('vol');s.value=Math.max(0,+s.value-5);setVol(s.value);} break;
     case 'KeyM':
@@ -8249,7 +8279,7 @@ function msnEmoji(html) {
   let out = html;
   MSN_EMOJIS.forEach(([code, src]) => {
     const safe = code.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const img = `<img class="msn-em" src="${src}" title="${safe}" alt="${safe}">`;
+    const img = `<span class="msn-em" style="background-image:url('${src}')" title="${safe}" aria-label="${safe}" role="img"></span>`;
     // Case-insensitive replace using regex (escaping regex special chars)
     const reEscape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     out = out.replace(new RegExp(reEscape(code), 'gi'), img);
@@ -8261,9 +8291,9 @@ function msnEmoji(html) {
   const heartSrc = MSN_EMOJIS.find(e=>e[0]==='(L)')?.[1]||'';
   const grinSrc  = MSN_EMOJIS.find(e=>e[0]===':D')?.[1]||'';
   const supSrc   = MSN_EMOJIS.find(e=>e[0]===':-O')?.[1]||'';
-  out = out.replace(/&lt;3/g, `<img class="msn-em" src="${heartSrc}" title="&lt;3" alt="&lt;3">`);
-  out = out.replace(/xD/gi,   `<img class="msn-em" src="${grinSrc}"  title="xD" alt="xD">`);
-  out = out.replace(/:o\b/gi, `<img class="msn-em" src="${supSrc}"   title=":o" alt=":o">`);
+  out = out.replace(/&lt;3/g, `<span class="msn-em" style="background-image:url('${heartSrc}')" title="&lt;3" aria-label="&lt;3" role="img"></span>`);
+  out = out.replace(/xD/gi,   `<span class="msn-em" style="background-image:url('${grinSrc}')" title="xD" aria-label="xD" role="img"></span>`);
+  out = out.replace(/:o\b/gi, `<span class="msn-em" style="background-image:url('${supSrc}')" title=":o" aria-label=":o" role="img"></span>`);
   return out;
 }
 function toggleEmojiBar(pane) {
@@ -9870,10 +9900,11 @@ function solCardEl(card, idx, pileType, pileIdx, zBase){
   if(selOk) d.classList.add('selected');
   d.addEventListener('click',function(e){e.stopPropagation();solClickCard(pileType,pileIdx,idx);});
   d.addEventListener('dblclick',function(e){e.stopPropagation();if(card.face)solAutoFoundation(pileType,pileIdx,idx);});
-  d.addEventListener('mousedown',function(e){
-    if(e.button!==0) return;
+  d.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse'&&e.button!==0) return;
     if(!card.face) return;
     e.stopPropagation();
+    d.setPointerCapture(e.pointerId);
     solStartDrag(pileType,pileIdx,idx,e);
   });
   return d;
@@ -10180,7 +10211,8 @@ function solStartDrag(ptype,pidx,cidx,e){
   cards.forEach(function(card,i){
     const d=document.createElement('div');
     d.className='sol-card '+(SOL_RED.has(card.s)?'red':'black');
-    d.style.cssText='position:relative;top:auto;left:auto;margin-top:'+(i===0?'0':'-74px')+';';
+    const _cardH=window.innerWidth<=768?66:96;
+    d.style.cssText='position:relative;top:auto;left:auto;margin-top:'+(i===0?'0':(_cardH-22)*-1+'px')+';';
     d.innerHTML='<span class="sol-card-top">'+card.v+'<br>'+card.s+'</span>';
     ghost.appendChild(d);
   });
@@ -10206,20 +10238,18 @@ function solStartDrag(ptype,pidx,cidx,e){
   }
 }
 
-document.addEventListener('mousemove',function(e){
+document.addEventListener('pointermove',function(e){
   if(!solDragState) return;
   solDragState.ghostEl.style.left=(e.clientX-solDragState.offX)+'px';
   solDragState.ghostEl.style.top=(e.clientY-solDragState.offY)+'px';
 });
 
-document.addEventListener('mouseup',function(e){
+document.addEventListener('pointerup',function(e){
   if(!solDragState) return;
   const ds=solDragState;
   solDragState=null;
-  // Remove ghost
   if(ds.ghostEl&&ds.ghostEl.parentNode) ds.ghostEl.parentNode.removeChild(ds.ghostEl);
 
-  // Find drop target
   const els=document.elementsFromPoint(e.clientX,e.clientY);
   let target=null;
   for(let i=0;i<els.length;i++){
@@ -11234,7 +11264,7 @@ function bjUpdateBalance(){
     <button onclick="prevVid()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer" title="Previous">⏮</button>
     <button id="th-playpause" onclick="togglePlay()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer" title="Play/Pause">⏸</button>
     <button onclick="nextVid()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer" title="Next">⏭</button>
-    <input id="th-seek" type="range" min="0" max="100" value="0" style="flex:1;min-width:80px" oninput="if(player&&ready)player.seekTo(this.value/100*(player.getDuration()||0),true)">
+    <input id="th-seek" type="range" min="0" max="100" value="0" style="flex:1;min-width:80px" oninput="if(player&&ready){player.seekTo(this.value/100*(player.getDuration()||0),true);if(window._canControl)window.broadcastRoomState?.(300);}">
     <span id="th-time" style="font-size:12px;white-space:nowrap;opacity:0.85">0:00</span>
     <button onclick="toggleTheaterChat()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px" title="Toggle chat">💬</button>
     <button onclick="toggleTheater()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px" title="Exit theater mode">✕ Exit</button>

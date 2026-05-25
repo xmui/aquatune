@@ -1968,16 +1968,36 @@
 }
 #room-badge button:hover { background: rgba(255,255,255,0.35); }
 
-/* ── GUEST PLAYER LOCK ──────────────────────────── */
-#guest-player-lock {
-  display: none; position: absolute; inset: 0; z-index: 10;
-  background: rgba(0,0,0,0.15); border-radius: inherit;
-  align-items: center; justify-content: center; cursor: not-allowed;
+/* ── ROOM MEMBERS PANEL ─────────────────────────── */
+#room-members-panel {
+  display: none; position: fixed; z-index: 900;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0,40,120,0.22);
+  min-width: 210px; max-width: 280px; overflow: hidden;
+  flex-direction: column;
 }
-#guest-player-lock span {
-  background: rgba(0,0,0,0.55); color: #fff; padding: 6px 14px;
-  border-radius: var(--r-btn); font-size: 11px; font-weight: 700;
+#room-members-panel.open { display: flex; }
+#room-members-panel-hdr {
+  background: var(--hdr-bg); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 7px 12px; display: flex; align-items: center; justify-content: space-between;
 }
+.room-member-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; font-size: 11px; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.room-member-row:last-child { border-bottom: none; }
+.room-member-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-member-badge { font-size: 12px; flex-shrink: 0; }
+.room-member-btn {
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text2);
+  transition: background .14s;
+}
+.room-member-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.room-member-btn.revoke { border-color: rgba(200,40,40,0.4); color: #c02020; }
+.room-member-btn.revoke:hover { background: rgba(200,40,40,0.85); color: #fff; border-color: transparent; }
+[data-scheme=dark] #room-members-panel { background: rgba(8,20,50,0.98); }
 
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
@@ -2665,6 +2685,18 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=mono90s] .sm-opt { color: #fff !important; border-radius: 0 !important; }
 [data-era=mono90s] .sm-opt.active,
 [data-era=mono90s] .sm-opt:hover { background: #fff !important; color: #000 !important; }
+[data-era=mono90s] #room-members-panel {
+  background: #000 !important; border: 2px solid #fff !important;
+  border-radius: 0 !important; box-shadow: 4px 4px 0 #fff !important; backdrop-filter: none !important;
+}
+[data-era=mono90s] #room-members-panel-hdr { background: #fff !important; color: #000 !important; }
+[data-era=mono90s] .room-member-row { border-bottom-color: #333 !important; color: #fff !important; }
+[data-era=mono90s] .room-member-btn {
+  background: #000 !important; border: 1px solid #fff !important;
+  border-radius: 0 !important; color: #fff !important;
+}
+[data-era=mono90s] .room-member-btn:hover { background: #fff !important; color: #000 !important; }
+[data-era=mono90s] .room-member-btn.revoke { border-color: #fff !important; color: #fff !important; }
 
 /* ── FROST THEME (Snow Leopard-inspired) ── */
 [data-era=frost] #board-wrap, [data-era=frost] .panel,
@@ -3412,7 +3444,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
     <div id="room-badge">
       <span id="room-badge-code"></span>
-      <span id="room-badge-members">👤 1</span>
+      <span id="room-badge-members" onclick="toggleMembersPanel()" style="cursor:pointer" title="Members">👤 1</span>
       <button onclick="copyRoomLink()" title="Copy room link">🔗</button>
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
@@ -3528,7 +3560,6 @@ body.perf-mode #aqua-gun { display: none !important; }
       <div id="player-bubble">
         <div id="yt-player"></div>
         <div id="sc-player"><iframe id="sc-frame" scrolling="no" allow="autoplay"></iframe></div>
-        <div id="guest-player-lock"><span>👑 Host is in control</span></div>
         <div id="ph">
           <div id="ph-txt">Search for a song, paste a YouTube link,<br>or enter a video ID to begin</div>
         </div>
@@ -4587,11 +4618,11 @@ function onState(e) {
   if (e.data === S.PLAYING) {
     playing = true; document.getElementById('play-btn').classList.add('playing'); startProg();
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
-    if (window._isRoomHost && !window._applyingRemote) window.broadcastRoomState?.();
+    if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
-    if (window._isRoomHost && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
+    if (window._canControl && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
@@ -4768,8 +4799,8 @@ function playVideo(v) {
     navigator.mediaSession.setActionHandler('pause',     () => player?.pauseVideo?.());
     navigator.mediaSession.setActionHandler('nexttrack', () => { if (queue.length) popQueue(); });
   }
-  if (window._isRoomHost && !window._applyingRemote) {
-    setTimeout(() => window.broadcastRoomState?.(), 800);
+  if (window._canControl && !window._applyingRemote) {
+    window.broadcastRoomState?.(350);
   }
 }
 function addToHistory(v) {
@@ -4969,7 +5000,7 @@ function makePlaylistResult(it) {
 //  QUEUE
 // ─────────────────────────────────────────────────────────
 function addToQueue(v) {
-  if (window._currentRoomId && !window._isRoomHost) {
+  if (window._currentRoomId && !window._canControl) {
     window.guestAddToRoomQueue?.(v);
     return;
   }
@@ -4977,10 +5008,10 @@ function addToQueue(v) {
   // Keep origQueue in sync when shuffle is on so toggling off doesn't lose new items
   if (shuffle) origQueue.push(v);
   renderQueue(); toast('Added: ' + v.title.slice(0,40)); saveSession();
-  if (window._isRoomHost) window.broadcastRoomState?.();
+  if (window._canControl) window.broadcastRoomState?.();
 }
 function playNext(v) {
-  if (window._currentRoomId && !window._isRoomHost) {
+  if (window._currentRoomId && !window._canControl) {
     window.guestAddToRoomQueue?.(v);
     return;
   }
@@ -4989,7 +5020,7 @@ function playNext(v) {
   // Keep origQueue in sync when shuffle is on
   if (shuffle) origQueue.unshift(v);
   renderQueue(); toast('Plays next: ' + v.title.slice(0,40)); saveSession();
-  if (window._isRoomHost) window.broadcastRoomState?.();
+  if (window._canControl) window.broadcastRoomState?.();
 }
 function popQueue() {
   if (!queue.length) return;
@@ -7567,7 +7598,7 @@ function updateTheaterControls() {
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>
   <button class="mob-tool-btn" onclick="openMines()" title="Minesweeper">💣<span>Mines</span></button>
-  <button class="mob-tool-btn" onclick="openBlackjack()" title="Blackjack">🃏<span>Blackjack</span></button>
+  <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
 
@@ -8891,6 +8922,28 @@ function copyRoomLink() {
   const url = window.location.href;
   navigator.clipboard?.writeText(url).then(() => toast('Room link copied!')).catch(() => toast(url));
 }
+
+function toggleMembersPanel() {
+  const panel = document.getElementById('room-members-panel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) { closeMembersPanel(); return; }
+  // Position below the member count badge
+  const anchor = document.getElementById('room-badge-members');
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    panel.style.top  = (r.bottom + 6) + 'px';
+    panel.style.left = Math.max(8, r.left - 80) + 'px';
+  }
+  panel.classList.add('open');
+}
+function closeMembersPanel() {
+  document.getElementById('room-members-panel')?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const panel = document.getElementById('room-members-panel');
+  if (!panel?.classList.contains('open')) return;
+  if (!panel.contains(e.target) && e.target.id !== 'room-badge-members') closeMembersPanel();
+});
 
 /* ── BOARD CHAT TABS ── */
 function switchBoardTab(tab) {
@@ -10677,6 +10730,13 @@ function bjUpdateBalance(){
     <textarea id="theater-chat-input" rows="2" maxlength="500" placeholder="Message…" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendTheaterChatMsg();event.preventDefault();}"></textarea>
     <button id="theater-chat-send" onclick="sendTheaterChatMsg()" title="Send (Ctrl+Enter)">➤</button>
   </div>
+</div>
+<div id="room-members-panel">
+  <div id="room-members-panel-hdr">
+    <span>👥 Members</span>
+    <button onclick="closeMembersPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
+  </div>
+  <div id="room-members-list"></div>
 </div>
 </body>
 </html>

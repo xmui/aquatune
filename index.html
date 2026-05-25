@@ -4576,7 +4576,8 @@ function saveSession() {
       currentThumb: current?.thumbnail,
       currentChannel: current?.channelTitle,
       currentChannelId: current?.channelId,
-      queue, volume: +document.getElementById('vol').value,
+      queue, origQueue: origQueue.length ? origQueue : undefined,
+      volume: +document.getElementById('vol').value,
       shuffle, repeat, automix, normalize, normalizeTarget,
       activeTab: document.querySelector('.tab.on')?.textContent?.toLowerCase() || 'queue',
       leftCollapsed: document.getElementById('left').classList.contains('collapsed'),
@@ -4597,6 +4598,7 @@ function restoreSession() {
     const vol = document.getElementById('vol');
     vol.value = s.volume ?? 80;
     if (s.queue?.length) { queue = s.queue; renderQueue(); }
+    if (s.origQueue?.length) origQueue = s.origQueue;
     if (s.leftCollapsed)  applyCollapse('left',  true);
     if (s.rightCollapsed) applyCollapse('right', true);
     if (s.currentId) {

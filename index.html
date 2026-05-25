@@ -2863,7 +2863,12 @@ body.perf-mode #aqua-gun { display: none !important; }
     [data-scheme=dark] .pc-cell { background:rgba(255,255,255,0.08); }
     [data-scheme=dark] .pc-cell.filled { background:var(--accent); }
     @media (max-width:768px) {
-      #picross-wrap { width:96vw; }
+      #picross-wrap {
+        width:100vw !important; height:100dvh !important;
+        top:0 !important; left:0 !important; transform:none !important;
+        border-radius:0 !important; overflow:hidden;
+      }
+      #picross-body { flex:1; overflow:hidden; padding:6px 8px 8px; min-height:0; }
     }
 
     /* ── SHARED WIN95 ─── */
@@ -9456,12 +9461,15 @@ function pcGetClues(arr, size, isRow) {
 }
 function renderPicrossGrid() {
   // Calculate max cell size so the full puzzle fits without scrolling
-  const vw = Math.min(window.innerWidth * 0.96, 520);
-  const vh = window.innerHeight - 130; // subtract header + titlebar + controls
+  const isMob = window.innerWidth <= 768;
+  // On mobile: full-screen window; overhead = titlebar(36) + body-pad(14) + controls+status(64) + gaps(10)
+  // On desktop: centred window, subtract external chrome + same internal overhead
+  const vw = isMob ? window.innerWidth - 16 : Math.min(window.innerWidth * 0.96, 520) - 28;
+  const vh = (isMob ? window.innerHeight : window.innerHeight - 80) - 124;
   const rowClueEstW = 40; const colClueEstH = 42;
   const maxCellW = Math.floor((vw - rowClueEstW) / _pcSize);
   const maxCellH = Math.floor((vh - colClueEstH) / _pcSize);
-  const CELL = Math.max(16, Math.min(32, maxCellW, maxCellH));
+  const CELL = Math.max(isMob ? 12 : 16, Math.min(isMob ? 36 : 32, maxCellW, maxCellH));
   const rowClues = pcGetClues(_pcSolution, _pcSize, true);
   const colClues = pcGetClues(_pcSolution, _pcSize, false);
   const maxRowClueLen = Math.max(...rowClues.map(r=>r.length));

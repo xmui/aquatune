@@ -3212,6 +3212,45 @@ body.perf-mode #aqua-gun { display: none !important; }
     body.theater-mode #ctrl-bubble { display:none !important; }
     body.theater-mode #viz-wrap { display:none !important; }
 
+/* ── THEATER MODE — MOBILE LAYOUT ── */
+@media (max-width: 768px) {
+  #th-theater-btn { display: none !important; }
+
+  body.theater-mode #player-bubble {
+    width: 100vw !important;
+    height: 56.25vw !important; /* 16:9 fill */
+    top: 0 !important; left: 0 !important;
+  }
+  body.theater-mode #player-bubble > * {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  body.theater-mode #yt-player,
+  body.theater-mode #yt-player iframe {
+    width: 100vw !important;
+    height: 56.25vw !important;
+  }
+  body.theater-mode #theater-chat-panel,
+  body.theater-mode.th-chat-collapsed #theater-chat-panel {
+    top: 56.25vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 56.25vw) !important;
+    border-left: none !important;
+    border-top: 1px solid rgba(255,255,255,0.15) !important;
+  }
+  body.theater-mode #theater-controls,
+  body.theater-mode.th-chat-collapsed #theater-controls {
+    width: 100vw !important;
+    bottom: calc(100vh - 56.25vw) !important; /* aligns with bottom edge of video */
+  }
+  /* hide collapse toggle — doesn't apply on mobile */
+  body.theater-mode #theater-chat-panel > div:first-child button[onclick="toggleTheaterChat()"] {
+    display: none !important;
+  }
+}
+
 /* ── FROST THEME — DARKER HEADER ── */
 [data-era=frost] #logo img {
   filter: drop-shadow(0 2px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 16px rgba(0,80,180,0.3));
@@ -4659,7 +4698,6 @@ setInterval(saveSession, 10000);
 window.addEventListener('beforeunload', saveSession);
 document.addEventListener('visibilitychange', function() {
   if (document.hidden && window._canControl && window._currentRoomId) {
-    try { if (playing) player.pauseVideo(); } catch(e) {}
     window.broadcastRoomState?.();
   }
 });
@@ -5142,7 +5180,7 @@ function moveQueueSelection(dir) {
   const indices = [...queueSelected].sort((a,b) => dir > 0 ? b-a : a-b);
   if (!indices.length) return;
   if (dir < 0 && indices[0] === 0) return;
-  if (dir > 0 && indices[indices.length-1] === queue.length-1) return;
+  if (dir > 0 && indices[0] === queue.length-1) return;
   indices.forEach(idx => {
     const newIdx = idx + dir;
     [queue[idx], queue[newIdx]] = [queue[newIdx], queue[idx]];

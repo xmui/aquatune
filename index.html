@@ -1452,10 +1452,11 @@
       bottom: 0; left: 0; right: 0;
       height: 50px;
       z-index: 600;
-      /* iOS 6 bottom bar — dark metallic gradient */
+      /* iOS 6 bottom bar — dark metallic gradient, always opaque */
       background: linear-gradient(180deg, #3e3e3e 0%, #212121 50%, #181818 51%, #0d0d0d 100%);
       border-top: 1px solid #000;
       box-shadow: 0 -1px 0 rgba(255,255,255,0.07) inset;
+      isolation: isolate;
     }
     #mob-tools-bar {
       display: none;
@@ -1464,6 +1465,10 @@
       height: 44px;
       z-index: 599;
       background: var(--hdr-bg);
+      /* Solid fallback so semi-transparent themes don't show content through */
+      isolation: isolate;
+      -webkit-backdrop-filter: blur(20px) brightness(0.85);
+      backdrop-filter: blur(20px) brightness(0.85);
       border-top: 1px solid rgba(255,255,255,0.18);
       border-bottom: 1px solid rgba(0,0,0,0.12);
       box-shadow: 0 -2px 12px rgba(0,60,150,0.18);
@@ -1656,6 +1661,9 @@
         bottom: 94px;
         right: 0;
         transform: translateY(100%);
+        max-height: calc(100vh - 94px - 55px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
       #theme-panel.open { transform: translateY(0); }
 
@@ -2879,7 +2887,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
-      <button id="remote-mode-btn" onclick="setRemoteMode(!_remoteMode)" title="Remote mode (mute, control only)">📡</button>
+
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
@@ -3508,25 +3516,25 @@ const THEMES = {
              hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
              panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
              font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#2878d8', accent2:'#50a0f8', text:'#0a1428', text2:'#3a5888',
-             bg:'linear-gradient(135deg, #1a2a4a 0%, #0a1830 40%, #1a2848 100%)',
-             hdr:'linear-gradient(180deg, rgba(80,140,240,0.55) 0%, rgba(40,100,210,0.45) 100%)',
-             panel:'rgba(20,50,110,0.35)', border:'rgba(100,160,255,0.3)',
+  glass:   { accent:'#60a8f8', accent2:'#90c8ff', text:'#ddeeff', text2:'#90b8e0',
+             bg:'linear-gradient(135deg, #0a1428 0%, #060e1e 40%, #0a1428 100%)',
+             hdr:'linear-gradient(180deg, rgba(80,140,240,0.72) 0%, rgba(40,100,210,0.65) 100%)',
+             panel:'rgba(20,50,110,0.65)', border:'rgba(120,180,255,0.35)',
              font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
   neon:    { accent:'#ff00ff', accent2:'#00ffff',
-             text:'#ffffff', text2:'#cc88ff',
+             text:'#ffffff', text2:'#dd99ff',
              bg:'linear-gradient(135deg, #0a0015 0%, #150030 50%, #000a20 100%)',
-             hdr:'linear-gradient(180deg, rgba(255,0,255,0.6), rgba(0,200,255,0.5))',
-             panel:'rgba(10,0,30,0.88)',
-             border:'rgba(255,0,255,0.35)',
+             hdr:'linear-gradient(180deg, rgba(255,0,255,0.75), rgba(0,200,255,0.65))',
+             panel:'rgba(20,0,50,0.92)',
+             border:'rgba(255,0,255,0.4)',
              font:"'Courier New',monospace",
              era:'neon', scheme:'dark' },
   pixel:   { accent:'#44bb44', accent2:'#88ff88',
-             text:'#002200', text2:'#228822',
+             text:'#aaffaa', text2:'#66cc66',
              bg:'#001100',
              hdr:'linear-gradient(180deg, #006600, #004400)',
-             panel:'rgba(0,30,0,0.92)',
-             border:'rgba(0,180,0,0.4)',
+             panel:'rgba(0,40,0,0.94)',
+             border:'rgba(0,200,0,0.35)',
              font:"'Courier New',Courier,monospace",
              era:'pixel', scheme:'dark' },
 };

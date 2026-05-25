@@ -9850,7 +9850,7 @@ function newSolitaireGame(){
   }
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
-  solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[];
+  solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
   solRender();
 }
 
@@ -9966,7 +9966,10 @@ function solRender(){
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){
-    setTimeout(function(){solOnWin();},100);
+    if(!_solAutoCompleting) setTimeout(function(){solOnWin();},100);
+    else { _solAutoCompleting=false; setTimeout(function(){solOnWin();},100); }
+  } else {
+    solCheckAutoComplete();
   }
   setTimeout(function(){solFlipSet.clear();},50);
 }
@@ -10110,11 +10113,58 @@ function solRemoveCards(ptype,pidx,cidx){
   else if(ptype==='tableau'){ solTableau[pidx].splice(cidx); }
 }
 
+let _solAutoCompleting=false;
+
+function solCheckAutoComplete(){
+  if(_solAutoCompleting) return;
+  if(solStock.length||solWaste.length) return;
+  const allFaceUp=solTableau.every(function(pile){return pile.every(function(c){return c.face;});});
+  if(!allFaceUp) return;
+  if(solFoundations.every(function(f){return f.length===13;})) return;
+  _solAutoCompleting=true;
+  const st=document.getElementById('sol-status');
+  if(st) st.textContent='Auto-completing…';
+  setTimeout(solRunAutoComplete,200);
+}
+
+function solRunAutoComplete(){
+  if(solFoundations.every(function(f){return f.length===13;})){
+    _solAutoCompleting=false;
+    solRender();
+    return;
+  }
+  let moved=false;
+  outer:for(let t=0;t<7;t++){
+    const pile=solTableau[t];
+    if(!pile.length) continue;
+    const card=pile[pile.length-1];
+    for(let f=0;f<4;f++){
+      if(solCanFoundation(card,f)){
+        pile.pop();
+        solFoundations[f].push(card);
+        solFlipSet.add(card.s+card.v);
+        solRender();
+        moved=true;
+        break outer;
+      }
+    }
+  }
+  if(!moved){
+    _solAutoCompleting=false;
+    return;
+  }
+  setTimeout(solRunAutoComplete,80);
+}
+
 function solOnWin(){
   unlockTheme('retro');
   playFanfare('win');
-  setTimeout(() => window.abSaySolitaire?.('win', solMoves + ' moves'), 600);
-  alert('You win! Completed in '+solMoves+' moves.');
+  setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
+  const banner=document.createElement('div');
+  banner.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);border-radius:inherit;z-index:200;color:#fff;font-size:22px;font-weight:bold;text-align:center;flex-direction:column;gap:8px;pointer-events:none;';
+  banner.innerHTML='<div>🎉 You Win!</div><div style="font-size:13px;opacity:.85">'+solMoves+' moves</div>';
+  const wrap=document.getElementById('solitaire-wrap');
+  if(wrap){wrap.style.position='relative';wrap.appendChild(banner);setTimeout(function(){banner.remove();},3500);}
 }
 
 // ── SOLITAIRE DRAG ────────────────────────────────────

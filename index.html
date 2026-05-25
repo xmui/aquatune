@@ -3121,8 +3121,9 @@ body.perf-mode #aqua-gun { display: none !important; }
       font-size: 10px; font-weight: bold; color: #fff;
     }
     .th-msg-body { flex: 1; min-width: 0; }
-    .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; }
+    .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; color: #ccc; }
     .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85); word-break: break-word; line-height: 1.4; }
+    .th-msg-bubble { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border-radius: 6px; padding: 4px 7px; }
     #theater-chat-input-area {
       display: flex; gap: 6px; padding: 8px;
       border-top: 1px solid rgba(255,255,255,0.12);
@@ -3141,6 +3142,13 @@ body.perf-mode #aqua-gun { display: none !important; }
       transition: background .15s;
     }
     #theater-chat-send:hover { background: rgba(0,200,240,0.9); }
+    #th-chat-tabs { display:flex; gap:0; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.15); }
+    .th-chat-tab {
+      flex:1; padding:5px 8px; font-size:10px; font-weight:700; border:none; cursor:pointer;
+      background:transparent; color:rgba(255,255,255,0.55); border-bottom:2px solid transparent;
+      transition:all .12s;
+    }
+    .th-chat-tab.active { color:#0cf; border-bottom-color:#0cf; background:rgba(255,255,255,0.08); }
     #th-theater-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
@@ -7732,6 +7740,7 @@ function spinSlots() {
   if (slotsSpinning || slotsBet > slotsCredits) return;
   slotsCredits -= slotsBet;
   slotsSpinning = true;
+  playTone(400, 0.08, 'square', 0.1);
   document.getElementById('slots-spin-btn').disabled = true;
   document.getElementById('slots-msg').textContent = '';
   document.getElementById('slots-win-line').textContent = '';
@@ -8968,6 +8977,19 @@ function switchBoardTab(tab) {
   });
 }
 
+/* ── GAME AUDIO HELPER ── */
+function playTone(freq, dur=0.1, type='sine', vol=0.18) {
+  try {
+    const cx = initActx();
+    const osc = cx.createOscillator(), g = cx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, cx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, cx.currentTime + dur);
+    osc.connect(g); g.connect(cx.destination);
+    osc.start(); osc.stop(cx.currentTime + dur + 0.01);
+  } catch(e) {}
+}
+
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {
   try {
@@ -9028,11 +9050,70 @@ function renderTheaterChatMsg(p, isRoom) {
   log.scrollTop = 99999;
 }
 
+let _thChatMode = 'room'; // 'room' or 'global'
+
+function switchTheaterChatTab(mode) {
+  _thChatMode = mode;
+  const tabRoom = document.getElementById('th-tab-room');
+  const tabGlobal = document.getElementById('th-tab-global');
+  if (tabRoom) tabRoom.classList.toggle('active', mode === 'room');
+  if (tabGlobal) tabGlobal.classList.toggle('active', mode === 'global');
+  const log = document.getElementById('theater-chat-log');
+  if (!log) return;
+  log.innerHTML = '';
+  if (mode === 'global') {
+    const globalLog = document.getElementById('global-log');
+    if (globalLog) {
+      globalLog.querySelectorAll('.bmsg').forEach(msg => {
+        const clone = document.createElement('div');
+        clone.className = 'th-msg';
+        const av   = msg.querySelector('.bmsg-av');
+        const name = msg.querySelector('.bmsg-name');
+        const text = msg.querySelector('.bmsg-text, .bmsg-bubble');
+        const img  = msg.querySelector('.chat-img');
+        const color = av ? av.style.background : '#0068b8';
+        const nameText = name ? name.textContent : '?';
+        const msgText  = text ? text.innerHTML : '';
+        clone.innerHTML = `
+          <div class="th-msg-av" style="background:${color}">${esc(nameText[0]?.toUpperCase()||'?')}</div>
+          <div class="th-msg-body">
+            <div class="th-msg-name" style="color:${color}">${esc(nameText)}</div>
+            <div class="th-msg-text">${msgText}${img ? `<br><img src="${img.src}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
+          </div>`;
+        log.appendChild(clone);
+      });
+    }
+  } else {
+    const roomLog = document.getElementById('room-log');
+    if (roomLog) {
+      roomLog.querySelectorAll('.bmsg').forEach(msg => {
+        const clone = document.createElement('div');
+        clone.className = 'th-msg';
+        const av   = msg.querySelector('.bmsg-av');
+        const name = msg.querySelector('.bmsg-name');
+        const text = msg.querySelector('.bmsg-text, .bmsg-bubble');
+        const img  = msg.querySelector('.chat-img');
+        const color = av ? av.style.background : '#0068b8';
+        const nameText = name ? name.textContent : '?';
+        const msgText  = text ? text.innerHTML : '';
+        clone.innerHTML = `
+          <div class="th-msg-av" style="background:${color}">${esc(nameText[0]?.toUpperCase()||'?')}</div>
+          <div class="th-msg-body">
+            <div class="th-msg-name" style="color:${color}">${esc(nameText)}</div>
+            <div class="th-msg-text">${msgText}${img ? `<br><img src="${img.src}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
+          </div>`;
+        log.appendChild(clone);
+      });
+    }
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
 function sendTheaterChatMsg() {
   const inp = document.getElementById('theater-chat-input');
   const msg = inp?.value.trim();
   if (!msg) return;
-  if (window._currentRoomId) {
+  if (_thChatMode === 'room' && window._currentRoomId) {
     window.sendRoomMessage?.(msg);
   } else {
     window.sendGlobalMessage?.(msg);
@@ -9680,6 +9761,7 @@ function solTryMove(fromPtype,fromPidx,fromCidx,toPtype,toPidx){
 
   if(moved){
     solMoves++;
+    playTone(440, 0.05, 'sine', 0.1);
     if(fromPtype==='tableau'){
       const src=solTableau[fromPidx];
       if(src.length&&!src[src.length-1].face) src[src.length-1].face=true;
@@ -9699,6 +9781,7 @@ function solRemoveCards(ptype,pidx,cidx){
 function solOnWin(){
   console.log('sol-win');
   unlockTheme('retro');
+  playTone(523, 0.15); setTimeout(()=>playTone(659,0.15),150); setTimeout(()=>playTone(784,0.2),300);
   alert('You win! Completed in '+solMoves+' moves.');
 }
 
@@ -9961,6 +10044,7 @@ function minesReveal(x,y){
     minesGameOver(x,y);
     return;
   }
+  playTone(600, 0.05, 'sine', 0.12);
   if(minesGrid[y][x]===0){
     for(let dy=-1;dy<=1;dy++){
       for(let dx=-1;dx<=1;dx++){
@@ -9996,6 +10080,7 @@ function minesChord(x,y){
 function minesGameOver(hx,hy){
   minesOver=true;
   minesStopTimer();
+  playTone(120, 0.4, 'sawtooth', 0.3);
   const s=document.getElementById('mines-smiley');
   if(s) s.textContent='😵';
   // Reveal all mines
@@ -10031,6 +10116,7 @@ function minesCheckWin(){
     }
     minesFlagCount=minesCt;
     minesUpdateCounter();
+    playTone(880, 0.1);
     setTimeout(function(){alert('You win! Time: '+minesSeconds+'s');},100);
   }
 }
@@ -10139,6 +10225,7 @@ function bjDeal(){
   hole.hidden=true;
   bjDealerHand.push(hole,bjDeck.pop());
   bjSetStatus('');
+  playTone(600, 0.06, 'sine', 0.12);
   bjRender();
   // Check natural BJ
   const pt=bjHandTotal(bjPlayerHand);
@@ -10193,6 +10280,7 @@ function bjHit(){
     bjGameOver=true;
     bjBalance-=bjBet;
     bjUpdateBalance();
+    playTone(150, 0.3, 'sawtooth', 0.25);
     bjSetStatus('Bust! You lose '+bjBet+' credits.');
     bjShowActions(false);
   } else if(total===21){
@@ -10218,12 +10306,14 @@ function bjStand(){
   if(dt>21||pt>dt){
     bjBalance+=bjBet;
     bjUpdateBalance();
+    playTone(700, 0.15);
     bjSetStatus('You win '+bjBet+' credits! (Player: '+pt+', Dealer: '+dt+')');
   } else if(pt===dt){
     bjSetStatus('Push! ('+pt+' vs '+dt+')');
   } else {
     bjBalance-=bjBet;
     bjUpdateBalance();
+    playTone(150, 0.3, 'sawtooth', 0.25);
     bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
   }
   bjRender();
@@ -10739,6 +10829,10 @@ function bjUpdateBalance(){
   <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
     <span id="theater-chat-title" class="th-chat-content" style="color:#fff;font-size:12px;font-weight:bold">💬 Chat</span>
     <button onclick="toggleTheaterChat()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:14px;line-height:1" title="Collapse chat">◀</button>
+  </div>
+  <div id="th-chat-tabs" class="th-chat-content">
+    <button id="th-tab-room" class="th-chat-tab active" onclick="switchTheaterChatTab('room')">Room</button>
+    <button id="th-tab-global" class="th-chat-tab" onclick="switchTheaterChatTab('global')">Global</button>
   </div>
   <div id="theater-chat-log" class="th-chat-content"></div>
   <div id="theater-chat-input-area" class="th-chat-content">

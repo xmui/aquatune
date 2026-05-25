@@ -7433,6 +7433,7 @@ function toggleTheater() {
     _theaterUpdateTimer = setInterval(updateTheaterControls, 500);
     updateTheaterControls();
     updateTheaterChatLabel();
+    syncTheaterChatFromMain();
     // Show controls briefly on enter
     const ctrl = document.getElementById('theater-controls');
     if (ctrl) {
@@ -7471,6 +7472,57 @@ function toggleTheaterChat() {
   panel.classList.toggle('collapsed');
   const btn = panel.querySelector('button[onclick="toggleTheaterChat()"]');
   if (btn) btn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+function syncTheaterChatFromMain() {
+  const thLog = document.getElementById('theater-chat-log');
+  if (!thLog) return;
+  thLog.innerHTML = '';
+  // Clone global messages
+  const globalLog = document.getElementById('global-log');
+  if (globalLog) {
+    globalLog.querySelectorAll('.bmsg').forEach(msg => {
+      const clone = document.createElement('div');
+      clone.className = 'th-msg';
+      const av   = msg.querySelector('.bmsg-av');
+      const name = msg.querySelector('.bmsg-name');
+      const text = msg.querySelector('.bmsg-text, .bmsg-bubble');
+      const img  = msg.querySelector('.chat-img');
+      const color = av ? av.style.background : '#0068b8';
+      const nameText = name ? name.textContent : '?';
+      const msgText  = text ? text.innerHTML : '';
+      clone.innerHTML = `
+        <div class="th-msg-av" style="background:${color}">${esc(nameText[0]?.toUpperCase()||'?')}</div>
+        <div class="th-msg-body">
+          <div class="th-msg-name" style="color:${color}">${esc(nameText)}</div>
+          <div class="th-msg-text">${msgText}${img ? `<br><img src="${img.src}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
+        </div>`;
+      thLog.appendChild(clone);
+    });
+  }
+  // Clone room messages with badge
+  const roomLog = document.getElementById('room-log');
+  if (roomLog) {
+    roomLog.querySelectorAll('.bmsg').forEach(msg => {
+      const clone = document.createElement('div');
+      clone.className = 'th-msg';
+      const av   = msg.querySelector('.bmsg-av');
+      const name = msg.querySelector('.bmsg-name');
+      const text = msg.querySelector('.bmsg-text, .bmsg-bubble');
+      const img  = msg.querySelector('.chat-img');
+      const color = av ? av.style.background : '#0068b8';
+      const nameText = name ? name.textContent : '?';
+      const msgText  = text ? text.innerHTML : '';
+      clone.innerHTML = `
+        <div class="th-msg-av" style="background:${color}">${esc(nameText[0]?.toUpperCase()||'?')}</div>
+        <div class="th-msg-body">
+          <div class="th-msg-name" style="color:${color}">${esc(nameText)}<span style="font-size:9px;background:rgba(0,180,100,0.35);color:#7fe;border-radius:4px;padding:0 4px;margin-left:4px;font-weight:700">room</span></div>
+          <div class="th-msg-text">${msgText}${img ? `<br><img src="${img.src}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
+        </div>`;
+      thLog.appendChild(clone);
+    });
+  }
+  thLog.scrollTop = 99999;
 }
 
 function updateTheaterChatLabel() {

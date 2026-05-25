@@ -6573,6 +6573,7 @@ const activeNotes = {};
 
 /* ---- flyout toggle ---- */
 let _synthInited = false, _fxInited = false, _bassInited = false, _sfxInited = false;
+let _synthKbInited = false, _drumsInited = false;
 function toggleSynthFlyout() {
   const fl = document.getElementById('synth-flyout');
   const btn = document.getElementById('synth-btn');
@@ -6581,10 +6582,7 @@ function toggleSynthFlyout() {
   if (open && !_synthInited) {
     _synthInited = true;
     initActx();
-    buildSynthKeyboard();
-    buildDrumPads();
-    buildSynthSeq();
-    buildDrumSeq();
+    if (!_synthKbInited) { _synthKbInited = true; buildSynthKeyboard(); buildSynthSeq(); }
     document.getElementById('bpm-inp').addEventListener('input', e => {
       seqBpm = Math.max(40, Math.min(240, parseInt(e.target.value)||128));
     });
@@ -6612,9 +6610,11 @@ function switchSynthTab(tab) {
     document.getElementById('spanel-'+t).classList.toggle('active', t===tab);
     document.getElementById('stab-'+t).classList.toggle('active', t===tab);
   });
-  if (tab==='fx' && !_fxInited) initFX();
-  if (tab==='bass' && !_bassInited) { _bassInited=true; buildBassKeys(); buildBassSeq(); }
-  if (tab==='sfx' && !_sfxInited) { _sfxInited=true; buildSFXPads(); }
+  if (tab==='synth' && !_synthKbInited) { _synthKbInited=true; initActx(); buildSynthKeyboard(); buildSynthSeq(); }
+  if (tab==='drums' && !_drumsInited)   { _drumsInited=true;   initActx(); buildDrumPads();     buildDrumSeq(); }
+  if (tab==='fx'    && !_fxInited)      initFX();
+  if (tab==='bass'  && !_bassInited)    { _bassInited=true;  buildBassKeys(); buildBassSeq(); }
+  if (tab==='sfx'   && !_sfxInited)     { _sfxInited=true;   buildSFXPads(); }
 }
 
 /* ---- wave selector ---- */
@@ -8852,8 +8852,7 @@ function openPicross(show = true) {
   w.classList.toggle('open');
   if (w.classList.contains('open') && !_picrossInited) {
     _picrossInited = true;
-    const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
-    loadPicrossPuzzle(generatePicross(size));
+    picrossNewPuzzle();
   }
 }
 function loadPicrossPuzzle(puzzle) {
@@ -10182,7 +10181,12 @@ function bjUpdateBalance(){
 <div id="picross-wrap">
   <div id="picross-titlebar">
     <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
-    <select id="picross-puzzle-sel" class="pc-puzzle-sel" onchange="loadPicrossPuzzle(+this.value)" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1"></select>
+    <select id="pc-size-sel" onchange="picrossNewPuzzle()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1;border-radius:6px;padding:2px 4px;font-size:11px">
+      <option value="10">10×10</option>
+      <option value="12">12×12</option>
+      <option value="15">15×15</option>
+      <option value="20">20×20</option>
+    </select>
     <button onclick="openPicross(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1">✕</button>
   </div>
   <div id="picross-body">
@@ -10200,6 +10204,7 @@ function bjUpdateBalance(){
     <div id="picross-controls">
       <button class="mbtn p" onclick="checkPicross()">Check</button>
       <button class="mbtn s" onclick="resetPicross()">Reset</button>
+      <button class="mbtn s" onclick="picrossNewPuzzle()">New</button>
     </div>
   </div>
 </div>

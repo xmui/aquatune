@@ -4761,6 +4761,11 @@ function onState(e) {
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
+    // If tab is hidden and we were playing, this is an unwanted auto-pause — fight it
+    if (e.data === S.PAUSED && _wasPlayingBeforeHide) {
+      setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
+      return;
+    }
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
@@ -4912,7 +4917,10 @@ async function playSoundCloud(v) {
       if (artwork) { const th = document.getElementById('np-thumb'); th.src = artwork; th.style.display = 'block'; if (current) current.thumbnail = artwork; }
     });
   });
-  scWidget.bind(SC.Widget.Events.PAUSE,  () => { playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false); });
+  scWidget.bind(SC.Widget.Events.PAUSE,  () => {
+    if (_wasPlayingBeforeHide) { setTimeout(() => { try { scWidget.play(); } catch(_) {} }, 80); return; }
+    playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false);
+  });
   scWidget.bind(SC.Widget.Events.FINISH, () => { playing = false; document.getElementById('play-btn').classList.remove('playing'); if (window.__beatUpdateFn) window.__beatUpdateFn(false); if (window._canControl) window.broadcastRoomState?.(); onEnded(); });
 }
 

@@ -116,6 +116,8 @@ window.initRoom = function(roomId, isHost) {
   window._isRoomHost    = isHost;
   window._canControl    = isHost;
   if (isHost) _roomHostUserId = myUserId;
+  // Immediately dim controls for guests
+  document.body.classList.toggle('room-guest', !isHost);
 
   // Write own presence
   const username  = localStorage.getItem('aq_username') || 'Guest';
@@ -145,6 +147,8 @@ window.initRoom = function(roomId, isHost) {
       const codeEl = document.getElementById('room-badge-code');
       if (codeEl) codeEl.textContent = `#${roomId}${window._canControl ? ' 🎮' : ''}`;
     }
+    // Dim controls for guests who can't control
+    document.body.classList.toggle('room-guest', !!window._currentRoomId && !window._canControl);
     renderMembersPanel();
   });
 

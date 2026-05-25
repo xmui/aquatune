@@ -470,6 +470,11 @@
     #play-btn.playing .pi  { display:none; }
     #play-btn.playing .pau { display:flex; }
 
+    /* Guest lock: dim playback controls when non-host in a room */
+    body.room-guest #prog-row, body.room-guest #play-btn,
+    body.room-guest .pb { opacity:0.42; cursor:not-allowed !important; }
+    body.room-guest #prog { cursor:not-allowed !important; }
+
     /* ── CURSOR BUBBLES ─────────────────────────────────── */
     .cursor-bubble {
       position:fixed;border-radius:50%;pointer-events:none;z-index:9999;
@@ -5919,15 +5924,25 @@ function toggleInfoExpand() {
 // ─────────────────────────────────────────────────────────
 //  CONTROLS
 // ─────────────────────────────────────────────────────────
+function _guestBlocked() {
+  if (window._currentRoomId && !window._canControl) {
+    toast('Host controls playback in this room');
+    return true;
+  }
+  return false;
+}
 function togglePlay() {
+  if (_guestBlocked()) return;
   if (currentSource === 'soundcloud' && scWidget) { playing ? scWidget.pause() : scWidget.play(); return; }
   if (ready) playing ? player.pauseVideo() : player.playVideo();
 }
 function prevVid() {
+  if (_guestBlocked()) return;
   if (currentSource === 'soundcloud' && scWidget) { scWidget.seekTo(0); return; }
   if (ready) player.seekTo(0);
 }
 function nextVid() {
+  if (_guestBlocked()) return;
   if (window.abSayNext) abSayNext();
   queue.length ? popQueue() : (automix && current ? fetchAutomix(current.id) : toast('Queue is empty'));
 }
@@ -5959,6 +5974,7 @@ function setVol(v) {
   if (scWidget && scReady) scWidget.setVolume(+v);
 }
 function seekClick(e) {
+  if (_guestBlocked()) return;
   const r = document.getElementById('prog').getBoundingClientRect();
   const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   if (currentSource === 'soundcloud' && scWidget) { scWidget.getDuration(dur => scWidget.seekTo(pct * dur)); return; }
@@ -6032,8 +6048,8 @@ document.addEventListener('keydown', e => {
     case 'Space':      e.preventDefault(); togglePlay(); break;
     case 'KeyN':       nextVid(); break;
     case 'KeyP':       prevVid(); break;
-    case 'ArrowLeft':  if(ready) player.seekTo(Math.max(0,player.getCurrentTime()-5)); break;
-    case 'ArrowRight': if(ready) player.seekTo(player.getCurrentTime()+5); break;
+    case 'ArrowLeft':  if(ready && !_guestBlocked()) player.seekTo(Math.max(0,player.getCurrentTime()-5)); break;
+    case 'ArrowRight': if(ready && !_guestBlocked()) player.seekTo(player.getCurrentTime()+5); break;
     case 'ArrowUp':    e.preventDefault(); {const s=document.getElementById('vol');s.value=Math.min(100,+s.value+5);setVol(s.value);} break;
     case 'ArrowDown':  e.preventDefault(); {const s=document.getElementById('vol');s.value=Math.max(0,+s.value-5);setVol(s.value);} break;
     case 'KeyM':

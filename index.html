@@ -43,8 +43,8 @@
 
     /* ── BACKGROUND ─────────────────────────────────────── */
     #bg {
-      position:fixed; inset:0; z-index:0; overflow:hidden;
-      background: linear-gradient(155deg, #7ec8f0 0%, #a8e0fb 28%, #c0eeff 52%, #9ad8f4 76%, #7ac8ec 100%);
+      position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
+      background: #111;
     }
     .orb { position:absolute; border-radius:50%; }
     /* Large white glowing orb — top-left */
@@ -81,7 +81,7 @@
     }
 
     /* ── APP SHELL ──────────────────────────────────────── */
-    #app { position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;padding:8px 10px;gap:8px; }
+    #app { position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;padding:8px 12px 12px;gap:12px; }
 
     /* ── HEADER ─────────────────────────────────────────── */
     #hdr {
@@ -159,7 +159,7 @@
     #user-chip { display:none; }
 
     /* ── MAIN GRID ──────────────────────────────────────── */
-    #main { display:grid;grid-template-columns:276px 1fr 292px;flex:1;gap:8px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
+    #main { display:grid;grid-template-columns:276px 1fr 292px;flex:1;gap:12px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
 
     /* ── PANEL BASE ─────────────────────────────────────── */
     .panel {
@@ -2799,6 +2799,197 @@ body.perf-mode #aqua-gun { display: none !important; }
       pointer-events: none;
     }
 
+/* ── FROST THEME — DARKER HEADER ── */
+[data-era=frost] #logo img {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 16px rgba(0,80,180,0.3));
+}
+[data-era=frost] #hdr {
+  background: linear-gradient(180deg, rgba(60,100,160,0.82) 0%, rgba(40,80,140,0.78) 100%) !important;
+  border-bottom: 1px solid rgba(140,180,230,0.5);
+}
+
+/* ── PLAYBACK CONTROLS PER THEME ── */
+
+/* DEFAULT (Aqua XP) — already styled, just ensure consistency */
+[data-era=default] #play-btn {
+  background: linear-gradient(180deg, #48d8f8, #0898bc);
+  box-shadow: 0 4px 16px rgba(0,180,220,0.5), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+[data-era=default] .pb { color: #fff; }
+
+/* MACOS (Brushed) — pill buttons, silver gradient */
+[data-era=macos] .pb {
+  background: linear-gradient(180deg, #e8e8e8, #c8c8c8) !important;
+  border: 1px solid rgba(0,0,0,0.25) !important;
+  border-radius: 999px !important;
+  color: #333 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+[data-era=macos] .pb:hover {
+  background: linear-gradient(180deg, #f0f0f0, #d8d8d8) !important;
+}
+[data-era=macos] #play-btn {
+  background: linear-gradient(180deg, #5ab0f8, #1878e8) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(30,100,220,0.45), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+}
+[data-era=macos] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
+[data-era=macos] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
+
+/* NINTENDO (Handheld) — red accent, rounded */
+[data-era=nintendo] .pb {
+  background: rgba(228,0,15,0.1) !important;
+  border: 1.5px solid rgba(228,0,15,0.25) !important;
+  border-radius: 50% !important;
+  color: #e4000f !important;
+}
+[data-era=nintendo] .pb:hover { background: rgba(228,0,15,0.2) !important; }
+[data-era=nintendo] #play-btn {
+  background: linear-gradient(180deg, #e4000f, #a00008) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 12px rgba(228,0,15,0.5) !important;
+}
+[data-era=nintendo] #prog::-webkit-slider-thumb { background: #e4000f; }
+[data-era=nintendo] #vol::-webkit-slider-thumb { background: #e4000f; }
+[data-era=nintendo] #prog::-webkit-slider-runnable-track { background: linear-gradient(90deg, #e4000f var(--pct,0%), rgba(0,0,0,0.15) var(--pct,0%)); }
+
+/* RETRO (Win95/Classic) — Win95 raised button style */
+[data-era=retro] .pb {
+  background: #d4d0c8 !important;
+  border: 2px solid !important;
+  border-color: #fff #808080 #808080 #fff !important;
+  border-radius: 2px !important;
+  color: #000 !important;
+  box-shadow: none !important;
+  font-family: Arial, sans-serif !important;
+}
+[data-era=retro] .pb:active {
+  border-color: #808080 #fff #fff #808080 !important;
+}
+[data-era=retro] #play-btn {
+  background: #d4d0c8 !important;
+  border: 2px solid !important;
+  border-color: #fff #808080 #808080 #fff !important;
+  border-radius: 2px !important;
+  color: #000 !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+}
+[data-era=retro] #prog { accent-color: #000080; }
+[data-era=retro] #vol { accent-color: #000080; }
+[data-era=retro] #prog::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
+[data-era=retro] #vol::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
+[data-era=retro] #prog::-webkit-slider-runnable-track { background: #d4d0c8; border: 1px inset #808080; border-radius: 0; }
+
+/* DARK (Midnight) — glowing teal accents */
+[data-era=dark] .pb {
+  background: rgba(56,189,248,0.1) !important;
+  border: 1px solid rgba(56,189,248,0.2) !important;
+  color: #38bdf8 !important;
+}
+[data-era=dark] .pb:hover { background: rgba(56,189,248,0.2) !important; box-shadow: 0 0 8px rgba(56,189,248,0.3) !important; }
+[data-era=dark] #play-btn {
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9) !important;
+  color: #0a1828 !important;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.5), 0 0 20px rgba(56,189,248,0.25) !important;
+}
+[data-era=dark] #prog::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
+[data-era=dark] #vol::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
+
+/* VAPOR (Vaporwave) — pink/purple gradient */
+[data-era=vapor] .pb {
+  background: linear-gradient(135deg, rgba(255,45,120,0.15), rgba(191,90,242,0.15)) !important;
+  border: 1px solid rgba(255,45,120,0.3) !important;
+  color: #ff2d78 !important;
+  border-radius: 0 !important;
+}
+[data-era=vapor] .pb:hover { background: linear-gradient(135deg, rgba(255,45,120,0.28), rgba(191,90,242,0.28)) !important; }
+[data-era=vapor] #play-btn {
+  background: linear-gradient(180deg, #ff2d78, #bf5af2) !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(255,45,120,0.5), 0 0 20px rgba(191,90,242,0.25) !important;
+}
+[data-era=vapor] #prog::-webkit-slider-thumb { background: linear-gradient(135deg, #ff2d78, #bf5af2); }
+[data-era=vapor] #vol::-webkit-slider-thumb { background: linear-gradient(135deg, #ff2d78, #bf5af2); }
+
+/* FROST (Snow Leopard) — soft blue-grey pill buttons */
+[data-era=frost] .pb {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(210,225,245,0.8)) !important;
+  border: 1px solid rgba(160,195,235,0.55) !important;
+  border-radius: 999px !important;
+  color: #2a5080 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+[data-era=frost] .pb:hover { background: linear-gradient(180deg, #fff, rgba(220,235,252,0.9)) !important; }
+[data-era=frost] #play-btn {
+  background: linear-gradient(180deg, #5a9de8, #2e72c8) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  box-shadow: 0 3px 12px rgba(46,114,200,0.45), inset 0 1px 0 rgba(255,255,255,0.35) !important;
+}
+[data-era=frost] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); border: 1px solid rgba(60,100,180,0.4); }
+[data-era=frost] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); }
+
+/* GLASS (Aero) — frosted glass, more opaque controls */
+[data-era=glass] .pb {
+  background: rgba(60,110,220,0.45) !important;
+  border: 1px solid rgba(140,200,255,0.5) !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 2px 8px rgba(0,0,80,0.4), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+}
+[data-era=glass] .pb:hover { background: rgba(80,140,255,0.6) !important; box-shadow: 0 4px 16px rgba(80,140,255,0.5) !important; }
+[data-era=glass] #play-btn {
+  background: linear-gradient(180deg, rgba(120,180,255,0.75), rgba(60,120,240,0.7)) !important;
+  border: 1px solid rgba(180,220,255,0.6) !important;
+  color: #fff !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 4px 16px rgba(40,100,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+}
+[data-era=glass] #prog::-webkit-slider-thumb { background: rgba(120,180,255,0.9); border: 1px solid rgba(200,230,255,0.7); box-shadow: 0 0 8px rgba(120,180,255,0.6); }
+[data-era=glass] #vol::-webkit-slider-thumb { background: rgba(120,180,255,0.9); border: 1px solid rgba(200,230,255,0.7); }
+
+/* NEON — glowing borders */
+[data-era=neon] .pb {
+  background: rgba(255,0,255,0.1) !important;
+  border: 1px solid rgba(255,0,255,0.5) !important;
+  color: #ff00ff !important;
+  border-radius: 4px !important;
+  box-shadow: 0 0 6px rgba(255,0,255,0.3), inset 0 0 6px rgba(255,0,255,0.05) !important;
+}
+[data-era=neon] .pb:hover { background: rgba(255,0,255,0.22) !important; box-shadow: 0 0 12px rgba(255,0,255,0.55) !important; }
+[data-era=neon] #play-btn {
+  background: linear-gradient(180deg, rgba(255,0,255,0.6), rgba(0,200,255,0.5)) !important;
+  border: 1px solid rgba(255,0,255,0.7) !important;
+  color: #fff !important;
+  box-shadow: 0 0 20px rgba(255,0,255,0.6), 0 0 40px rgba(0,200,255,0.3) !important;
+}
+[data-era=neon] #prog::-webkit-slider-thumb { background: #ff00ff; box-shadow: 0 0 8px rgba(255,0,255,0.8); }
+[data-era=neon] #vol::-webkit-slider-thumb { background: #00ffff; box-shadow: 0 0 8px rgba(0,255,255,0.8); }
+
+/* PIXEL — monospace terminal green */
+[data-era=pixel] .pb {
+  background: rgba(0,180,0,0.1) !important;
+  border: 1px solid rgba(0,200,0,0.4) !important;
+  color: #44bb44 !important;
+  border-radius: 2px !important;
+  font-family: 'Courier New', monospace !important;
+  box-shadow: 0 0 4px rgba(0,180,0,0.2) !important;
+}
+[data-era=pixel] .pb:hover { background: rgba(0,200,0,0.2) !important; box-shadow: 0 0 8px rgba(0,200,0,0.4) !important; }
+[data-era=pixel] #play-btn {
+  background: rgba(0,150,0,0.6) !important;
+  border: 1px solid rgba(0,220,0,0.6) !important;
+  color: #aaffaa !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 12px rgba(0,200,0,0.4) !important;
+  font-family: 'Courier New', monospace !important;
+}
+[data-era=pixel] #prog::-webkit-slider-thumb { background: #44bb44; border-radius: 1px; box-shadow: 0 0 4px rgba(68,187,68,0.7); }
+[data-era=pixel] #vol::-webkit-slider-thumb { background: #44bb44; border-radius: 1px; }
+
   </style>
 </head>
 <body>
@@ -3171,6 +3362,26 @@ body.perf-mode #aqua-gun { display: none !important; }
       <button id="signout-btn" onclick="signOut()" style="background:none;border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:8px;cursor:pointer;font-size:10px">Sign out</button>
     </div>
     <div style="font-size:9px;color:var(--text2);margin-top:5px">Optional — enables playlist access &amp; full search</div>
+  </div>
+  <div class="theme-section">
+    <div class="theme-label">Layout</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="layout-visualizer" onchange="setLayoutOpt('visualizer',this.checked)" style="cursor:pointer" checked> Show visualizer
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="layout-buddy" onchange="setLayoutOpt('buddy',this.checked)" style="cursor:pointer" checked> Aqua Buddy
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="layout-clock" onchange="setLayoutOpt('clock',this.checked)" style="cursor:pointer" checked> Header clock
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="layout-weather" onchange="setLayoutOpt('weather',this.checked)" style="cursor:pointer" checked> Weather widget
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="layout-hints" onchange="setLayoutOpt('hints',this.checked)" style="cursor:pointer" checked> Keyboard hints
+      </label>
+    </div>
   </div>
 </div>
 
@@ -4777,10 +4988,11 @@ function renderDiscView() {
   if (discState.view === 'albums') {
     box.innerHTML = '';
     if (!discState.albums?.length) { box.innerHTML = '<div class="empty">No releases found</div>'; return; }
+    const albumArtist = discState.artist?.name || '';
     const hdr = document.createElement('span'); hdr.className = 'disc-sec';
     hdr.textContent = discState.albumsType === 'videos'
-      ? `${discState.artist?.name} — Videos`
-      : `${discState.artist?.name} — Albums`;
+      ? `${albumArtist} — Videos`
+      : `${albumArtist} — Albums`;
     box.appendChild(hdr);
 
     if (discState.albumsType === 'videos') {
@@ -8166,6 +8378,43 @@ function setPerfMode(on) {
 // Apply perf mode on load before DOM settles
 if (_perfMode) document.body.classList.add('perf-mode');
 
+/* ── LAYOUT OPTIONS ── */
+const _layoutOpts = JSON.parse(localStorage.getItem('aq_layout') || '{}');
+
+function setLayoutOpt(key, val) {
+  _layoutOpts[key] = val;
+  localStorage.setItem('aq_layout', JSON.stringify(_layoutOpts));
+  applyLayoutOpts();
+}
+
+function applyLayoutOpts() {
+  // Visualizer
+  const viz = document.getElementById('viz-wrap') || document.querySelector('.visualizer');
+  if (viz) viz.style.display = (_layoutOpts.visualizer !== false) ? '' : 'none';
+
+  // Buddy
+  const buddy = document.getElementById('aqua-buddy');
+  if (buddy) buddy.style.display = (_layoutOpts.buddy !== false) ? '' : 'none';
+
+  // Clock
+  const clock = document.getElementById('hdr-clock');
+  if (clock) clock.style.display = (_layoutOpts.clock !== false) ? '' : 'none';
+
+  // Weather
+  const weather = document.getElementById('weather');
+  if (weather) weather.style.display = (_layoutOpts.weather !== false) ? '' : 'none';
+
+  // Keyboard hints
+  const hints = document.getElementById('kbd-hint');
+  if (hints) hints.style.display = (_layoutOpts.hints !== false) ? '' : 'none';
+
+  // Sync checkboxes
+  ['visualizer','buddy','clock','weather','hints'].forEach(k => {
+    const el = document.getElementById('layout-' + k);
+    if (el) el.checked = (_layoutOpts[k] !== false);
+  });
+}
+
 /* ── SPLASH & ROOM FUNCTIONS ── */
 function _requireName() {
   const name = document.getElementById('sp-name').value.trim();
@@ -8454,6 +8703,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Init theme swatches (locked state)
   renderThemeSwatches();
+
+  // Apply layout options from saved preferences
+  applyLayoutOpts();
 });
 
 // ── PICROSS ──────────────────────────────────────────

@@ -2461,6 +2461,211 @@ body.perf-mode #aqua-gun { display: none !important; }
   box-shadow: none !important;
 }
 
+/* ── MONO90S: floating panels, menus, overlays ── */
+[data-era=mono90s] #theme-panel,
+[data-era=mono90s] #apps-menu,
+[data-era=mono90s] #synth-flyout,
+[data-era=mono90s] #slots-wrap,
+[data-era=mono90s] #paint-wrap,
+[data-era=mono90s] #picross-wrap,
+[data-era=mono90s] #solitaire-wrap,
+[data-era=mono90s] #blackjack-wrap,
+[data-era=mono90s] #mines-wrap,
+[data-era=mono90s] #search-wrap,
+[data-era=mono90s] #pl-wrap,
+[data-era=mono90s] #sm-menu,
+[data-era=mono90s] #theater-chat-panel,
+[data-era=mono90s] #admin-wrap {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 #fff !important;
+  backdrop-filter: none !important;
+  color: #fff !important;
+}
+/* title bars inside game windows */
+[data-era=mono90s] .sol-titlebar,
+[data-era=mono90s] #slots-titlebar,
+[data-era=mono90s] #picross-titlebar,
+[data-era=mono90s] #paint-titlebar,
+[data-era=mono90s] .sf-header,
+[data-era=mono90s] #theme-panel-hdr,
+[data-era=mono90s] .board-titlebar {
+  background: #fff !important;
+  color: #000 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .sol-titlebar::after,
+[data-era=mono90s] #slots-titlebar::after,
+[data-era=mono90s] .sf-header::after { display: none !important; }
+[data-era=mono90s] .sol-titlebtn,
+[data-era=mono90s] .sf-close {
+  background: #000 !important;
+  color: #fff !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .sol-titlebtn:hover,
+[data-era=mono90s] .sf-close:hover {
+  background: #fff !important;
+  color: #000 !important;
+}
+/* synth tabs */
+[data-era=mono90s] .sf-tabs {
+  background: #000 !important;
+  border-bottom: 2px solid #fff !important;
+}
+[data-era=mono90s] .sf-tab {
+  background: #000 !important;
+  color: #aaa !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid #333 !important;
+}
+[data-era=mono90s] .sf-tab.active,
+[data-era=mono90s] .sf-tab:hover {
+  background: #fff !important;
+  color: #000 !important;
+}
+[data-era=mono90s] .sf-panel {
+  background: #000 !important;
+  color: #fff !important;
+}
+[data-era=mono90s] .wbtn {
+  background: #000 !important;
+  border: 1px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .wbtn:hover,
+[data-era=mono90s] .wbtn.sel {
+  background: #fff !important;
+  color: #000 !important;
+}
+/* step sequencer */
+[data-era=mono90s] .seq-step {
+  background: #000 !important;
+  border: 1px solid #444 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .seq-step.on {
+  background: #fff !important;
+  border-color: #fff !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .seq-step.on::after { display: none !important; }
+[data-era=mono90s] .seq-step.cur { outline: 2px solid #fff !important; }
+[data-era=mono90s] .seq-step:hover:not(.on) { background: #333 !important; }
+[data-era=mono90s] .seq-rlabel { border-radius: 0 !important; }
+[data-era=mono90s] .rlabel-black { background: #222 !important; color: #fff !important; }
+[data-era=mono90s] .rlabel-white { background: #111 !important; color: #ccc !important; }
+/* drum pads */
+[data-era=mono90s] .dpad {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  box-shadow: 2px 2px 0 #fff !important;
+  filter: none !important;
+}
+[data-era=mono90s] .dpad::before { display: none !important; }
+[data-era=mono90s] .dpad:hover,
+[data-era=mono90s] .dpad.hit { background: #fff !important; color: #000 !important; box-shadow: none !important; }
+/* piano keys */
+[data-era=mono90s] .skey-w {
+  background: #222 !important;
+  border-right: 1px solid #fff !important;
+  border-bottom: 2px solid #fff !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .skey-w::after { display: none !important; }
+[data-era=mono90s] .skey-w:hover,
+[data-era=mono90s] .skey-w.pressed { background: #fff !important; }
+[data-era=mono90s] .skey-b {
+  background: #000 !important;
+  border: 1px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .skey-b::after { display: none !important; }
+[data-era=mono90s] .skey-b:hover,
+[data-era=mono90s] .skey-b.pressed { background: #555 !important; }
+/* apps menu items */
+[data-era=mono90s] .apps-item,
+[data-era=mono90s] .apps-game-btn {
+  background: #000 !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .apps-item:hover,
+[data-era=mono90s] .apps-game-btn:hover {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+}
+/* settings panel internals */
+[data-era=mono90s] .theme-swatch {
+  border-radius: 0 !important;
+  border: 2px solid #555 !important;
+  box-shadow: none !important;
+}
+[data-era=mono90s] .theme-swatch:hover,
+[data-era=mono90s] .theme-swatch.active {
+  border-color: #fff !important;
+  box-shadow: 2px 2px 0 #fff !important;
+}
+[data-era=mono90s] .theme-label { color: #aaa !important; }
+[data-era=mono90s] .settings-section { border-bottom: 1px solid #333 !important; }
+/* win95 game buttons */
+[data-era=mono90s] .win95-btn {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  box-shadow: 2px 2px 0 #fff !important;
+}
+[data-era=mono90s] .win95-btn:hover,
+[data-era=mono90s] .win95-btn:active {
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+/* theater chat */
+[data-era=mono90s] #theater-chat-panel {
+  background: #000 !important;
+  border-left: 2px solid #fff !important;
+  backdrop-filter: none !important;
+}
+[data-era=mono90s] #theater-chat-input {
+  background: #000 !important;
+  border: 1px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+}
+[data-era=mono90s] #theater-chat-send {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+}
+[data-era=mono90s] #theater-chat-send:hover { background: #fff !important; color: #000 !important; }
+/* search/source picker */
+[data-era=mono90s] #sm-menu {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 #fff !important;
+}
+[data-era=mono90s] .sm-opt { color: #fff !important; border-radius: 0 !important; }
+[data-era=mono90s] .sm-opt.active,
+[data-era=mono90s] .sm-opt:hover { background: #fff !important; color: #000 !important; }
+
 /* ── FROST THEME (Snow Leopard-inspired) ── */
 [data-era=frost] #board-wrap, [data-era=frost] .panel,
 [data-era=frost] #theme-panel, [data-era=frost] #hdr {

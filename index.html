@@ -7898,22 +7898,26 @@ function paintPaste(x=0, y=0) {
   ctx.putImageData(paintClipboard, x, y);
 }
 
-/* Paint paste album cover */
+/* Paint paste album cover — activates click-to-place mode */
+let _paintCoverImg = null;
 function paintPasteAlbumCover() {
   const thumb = (current || {}).thumbnail;
   if (!thumb) { toast('No track playing'); return; }
-  const canvas = document.getElementById('paint-canvas');
-  const ctx = canvas.getContext('2d');
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    paintSaveState();
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, 0, 0, 64, 64);
+  const activate = (i) => {
+    _paintCoverImg = i;
+    _paintTool = 'cover';
+    document.querySelectorAll('.ptool').forEach(b => b.classList.remove('active'));
+    const el = document.getElementById('ptool-cover');
+    if (el) el.classList.add('active');
+    document.getElementById('paint-canvas').style.cursor = 'crosshair';
+    toast('Click canvas to place cover');
   };
+  img.onload = () => activate(img);
   img.onerror = () => {
     const img2 = new Image();
-    img2.onload = () => { paintSaveState(); ctx.imageSmoothingEnabled = false; ctx.drawImage(img2, 0, 0, 64, 64); };
+    img2.onload = () => activate(img2);
     img2.src = thumb;
   };
   img.src = thumb;
@@ -8008,6 +8012,18 @@ function initPaint() {
   cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId);
     const p = getPos(e);
+    if (_paintTool === 'cover' && _paintCoverImg) {
+      paintSaveState();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(_paintCoverImg, Math.round(p.x - 32), Math.round(p.y - 32), 64, 64);
+      _paintCoverImg = null;
+      _paintTool = 'pencil';
+      cv.style.cursor = '';
+      document.querySelectorAll('.ptool').forEach(b => b.classList.remove('active'));
+      const el = document.getElementById('ptool-pencil');
+      if (el) el.classList.add('active');
+      return;
+    }
     if (_paintTool === 'select') {
       paintStartSelect(p.x, p.y);
       return;

@@ -2865,6 +2865,39 @@ body.perf-mode #aqua-gun { display: none !important; }
     body.theater-mode #theater-chat-panel { display: flex; }
     #theater-chat-panel.collapsed { width: 40px; overflow: hidden; }
     #theater-chat-panel.collapsed .th-chat-content { display: none; }
+    #theater-chat-log {
+      flex: 1; overflow-y: auto; padding: 8px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    #theater-chat-log::-webkit-scrollbar { width: 3px; }
+    #theater-chat-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+    .th-msg { display: flex; gap: 6px; align-items: flex-start; }
+    .th-msg-av {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: bold; color: #fff;
+    }
+    .th-msg-body { flex: 1; min-width: 0; }
+    .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; }
+    .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85); word-break: break-word; line-height: 1.4; }
+    #theater-chat-input-area {
+      display: flex; gap: 6px; padding: 8px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+    }
+    #theater-chat-input {
+      flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 6px 8px; color: #fff; font-size: 11px;
+      font-family: inherit; resize: none; outline: none; line-height: 1.4;
+    }
+    #theater-chat-input::placeholder { color: rgba(255,255,255,0.35); }
+    #theater-chat-input:focus { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.14); }
+    #theater-chat-send {
+      background: rgba(0,180,220,0.7); border: none; border-radius: 8px;
+      color: #fff; cursor: pointer; padding: 6px 10px; font-size: 13px; flex-shrink: 0;
+      transition: background .15s;
+    }
+    #theater-chat-send:hover { background: rgba(0,200,240,0.9); }
     #th-theater-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
@@ -7228,7 +7261,10 @@ function theaterMouseMove(e) {
 
 function toggleTheaterChat() {
   const panel = document.getElementById('theater-chat-panel');
-  if (panel) panel.classList.toggle('collapsed');
+  if (!panel) return;
+  panel.classList.toggle('collapsed');
+  const btn = panel.querySelector('button[onclick="toggleTheaterChat()"]');
+  if (btn) btn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
 }
 
 function updateTheaterControls() {
@@ -8629,6 +8665,33 @@ function renderChatMsg(logEl, p) {
   logEl.scrollTop = 99999;
 }
 
+function renderTheaterChatMsg(p) {
+  const log = document.getElementById('theater-chat-log');
+  if (!log) return;
+  const name = p.username || p.name || 'Anonymous';
+  const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
+  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '');
+  const msgHtml = msnEmoji(esc(rawMsg));
+  const div = document.createElement('div');
+  div.className = 'th-msg';
+  div.innerHTML = `
+    <div class="th-msg-av" style="background:${color}">${esc(name[0].toUpperCase())}</div>
+    <div class="th-msg-body">
+      <div class="th-msg-name" style="color:${color}">${esc(name)}</div>
+      <div class="th-msg-text">${msgHtml}${p.imageData ? `<br><img src="${p.imageData}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
+    </div>`;
+  log.appendChild(div);
+  log.scrollTop = 99999;
+}
+
+function sendTheaterChatMsg() {
+  const inp = document.getElementById('theater-chat-input');
+  const msg = inp?.value.trim();
+  if (!msg) return;
+  window.sendGlobalMessage?.(msg);
+  if (inp) inp.value = '';
+}
+
 window.appendRoomChatMsg = function(p) {
   const log = document.getElementById('room-log');
   if (log) {
@@ -8794,6 +8857,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.listenGlobalChat?.((p) => {
     const log = document.getElementById('global-log');
     if (log) renderChatMsg(log, p);
+    renderTheaterChatMsg(p);
   });
 
   // Init perf mode checkbox
@@ -10324,12 +10388,14 @@ function bjUpdateBalance(){
   <div id="th-title" style="font-size:13px;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
 </div>
 <div id="theater-chat-panel">
-  <div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
-    <span class="th-chat-content" style="color:#fff;font-size:12px;font-weight:bold">Chat</span>
-    <button onclick="toggleTheaterChat()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px" title="Collapse chat">◀</button>
+  <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.15);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+    <span class="th-chat-content" style="color:#fff;font-size:12px;font-weight:bold">💬 Chat</span>
+    <button onclick="toggleTheaterChat()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:14px;line-height:1" title="Collapse chat">◀</button>
   </div>
-  <div class="th-chat-content" style="flex:1;overflow-y:auto;padding:8px;font-size:11px;color:rgba(255,255,255,0.8)">
-    <div style="text-align:center;opacity:0.5;margin-top:20px">Chat is shown in the main panel</div>
+  <div id="theater-chat-log" class="th-chat-content"></div>
+  <div id="theater-chat-input-area" class="th-chat-content">
+    <textarea id="theater-chat-input" rows="2" maxlength="500" placeholder="Message…" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendTheaterChatMsg();event.preventDefault();}"></textarea>
+    <button id="theater-chat-send" onclick="sendTheaterChatMsg()" title="Send (Ctrl+Enter)">➤</button>
   </div>
 </div>
 </body>

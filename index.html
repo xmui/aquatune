@@ -930,7 +930,7 @@
       color:#000;
     }
     .bmsg-text {
-      font-size:12px; line-height:1.65; white-space:pre-wrap; word-break:break-word; color:#222;
+      font-size:12px; line-height:1.65; white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; color:#222;
     }
     .bmsg-del {
       background:none; border:none; cursor:pointer; font-size:10px;
@@ -3107,7 +3107,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       background: rgba(0,0,0,0.75);
       backdrop-filter: blur(12px);
       border-radius: 0;
-      padding: 12px 20px;
+      padding: 12px 20px max(12px, env(safe-area-inset-bottom)) 20px;
       z-index: 600;
       color: #fff;
       opacity: 0;
@@ -3149,7 +3149,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
     .th-msg-body { flex: 1; min-width: 0; }
     .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; color: #ccc; }
-    .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85); word-break: break-word; line-height: 1.4; }
+    .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85); word-break: break-all; overflow-wrap: anywhere; line-height: 1.4; }
     .th-msg-bubble { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border-radius: 6px; padding: 4px 7px; }
     #theater-chat-input-area {
       display: flex; gap: 6px; padding: 8px;
@@ -3205,6 +3205,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     body.remote-mode #ctrl-bubble { display:none !important; }
     body.remote-mode #viz-wrap { display:none !important; }
     body.remote-mode #remote-now-playing { display:flex !important; }
+    body.theater-mode #player-bubble { display:block !important; }
+    body.theater-mode #ctrl-bubble { display:none !important; }
+    body.theater-mode #viz-wrap { display:none !important; }
 
 /* ── FROST THEME — DARKER HEADER ── */
 [data-era=frost] #logo img {
@@ -3596,14 +3599,23 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     <!-- CENTER: player + info + visualizer + controls -->
     <div id="center">
-  <div id="remote-now-playing" style="display:none;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:10px;margin-bottom:6px;">
-    <img id="remote-thumb" style="width:52px;height:39px;border-radius:5px;object-fit:cover;flex-shrink:0" src="" alt="">
-    <div style="flex:1;min-width:0;">
-      <div id="remote-title" style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">Nothing playing</div>
-      <div id="remote-ch" style="font-size:10px;opacity:.65;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)"></div>
+  <div id="remote-now-playing" style="display:none;flex-direction:column;gap:0;padding:12px 16px;background:var(--bubble,rgba(255,255,255,0.15));border-radius:12px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.12);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <img id="remote-thumb" style="width:56px;height:42px;border-radius:6px;object-fit:cover;flex-shrink:0;display:none" src="" alt="">
+      <div style="flex:1;min-width:0;">
+        <div id="remote-title" style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">Nothing playing</div>
+        <div id="remote-ch" style="font-size:11px;opacity:.65;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)"></div>
+      </div>
     </div>
-    <button onclick="togglePlay()" style="font-size:18px;background:none;border:none;cursor:pointer;padding:2px 6px;" title="Play/Pause">⏯</button>
-    <button onclick="nextVid()" style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px 6px;" title="Next">⏭</button>
+    <div id="remote-prog" style="height:4px;background:rgba(128,128,128,0.25);border-radius:2px;cursor:pointer;margin-bottom:12px;position:relative;" onclick="seekClick(event)">
+      <div id="remote-prog-fill" style="height:100%;background:var(--accent,#0068b8);border-radius:2px;width:0%;transition:width .4s linear;pointer-events:none"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="prevVid()" class="mbtn" style="font-size:17px;padding:4px 10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;cursor:pointer;color:var(--text)" title="Previous">⏮</button>
+      <button onclick="togglePlay()" id="remote-play-btn" class="mbtn p" style="font-size:20px;padding:6px 18px;background:var(--accent,#0068b8);border:none;border-radius:8px;cursor:pointer;color:#fff;flex:0 0 auto" title="Play/Pause">▶</button>
+      <button onclick="nextVid()" class="mbtn" style="font-size:17px;padding:4px 10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;cursor:pointer;color:var(--text)" title="Next">⏭</button>
+      <input type="range" id="remote-vol" min="0" max="100" style="flex:1;accent-color:var(--accent,#0068b8)" oninput="setVol(this.value)" title="Volume">
+    </div>
   </div>
       <div id="player-bubble">
         <div id="yt-player"></div>
@@ -4685,16 +4697,20 @@ window.onYouTubeIframeAPIReady = () => {
 };
 function onState(e) {
   const S = YT.PlayerState;
+  const rBtn = document.getElementById('remote-play-btn');
   if (e.data === S.PLAYING) {
     playing = true; document.getElementById('play-btn').classList.add('playing'); startProg();
+    if (rBtn) rBtn.textContent = '⏸';
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     playing = false; document.getElementById('play-btn').classList.remove('playing');
+    if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
     if (window._canControl && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();
+    if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
   }
 }
@@ -4711,14 +4727,18 @@ function startProg() {
       scWidget.getPosition(pos => scWidget.getDuration(dur => {
         document.getElementById('t-cur').textContent = fmt(pos/1000);
         document.getElementById('t-dur').textContent = fmt(dur/1000);
-        document.getElementById('prog-fill').style.width = dur ? (pos/dur*100)+'%' : '0%';
+        const pct = dur ? (pos/dur*100) : 0;
+        document.getElementById('prog-fill').style.width = pct+'%';
+        const rFill = document.getElementById('remote-prog-fill'); if (rFill) rFill.style.width = pct+'%';
       }));
     } else {
       if (!player || !ready) return;
       const c = player.getCurrentTime() || 0, d = player.getDuration() || 0;
       document.getElementById('t-cur').textContent = fmt(c);
       document.getElementById('t-dur').textContent = fmt(d);
-      document.getElementById('prog-fill').style.width = d ? (c/d*100)+'%' : '0%';
+      const pct = d ? (c/d*100) : 0;
+      document.getElementById('prog-fill').style.width = pct+'%';
+      const rFill = document.getElementById('remote-prog-fill'); if (rFill) rFill.style.width = pct+'%';
     }
   }, 500);
 }
@@ -4820,7 +4840,7 @@ async function playSoundCloud(v) {
     await new Promise(res => { const s = document.createElement('script'); s.src = 'https://w.soundcloud.com/player/api.js'; s.onload = res; document.head.appendChild(s); });
   }
   scWidget = SC.Widget(frame);
-  scWidget.bind(SC.Widget.Events.READY, () => { scReady = true; scWidget.setVolume(vol); });
+  scWidget.bind(SC.Widget.Events.READY, () => { scReady = true; scWidget.setVolume(_remoteMode ? 0 : vol); if (_remoteMode) scWidget.pause(); });
   scWidget.bind(SC.Widget.Events.PLAY, () => {
     playing = true; document.getElementById('play-btn').classList.add('playing'); startProg();
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
@@ -5187,7 +5207,7 @@ function renderQueue() {
     box.appendChild(el);
   });
 }
-function clearQueue() { queue=[]; origQueue=[]; renderQueue(); toast('Queue cleared'); }
+function clearQueue() { queue=[]; origQueue=[]; renderQueue(); toast('Queue cleared'); if (window._canControl) window.broadcastRoomState?.(); }
 function saveQueuePl() {
   if (!queue.length) { toast('Queue is empty'); return; }
   const name = prompt('Playlist name:'); if (!name?.trim()) return;
@@ -5825,7 +5845,7 @@ function viewPl(id) {
   });
 }
 async function viewYtPl(pl) { activePlId=pl.id; renderPls(); document.getElementById('q').value=pl.ytId; await loadYtPlaylist(pl.ytId); }
-function playPl(id) { const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); renderQueue(); toast(`Playing: ${pl.name}`); }
+function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); renderQueue(); toast(`Playing: ${pl.name}`); }
 function backToSearch() { activePlId=null; renderPls(); document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
 function newPlaylistPrompt() { document.getElementById('pl-name-inp').value=''; openModal('pl-modal'); setTimeout(()=>document.getElementById('pl-name-inp').focus(),80); }
 function confirmNewPl() { const name=document.getElementById('pl-name-inp').value.trim(); if(!name) return; playlists.push({id:Date.now(),name,videos:[]}); savePls(); closeModal('pl-modal'); toast(`Playlist "${name}" created`); }
@@ -7868,6 +7888,7 @@ function updateTheaterControls() {
   <button class="mob-tool-btn" onclick="openMines()" title="Minesweeper">💣<span>Mines</span></button>
   <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
   <button class="mob-tool-btn" onclick="openBlackjack()" title="Blackjack">🃏<span>Blackjack</span></button>
+  <button class="mob-tool-btn" onclick="toggleTheater()" title="Theater">🎬<span>Theater</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
 
@@ -8308,18 +8329,21 @@ function buildEmojiBar(barId, textareaId) {
   bar.dataset.built = '1';
   MSN_EMOJIS.forEach(([code, src]) => {
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'board-emoji-btn';
     btn.title = code;
-    const img = document.createElement('img');
-    img.className = 'msn-em';
-    img.src = src;
-    img.alt = code;
-    btn.appendChild(img);
+    const sp = document.createElement('span');
+    sp.className = 'msn-em';
+    sp.style.backgroundImage = `url('${src}')`;
+    sp.setAttribute('aria-hidden', 'true');
+    btn.appendChild(sp);
+    btn.addEventListener('pointerdown', e => e.preventDefault());
     btn.onclick = () => {
       const ta = document.getElementById(textareaId);
       if (!ta) return;
-      const s = ta.selectionStart, e = ta.selectionEnd;
-      ta.value = ta.value.slice(0, s) + code + ta.value.slice(e);
+      const s = ta.selectionStart ?? ta.value.length;
+      const e2 = ta.selectionEnd ?? s;
+      ta.value = ta.value.slice(0, s) + code + ta.value.slice(e2);
       ta.selectionStart = ta.selectionEnd = s + code.length;
       ta.focus();
     };
@@ -9316,7 +9340,7 @@ function renderChatMsg(logEl, p) {
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
   const initl = name[0].toUpperCase();
   const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(ts || Date.now()) : '';
-  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, ''); // strip stale HTML tags
+  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '').replace(/data:[^\s"'<>)]+/gi, '').trim();
   const msgHtml = msnEmoji(esc(rawMsg));
   div.innerHTML = `
     <div class="bmsg-av" style="background:${color}">${esc(initl)}</div>
@@ -9337,7 +9361,7 @@ function renderTheaterChatMsg(p, isRoom) {
   if (!log) return;
   const name = p.username || p.name || 'Anonymous';
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
-  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '');
+  const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '').replace(/data:[^\s"'<>)]+/gi, '').trim();
   const msgHtml = msnEmoji(esc(rawMsg));
   const badge = isRoom ? `<span style="font-size:9px;background:rgba(0,180,100,0.35);color:#7fe;border-radius:4px;padding:0 4px;margin-left:4px;font-weight:700">room</span>` : '';
   const div = document.createElement('div');
@@ -9438,7 +9462,7 @@ window.appendRoomChatMsg = function(p) {
 function sendGlobalChatMsg() {
   const msgEl = document.getElementById('global-msg');
   const nameEl = document.getElementById('global-name');
-  const msg = msgEl?.value.trim();
+  const msg = (msgEl?.value.trim() || '').replace(/data:[^\s"'<>)]+/gi, '').trim();
   if (!msg) return;
   const name = nameEl?.value.trim() || localStorage.getItem('aq_username') || 'Anonymous';
   localStorage.setItem('aq_username', name);
@@ -9448,7 +9472,7 @@ function sendGlobalChatMsg() {
 
 function sendRoomChatMsg() {
   const msgEl = document.getElementById('room-msg');
-  const msg = msgEl?.value.trim();
+  const msg = (msgEl?.value.trim() || '').replace(/data:[^\s"'<>)]+/gi, '').trim();
   if (!msg || !window._currentRoomId) return;
   window.sendRoomMessage?.(msg);
   if (msgEl) msgEl.value = '';
@@ -9609,6 +9633,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const rBtn = document.getElementById('remote-mode-btn');
     if (rBtn) rBtn.style.background = 'rgba(255,80,80,0.3)';
   }
+  // Init remote volume slider
+  const rVol = document.getElementById('remote-vol');
+  if (rVol) rVol.value = localStorage.getItem('aq_vol') || '80';
 
   // Init theme swatches (locked state)
   renderThemeSwatches();

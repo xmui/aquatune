@@ -10926,7 +10926,7 @@ function bjUpdateBalance(){
         <div class="board-emoji-bar" id="global-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
           <button class="emoji-toggle-btn" onclick="toggleEmojiBar('global')" title="Emoticons">☺</button>
-          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Ctrl+Enter)"></textarea>
+          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalChatMsg();}"></textarea>
           <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
         </div>
       </div>
@@ -10942,7 +10942,7 @@ function bjUpdateBalance(){
         <div class="board-emoji-bar" id="room-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
           <button class="emoji-toggle-btn" onclick="toggleEmojiBar('room')" title="Emoticons">☺</button>
-          <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room chat… (Ctrl+Enter)"></textarea>
+          <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room chat… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendRoomChatMsg();}"></textarea>
           <button class="board-send-btn" onclick="sendRoomChatMsg()">Send</button>
         </div>
       </div>
@@ -11322,8 +11322,8 @@ function bjUpdateBalance(){
   </div>
   <div id="theater-chat-log" class="th-chat-content"></div>
   <div id="theater-chat-input-area" class="th-chat-content">
-    <textarea id="theater-chat-input" rows="2" maxlength="500" placeholder="Message…" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendTheaterChatMsg();event.preventDefault();}"></textarea>
-    <button id="theater-chat-send" onclick="sendTheaterChatMsg()" title="Send (Ctrl+Enter)">➤</button>
+    <textarea id="theater-chat-input" rows="2" maxlength="500" placeholder="Message… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTheaterChatMsg();}"></textarea>
+    <button id="theater-chat-send" onclick="sendTheaterChatMsg()" title="Send">➤</button>
   </div>
 </div>
 <div id="room-members-panel">

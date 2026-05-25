@@ -386,8 +386,8 @@
     #prog:hover { height:9px; }
     #prog-fill {
       height:100%; border-radius:6px; position:relative; pointer-events:none; transition:width .45s linear;
-      background: linear-gradient(90deg, #0098d8, #00d4ec, #00e8c8);
-      box-shadow: 0 0 8px rgba(0,190,230,0.45);
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 8px rgba(0,190,230,0.35);
     }
     #prog-fill::after { content:'';position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:14px;height:14px;background:radial-gradient(circle at 40% 35%, rgba(255,255,255,0.65), var(--accent));border-radius:50%;border:2px solid #fff;opacity:0;transition:opacity .14s;box-shadow:0 0 9px rgba(0,180,220,0.7); }
     #prog:hover #prog-fill::after { opacity:1; }
@@ -2245,6 +2245,16 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=nintendo] #vol { accent-color: #e4000f; }
 [data-era=nintendo] .tab.on { border-bottom-color: #e4000f !important; }
 [data-era=nintendo] .vb { background: linear-gradient(0deg, #cc0011 0%, #e4000f 55%, #ff6666 100%) !important; }
+[data-era=nintendo] #prog-fill { background: linear-gradient(90deg,#e4000f,#ff4444) !important; box-shadow: 0 0 8px rgba(228,0,15,0.4) !important; }
+[data-era=nintendo] #prog { background: rgba(228,0,15,0.1) !important; }
+[data-era=nintendo] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: #e4000f !important; }
+[data-era=nintendo] .pl-item.active { background: rgba(228,0,15,0.1) !important; border-left-color: #e4000f !important; border-color: rgba(228,0,15,0.25) !important; }
+[data-era=nintendo] .sec-ttl { border-left-color: #e4000f !important; }
+[data-era=nintendo] #q:focus, [data-era=nintendo] input:focus { box-shadow: 0 0 0 3px rgba(228,0,15,0.15) !important; border-color: rgba(228,0,15,0.4) !important; }
+[data-era=nintendo] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.45) !important; }
+[data-era=nintendo] .cb:hover, [data-era=nintendo] .q-btn:hover { background: linear-gradient(180deg,#fff 0%,#f0f0f0 100%) !important; border-color: #e4000f !important; }
+[data-era=nintendo] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
+[data-era=nintendo] .sm-opt.active, [data-era=nintendo] .sm-opt:hover { color: #e4000f !important; background: rgba(228,0,15,0.06) !important; }
 
 /* Retro 95: flat Windows 95 chrome, 3D raised borders */
 [data-era=retro] .panel,
@@ -3892,6 +3902,8 @@ function applyTheme(name, customAccent) {
       const rv = parseInt(hex.slice(0,2),16), gv = parseInt(hex.slice(2,4),16), bv = parseInt(hex.slice(4,6),16);
       o3.style.background = `rgba(${rv},${gv},${bv},0.15)`;
     }
+    // Clear any inline tab styles left by a previous custom accent so CSS class rules take over
+    document.querySelectorAll('.tab.on').forEach(el => el.style.background = '');
   }
   document.documentElement.dataset.scheme = (t.scheme || 'light');
   document.documentElement.dataset.era = t.era || 'default';

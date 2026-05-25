@@ -3125,12 +3125,13 @@ body.perf-mode #aqua-gun { display: none !important; }
       position: fixed;
       top: 0; right: 0;
       width: 280px; height: 100vh;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.92) !important;
       backdrop-filter: blur(16px);
       z-index: 601;
       flex-direction: column;
       border-left: 1px solid rgba(255,255,255,0.15);
       transition: width .2s;
+      color: #fff !important;
     }
     body.theater-mode #theater-chat-panel { display: flex; }
     #theater-chat-panel.collapsed { width: 40px; overflow: hidden; }
@@ -3138,6 +3139,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #theater-chat-log {
       flex: 1; overflow-y: auto; padding: 8px;
       display: flex; flex-direction: column; gap: 4px;
+      background: transparent !important;
     }
     #theater-chat-log::-webkit-scrollbar { width: 3px; }
     #theater-chat-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
@@ -3145,37 +3147,38 @@ body.perf-mode #aqua-gun { display: none !important; }
     .th-msg-av {
       width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: bold; color: #fff;
+      font-size: 10px; font-weight: bold; color: #fff !important;
     }
     .th-msg-body { flex: 1; min-width: 0; }
-    .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; color: #ccc; }
-    .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85); word-break: break-all; overflow-wrap: anywhere; line-height: 1.4; }
-    .th-msg-bubble { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border-radius: 6px; padding: 4px 7px; }
+    .th-msg-name { font-size: 10px; font-weight: 700; margin-bottom: 1px; color: #ccc !important; }
+    .th-msg-text { font-size: 11px; color: rgba(255,255,255,0.85) !important; word-break: break-all; overflow-wrap: anywhere; line-height: 1.4; }
+    .th-msg-bubble { background: rgba(255,255,255,0.12) !important; color: rgba(255,255,255,0.85) !important; border-radius: 6px; padding: 4px 7px; }
     #theater-chat-input-area {
       display: flex; gap: 6px; padding: 8px;
       border-top: 1px solid rgba(255,255,255,0.12);
       flex-shrink: 0;
+      background: transparent !important;
     }
     #theater-chat-input {
-      flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 8px; padding: 6px 8px; color: #fff; font-size: 11px;
+      flex: 1; background: rgba(255,255,255,0.1) !important; border: 1px solid rgba(255,255,255,0.2) !important;
+      border-radius: 8px; padding: 6px 8px; color: #fff !important; font-size: 11px;
       font-family: inherit; resize: none; outline: none; line-height: 1.4;
     }
-    #theater-chat-input::placeholder { color: rgba(255,255,255,0.35); }
-    #theater-chat-input:focus { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.14); }
+    #theater-chat-input::placeholder { color: rgba(255,255,255,0.35) !important; }
+    #theater-chat-input:focus { border-color: rgba(255,255,255,0.4) !important; background: rgba(255,255,255,0.14) !important; }
     #theater-chat-send {
       background: rgba(0,180,220,0.7); border: none; border-radius: 8px;
-      color: #fff; cursor: pointer; padding: 6px 10px; font-size: 13px; flex-shrink: 0;
+      color: #fff !important; cursor: pointer; padding: 6px 10px; font-size: 13px; flex-shrink: 0;
       transition: background .15s;
     }
     #theater-chat-send:hover { background: rgba(0,200,240,0.9); }
-    #th-chat-tabs { display:flex; gap:0; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.15); }
+    #th-chat-tabs { display:flex; gap:0; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4) !important; }
     .th-chat-tab {
       flex:1; padding:5px 8px; font-size:10px; font-weight:700; border:none; cursor:pointer;
-      background:transparent; color:rgba(255,255,255,0.55); border-bottom:2px solid transparent;
+      background:transparent !important; color:rgba(255,255,255,0.55) !important; border-bottom:2px solid transparent;
       transition:all .12s;
     }
-    .th-chat-tab.active { color:#0cf; border-bottom-color:#0cf; background:rgba(255,255,255,0.08); }
+    .th-chat-tab.active { color:#0cf !important; border-bottom-color:#0cf; background:rgba(255,255,255,0.08) !important; }
     #th-theater-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
@@ -8254,69 +8257,78 @@ const _fl = '<path d="M7.5 13 L12.5 13" fill="none" stroke="#333" stroke-width="
 const _ab = '<path d="M5.5 6.3 L8 7.8" fill="none" stroke="#333" stroke-width="1.4"/><path d="M12 7.8 L14.5 6.3" fill="none" stroke="#333" stroke-width="1.4"/>';
 const _glss = '<rect x="4" y="7.5" width="4.5" height="3.5" rx="1.8" fill="#333" opacity="0.8"/><rect x="11.5" y="7.5" width="4.5" height="3.5" rx="1.8" fill="#333" opacity="0.8"/><path d="M8.5 9.2 L11.5 9.2" stroke="#333" stroke-width="1"/>';
 
-const MSN_EMOJIS = [
-  [':)',  _sv(_yb+_ey+_sm)],
-  [':D',  _sv(_yb+_ey+_gr)],
-  [';)',  _sv(_yb+_ew+_sm)],
-  [':-O', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/>')],
-  [':P',  _sv(_yb+_ey+'<path d="M6.5 12 Q10 15 13.5 12" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="10" cy="14.5" rx="2" ry="1.5" fill="#FF6B8A"/>')],
-  ['(H)', _sv(_yb+_glss+_sm)],
-  [':@',  _sv(_yb+_ab+_ey+'<path d="M7.5 14.5 Q10 12.5 12.5 14.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
-  [':S',  _sv(_yb+_ey+'<path d="M7 13 Q8.5 14.5 10 13 Q11.5 11.5 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
-  [':\\', _sv(_yb+_ey+'<path d="M7.5 13.5 Q10 13.5 12 12.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
-  [':(',  _sv(_yb+_ey+_sd)],
-  [":'(", _sv(_yb+_ey+_sd+'<ellipse cx="13.5" cy="11.5" rx="1" ry="2" fill="#88ccff" opacity="0.85"/>')],
-  [':|',  _sv(_yb+_ey+_fl)],
-  ['(A)', _sv(_yb+_ey+_sm+'<ellipse cx="10" cy="2.5" rx="4.5" ry="1.3" fill="none" stroke="#FFD700" stroke-width="1.8"/>')],
-  ['8o|', _sv(_yb+_ab+_ey+'<path d="M7 13.5 L13 13.5" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>')],
-  ['8-|', _sv(_yb+_glss+_fl)],
-  ['+o(', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#5aaa44"/><path d="M7 5.5 Q10 3 13 5.5" fill="none" stroke="#5aaa44" stroke-width="1.4" stroke-linecap="round"/>')],
-  ['<:o)', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/><path d="M3.5 8 Q2 6 4.5 5 Q7 4 6 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/><path d="M16.5 8 Q18 6 15.5 5 Q13 4 14 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/>')],
-  ['|-)', _sv(_yb+'<path d="M5 8.5 L8.5 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><path d="M11.5 8.5 L15 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/>'+_fl)],
-  ['*-)', _sv(_yb+'<path d="M5 6.5 L9 10.5 M9 6.5 L5 10.5" fill="none" stroke="#333" stroke-width="1.4"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm)],
-  [':-#', _sv(_yb+_ey+'<path d="M7.5 12.5 L12.5 12.5 M7.5 13.5 L12.5 13.5 M10 12 L10 14 M8.5 12 L8.5 14 M11.5 12 L11.5 14" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>')],
-  [':-*', _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2" fill="#FF9090"/><path d="M8.5 13 Q10 15 11.5 13" fill="#FF6B8A"/>')],
-  ['^o)', _sv(_yb+'<path d="M4.5 9 Q5.5 7 7 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm)],
-  ['8-)', _sv(_yb+_glss+'<path d="M7 13 Q10 16 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>')],
-  ['(L)', _sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="#f44" stroke="#c22" stroke-width="0.8"/>')],
-  ['(U)', _sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="none" stroke="#8899aa" stroke-width="1.8"/><path d="M9 12 L11 10 M11 12 L9 10" stroke="#8899aa" stroke-width="1.2"/>')],
-  ['(M)', _sv('<rect x="2" y="5.5" width="16" height="11" rx="2.5" fill="#1a78c2" stroke="#0a5a9a" stroke-width="1.2"/><path d="M2 8 L10 12.5 L18 8" fill="none" stroke="#fff" stroke-width="1.5"/>')],
-  ['(@)', _sv('<circle cx="10" cy="9.5" r="7.5" fill="#FFD700" stroke="#C8A000" stroke-width="1.2"/><circle cx="7.5" cy="9" r="1.2" fill="#333"/><circle cx="12.5" cy="9" r="1.2" fill="#333"/><path d="M7 12 Q10 14.5 13 12" fill="none" stroke="#333" stroke-width="1.3" stroke-linecap="round"/><path d="M6 5 Q10 2 14 5" fill="none" stroke="#C8A000" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 9 Q1.5 9.5 3.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/><path d="M16.5 9 Q18.5 9.5 16.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/>')],
-  ['(&)', _sv('<circle cx="10" cy="9" r="7" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><ellipse cx="10" cy="14.5" rx="5" ry="4" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><circle cx="7.2" cy="8.5" r="1.2" fill="#333"/><circle cx="12.8" cy="8.5" r="1.2" fill="#333"/><ellipse cx="10" cy="11" rx="2" ry="1.5" fill="#e8b880"/>')],
-  ['(sn)', _sv('<ellipse cx="10" cy="12.5" rx="7.5" ry="5.5" fill="#aaa" stroke="#888" stroke-width="1.2"/><circle cx="10" cy="7.5" r="4.5" fill="#bbb" stroke="#888" stroke-width="1.2"/><circle cx="8.2" cy="7.5" r="1" fill="#333"/><circle cx="11.8" cy="7.5" r="1" fill="#333"/><path d="M5.5 12 Q10 10 14.5 12" fill="none" stroke="#888" stroke-width="1.2"/>')],
-  ['(bah)', _sv('<ellipse cx="10" cy="12.5" rx="7" ry="6" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="7" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="13" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><circle cx="8" cy="13" r="1.2" fill="#333"/><circle cx="12" cy="13" r="1.2" fill="#333"/>')],
-  ['(S)', _sv('<circle cx="10" cy="10" r="7.5" fill="#FFFAAA" stroke="#D4C850" stroke-width="1.2"/><circle cx="13.5" cy="7" r="6" fill="#c8d8f8"/><circle cx="13" cy="6.5" r="5.2" fill="#dde8ff"/>')],
-  ['(*)', _sv('<polygon points="10,2.5 12.5,7.5 18,8 13.8,12 15.5,17.5 10,14 4.5,17.5 6.2,12 2,8 7.5,7.5" fill="#FFD700" stroke="#C8A000" stroke-width="0.8"/>')],
-  ['(#)', _sv('<circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#C8A000" stroke-width="1"/><line x1="10" y1="1" x2="10" y2="3.5" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16.5" x2="10" y2="19" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="10" x2="3.5" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="16.5" y1="10" x2="19" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="3.5" y1="3.5" x2="5.4" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="14.6" y1="14.6" x2="16.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="3.5" x2="14.6" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="5.4" y1="14.6" x2="3.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/>')],
-  ['(R)', _sv('<path d="M2 17 Q10 2 18 17" fill="none" stroke="#f00" stroke-width="4.5"/><path d="M2.8 17 Q10 3.5 17.2 17" fill="none" stroke="#ff7700" stroke-width="4"/><path d="M3.8 17 Q10 5.5 16.2 17" fill="none" stroke="#ffee00" stroke-width="3.5"/><path d="M4.8 17 Q10 7.5 15.2 17" fill="none" stroke="#00cc00" stroke-width="3"/><path d="M5.8 17 Q10 9.5 14.2 17" fill="none" stroke="#0055ff" stroke-width="2.5"/><path d="M6.8 17 Q10 11.5 13.2 17" fill="none" stroke="#8800ff" stroke-width="2"/>')],
-  ['({)', _sv(_yb+_ey+_sm+'<path d="M1.5 8 Q0 9.5 1.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>')],
-  ['(})', _sv(_yb+_ey+_sm+'<path d="M18.5 8 Q20 9.5 18.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>')],
-  ['(K)', _sv('<circle cx="10" cy="10" r="9" fill="#FFB0C8" stroke="#e07090" stroke-width="1.2"/><ellipse cx="10" cy="13.5" rx="3" ry="2" fill="#e04070"/><path d="M8.5 12.5 Q10 14.5 11.5 12.5" fill="#FF6090"/><circle cx="7.5" cy="8.5" r="1.2" fill="#333"/><circle cx="12.5" cy="8.5" r="1.2" fill="#333"/>')],
-  ['(F)', _sv('<circle cx="10" cy="11" r="5.5" fill="#FFD700" stroke="#e8c000" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#98d848" stroke="#70b030" stroke-width="0.8"/>')],
-  ['(W)', _sv('<circle cx="10" cy="11" r="5.5" fill="#cccc44" stroke="#aaaa22" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#667733" stroke="#445511" stroke-width="0.8"/>')],
-  ['(O)', _sv('<circle cx="10" cy="10" r="8" fill="none" stroke="#888" stroke-width="2"/><path d="M10 2.5 L10 10 L14 10" fill="none" stroke="#444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>')],
+// ── EMOTE REGISTRY ────────────────────────────────────────
+// Format: [cssClass, svgSrc, primaryCode, ...aliases]
+// primaryCode is what the picker inserts and what users type.
+// Aliases are extra codes that also trigger the same emote.
+// To add a new emote: ['em-name', _sv(/* SVG */), ':name:']
+const EMOTE_REGISTRY = [
+  ['em-smile',      _sv(_yb+_ey+_sm),  ':)', ':smile:'],
+  ['em-grin',       _sv(_yb+_ey+_gr),  ':D', ':grin:', 'xD'],
+  ['em-wink',       _sv(_yb+_ew+_sm),  ';)', ':wink:'],
+  ['em-shock',      _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/>'),  ':-O', ':shock:', ':o'],
+  ['em-tongue',     _sv(_yb+_ey+'<path d="M6.5 12 Q10 15 13.5 12" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="10" cy="14.5" rx="2" ry="1.5" fill="#FF6B8A"/>'),  ':P', ':tongue:'],
+  ['em-cool',       _sv(_yb+_glss+_sm),  '(H)', ':cool:'],
+  ['em-angry',      _sv(_yb+_ab+_ey+'<path d="M7.5 14.5 Q10 12.5 12.5 14.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>'),  ':@', ':angry:'],
+  ['em-confused',   _sv(_yb+_ey+'<path d="M7 13 Q8.5 14.5 10 13 Q11.5 11.5 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>'),  ':S', ':confused:'],
+  ['em-undecided',  _sv(_yb+_ey+'<path d="M7.5 13.5 Q10 13.5 12 12.5" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>'),  ':\\', ':undecided:'],
+  ['em-sad',        _sv(_yb+_ey+_sd),  ':(', ':sad:'],
+  ['em-cry',        _sv(_yb+_ey+_sd+'<ellipse cx="13.5" cy="11.5" rx="1" ry="2" fill="#88ccff" opacity="0.85"/>'),  ":'(", ':cry:'],
+  ['em-neutral',    _sv(_yb+_ey+_fl),  ':|', ':neutral:'],
+  ['em-angel',      _sv(_yb+_ey+_sm+'<ellipse cx="10" cy="2.5" rx="4.5" ry="1.3" fill="none" stroke="#FFD700" stroke-width="1.8"/>'),  '(A)', ':angel:'],
+  ['em-rage',       _sv(_yb+_ab+_ey+'<path d="M7 13.5 L13 13.5" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>'),  '8o|', ':rage:'],
+  ['em-eyeroll',    _sv(_yb+_glss+_fl),  '8-|', ':eyeroll:'],
+  ['em-sick',       _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#5aaa44"/><path d="M7 5.5 Q10 3 13 5.5" fill="none" stroke="#5aaa44" stroke-width="1.4" stroke-linecap="round"/>'),  '+o(', ':sick:'],
+  ['em-clown',      _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2.5" fill="#333"/><path d="M3.5 8 Q2 6 4.5 5 Q7 4 6 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/><path d="M16.5 8 Q18 6 15.5 5 Q13 4 14 6.5" fill="#f44" stroke="#a22" stroke-width="0.5"/>'),  '<:o)', ':clown:'],
+  ['em-sleepy',     _sv(_yb+'<path d="M5 8.5 L8.5 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><path d="M11.5 8.5 L15 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/>'+_fl),  '|-)', ':sleepy:'],
+  ['em-thinking',   _sv(_yb+'<path d="M5 6.5 L9 10.5 M9 6.5 L5 10.5" fill="none" stroke="#333" stroke-width="1.4"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm),  '*-)', ':thinking:'],
+  ['em-mute',       _sv(_yb+_ey+'<path d="M7.5 12.5 L12.5 12.5 M7.5 13.5 L12.5 13.5 M10 12 L10 14 M8.5 12 L8.5 14 M11.5 12 L11.5 14" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>'),  ':-#', ':mute:'],
+  ['em-kiss',       _sv(_yb+_ey+'<ellipse cx="10" cy="13.5" rx="2.5" ry="2" fill="#FF9090"/><path d="M8.5 13 Q10 15 11.5 13" fill="#FF6B8A"/>'),  ':-*', ':kiss:'],
+  ['em-sarcastic',  _sv(_yb+'<path d="M4.5 9 Q5.5 7 7 8.5" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="8.5" r="1.4" fill="#333"/>'+_sm),  '^o)', ':sarcastic:'],
+  ['em-sunglasses', _sv(_yb+_glss+'<path d="M7 13 Q10 16 13 13" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>'),  '8-)', ':sunglasses:'],
+  ['em-heart',      _sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="#f44" stroke="#c22" stroke-width="0.8"/>'),  '(L)', ':heart:', '<3'],
+  ['em-brokenheart',_sv('<path d="M10 17 L3 10.5 Q3 6 7 6 Q9 6 10 8.5 Q11 6 13 6 Q17 6 17 10.5 Z" fill="none" stroke="#8899aa" stroke-width="1.8"/><path d="M9 12 L11 10 M11 12 L9 10" stroke="#8899aa" stroke-width="1.2"/>'),  '(U)', ':brokenheart:'],
+  ['em-msn',        _sv('<rect x="2" y="5.5" width="16" height="11" rx="2.5" fill="#1a78c2" stroke="#0a5a9a" stroke-width="1.2"/><path d="M2 8 L10 12.5 L18 8" fill="none" stroke="#fff" stroke-width="1.5"/>'),  '(M)', ':msn:'],
+  ['em-cat',        _sv('<circle cx="10" cy="9.5" r="7.5" fill="#FFD700" stroke="#C8A000" stroke-width="1.2"/><circle cx="7.5" cy="9" r="1.2" fill="#333"/><circle cx="12.5" cy="9" r="1.2" fill="#333"/><path d="M7 12 Q10 14.5 13 12" fill="none" stroke="#333" stroke-width="1.3" stroke-linecap="round"/><path d="M6 5 Q10 2 14 5" fill="none" stroke="#C8A000" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 9 Q1.5 9.5 3.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/><path d="M16.5 9 Q18.5 9.5 16.5 11" fill="none" stroke="#C8A000" stroke-width="1.5"/>'),  '(@)', ':cat:'],
+  ['em-dog',        _sv('<circle cx="10" cy="9" r="7" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><ellipse cx="10" cy="14.5" rx="5" ry="4" fill="#C8A060" stroke="#8a6030" stroke-width="1.2"/><circle cx="7.2" cy="8.5" r="1.2" fill="#333"/><circle cx="12.8" cy="8.5" r="1.2" fill="#333"/><ellipse cx="10" cy="11" rx="2" ry="1.5" fill="#e8b880"/>'),  '(&)', ':dog:'],
+  ['em-snail',      _sv('<ellipse cx="10" cy="12.5" rx="7.5" ry="5.5" fill="#aaa" stroke="#888" stroke-width="1.2"/><circle cx="10" cy="7.5" r="4.5" fill="#bbb" stroke="#888" stroke-width="1.2"/><circle cx="8.2" cy="7.5" r="1" fill="#333"/><circle cx="11.8" cy="7.5" r="1" fill="#333"/><path d="M5.5 12 Q10 10 14.5 12" fill="none" stroke="#888" stroke-width="1.2"/>'),  '(sn)', ':snail:'],
+  ['em-sheep',      _sv('<ellipse cx="10" cy="12.5" rx="7" ry="6" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="7" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><ellipse cx="13" cy="6" rx="2.5" ry="4" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/><circle cx="8" cy="13" r="1.2" fill="#333"/><circle cx="12" cy="13" r="1.2" fill="#333"/>'),  '(bah)', ':sheep:'],
+  ['em-moon',       _sv('<circle cx="10" cy="10" r="7.5" fill="#FFFAAA" stroke="#D4C850" stroke-width="1.2"/><circle cx="13.5" cy="7" r="6" fill="#c8d8f8"/><circle cx="13" cy="6.5" r="5.2" fill="#dde8ff"/>'),  '(S)', ':moon:'],
+  ['em-star',       _sv('<polygon points="10,2.5 12.5,7.5 18,8 13.8,12 15.5,17.5 10,14 4.5,17.5 6.2,12 2,8 7.5,7.5" fill="#FFD700" stroke="#C8A000" stroke-width="0.8"/>'),  '(*)', ':star:'],
+  ['em-sun',        _sv('<circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#C8A000" stroke-width="1"/><line x1="10" y1="1" x2="10" y2="3.5" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16.5" x2="10" y2="19" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="10" x2="3.5" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="16.5" y1="10" x2="19" y2="10" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/><line x1="3.5" y1="3.5" x2="5.4" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="14.6" y1="14.6" x2="16.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="3.5" x2="14.6" y2="5.4" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/><line x1="5.4" y1="14.6" x2="3.5" y2="16.5" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/>'),  '(#)', ':sun:'],
+  ['em-rainbow',    _sv('<path d="M2 17 Q10 2 18 17" fill="none" stroke="#f00" stroke-width="4.5"/><path d="M2.8 17 Q10 3.5 17.2 17" fill="none" stroke="#ff7700" stroke-width="4"/><path d="M3.8 17 Q10 5.5 16.2 17" fill="none" stroke="#ffee00" stroke-width="3.5"/><path d="M4.8 17 Q10 7.5 15.2 17" fill="none" stroke="#00cc00" stroke-width="3"/><path d="M5.8 17 Q10 9.5 14.2 17" fill="none" stroke="#0055ff" stroke-width="2.5"/><path d="M6.8 17 Q10 11.5 13.2 17" fill="none" stroke="#8800ff" stroke-width="2"/>'),  '(R)', ':rainbow:'],
+  ['em-hugleft',    _sv(_yb+_ey+_sm+'<path d="M1.5 8 Q0 9.5 1.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>'),  '({)', ':hugleft:'],
+  ['em-hugright',   _sv(_yb+_ey+_sm+'<path d="M18.5 8 Q20 9.5 18.5 12" fill="none" stroke="#C8A000" stroke-width="2" stroke-linecap="round"/>'),  '(})', ':hugright:'],
+  ['em-lips',       _sv('<circle cx="10" cy="10" r="9" fill="#FFB0C8" stroke="#e07090" stroke-width="1.2"/><ellipse cx="10" cy="13.5" rx="3" ry="2" fill="#e04070"/><path d="M8.5 12.5 Q10 14.5 11.5 12.5" fill="#FF6090"/><circle cx="7.5" cy="8.5" r="1.2" fill="#333"/><circle cx="12.5" cy="8.5" r="1.2" fill="#333"/>'),  '(K)', ':lips:'],
+  ['em-flower',     _sv('<circle cx="10" cy="11" r="5.5" fill="#FFD700" stroke="#e8c000" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#98d848" stroke="#70b030" stroke-width="0.8"/>'),  '(F)', ':flower:'],
+  ['em-wilted',     _sv('<circle cx="10" cy="11" r="5.5" fill="#cccc44" stroke="#aaaa22" stroke-width="1"/><path d="M10 5.5 Q8 1 5 2 Q6 5 8 5.5 Q7 2 10 2 Q13 2 12 5.5 Q14 5 15 2 Q12 1 10 5.5" fill="#667733" stroke="#445511" stroke-width="0.8"/>'),  '(W)', ':wilted:'],
+  ['em-clock',      _sv('<circle cx="10" cy="10" r="8" fill="none" stroke="#888" stroke-width="2"/><path d="M10 2.5 L10 10 L14 10" fill="none" stroke="#444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'),  '(O)', ':clock:'],
 ];
+
+function _reEsc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// Injects a <style> tag so emote images live only in CSS, never in HTML content.
+function buildEmoteCss() {
+  if (document.getElementById('emote-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'emote-styles';
+  s.textContent = EMOTE_REGISTRY.map(([cls, src]) => `.${cls}{background-image:url('${src}')}`).join('');
+  document.head.appendChild(s);
+}
+
 function msnEmoji(html) {
   let out = html;
-  MSN_EMOJIS.forEach(([code, src]) => {
-    const safe = code.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const img = `<span class="msn-em" style="background-image:url('${src}')" title="${safe}" aria-label="${safe}" role="img"></span>`;
-    // Case-insensitive replace using regex (escaping regex special chars)
-    const reEscape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    out = out.replace(new RegExp(reEscape(code), 'gi'), img);
-    // Also match HTML-escaped version of the code
-    const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    if (escaped !== code) out = out.replace(new RegExp(reEscape(escaped), 'gi'), img);
+  EMOTE_REGISTRY.forEach(([cls,, ...codes]) => {
+    const span = `<span class="msn-em ${cls}" aria-hidden="true"></span>`;
+    codes.forEach(rawCode => {
+      // Match the HTML-escaped version of the code (input is already esc()'d)
+      const htmlCode = rawCode.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      out = out.replace(new RegExp(_reEsc(htmlCode), 'g'), span);
+    });
   });
-  // Extra shorthand codes (applied to HTML-escaped input)
-  const heartSrc = MSN_EMOJIS.find(e=>e[0]==='(L)')?.[1]||'';
-  const grinSrc  = MSN_EMOJIS.find(e=>e[0]===':D')?.[1]||'';
-  const supSrc   = MSN_EMOJIS.find(e=>e[0]===':-O')?.[1]||'';
-  out = out.replace(/&lt;3/g, `<span class="msn-em" style="background-image:url('${heartSrc}')" title="&lt;3" aria-label="&lt;3" role="img"></span>`);
-  out = out.replace(/xD/gi,   `<span class="msn-em" style="background-image:url('${grinSrc}')" title="xD" aria-label="xD" role="img"></span>`);
-  out = out.replace(/:o\b/gi, `<span class="msn-em" style="background-image:url('${supSrc}')" title=":o" aria-label=":o" role="img"></span>`);
   return out;
 }
+
 function toggleEmojiBar(pane) {
   const bar = document.getElementById(pane + '-emoji-bar');
   if (!bar) return;
@@ -8327,14 +8339,13 @@ function buildEmojiBar(barId, textareaId) {
   const bar = document.getElementById(barId);
   if (!bar || bar.dataset.built) return;
   bar.dataset.built = '1';
-  MSN_EMOJIS.forEach(([code, src]) => {
+  EMOTE_REGISTRY.forEach(([cls,, primaryCode]) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'board-emoji-btn';
-    btn.title = code;
+    btn.title = primaryCode;
     const sp = document.createElement('span');
-    sp.className = 'msn-em';
-    sp.style.backgroundImage = `url('${src}')`;
+    sp.className = `msn-em ${cls}`;
     sp.setAttribute('aria-hidden', 'true');
     btn.appendChild(sp);
     btn.addEventListener('pointerdown', e => e.preventDefault());
@@ -8343,8 +8354,8 @@ function buildEmojiBar(barId, textareaId) {
       if (!ta) return;
       const s = ta.selectionStart ?? ta.value.length;
       const e2 = ta.selectionEnd ?? s;
-      ta.value = ta.value.slice(0, s) + code + ta.value.slice(e2);
-      ta.selectionStart = ta.selectionEnd = s + code.length;
+      ta.value = ta.value.slice(0, s) + primaryCode + ta.value.slice(e2);
+      ta.selectionStart = ta.selectionEnd = s + primaryCode.length;
       ta.focus();
     };
     bar.appendChild(btn);
@@ -9602,6 +9613,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }, 1500);
+  // Inject emote CSS (data URIs live only in CSS, never in HTML)
+  buildEmoteCss();
   // Build emoji bars lazily (after DOM ready)
   setTimeout(() => {
     buildEmojiBar('global-emoji-bar', 'global-msg');

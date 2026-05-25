@@ -4696,9 +4696,25 @@ function restoreSession() {
 }
 setInterval(saveSession, 10000);
 window.addEventListener('beforeunload', saveSession);
+let _wasPlayingBeforeHide = false;
 document.addEventListener('visibilitychange', function() {
-  if (document.hidden && window._canControl && window._currentRoomId) {
-    window.broadcastRoomState?.();
+  if (document.hidden) {
+    _wasPlayingBeforeHide = playing;
+    if (window._canControl && window._currentRoomId) window.broadcastRoomState?.();
+  } else {
+    // Resume playback if the browser auto-paused when the tab was hidden
+    if (_wasPlayingBeforeHide) {
+      _wasPlayingBeforeHide = false;
+      setTimeout(() => {
+        if (!playing) {
+          if (currentSource === 'soundcloud' && scWidget && scReady) {
+            try { scWidget.play(); } catch(e) {}
+          } else if (player && ready) {
+            try { player.playVideo(); } catch(e) {}
+          }
+        }
+      }, 250);
+    }
   }
 });
 window.addEventListener('pagehide', function() {
@@ -9007,8 +9023,11 @@ function initPaint() {
     const p = getPos(e);
     if (_paintTool === 'cover' && _paintCoverImg) {
       paintSaveState();
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(_paintCoverImg, Math.round(p.x - 32), Math.round(p.y - 32), 64, 64);
+      ctx.imageSmoothingEnabled = true;
+      const iw = _paintCoverImg.naturalWidth, ih = _paintCoverImg.naturalHeight;
+      const sSize = Math.min(iw, ih);
+      const sx = (iw - sSize) / 2, sy = (ih - sSize) / 2;
+      ctx.drawImage(_paintCoverImg, sx, sy, sSize, sSize, Math.round(p.x - 32), Math.round(p.y - 32), 64, 64);
       _paintCoverImg = null;
       _paintTool = 'pencil';
       cv.style.cursor = '';
@@ -9052,6 +9071,7 @@ function initPaint() {
       paintUpdateSelect(getPos(e).x, getPos(e).y);
       return;
     }
+    if (_paintTool === 'select' && paintSelecting) { paintUpdateSelect(getPos(e).x, getPos(e).y); return; }
     if (!_painting) return;
     const p = getPos(e);
     const sz = parseInt(ps.value);
@@ -9102,6 +9122,40 @@ function initPaint() {
     if (_painting) paintSaveState();
     _painting = false; lastPt = null;
     ctx.globalCompositeOperation = 'source-over';
+  });
+  // Right-click context menu
+  cv.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const existing = document.getElementById('paint-ctx-menu');
+    if (existing) existing.remove();
+    const hasSel = paintSelection && paintSelection.w > 1 && paintSelection.h > 1;
+    const menu = document.createElement('div');
+    menu.id = 'paint-ctx-menu';
+    menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:var(--bubble,#fff);border:1px solid rgba(0,0,0,0.15);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);z-index:9999;min-width:140px;padding:4px 0;font-size:12px;`;
+    const items = [
+      hasSel ? ['Copy',  () => paintCopy()] : null,
+      paintClipboard ? ['Paste', () => { setPaintTool('pencil'); paintPaste(0,0); }] : null,
+      null,
+      ['Undo',  () => paintUndo()],
+      ['Redo',  () => paintRedo()],
+      null,
+      ['Select All', () => { setPaintTool('select'); paintSelection={x:0,y:0,w:cv.width,h:cv.height}; renderPaintSelectionOverlay(); }],
+      ['Clear Canvas', () => { paintSaveState(); ctx.clearRect(0,0,cv.width,cv.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); }],
+    ];
+    items.forEach(item => {
+      if (!item) { const sep = document.createElement('div'); sep.style.cssText='height:1px;background:rgba(0,0,0,0.08);margin:3px 0;'; menu.appendChild(sep); return; }
+      const [label, fn] = item;
+      const btn = document.createElement('div');
+      btn.textContent = label;
+      btn.style.cssText = 'padding:6px 14px;cursor:pointer;';
+      btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(0,100,200,0.1)');
+      btn.addEventListener('mouseleave', () => btn.style.background = '');
+      btn.addEventListener('mousedown', ev => { ev.preventDefault(); menu.remove(); fn(); });
+      menu.appendChild(btn);
+    });
+    document.body.appendChild(menu);
+    const dismiss = () => { menu.remove(); document.removeEventListener('pointerdown', dismiss); };
+    setTimeout(() => document.addEventListener('pointerdown', dismiss), 0);
   });
   // Keyboard shortcuts for paint window
   document.addEventListener('keydown', e => {
@@ -11011,11 +11065,11 @@ function bjUpdateBalance(){
     <button class="ptool" id="ptool-rect" onclick="setPaintTool('rect')" title="Rectangle">▭</button>
     <button class="ptool" id="ptool-ellipse" onclick="setPaintTool('ellipse')" title="Ellipse">⬭</button>
     <button class="ptool" id="ptool-spray" onclick="setPaintTool('spray')" title="Spray Can">💨</button>
-    <button class="ptool" id="ptool-select" onclick="setPaintTool('select')" title="Selection">⬚ Sel</button>
+    <button class="ptool" id="ptool-select" onclick="setPaintTool('select')" title="Selection">⬚</button>
     <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
-    <button class="ptool" onclick="paintUndo()" title="Undo (Ctrl+Z)">↩ Undo</button>
-    <button class="ptool" onclick="paintRedo()" title="Redo (Ctrl+Y)">↪ Redo</button>
-    <button class="ptool" onclick="paintPasteAlbumCover()" title="Paste album cover">🖼 Cover</button>
+    <button class="ptool" onclick="paintUndo()" title="Undo (Ctrl+Z)">↩</button>
+    <button class="ptool" onclick="paintRedo()" title="Redo (Ctrl+Y)">↪</button>
+    <button class="ptool" onclick="paintPasteAlbumCover()" title="Paste album cover">🖼</button>
     <span style="width:1px;height:20px;background:rgba(0,80,180,0.15);margin:0 2px"></span>
     <label style="font-size:9px;font-weight:700;color:var(--text2)">SIZE</label>
     <input type="range" id="paint-size" min="1" max="40" value="4" style="width:60px">

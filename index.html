@@ -90,6 +90,7 @@
       border-radius: var(--r);
       box-shadow: 0 6px 24px rgba(0,100,180,0.38), 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
       position:relative;
+      z-index:10;
     }
     /* top-half gloss shine — the defining 2000s Aqua look */
     #hdr::after {
@@ -2231,10 +2232,19 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=nintendo] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
 [data-era=nintendo] .v-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
 [data-era=nintendo] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: #e4000f !important; }
-[data-era=nintendo] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.22) !important; border-radius: 10px !important; }
+[data-era=nintendo] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.5) !important; border-radius: 10px !important; }
 [data-era=nintendo] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04) !important; }
 [data-era=nintendo] #splash { background: linear-gradient(180deg,#e8e8ec 0%,#d0d0d8 100%) !important; }
 [data-era=nintendo] #splash-room { font-family: Arial,Helvetica,sans-serif !important; background: #fff !important; border: 2.5px solid rgba(0,0,0,0.18) !important; border-radius: 20px 20px 14px 14px !important; }
+[data-era=nintendo] #hdr { box-shadow: 0 6px 24px rgba(228,0,15,0.35), 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52) !important; }
+[data-era=nintendo] .panel, [data-era=nintendo] #board-wrap,
+[data-era=nintendo] #left, [data-era=nintendo] #right, [data-era=nintendo] #center {
+  box-shadow: 0 4px 16px rgba(228,0,15,0.12) !important;
+}
+[data-era=nintendo] #prog { accent-color: #e4000f; }
+[data-era=nintendo] #vol { accent-color: #e4000f; }
+[data-era=nintendo] .tab.on { border-bottom-color: #e4000f !important; }
+[data-era=nintendo] .vb { background: linear-gradient(0deg, #cc0011 0%, #e4000f 55%, #ff6666 100%) !important; }
 
 /* Retro 95: flat Windows 95 chrome, 3D raised borders */
 [data-era=retro] .panel,
@@ -2328,75 +2338,118 @@ body.perf-mode #aqua-gun { display: none !important; }
   backdrop-filter: blur(18px) saturate(1.5) !important;
 }
 
-/* Vaporwave: synthwave neon, pastel panels */
-[data-era=vapor] .panel,
-[data-era=vapor] #ctrl-bubble {
-  background: linear-gradient(170deg,rgba(255,225,255,0.94) 0%,rgba(242,210,255,0.90) 100%) !important;
-  border: 1.5px solid rgba(255,45,120,0.30) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 8px 32px rgba(191,90,242,0.22), inset 0 1.5px 0 rgba(255,255,255,0.85) !important;
+/* ── MONO90S THEME (90s monochrome pixel art) ── */
+[data-era=mono90s] * {
+  font-family: 'Courier New', Courier, monospace !important;
+  image-rendering: pixelated;
 }
-[data-era=vapor] #board-wrap {
-  background: linear-gradient(170deg,rgba(255,225,255,0.97) 0%,rgba(240,210,255,0.95) 100%) !important;
-  border: 1.5px solid rgba(255,45,120,0.30) !important;
-  border-radius: 16px 16px 10px 10px !important;
-  box-shadow: 0 16px 48px rgba(191,90,242,0.32) !important;
+[data-era=mono90s] #hdr {
+  background: #000 !important;
+  border-bottom: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
-[data-era=vapor] #theme-panel {
-  background: linear-gradient(170deg,rgba(255,225,255,0.97) 0%,rgba(242,210,255,0.94) 100%) !important;
-  border: 1.5px solid rgba(255,45,120,0.28) !important;
-  border-radius: 18px !important;
+[data-era=mono90s] #hdr::after { display: none !important; }
+[data-era=mono90s] .panel, [data-era=mono90s] #board-wrap,
+[data-era=mono90s] #left, [data-era=mono90s] #right, [data-era=mono90s] #center {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 #fff !important;
 }
-[data-era=vapor] #hdr {
-  background: linear-gradient(180deg,#ff2d78 0%,#bf5af2 55%,#7a40e0 100%) !important;
-  box-shadow: 0 4px 24px rgba(191,90,242,0.60), inset 0 1px 0 rgba(255,255,255,0.28) !important;
+[data-era=mono90s] .tab {
+  background: #000 !important;
+  color: #aaa !important;
+  border-radius: 0 !important;
+  border: 1px solid #555 !important;
 }
-[data-era=vapor] #hdr::after {
-  background: linear-gradient(180deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0) 100%) !important;
+[data-era=mono90s] .tab.on, [data-era=mono90s] .tab:hover {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
 }
-[data-era=vapor] .board-titlebar,
-[data-era=vapor] #paint-titlebar {
-  background: linear-gradient(180deg,#ff2d78 0%,#bf5af2 100%) !important;
-}
-[data-era=vapor] .board-titlebar::after,
-[data-era=vapor] #paint-titlebar::after {
-  background: linear-gradient(180deg,rgba(255,255,255,0.16) 0%,rgba(255,255,255,0) 100%) !important;
-}
-[data-era=vapor] .cb, [data-era=vapor] .mb, [data-era=vapor] .mbtn,
-[data-era=vapor] .ico-btn, [data-era=vapor] .q-btn, [data-era=vapor] .sm-tab,
-[data-era=vapor] .sp-btn, [data-era=vapor] .sp-opt-btn {
-  background: linear-gradient(180deg,rgba(255,230,255,0.97) 0%,rgba(240,210,255,0.92) 100%) !important;
-  border: 1.5px solid rgba(255,45,120,0.28) !important;
-  border-radius: 12px !important;
-  color: #6a0a8a !important;
-  box-shadow: 0 2px 8px rgba(191,90,242,0.12), inset 0 1px 0 rgba(255,255,255,0.8) !important;
-}
-[data-era=vapor] .cb:hover, [data-era=vapor] .mb:hover, [data-era=vapor] .mbtn:hover,
-[data-era=vapor] .ico-btn:hover, [data-era=vapor] .q-btn:hover {
-  border-color: #ff2d78 !important;
-  background: linear-gradient(180deg,rgba(255,220,255,1) 0%,rgba(245,200,255,0.96) 100%) !important;
-}
-[data-era=vapor] .tab.on, [data-era=vapor] .sm-tab.on,
-[data-era=vapor] #search-btn, [data-era=vapor] .mbtn.p,
-[data-era=vapor] .sp-opt-btn.sp-opt-create {
-  background: linear-gradient(180deg,#ff2d78 0%,#bf5af2 100%) !important;
-  border-color: transparent !important;
+[data-era=mono90s] .mbtn, [data-era=mono90s] button.mbtn,
+[data-era=mono90s] .pb {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
   color: #fff !important;
-  box-shadow: 0 3px 14px rgba(191,90,242,0.45), inset 0 1px 0 rgba(255,255,255,0.22) !important;
+  box-shadow: 2px 2px 0 #fff !important;
 }
-[data-era=vapor] .tab { background: linear-gradient(180deg,rgba(255,225,255,0.85) 0%,rgba(240,205,255,0.7) 100%) !important; border-bottom: 3px solid transparent !important; border-radius: 0 !important; border-top: none !important; border-left: none !important; border-right: none !important; color: #6a0a8a !important; }
-[data-era=vapor] .tab:hover { background: linear-gradient(180deg,rgba(255,235,255,0.97) 0%,rgba(248,215,255,0.88) 100%) !important; color: #440066 !important; transform: none !important; }
-[data-era=vapor] #q, [data-era=vapor] input[type=text], [data-era=vapor] input[type=search], [data-era=vapor] textarea {
-  background: rgba(255,230,255,0.97) !important;
-  border: 1.5px solid rgba(255,45,120,0.28) !important;
-  border-radius: 12px !important;
+[data-era=mono90s] .mbtn:hover, [data-era=mono90s] .pb:hover {
+  background: #fff !important;
+  color: #000 !important;
 }
-[data-era=vapor] .r-item:hover { background: rgba(255,45,120,0.08) !important; border-color: rgba(255,45,120,0.30) !important; }
-[data-era=vapor] .v-item:hover { background: rgba(255,45,120,0.08) !important; border-color: rgba(255,45,120,0.30) !important; }
-[data-era=vapor] .v-item.now { background: rgba(191,90,242,0.10) !important; border-left-color: #ff2d78 !important; }
-[data-era=vapor] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,rgba(255,45,120,0.5),rgba(191,90,242,0.42)) !important; border-radius: 4px !important; }
-[data-era=vapor] ::-webkit-scrollbar-track { background: rgba(255,45,120,0.05) !important; }
-[data-era=vapor] #splash { background: linear-gradient(135deg,#1a0030 0%,#0d0d2b 100%) !important; }
+[data-era=mono90s] #play-btn {
+  background: #fff !important;
+  color: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 #555 !important;
+}
+[data-era=mono90s] input, [data-era=mono90s] select, [data-era=mono90s] textarea {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+}
+[data-era=mono90s] ::-webkit-scrollbar-track { background: #000; }
+[data-era=mono90s] ::-webkit-scrollbar-thumb { background: #fff; border-radius: 0; }
+[data-era=mono90s] #prog { accent-color: #fff; }
+[data-era=mono90s] #vol { accent-color: #fff; }
+[data-era=mono90s] #prog::-webkit-slider-thumb { background: #fff; border-radius: 0; border: 2px solid #000; }
+[data-era=mono90s] #vol::-webkit-slider-thumb { background: #fff; border-radius: 0; }
+[data-era=mono90s] #prog::-webkit-slider-runnable-track { background: linear-gradient(90deg, #fff 0%, #fff var(--pct,0%), #333 var(--pct,0%), #333 100%); border: 1px solid #fff; border-radius: 0; }
+[data-era=mono90s] #bg { background: #000 !important; }
+[data-era=mono90s] .orb { display: none !important; }
+[data-era=mono90s] .vb { background: #fff !important; }
+[data-era=mono90s] .cb, [data-era=mono90s] .mb,
+[data-era=mono90s] .ico-btn, [data-era=mono90s] .q-btn, [data-era=mono90s] .sm-tab,
+[data-era=mono90s] .sp-btn, [data-era=mono90s] .sp-opt-btn {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  box-shadow: 2px 2px 0 #fff !important;
+}
+[data-era=mono90s] .tab.on, [data-era=mono90s] .sm-tab.on,
+[data-era=mono90s] #search-btn, [data-era=mono90s] .mbtn.p,
+[data-era=mono90s] .sp-opt-btn.sp-opt-create {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+}
+[data-era=mono90s] #q, [data-era=mono90s] input[type=text], [data-era=mono90s] input[type=search], [data-era=mono90s] textarea {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+}
+[data-era=mono90s] .r-item:hover { background: rgba(255,255,255,0.15) !important; border-color: #fff !important; }
+[data-era=mono90s] .v-item:hover { background: rgba(255,255,255,0.15) !important; border-color: #fff !important; }
+[data-era=mono90s] .v-item.now { background: rgba(255,255,255,0.1) !important; border-left-color: #fff !important; }
+[data-era=mono90s] #splash { background: #000 !important; }
+[data-era=mono90s] #splash-room { font-family: 'Courier New', monospace !important; background: #000 !important; border: 2px solid #fff !important; border-radius: 0 !important; color: #fff !important; }
+[data-era=mono90s] .board-titlebar,
+[data-era=mono90s] #paint-titlebar {
+  background: #000 !important;
+  border-bottom: 2px solid #fff !important;
+  border-radius: 0 !important;
+}
+[data-era=mono90s] .board-titlebar::after,
+[data-era=mono90s] #paint-titlebar::after { display: none !important; }
+[data-era=mono90s] #ctrl-bubble {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 #fff !important;
+}
+[data-era=mono90s] #viz-wrap {
+  background: #000 !important;
+  border: 2px solid #fff !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
 
 /* ── FROST THEME (Snow Leopard-inspired) ── */
 [data-era=frost] #board-wrap, [data-era=frost] .panel,
@@ -2751,6 +2804,10 @@ body.perf-mode #aqua-gun { display: none !important; }
       padding: 0 !important;
       display: flex !important;
       flex-direction: column !important;
+      overflow: visible !important;
+      aspect-ratio: unset !important;
+      border: none !important;
+      box-shadow: none !important;
     }
     body.theater-mode #player-bubble > * {
       position: absolute !important;
@@ -2758,8 +2815,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       width: 100% !important;
       height: 100% !important;
     }
-    body.theater-mode #yt-player iframe,
-    body.theater-mode #yt-player {
+    body.theater-mode #yt-player,
+    body.theater-mode #yt-player iframe {
       width: 100% !important;
       height: 100% !important;
       flex: 1 !important;
@@ -2921,22 +2978,24 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=dark] #prog::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
 [data-era=dark] #vol::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
 
-/* VAPOR (Vaporwave) — pink/purple gradient */
-[data-era=vapor] .pb {
-  background: linear-gradient(135deg, rgba(255,45,120,0.15), rgba(191,90,242,0.15)) !important;
-  border: 1px solid rgba(255,45,120,0.3) !important;
-  color: #ff2d78 !important;
-  border-radius: 0 !important;
-}
-[data-era=vapor] .pb:hover { background: linear-gradient(135deg, rgba(255,45,120,0.28), rgba(191,90,242,0.28)) !important; }
-[data-era=vapor] #play-btn {
-  background: linear-gradient(180deg, #ff2d78, #bf5af2) !important;
-  border-radius: 0 !important;
+/* MONO90S (90s Monochrome) — pure black/white pixel art */
+[data-era=mono90s] .pb {
+  background: #000 !important;
+  border: 2px solid #fff !important;
   color: #fff !important;
-  box-shadow: 0 4px 16px rgba(255,45,120,0.5), 0 0 20px rgba(191,90,242,0.25) !important;
+  border-radius: 0 !important;
+  box-shadow: 2px 2px 0 #fff !important;
 }
-[data-era=vapor] #prog::-webkit-slider-thumb { background: linear-gradient(135deg, #ff2d78, #bf5af2); }
-[data-era=vapor] #vol::-webkit-slider-thumb { background: linear-gradient(135deg, #ff2d78, #bf5af2); }
+[data-era=mono90s] .pb:hover { background: #fff !important; color: #000 !important; }
+[data-era=mono90s] #play-btn {
+  background: #fff !important;
+  border-radius: 0 !important;
+  color: #000 !important;
+  border: 2px solid #fff !important;
+  box-shadow: 3px 3px 0 #555 !important;
+}
+[data-era=mono90s] #prog::-webkit-slider-thumb { background: #fff; border-radius: 0; border: 2px solid #000; }
+[data-era=mono90s] #vol::-webkit-slider-thumb { background: #fff; border-radius: 0; }
 
 /* FROST (Snow Leopard) — soft blue-grey pill buttons */
 [data-era=frost] .pb {
@@ -3014,6 +3073,17 @@ body.perf-mode #aqua-gun { display: none !important; }
 }
 [data-era=pixel] #prog::-webkit-slider-thumb { background: #44bb44; border-radius: 1px; box-shadow: 0 0 4px rgba(68,187,68,0.7); }
 [data-era=pixel] #vol::-webkit-slider-thumb { background: #44bb44; border-radius: 1px; }
+
+/* ── VISUALIZER BAR COLORS PER THEME ── */
+[data-era=default] .vb { background: linear-gradient(0deg, #0098d8 0%, #00d0f0 55%, #80eeff 100%); }
+[data-era=macos] .vb { background: linear-gradient(0deg, #3368a8 0%, #5a90d8 55%, #9ac0f0 100%) !important; }
+[data-era=dark] .vb { background: linear-gradient(0deg, #0ea5e9 0%, #38bdf8 55%, #7dd3fc 100%) !important; }
+[data-era=retro] .vb { background: linear-gradient(0deg, #000060 0%, #000096 55%, #4040c0 100%) !important; border-radius: 0 !important; }
+[data-era=frost] .vb { background: linear-gradient(0deg, #2e72c8 0%, #5a9de8 55%, #90bff5 100%) !important; }
+[data-era=glass] .vb { background: linear-gradient(0deg, rgba(60,120,240,0.9) 0%, rgba(120,180,255,0.9) 55%, rgba(180,220,255,0.9) 100%) !important; }
+[data-era=neon] .vb { background: linear-gradient(0deg, #cc00cc 0%, #ff00ff 55%, #ff88ff 100%) !important; box-shadow: 0 0 6px rgba(255,0,255,0.6); }
+[data-era=pixel] .vb { background: #44bb44 !important; border-radius: 0 !important; }
+[data-era=mono90s] .vb { background: #fff !important; border-radius: 0 !important; }
 
   </style>
 </head>
@@ -3306,7 +3376,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
-    <button class="theme-swatch"   data-theme="vapor"     onclick="selectTheme('vapor',this)">Vaporwave</button>
+    <button class="theme-swatch"   data-theme="mono90s"   onclick="selectTheme('mono90s',this)">Mono 90s</button>
     <button class="theme-swatch"   data-theme="frost"     onclick="selectTheme('frost',this)">Frost</button>
     <button class="theme-swatch"   data-theme="glass"     onclick="selectTheme('glass',this)">Glass</button>
     <button class="theme-swatch"   data-theme="retro"     data-unlock-label="Classic" onclick="selectTheme('retro',this)">Classic</button>
@@ -3740,11 +3810,11 @@ const THEMES = {
              hdr:'linear-gradient(180deg,#0a2040,#05101e)',
              panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)',
              font:"'Segoe UI',system-ui,sans-serif", era:'dark', scheme:'dark' },
-  vapor:   { accent:'#ff2d78', accent2:'#bf5af2', text:'#1a0028', text2:'#6a0a8a',
-             bg:'linear-gradient(135deg,#0d0d2b 0%,#1a0030 40%,#2d0050 70%,#0d0d2b 100%)',
-             hdr:'linear-gradient(180deg,#ff2d78 0%,#bf5af2 55%,#7a40e0 100%)',
-             panel:'rgba(255,225,255,0.96)', border:'rgba(255,45,120,0.28)',
-             font:"'Courier New',Courier,monospace", era:'vapor', scheme:'light' },
+  mono90s: { accent:'#ffffff', accent2:'#aaaaaa', text:'#ffffff', text2:'#aaaaaa',
+             bg:'#000000',
+             hdr:'#000000',
+             panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)',
+             font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark' },
   frost:   { accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
              bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
              hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
@@ -3844,6 +3914,7 @@ function applyTheme(name, customAccent) {
     r.setProperty('--seq-label-white-color', 'var(--text)');
   }
   currentTheme = name;
+  window._vizColor = accent;
 }
 function toggleAppsMenu() {
   const menu = document.getElementById('apps-menu');

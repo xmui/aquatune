@@ -541,7 +541,7 @@
 
     #synth-flyout {
       position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:min(860px, 96vw); height:520px; max-height:92vh;
+      width:min(860px, 96vw); min-width:340px; height:520px; max-height:92vh;
       background:var(--synth-bg, linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(218,238,255,0.94) 100%));
       backdrop-filter:blur(28px) saturate(1.5);
       border:2px solid rgba(255,255,255,0.85);
@@ -592,7 +592,7 @@
       box-shadow:inset 0 2px 4px rgba(0,0,0,0.12);
     }
     .bpm-inp {
-      width:40px; height:25px; border-radius:8px; font-size:11px; font-weight:700;
+      width:50px; height:25px; border-radius:8px; font-size:11px; font-weight:700;
       font-family:monospace; text-align:center; outline:none;
       background:rgba(255,255,255,0.25); border:1.5px solid rgba(255,255,255,0.5);
       color:#fff; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);
@@ -600,12 +600,13 @@
     .bpm-lbl { font-size:8px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:rgba(255,255,255,0.85); z-index:1; }
 
     /* Tabs */
-    .sf-tabs { display:flex; flex-shrink:0; background:rgba(255,255,255,0.6); border-bottom:1.5px solid rgba(0,0,0,0.06); }
+    .sf-tabs { display:flex; flex-shrink:0; background:rgba(255,255,255,0.6); border-bottom:1.5px solid rgba(0,0,0,0.06); overflow-x:auto; scrollbar-width:none; }
+    .sf-tabs::-webkit-scrollbar { display:none; }
     .sf-tab {
-      flex:1; height:30px; border:none; background:transparent;
+      flex:0 0 auto; min-width:64px; height:30px; padding:0 10px; border:none; background:transparent;
       border-bottom:2.5px solid transparent;
-      color:var(--text2); font-size:10.5px; font-weight:700; letter-spacing:.4px;
-      cursor:pointer; transition:all .14s;
+      color:var(--text2); font-size:10px; font-weight:700; letter-spacing:.3px;
+      cursor:pointer; transition:all .14s; white-space:nowrap;
     }
     .sf-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(255,255,255,0.65); }
     .sf-tab:hover:not(.active) { background:rgba(255,255,255,0.4); color:var(--accent); }
@@ -710,12 +711,13 @@
       overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
     }
     .seq-step {
-      height:18px; border-radius:4px; cursor:pointer;
+      height:20px; border-radius:4px; cursor:pointer;
       background:var(--synth-step-off, rgba(255,255,255,0.9));
       border:1px solid var(--synth-step-off-border, rgba(0,80,180,0.14));
       box-shadow:inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 2px rgba(0,40,120,0.06);
       transition:background .05s, box-shadow .05s;
     }
+    .seq-step:active:not(.seq-step-tie) { transform:scale(0.9); }
     .seq-step.b4 { border-left-color:rgba(0,80,180,0.28); }
     .seq-step.on {
       background:var(--accent);
@@ -736,7 +738,9 @@
     .drum-mute-btn.active { background:rgba(200,50,50,0.75);color:#fff; }
     .seq-row.drum-muted .seq-rlabel { opacity:0.35; }
     .seq-row.drum-muted .seq-step { opacity:0.15!important; pointer-events:none; }
-    .stepcount-btn.sel { background:rgba(255,255,255,0.28)!important; border-color:rgba(255,255,255,0.5)!important; }
+    .stepcount-btn { min-width:28px; }
+    .stepcount-btn.sel { background:rgba(255,255,255,0.28)!important; border-color:rgba(255,255,255,0.5)!important; color:#fff!important; }
+    .stepcount-btn:hover:not(.sel) { background:rgba(255,255,255,0.18)!important; color:#fff!important; }
     .arr-bar-playing { box-shadow:0 0 0 2px rgba(0,200,120,0.8), 0 0 8px rgba(0,200,120,0.4) !important; border-color:rgba(0,200,120,0.8) !important; }
     #arrange-bars-row { user-select:none; }
 
@@ -7260,7 +7264,14 @@ function toggleSynthFlyout() {
   }
 }
 
+const _tabScrollPos = {};
 function switchSynthTab(tab) {
+  const seqIds = { synth:'synth-seq', keys:'keys-seq', bass:'bass-seq', drums:'drum-seq' };
+  const prevTab = document.querySelector('.sf-tab.active')?.id?.replace('stab-','');
+  if (prevTab && seqIds[prevTab]) {
+    const el = document.getElementById(seqIds[prevTab]);
+    if (el) _tabScrollPos[prevTab] = el.scrollTop;
+  }
   ['synth','drums','fx','bass','keys','sfx','arrange'].forEach(t => {
     document.getElementById('spanel-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('stab-'+t)?.classList.toggle('active', t===tab);
@@ -7268,6 +7279,7 @@ function switchSynthTab(tab) {
   if (tab==='synth') {
     const w = document.getElementById('synth-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildSynthKeyboard(); buildSynthSeq(); }); }
+    else if (_tabScrollPos.synth != null) requestAnimationFrame(() => { const el=document.getElementById('synth-seq'); if(el) el.scrollTop=_tabScrollPos.synth; });
   }
   if (tab==='drums') {
     const g = document.getElementById('drum-grid');
@@ -7277,6 +7289,7 @@ function switchSynthTab(tab) {
   if (tab==='bass') {
     const w = document.getElementById('bass-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildBassKeys(); buildBassSeq(); }); }
+    else if (_tabScrollPos.bass != null) requestAnimationFrame(() => { const el=document.getElementById('bass-seq'); if(el) el.scrollTop=_tabScrollPos.bass; });
   }
   if (tab==='sfx') {
     const g = document.getElementById('sfx-grid');
@@ -7285,6 +7298,7 @@ function switchSynthTab(tab) {
   if (tab==='keys') {
     const w = document.getElementById('keys-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildKeysKeys(); buildKeysSeq(); }); }
+    else if (_tabScrollPos.keys != null) requestAnimationFrame(() => { const el=document.getElementById('keys-seq'); if(el) el.scrollTop=_tabScrollPos.keys; });
   }
   if (tab==='arrange') buildPatternUI();
 }
@@ -7402,16 +7416,19 @@ function shiftOct(d) {
 const NOTE_SEMIS = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
 function noteFreq(note, oct) { return 440 * Math.pow(2, (NOTE_SEMIS[note] + (oct-4)*12 - 9) / 12); }
 
+const MAX_VOICES = 20;
 function synthNoteOn(id, freq) {
   if (activeNotes[id]) return;
+  // Evict oldest voice if polyphony limit reached
+  const ids = Object.keys(activeNotes);
+  if (ids.length >= MAX_VOICES) synthNoteOff(ids[0]);
   const cx = initActx();
   const osc = cx.createOscillator();
   const gain = cx.createGain();
   osc.type = synthWave;
   osc.frequency.value = freq;
-  const atk = parseFloat(document.getElementById('atk-sl').value);
   gain.gain.setValueAtTime(0, cx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.22, cx.currentTime + atk);
+  gain.gain.linearRampToValueAtTime(0.22, cx.currentTime + _cachedAtk);
   osc.connect(gain); gain.connect(synthDest());
   osc.start();
   activeNotes[id] = {osc, gain};
@@ -7421,11 +7438,10 @@ function synthNoteOff(id) {
   const n = activeNotes[id];
   if (!n) return;
   const cx = actx;
-  const rel = parseFloat(document.getElementById('rel-sl').value);
   n.gain.gain.cancelScheduledValues(cx.currentTime);
   n.gain.gain.setValueAtTime(n.gain.gain.value, cx.currentTime);
-  n.gain.gain.exponentialRampToValueAtTime(0.0001, cx.currentTime + rel);
-  n.osc.stop(cx.currentTime + rel + 0.06);
+  n.gain.gain.exponentialRampToValueAtTime(0.0001, cx.currentTime + _cachedRel);
+  n.osc.stop(cx.currentTime + _cachedRel + 0.06);
   delete activeNotes[id];
 }
 
@@ -8178,11 +8194,12 @@ function playBass(note) {
   const cx=initActx(), freq=noteFreq(note,bassOct);
   const osc=cx.createOscillator(), g=cx.createGain();
   osc.type=bassWave; osc.frequency.value=freq;
-  const dec=parseFloat(document.getElementById('bass-dec-sl')?.value||0.4);
+  const dec = _cachedBassDec;
   g.gain.setValueAtTime(0.35,cx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+dec);
   osc.connect(g); g.connect(bassDest());
   osc.start(); osc.stop(cx.currentTime+dec+0.02);
+  osc.onended = () => { osc.disconnect(); g.disconnect(); };
   const k=document.querySelector(`#bass-keys [data-note="${note}"]`);
   if(k){k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),100);}
 }
@@ -11957,7 +11974,7 @@ function bjUpdateBalance(){
 
   <div class="sf-header">
     <span class="sf-brand">🎹 AquaTune Studio</span>
-    <canvas id="studio-osc" width="100" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
+    <canvas id="studio-osc" width="140" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
     <div class="sf-transport">
       <button class="t-btn seq-play-btn" onclick="seqPlay()">▶ Play</button>
       <button class="t-btn seq-stop-btn active" onclick="seqStop()">■ Stop</button>

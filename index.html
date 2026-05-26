@@ -541,7 +541,7 @@
 
     #synth-flyout {
       position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:min(860px, 96vw); height:520px; max-height:92vh;
+      width:min(860px, 96vw); min-width:340px; height:520px; max-height:92vh;
       background:var(--synth-bg, linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(218,238,255,0.94) 100%));
       backdrop-filter:blur(28px) saturate(1.5);
       border:2px solid rgba(255,255,255,0.85);
@@ -592,7 +592,7 @@
       box-shadow:inset 0 2px 4px rgba(0,0,0,0.12);
     }
     .bpm-inp {
-      width:40px; height:25px; border-radius:8px; font-size:11px; font-weight:700;
+      width:50px; height:25px; border-radius:8px; font-size:11px; font-weight:700;
       font-family:monospace; text-align:center; outline:none;
       background:rgba(255,255,255,0.25); border:1.5px solid rgba(255,255,255,0.5);
       color:#fff; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);
@@ -600,12 +600,13 @@
     .bpm-lbl { font-size:8px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:rgba(255,255,255,0.85); z-index:1; }
 
     /* Tabs */
-    .sf-tabs { display:flex; flex-shrink:0; background:rgba(255,255,255,0.6); border-bottom:1.5px solid rgba(0,0,0,0.06); }
+    .sf-tabs { display:flex; flex-shrink:0; background:rgba(255,255,255,0.6); border-bottom:1.5px solid rgba(0,0,0,0.06); overflow-x:auto; scrollbar-width:none; }
+    .sf-tabs::-webkit-scrollbar { display:none; }
     .sf-tab {
-      flex:1; height:30px; border:none; background:transparent;
+      flex:0 0 auto; min-width:64px; height:30px; padding:0 10px; border:none; background:transparent;
       border-bottom:2.5px solid transparent;
-      color:var(--text2); font-size:10.5px; font-weight:700; letter-spacing:.4px;
-      cursor:pointer; transition:all .14s;
+      color:var(--text2); font-size:10px; font-weight:700; letter-spacing:.3px;
+      cursor:pointer; transition:all .14s; white-space:nowrap;
     }
     .sf-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(255,255,255,0.65); }
     .sf-tab:hover:not(.active) { background:rgba(255,255,255,0.4); color:var(--accent); }
@@ -710,12 +711,13 @@
       overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
     }
     .seq-step {
-      height:18px; border-radius:4px; cursor:pointer;
+      height:20px; border-radius:4px; cursor:pointer;
       background:var(--synth-step-off, rgba(255,255,255,0.9));
       border:1px solid var(--synth-step-off-border, rgba(0,80,180,0.14));
       box-shadow:inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 2px rgba(0,40,120,0.06);
       transition:background .05s, box-shadow .05s;
     }
+    .seq-step:active:not(.seq-step-tie) { transform:scale(0.9); }
     .seq-step.b4 { border-left-color:rgba(0,80,180,0.28); }
     .seq-step.on {
       background:var(--accent);
@@ -736,7 +738,11 @@
     .drum-mute-btn.active { background:rgba(200,50,50,0.75);color:#fff; }
     .seq-row.drum-muted .seq-rlabel { opacity:0.35; }
     .seq-row.drum-muted .seq-step { opacity:0.15!important; pointer-events:none; }
-    .stepcount-btn.sel { background:rgba(255,255,255,0.28)!important; border-color:rgba(255,255,255,0.5)!important; }
+    .stepcount-btn { min-width:28px; }
+    .stepcount-btn.sel { background:rgba(255,255,255,0.28)!important; border-color:rgba(255,255,255,0.5)!important; color:#fff!important; }
+    .stepcount-btn:hover:not(.sel) { background:rgba(255,255,255,0.18)!important; color:#fff!important; }
+    .arr-bar-playing { box-shadow:0 0 0 2px rgba(0,200,120,0.8), 0 0 8px rgba(0,200,120,0.4) !important; border-color:rgba(0,200,120,0.8) !important; }
+    #arrange-bars-row { user-select:none; }
 
     /* Drum pads — Aero rubber button style */
     #drum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; height:96px; flex-shrink:0; margin-bottom:8px; }
@@ -7258,7 +7264,14 @@ function toggleSynthFlyout() {
   }
 }
 
+const _tabScrollPos = {};
 function switchSynthTab(tab) {
+  const seqIds = { synth:'synth-seq', keys:'keys-seq', bass:'bass-seq', drums:'drum-seq' };
+  const prevTab = document.querySelector('.sf-tab.active')?.id?.replace('stab-','');
+  if (prevTab && seqIds[prevTab]) {
+    const el = document.getElementById(seqIds[prevTab]);
+    if (el) _tabScrollPos[prevTab] = el.scrollTop;
+  }
   ['synth','drums','fx','bass','keys','sfx','arrange'].forEach(t => {
     document.getElementById('spanel-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('stab-'+t)?.classList.toggle('active', t===tab);
@@ -7266,6 +7279,7 @@ function switchSynthTab(tab) {
   if (tab==='synth') {
     const w = document.getElementById('synth-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildSynthKeyboard(); buildSynthSeq(); }); }
+    else if (_tabScrollPos.synth != null) requestAnimationFrame(() => { const el=document.getElementById('synth-seq'); if(el) el.scrollTop=_tabScrollPos.synth; });
   }
   if (tab==='drums') {
     const g = document.getElementById('drum-grid');
@@ -7275,6 +7289,7 @@ function switchSynthTab(tab) {
   if (tab==='bass') {
     const w = document.getElementById('bass-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildBassKeys(); buildBassSeq(); }); }
+    else if (_tabScrollPos.bass != null) requestAnimationFrame(() => { const el=document.getElementById('bass-seq'); if(el) el.scrollTop=_tabScrollPos.bass; });
   }
   if (tab==='sfx') {
     const g = document.getElementById('sfx-grid');
@@ -7283,70 +7298,104 @@ function switchSynthTab(tab) {
   if (tab==='keys') {
     const w = document.getElementById('keys-keys');
     if (!w.dataset.built) { initActx(); requestAnimationFrame(() => { buildKeysKeys(); buildKeysSeq(); }); }
+    else if (_tabScrollPos.keys != null) requestAnimationFrame(() => { const el=document.getElementById('keys-seq'); if(el) el.scrollTop=_tabScrollPos.keys; });
   }
   if (tab==='arrange') buildPatternUI();
 }
 
 let _selectedPatSlot = -1;
 
+const PAT_COLORS = ['#0068b8','#007a50','#a05000','#8e44ad','#c0392b','#16a085','#2c3e50','#d35400'];
+
 function buildPatternUI() {
   const slotsRow = document.getElementById('pat-slots-row');
-  const barsRow = document.getElementById('arrange-bars-row');
+  const barsRow  = document.getElementById('arrange-bars-row');
   if (!slotsRow || !barsRow) return;
   if (slotsRow.dataset.built) { refreshPatternUI(); return; }
   slotsRow.dataset.built = '1';
+
+  // ── Pattern slots ──────────────────────────────────────────
   for (let i = 0; i < 8; i++) {
-    const btn = document.createElement('button');
-    btn.id = 'pat-slot-' + i;
-    btn.style.cssText = 'font-size:9px;padding:3px 7px;border-radius:6px;border:1px solid rgba(0,100,200,0.3);background:rgba(0,100,200,0.08);color:var(--accent);cursor:pointer;min-width:30px';
-    btn.innerHTML = '<div style="font-weight:800">' + (i+1) + '</div>';
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.cssText = 'display:flex;gap:2px;margin-top:2px';
+    const col = PAT_COLORS[i];
+    const wrap = document.createElement('div');
+    wrap.id = 'pat-slot-' + i;
+    wrap.style.cssText = `display:flex;flex-direction:column;gap:2px;padding:4px 6px;border-radius:7px;border:2px solid ${col}33;background:${col}0d;cursor:pointer;min-width:48px;transition:border-color 0.15s,background 0.15s`;
+    const lbl = document.createElement('div');
+    lbl.style.cssText = `font-size:10px;font-weight:800;color:${col};text-align:center;letter-spacing:0.5px`;
+    lbl.textContent = 'P' + (i+1);
+    const status = document.createElement('div');
+    status.id = 'pat-status-' + i;
+    status.style.cssText = 'font-size:7px;color:rgba(100,100,100,0.6);text-align:center';
+    status.textContent = 'empty';
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:2px;justify-content:center;margin-top:1px';
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    saveBtn.title = 'Save current pattern to slot ' + (i+1);
-    saveBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(0,150,100,0.4);background:rgba(0,150,100,0.15);color:#007a50;cursor:pointer';
-    saveBtn.onclick = (e) => { e.stopPropagation(); savePatternTo(i); };
+    saveBtn.textContent = '💾 Save';
+    saveBtn.title = 'Save current pattern here';
+    saveBtn.style.cssText = `font-size:7px;padding:1px 5px;border-radius:4px;border:1px solid ${col}55;background:${col}22;color:${col};cursor:pointer`;
+    saveBtn.onclick = e => { e.stopPropagation(); savePatternTo(i); };
     const loadBtn = document.createElement('button');
-    loadBtn.textContent = 'Load';
-    loadBtn.title = 'Load pattern from slot ' + (i+1);
-    loadBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(0,100,200,0.4);background:rgba(0,100,200,0.15);color:#0068b8;cursor:pointer';
-    loadBtn.onclick = (e) => { e.stopPropagation(); loadPatternFrom(i); };
-    const selBtn = document.createElement('button');
-    selBtn.textContent = '→Arr';
-    selBtn.title = 'Select this pattern to assign to arrangement bars';
-    selBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(180,100,0,0.4);background:rgba(180,100,0,0.15);color:#a05000;cursor:pointer';
-    selBtn.onclick = (e) => {
-      e.stopPropagation();
+    loadBtn.textContent = '▶ Load';
+    loadBtn.title = 'Load this pattern into editor';
+    loadBtn.style.cssText = `font-size:7px;padding:1px 5px;border-radius:4px;border:1px solid ${col}55;background:${col}22;color:${col};cursor:pointer`;
+    loadBtn.onclick = e => { e.stopPropagation(); if (patterns[i]) loadPatternFrom(i); };
+    btns.append(saveBtn, loadBtn);
+    wrap.append(lbl, status, btns);
+    // Click wrap to select/deselect for painting
+    wrap.addEventListener('click', () => {
       _selectedPatSlot = (_selectedPatSlot === i) ? -1 : i;
-      document.querySelectorAll('#pat-slots-row button[id^="pat-slot-"]').forEach(b =>
-        b.style.outline = b.id === 'pat-slot-' + _selectedPatSlot ? '2px solid var(--accent)' : '');
-    };
-    actionsDiv.append(saveBtn, loadBtn, selBtn);
-    btn.append(actionsDiv);
-    slotsRow.appendChild(btn);
-  }
-  for (let b = 0; b < 16; b++) {
-    const btn = document.createElement('button');
-    btn.id = 'arr-bar-' + b;
-    btn.textContent = '·';
-    btn.style.cssText = 'width:28px;height:28px;font-size:9px;border-radius:4px;border:1px solid rgba(0,100,200,0.2);background:rgba(0,100,200,0.05);color:var(--text2);cursor:pointer;font-weight:700';
-    const barIdx = b;
-    btn.onclick = () => {
-      if (arrangeSeq[barIdx] >= 0) {
-        arrangeSeq[barIdx] = -1;
-      } else if (_selectedPatSlot >= 0) {
-        arrangeSeq[barIdx] = _selectedPatSlot;
-      }
       refreshPatternUI();
-    };
+    });
+    slotsRow.appendChild(wrap);
+  }
+
+  // ── Timeline bars (32 bars, two rows of 16) ────────────────
+  let _painting = false, _paintVal = -1;
+  for (let b = 0; b < 32; b++) {
+    const btn = document.createElement('div');
+    btn.id = 'arr-bar-' + b;
+    btn.dataset.bar = b;
+    btn.style.cssText = 'width:22px;height:30px;border-radius:4px;border:1px solid rgba(0,100,200,0.18);background:rgba(0,100,200,0.04);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;cursor:pointer;user-select:none;position:relative;transition:background 0.1s';
+    btn.innerHTML = `<span style="font-size:7px;color:rgba(0,100,200,0.3);position:absolute;top:1px;left:0;right:0;text-align:center">${b+1}</span>`;
+    const barIdx = b;
+    btn.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      _painting = true;
+      if (arrangeSeq[barIdx] >= 0 && arrangeSeq[barIdx] === _selectedPatSlot) {
+        // clicking filled bar of the SAME selected pattern clears it
+        _paintVal = -1;
+      } else if (_selectedPatSlot >= 0) {
+        _paintVal = _selectedPatSlot;
+      } else {
+        _paintVal = -1; // erase mode
+      }
+      arrangeSeq[barIdx] = _paintVal;
+      refreshPatternUI();
+    });
+    btn.addEventListener('pointerenter', e => {
+      if (!_painting) return;
+      arrangeSeq[barIdx] = _paintVal;
+      refreshPatternUI();
+    });
     barsRow.appendChild(btn);
   }
+  document.addEventListener('pointerup', () => { _painting = false; });
   refreshPatternUI();
 }
 
 function clearArrange() {
   arrangeSeq.fill(-1);
+  _arrangeBarIdx = -1; _lastArrBar = -1;
+  refreshPatternUI();
+}
+
+function toggleArrangeFollow() {
+  arrangeEnabled = !arrangeEnabled;
+  if (!arrangeEnabled) {
+    const playingBar = document.querySelector('.arr-bar-playing');
+    if (playingBar) playingBar.classList.remove('arr-bar-playing');
+    _arrangeBarIdx = -1; _lastArrBar = -1;
+  }
   refreshPatternUI();
 }
 
@@ -7367,16 +7416,19 @@ function shiftOct(d) {
 const NOTE_SEMIS = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
 function noteFreq(note, oct) { return 440 * Math.pow(2, (NOTE_SEMIS[note] + (oct-4)*12 - 9) / 12); }
 
+const MAX_VOICES = 20;
 function synthNoteOn(id, freq) {
   if (activeNotes[id]) return;
+  // Evict oldest voice if polyphony limit reached
+  const ids = Object.keys(activeNotes);
+  if (ids.length >= MAX_VOICES) synthNoteOff(ids[0]);
   const cx = initActx();
   const osc = cx.createOscillator();
   const gain = cx.createGain();
   osc.type = synthWave;
   osc.frequency.value = freq;
-  const atk = parseFloat(document.getElementById('atk-sl').value);
   gain.gain.setValueAtTime(0, cx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.22, cx.currentTime + atk);
+  gain.gain.linearRampToValueAtTime(0.22, cx.currentTime + _cachedAtk);
   osc.connect(gain); gain.connect(synthDest());
   osc.start();
   activeNotes[id] = {osc, gain};
@@ -7386,11 +7438,10 @@ function synthNoteOff(id) {
   const n = activeNotes[id];
   if (!n) return;
   const cx = actx;
-  const rel = parseFloat(document.getElementById('rel-sl').value);
   n.gain.gain.cancelScheduledValues(cx.currentTime);
   n.gain.gain.setValueAtTime(n.gain.gain.value, cx.currentTime);
-  n.gain.gain.exponentialRampToValueAtTime(0.0001, cx.currentTime + rel);
-  n.osc.stop(cx.currentTime + rel + 0.06);
+  n.gain.gain.exponentialRampToValueAtTime(0.0001, cx.currentTime + _cachedRel);
+  n.osc.stop(cx.currentTime + _cachedRel + 0.06);
   delete activeNotes[id];
 }
 
@@ -7573,8 +7624,9 @@ let analyserNode = null;
 // Pattern slots and arrangement
 let patterns = Array.from({length:8}, () => null);
 let arrangeEnabled = false;
-let arrangeSeq = new Array(16).fill(-1);
-let _arrangeBarIdx = 0;
+let arrangeSeq = new Array(32).fill(-1);  // 32 bars
+let _arrangeBarIdx = -1;   // -1 so first step-0 increment hits bar 0
+let _lastArrBar = -1;      // for RAF highlight
 
 function stepDuration() { return 60 / seqBpm / 4; }
 
@@ -7681,28 +7733,60 @@ function refreshSequencerUI() {
 function refreshPatternUI() {
   for (let i = 0; i < 8; i++) {
     const el = document.getElementById('pat-slot-' + i);
+    const col = PAT_COLORS[i];
+    const has = !!patterns[i];
+    const sel = _selectedPatSlot === i;
     if (el) {
-      el.style.opacity = patterns[i] ? '1' : '0.5';
-      el.style.borderColor = patterns[i] ? 'rgba(0,100,200,0.6)' : 'rgba(0,100,200,0.2)';
+      el.style.borderColor = sel ? col : (has ? col + '55' : col + '22');
+      el.style.background   = sel ? col + '2a' : (has ? col + '10' : col + '06');
+      el.style.boxShadow    = sel ? `0 0 0 2px ${col}88` : '';
+    }
+    const st = document.getElementById('pat-status-' + i);
+    if (st) {
+      const uses = arrangeSeq.filter(v => v === i).length;
+      st.textContent = has ? (uses > 0 ? `×${uses} bars` : 'saved') : 'empty';
+      st.style.color = has ? col + 'cc' : 'rgba(100,100,100,0.45)';
     }
   }
-  for (let b = 0; b < 16; b++) {
+  for (let b = 0; b < 32; b++) {
     const el = document.getElementById('arr-bar-' + b);
     if (el) {
       const pidx = arrangeSeq[b];
-      el.textContent = pidx >= 0 ? (pidx + 1) : '·';
-      el.style.background = pidx >= 0 ? 'rgba(0,100,200,0.3)' : 'rgba(0,100,200,0.05)';
-      el.style.color = pidx >= 0 ? 'var(--accent)' : 'var(--text2)';
-      el.style.borderColor = pidx >= 0 ? 'rgba(0,100,200,0.5)' : 'rgba(0,100,200,0.2)';
+      const col = pidx >= 0 ? PAT_COLORS[pidx] : null;
+      el.style.background   = col ? col + '33' : 'rgba(0,100,200,0.04)';
+      el.style.borderColor  = col ? col + '88' : 'rgba(0,100,200,0.18)';
+      const valSpan = el.querySelector('span:last-child') || el.querySelector('span');
+      // Update content label (P number inside bar)
+      let inner = el.querySelector('.arr-bar-inner');
+      if (!inner) {
+        inner = document.createElement('span');
+        inner.className = 'arr-bar-inner';
+        inner.style.cssText = 'font-size:8px;font-weight:800;position:relative;z-index:1';
+        el.appendChild(inner);
+      }
+      inner.textContent = col ? ('P' + (pidx+1)) : '';
+      inner.style.color = col || 'transparent';
     }
+  }
+  // Arrange enable button
+  const enBtn = document.getElementById('arrange-enable-btn');
+  if (enBtn) {
+    enBtn.textContent = arrangeEnabled ? '▶ Following' : '▶ Follow Arrangement';
+    enBtn.style.background = arrangeEnabled ? 'rgba(0,150,100,0.35)' : 'rgba(0,150,100,0.12)';
+    enBtn.style.borderColor = arrangeEnabled ? 'rgba(0,150,100,0.7)' : 'rgba(0,150,100,0.3)';
   }
 }
 
 function scheduleStep(step, time) {
   if (step === 0 && arrangeEnabled) {
-    _arrangeBarIdx = (_arrangeBarIdx + 1) % 16;
-    const pidx = arrangeSeq[_arrangeBarIdx];
-    if (pidx >= 0 && patterns[pidx]) loadPatternSnapshot(patterns[pidx]);
+    // Find next filled bar (wraps within filled bars only)
+    const filled = arrangeSeq.map((v, i) => v >= 0 ? i : -1).filter(i => i >= 0);
+    if (filled.length > 0) {
+      const cur = filled.indexOf(_arrangeBarIdx);
+      _arrangeBarIdx = filled[(cur + 1) % filled.length];
+      const pidx = arrangeSeq[_arrangeBarIdx];
+      if (pidx >= 0 && patterns[pidx]) loadPatternSnapshot(patterns[pidx]);
+    }
   }
   const dur = stepDuration();
   drumSeqData.forEach((row, di) => {
@@ -7794,6 +7878,14 @@ function rafLoop() {
     _getStepCol(vis).forEach(el => el.classList.add('cur'));
     _lastVisStep = vis;
   }
+  // Highlight current arrangement bar
+  if (arrangeEnabled && _arrangeBarIdx !== _lastArrBar) {
+    const prev = document.getElementById('arr-bar-' + _lastArrBar);
+    if (prev) prev.classList.remove('arr-bar-playing');
+    const cur = document.getElementById('arr-bar-' + _arrangeBarIdx);
+    if (cur) cur.classList.add('arr-bar-playing');
+    _lastArrBar = _arrangeBarIdx;
+  }
   drawOsc();
   _rafId = requestAnimationFrame(rafLoop);
 }
@@ -7801,7 +7893,7 @@ function rafLoop() {
 function seqPlay() {
   if (seqPlaying) return;
   initActx(); seqPlaying = true; seqStep = 0;
-  _scheduledStep = 0; _lastVisStep = -1; _arrangeBarIdx = 0;
+  _scheduledStep = 0; _lastVisStep = -1; _arrangeBarIdx = -1; _lastArrBar = -1;
   _stepTimes.fill(Number.MAX_VALUE);
   _nextNoteTime = actx.currentTime + 0.05;
   _patternStartTime = _nextNoteTime;
@@ -7813,6 +7905,9 @@ function seqStop() {
   clearInterval(_schedTimer); cancelAnimationFrame(_rafId);
   _getStepCol(_lastVisStep).forEach(el => el.classList.remove('cur'));
   _lastVisStep = -1;
+  const playingBar = document.querySelector('.arr-bar-playing');
+  if (playingBar) playingBar.classList.remove('arr-bar-playing');
+  _lastArrBar = -1;
   seqStep = 0; _syncTransportBtns();
 }
 function _syncTransportBtns() {
@@ -8099,11 +8194,12 @@ function playBass(note) {
   const cx=initActx(), freq=noteFreq(note,bassOct);
   const osc=cx.createOscillator(), g=cx.createGain();
   osc.type=bassWave; osc.frequency.value=freq;
-  const dec=parseFloat(document.getElementById('bass-dec-sl')?.value||0.4);
+  const dec = _cachedBassDec;
   g.gain.setValueAtTime(0.35,cx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+dec);
   osc.connect(g); g.connect(bassDest());
   osc.start(); osc.stop(cx.currentTime+dec+0.02);
+  osc.onended = () => { osc.disconnect(); g.disconnect(); };
   const k=document.querySelector(`#bass-keys [data-note="${note}"]`);
   if(k){k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),100);}
 }
@@ -9382,12 +9478,12 @@ function randomizeDrums() {
     for (let s=0;s<seqStepCount;s++) { if (drumSeqData[2][s]&&Math.random()<0.2) drumSeqData[2][s]=false; }
   }
   if (Math.random()<0.4) drumSeqData[0][seqStepCount-2]=true;
-  document.querySelectorAll('#drum-seq .seq-step').forEach(btn => {
-    const di=parseInt(btn.dataset.row), s=parseInt(btn.dataset.col);
-    if (!isNaN(di)&&!isNaN(s)) {
+  // Update UI row by row (avoids full seq-step scan)
+  document.querySelectorAll('#drum-seq .seq-row').forEach((row, di) => {
+    row.querySelectorAll('.seq-step').forEach((btn, s) => {
       btn.classList.toggle('on', !!drumSeqData[di][s]);
       btn.style.opacity = drumSeqData[di][s] ? (0.4 + (drumSeqVel[di][s]||80)/100*0.6) : '';
-    }
+    });
   });
 }
 function randomizeSynth() {
@@ -11878,7 +11974,7 @@ function bjUpdateBalance(){
 
   <div class="sf-header">
     <span class="sf-brand">🎹 AquaTune Studio</span>
-    <canvas id="studio-osc" width="100" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
+    <canvas id="studio-osc" width="140" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
     <div class="sf-transport">
       <button class="t-btn seq-play-btn" onclick="seqPlay()">▶ Play</button>
       <button class="t-btn seq-stop-btn active" onclick="seqStop()">■ Stop</button>
@@ -12082,22 +12178,22 @@ function bjUpdateBalance(){
 
   <!-- ARRANGE PANEL -->
   <div class="sf-panel" id="spanel-arrange">
-    <div style="font-size:9px;color:var(--text2);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Pattern Slots</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px" id="pat-slots-row">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+      <span style="font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px">Pattern Slots</span>
+      <span style="font-size:8px;color:var(--text2);opacity:0.6">Click slot to select · drag bars to paint</span>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px" id="pat-slots-row">
       <!-- built by buildPatternUI() -->
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-      <span style="font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px">Arrangement</span>
-      <label style="font-size:9px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer">
-        <input type="checkbox" id="arrange-enable-chk" onchange="arrangeEnabled=this.checked" style="width:11px;height:11px">
-        Follow arrangement
-      </label>
-      <button onclick="clearArrange()" style="font-size:8px;padding:2px 6px;border-radius:6px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
+      <span style="font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px">Timeline</span>
+      <button id="arrange-enable-btn" onclick="toggleArrangeFollow()"
+        style="font-size:8px;padding:3px 10px;border-radius:8px;border:1px solid rgba(0,150,100,0.3);background:rgba(0,150,100,0.12);color:#007a50;cursor:pointer;font-weight:700;transition:all 0.15s">▶ Follow Arrangement</button>
+      <button onclick="clearArrange()" style="font-size:8px;padding:3px 8px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
     </div>
-    <div style="display:flex;gap:2px;flex-wrap:wrap" id="arrange-bars-row">
-      <!-- built by buildPatternUI() -->
+    <div style="display:flex;gap:2px;flex-wrap:wrap;touch-action:none" id="arrange-bars-row">
+      <!-- built by buildPatternUI() (32 bars, drag-to-paint) -->
     </div>
-    <div style="font-size:8px;color:var(--text2);margin-top:6px;opacity:0.6">Click a pattern slot then click a bar to assign · Click filled bar to clear</div>
   </div>
 
 </div>

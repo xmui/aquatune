@@ -7146,6 +7146,9 @@ function initActx() {
     masterComp.threshold.value = -18; masterComp.knee.value = 30;
     masterComp.ratio.value = 8; masterComp.attack.value = 0.003; masterComp.release.value = 0.25;
     masterComp.connect(actx.destination);
+    analyserNode = actx.createAnalyser();
+    analyserNode.fftSize = 256;
+    masterComp.connect(analyserNode);
     initFilter();
   }
   if (actx.state === 'suspended') actx.resume();
@@ -7243,9 +7246,9 @@ function toggleSynthFlyout() {
 }
 
 function switchSynthTab(tab) {
-  ['synth','drums','fx','bass','sfx'].forEach(t => {
-    document.getElementById('spanel-'+t).classList.toggle('active', t===tab);
-    document.getElementById('stab-'+t).classList.toggle('active', t===tab);
+  ['synth','drums','fx','bass','sfx','arrange'].forEach(t => {
+    document.getElementById('spanel-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('stab-'+t)?.classList.toggle('active', t===tab);
   });
   if (tab==='synth') {
     const w = document.getElementById('synth-keys');
@@ -7264,6 +7267,70 @@ function switchSynthTab(tab) {
     const g = document.getElementById('sfx-grid');
     if (!g.dataset.built) { initActx(); requestAnimationFrame(() => { buildSFXPads(); }); }
   }
+  if (tab==='arrange') buildPatternUI();
+}
+
+let _selectedPatSlot = -1;
+
+function buildPatternUI() {
+  const slotsRow = document.getElementById('pat-slots-row');
+  const barsRow = document.getElementById('arrange-bars-row');
+  if (!slotsRow || !barsRow) return;
+  if (slotsRow.dataset.built) { refreshPatternUI(); return; }
+  slotsRow.dataset.built = '1';
+  for (let i = 0; i < 8; i++) {
+    const btn = document.createElement('button');
+    btn.id = 'pat-slot-' + i;
+    btn.style.cssText = 'font-size:9px;padding:3px 7px;border-radius:6px;border:1px solid rgba(0,100,200,0.3);background:rgba(0,100,200,0.08);color:var(--accent);cursor:pointer;min-width:30px';
+    btn.innerHTML = '<div style="font-weight:800">' + (i+1) + '</div>';
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.cssText = 'display:flex;gap:2px;margin-top:2px';
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.title = 'Save current pattern to slot ' + (i+1);
+    saveBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(0,150,100,0.4);background:rgba(0,150,100,0.15);color:#007a50;cursor:pointer';
+    saveBtn.onclick = (e) => { e.stopPropagation(); savePatternTo(i); };
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent = 'Load';
+    loadBtn.title = 'Load pattern from slot ' + (i+1);
+    loadBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(0,100,200,0.4);background:rgba(0,100,200,0.15);color:#0068b8;cursor:pointer';
+    loadBtn.onclick = (e) => { e.stopPropagation(); loadPatternFrom(i); };
+    const selBtn = document.createElement('button');
+    selBtn.textContent = '→Arr';
+    selBtn.title = 'Select this pattern to assign to arrangement bars';
+    selBtn.style.cssText = 'font-size:7px;padding:1px 4px;border-radius:4px;border:1px solid rgba(180,100,0,0.4);background:rgba(180,100,0,0.15);color:#a05000;cursor:pointer';
+    selBtn.onclick = (e) => {
+      e.stopPropagation();
+      _selectedPatSlot = (_selectedPatSlot === i) ? -1 : i;
+      document.querySelectorAll('#pat-slots-row button[id^="pat-slot-"]').forEach(b =>
+        b.style.outline = b.id === 'pat-slot-' + _selectedPatSlot ? '2px solid var(--accent)' : '');
+    };
+    actionsDiv.append(saveBtn, loadBtn, selBtn);
+    btn.append(actionsDiv);
+    slotsRow.appendChild(btn);
+  }
+  for (let b = 0; b < 16; b++) {
+    const btn = document.createElement('button');
+    btn.id = 'arr-bar-' + b;
+    btn.textContent = '·';
+    btn.style.cssText = 'width:28px;height:28px;font-size:9px;border-radius:4px;border:1px solid rgba(0,100,200,0.2);background:rgba(0,100,200,0.05);color:var(--text2);cursor:pointer;font-weight:700';
+    const barIdx = b;
+    btn.onclick = () => {
+      if (arrangeSeq[barIdx] >= 0) {
+        arrangeSeq[barIdx] = -1;
+      } else if (_selectedPatSlot >= 0) {
+        arrangeSeq[barIdx] = _selectedPatSlot;
+      }
+      refreshPatternUI();
+    };
+    barsRow.appendChild(btn);
+  }
+  refreshPatternUI();
+}
+
+function clearArrange() {
+  arrangeSeq.fill(-1);
+  refreshPatternUI();
 }
 
 /* ---- wave selector ---- */
@@ -7476,6 +7543,7 @@ let seqBpm = 128, seqPlaying = false, seqStep = 0;
 let seqStepCount = 16;
 let seqSwing = 0;
 let _nextNoteTime = 0, _scheduledStep = 0;
+let _patternStartTime = 0;
 let _stepTimes = new Array(64).fill(0);
 let _lastVisStep = -1;
 let _schedTimer = null, _rafId = null;
@@ -7483,6 +7551,12 @@ const LOOKAHEAD = 0.1, SCHED_INTERVAL = 25;
 let drumMuted = new Array(8).fill(false);
 let drumSeqVel = Array.from({length:8}, () => new Array(16).fill(80));
 let synthChordMode = false, synthChordType = 'maj';
+let analyserNode = null;
+// Pattern slots and arrangement
+let patterns = Array.from({length:8}, () => null);
+let arrangeEnabled = false;
+let arrangeSeq = new Array(16).fill(-1);
+let _arrangeBarIdx = 0;
 
 function stepDuration() { return 60 / seqBpm / 4; }
 
@@ -7521,7 +7595,71 @@ function isTieStep(ni, s) {
   return false;
 }
 
+function loadPatternSnapshot(p) {
+  if (!p) return;
+  p.drum.forEach((row, di) => { row.forEach((v, s) => { if (s < drumSeqData[di].length) drumSeqData[di][s] = v; }); });
+  p.synth.forEach((row, ni) => { row.forEach((v, s) => { if (s < synthSeqData[ni].length) synthSeqData[ni][s] = v; }); });
+  if (typeof bassSeqData !== 'undefined') p.bass.forEach((row, ni) => { row.forEach((v, s) => { if (s < bassSeqData[ni].length) bassSeqData[ni][s] = v; }); });
+}
+
+function savePatternTo(idx) {
+  patterns[idx] = {
+    drum: drumSeqData.map(r => [...r]),
+    synth: synthSeqData.map(r => [...r]),
+    bass: (typeof bassSeqData !== 'undefined') ? bassSeqData.map(r => [...r]) : [],
+    steps: seqStepCount
+  };
+  refreshPatternUI();
+}
+
+function loadPatternFrom(idx) {
+  const p = patterns[idx];
+  if (!p) return;
+  loadPatternSnapshot(p);
+  refreshSequencerUI();
+}
+
+function refreshSequencerUI() {
+  document.querySelectorAll('#drum-seq .seq-step').forEach(btn => {
+    const di = parseInt(btn.dataset.row), s = parseInt(btn.dataset.col);
+    if (!isNaN(di) && !isNaN(s)) {
+      btn.classList.toggle('on', !!drumSeqData[di][s]);
+      btn.style.opacity = drumSeqData[di][s] ? (0.4 + (drumSeqVel[di][s]||80)/100*0.6) : '';
+    }
+  });
+  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni));
+  document.querySelectorAll('#bass-seq .seq-step').forEach(btn => {
+    const ni = parseInt(btn.dataset.row), s = parseInt(btn.dataset.col);
+    if (!isNaN(ni) && !isNaN(s)) btn.classList.toggle('on', !!bassSeqData?.[ni]?.[s]);
+  });
+}
+
+function refreshPatternUI() {
+  for (let i = 0; i < 8; i++) {
+    const el = document.getElementById('pat-slot-' + i);
+    if (el) {
+      el.style.opacity = patterns[i] ? '1' : '0.5';
+      el.style.borderColor = patterns[i] ? 'rgba(0,100,200,0.6)' : 'rgba(0,100,200,0.2)';
+    }
+  }
+  for (let b = 0; b < 16; b++) {
+    const el = document.getElementById('arr-bar-' + b);
+    if (el) {
+      const pidx = arrangeSeq[b];
+      el.textContent = pidx >= 0 ? (pidx + 1) : '·';
+      el.style.background = pidx >= 0 ? 'rgba(0,100,200,0.3)' : 'rgba(0,100,200,0.05)';
+      el.style.color = pidx >= 0 ? 'var(--accent)' : 'var(--text2)';
+      el.style.borderColor = pidx >= 0 ? 'rgba(0,100,200,0.5)' : 'rgba(0,100,200,0.2)';
+    }
+  }
+}
+
 function scheduleStep(step, time) {
+  if (step === 0 && arrangeEnabled) {
+    _arrangeBarIdx = (_arrangeBarIdx + 1) % 16;
+    const pidx = arrangeSeq[_arrangeBarIdx];
+    if (pidx >= 0 && patterns[pidx]) loadPatternSnapshot(patterns[pidx]);
+  }
   const dur = stepDuration();
   drumSeqData.forEach((row, di) => {
     if (drumMuted[di] || !row[step]) return;
@@ -7557,7 +7695,9 @@ function advanceStep() {
   const dur = stepDuration();
   const swing = (seqSwing > 0 && _scheduledStep % 2 === 1) ? (seqSwing / 100 * dur) : 0;
   _nextNoteTime += dur + swing;
-  _scheduledStep = (_scheduledStep + 1) % seqStepCount;
+  const nextStep = (_scheduledStep + 1) % seqStepCount;
+  if (nextStep === 0) _patternStartTime = _nextNoteTime; // resync on loop wrap
+  _scheduledStep = nextStep;
 }
 
 function scheduler() {
@@ -7570,27 +7710,47 @@ function scheduler() {
   }
 }
 
+function drawOsc() {
+  const canvas = document.getElementById('studio-osc');
+  if (!canvas || !analyserNode) return;
+  const ctx2d = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const buf = new Uint8Array(analyserNode.fftSize);
+  analyserNode.getByteTimeDomainData(buf);
+  ctx2d.clearRect(0, 0, W, H);
+  ctx2d.beginPath();
+  ctx2d.strokeStyle = 'rgba(80,200,255,0.9)';
+  ctx2d.lineWidth = 1.5;
+  for (let i = 0; i < buf.length; i++) {
+    const x = i / buf.length * W;
+    const y = ((buf[i] / 128) - 1) * (H / 2) + H / 2;
+    i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
+  }
+  ctx2d.stroke();
+}
+
 function rafLoop() {
   if (!seqPlaying) return;
   const now = actx.currentTime;
-  let vis = -1;
-  for (let i = 0; i < seqStepCount; i++) {
-    if (_stepTimes[i] <= now) vis = i;
-  }
-  if (vis !== -1 && vis !== _lastVisStep) {
+  const stepDur = stepDuration();
+  const elapsed = Math.max(0, now - _patternStartTime);
+  const vis = Math.floor(elapsed / stepDur) % seqStepCount;
+  if (vis !== _lastVisStep) {
     document.querySelectorAll('.seq-step.cur').forEach(el => el.classList.remove('cur'));
     document.querySelectorAll(`.seq-step[data-col="${vis}"]`).forEach(el => el.classList.add('cur'));
     _lastVisStep = vis;
   }
+  drawOsc();
   _rafId = requestAnimationFrame(rafLoop);
 }
 
 function seqPlay() {
   if (seqPlaying) return;
   initActx(); seqPlaying = true; seqStep = 0;
-  _scheduledStep = 0; _lastVisStep = -1;
-  _stepTimes.fill(Number.MAX_VALUE); // prevent stale zeros from lighting up the playhead
+  _scheduledStep = 0; _lastVisStep = -1; _arrangeBarIdx = 0;
+  _stepTimes.fill(Number.MAX_VALUE);
   _nextNoteTime = actx.currentTime + 0.05;
+  _patternStartTime = _nextNoteTime;
   _schedTimer = setInterval(scheduler, SCHED_INTERVAL);
   rafLoop(); _syncTransportBtns();
 }
@@ -9274,6 +9434,7 @@ function initPaint() {
   }
   let lastPt = null;
   cv.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return; // only primary button starts drawing/selecting
     cv.setPointerCapture(e.pointerId);
     const p = getPos(e);
     if (_paintTool === 'cover' && _paintCoverImg) {
@@ -9292,7 +9453,20 @@ function initPaint() {
       return;
     }
     if (_paintTool === 'select') {
-      paintStartSelect(p.x, p.y);
+      // If clicking inside existing selection → start drag-move
+      if (paintSelection && paintSelection.w > 2 && paintSelection.h > 2 &&
+          p.x >= paintSelection.x && p.x <= paintSelection.x + paintSelection.w &&
+          p.y >= paintSelection.y && p.y <= paintSelection.y + paintSelection.h) {
+        _paintSelDragging = true;
+        _paintSelDragStart = {x: p.x, y: p.y};
+        _paintSelOrigin = {x: paintSelection.x, y: paintSelection.y};
+        paintCopy();
+        // Clear original area
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(paintSelection.x, paintSelection.y, paintSelection.w, paintSelection.h);
+      } else {
+        paintStartSelect(p.x, p.y);
+      }
       return;
     }
     paintClearSelectionOverlay();
@@ -9322,11 +9496,17 @@ function initPaint() {
     }
   });
   cv.addEventListener('pointermove', e => {
-    if (_paintTool === 'select' && paintSelecting) {
-      paintUpdateSelect(getPos(e).x, getPos(e).y);
+    if (_paintTool === 'select') {
+      if (_paintSelDragging && paintSelection) {
+        const p = getPos(e);
+        const dx = p.x - _paintSelDragStart.x, dy = p.y - _paintSelDragStart.y;
+        paintSelection = {x: _paintSelOrigin.x + dx, y: _paintSelOrigin.y + dy, w: paintSelection.w, h: paintSelection.h};
+        renderPaintSelectionOverlay();
+      } else if (paintSelecting) {
+        paintUpdateSelect(getPos(e).x, getPos(e).y);
+      }
       return;
     }
-    if (_paintTool === 'select' && paintSelecting) { paintUpdateSelect(getPos(e).x, getPos(e).y); return; }
     if (!_painting) return;
     const p = getPos(e);
     const sz = parseInt(ps.value);
@@ -9370,8 +9550,17 @@ function initPaint() {
     }
   });
   cv.addEventListener('pointerup', () => {
-    if (_paintTool === 'select' && paintSelecting) {
-      paintEndSelect();
+    if (_paintTool === 'select') {
+      if (_paintSelDragging) {
+        // Commit the move
+        if (paintClipboard && paintSelection) {
+          ctx.putImageData(paintClipboard, paintSelection.x, paintSelection.y);
+          paintSaveState();
+        }
+        _paintSelDragging = false;
+      } else if (paintSelecting) {
+        paintEndSelect();
+      }
       return;
     }
     if (_painting) paintSaveState();
@@ -9388,14 +9577,16 @@ function initPaint() {
     menu.id = 'paint-ctx-menu';
     menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:var(--bubble,#fff);border:1px solid rgba(0,0,0,0.15);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);z-index:9999;min-width:140px;padding:4px 0;font-size:12px;`;
     const items = [
-      hasSel ? ['Copy',  () => paintCopy()] : null,
-      paintClipboard ? ['Paste', () => { setPaintTool('pencil'); paintPaste(0,0); }] : null,
+      hasSel ? ['Copy',    () => paintCopy()] : null,
+      hasSel ? ['Cut',     () => { paintCopy(); paintSaveState(); ctx.fillStyle='#fff'; ctx.fillRect(paintSelection.x,paintSelection.y,paintSelection.w,paintSelection.h); paintClearSelectionOverlay(); }] : null,
+      hasSel ? ['Delete',  () => { paintSaveState(); ctx.fillStyle='#fff'; ctx.fillRect(paintSelection.x,paintSelection.y,paintSelection.w,paintSelection.h); paintClearSelectionOverlay(); }] : null,
+      paintClipboard ? ['Paste (center)', () => { const px=Math.floor((cv.width-paintClipboard.width)/2),py=Math.floor((cv.height-paintClipboard.height)/2); paintSaveState(); ctx.putImageData(paintClipboard,px,py); paintSelection={x:px,y:py,w:paintClipboard.width,h:paintClipboard.height}; setPaintTool('select'); renderPaintSelectionOverlay(); }] : null,
       null,
-      ['Undo',  () => paintUndo()],
-      ['Redo',  () => paintRedo()],
+      ['Undo',       () => paintUndo()],
+      ['Redo',       () => paintRedo()],
       null,
       ['Select All', () => { setPaintTool('select'); paintSelection={x:0,y:0,w:cv.width,h:cv.height}; renderPaintSelectionOverlay(); }],
-      ['Clear Canvas', () => { paintSaveState(); ctx.clearRect(0,0,cv.width,cv.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); }],
+      ['Clear Canvas', () => { paintSaveState(); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); }],
     ];
     items.forEach(item => {
       if (!item) { const sep = document.createElement('div'); sep.style.cssText='height:1px;background:rgba(0,0,0,0.08);margin:3px 0;'; menu.appendChild(sep); return; }
@@ -9405,11 +9596,13 @@ function initPaint() {
       btn.style.cssText = 'padding:6px 14px;cursor:pointer;';
       btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(0,100,200,0.1)');
       btn.addEventListener('mouseleave', () => btn.style.background = '');
-      btn.addEventListener('mousedown', ev => { ev.preventDefault(); menu.remove(); fn(); });
+      // Use pointerdown + stopPropagation so the dismiss handler doesn't fire first
+      btn.addEventListener('pointerdown', ev => { ev.preventDefault(); ev.stopPropagation(); menu.remove(); fn(); });
       menu.appendChild(btn);
     });
     document.body.appendChild(menu);
-    const dismiss = () => { menu.remove(); document.removeEventListener('pointerdown', dismiss); };
+    // Dismiss when clicking outside the menu
+    const dismiss = ev => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('pointerdown', dismiss); } };
     setTimeout(() => document.addEventListener('pointerdown', dismiss), 0);
   });
   // Keyboard shortcuts for paint window
@@ -9419,7 +9612,26 @@ function initPaint() {
     if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); paintUndo(); }
     else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); paintRedo(); }
     else if (e.ctrlKey && e.key === 'c' && _paintTool === 'select') { e.preventDefault(); paintCopy(); }
-    else if (e.ctrlKey && e.key === 'v') { e.preventDefault(); paintPaste(0, 0); }
+    else if (e.ctrlKey && e.key === 'x' && _paintTool === 'select' && paintSelection) {
+      e.preventDefault();
+      paintCopy(); paintSaveState();
+      ctx.fillStyle = '#fff'; ctx.fillRect(paintSelection.x, paintSelection.y, paintSelection.w, paintSelection.h);
+      paintClearSelectionOverlay();
+    }
+    else if (e.ctrlKey && e.key === 'v' && paintClipboard) {
+      e.preventDefault();
+      const px = Math.floor((cv.width - paintClipboard.width) / 2);
+      const py = Math.floor((cv.height - paintClipboard.height) / 2);
+      paintSaveState(); ctx.putImageData(paintClipboard, px, py);
+      paintSelection = {x: px, y: py, w: paintClipboard.width, h: paintClipboard.height};
+      setPaintTool('select'); renderPaintSelectionOverlay();
+    }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && _paintTool === 'select' && paintSelection && paintSelection.w > 0) {
+      e.preventDefault();
+      paintSaveState(); ctx.fillStyle = '#fff';
+      ctx.fillRect(paintSelection.x, paintSelection.y, paintSelection.w, paintSelection.h);
+      paintClearSelectionOverlay();
+    }
   });
 
   const tb=document.getElementById('paint-titlebar');
@@ -11024,9 +11236,13 @@ function bjHandTotal(hand){
 }
 
 function bjDeal(){
+  if(!bjGameOver) return; // block re-dealing mid-hand
   const betInp=document.getElementById('bj-bet');
   bjBet=Math.max(1,Math.min(bjBalance,parseInt(betInp?betInp.value:10)||10));
   if(bjBet>bjBalance){bjSetStatus('Not enough credits!');return;}
+  // Deduct bet upfront — wins/pushes return it back
+  bjBalance-=bjBet;
+  bjUpdateBalance();
   bjEnsureDeck();
   bjDealerHand=[];
   bjPlayerHand=[];
@@ -11050,6 +11266,8 @@ function bjDeal(){
     bjDealerHoleShown=true;
     bjDealerHand[0].hidden=false;
     bjGameOver=true;
+    bjBalance+=bjBet; // return stake (push)
+    bjUpdateBalance();
     bjSetStatus('Push! Both Blackjack');
     bjShowActions(false);
     bjRender();
@@ -11059,7 +11277,7 @@ function bjDeal(){
     bjDealerHoleShown=true;
     bjDealerHand[0].hidden=false;
     bjGameOver=true;
-    bjBalance+=Math.floor(bjBet*1.5);
+    bjBalance+=bjBet+Math.floor(bjBet*1.5); // return stake + 1.5x profit
     bjUpdateBalance();
     playFanfare('win');
     setTimeout(() => window.abSayBJ?.('blackjack'), 700);
@@ -11072,8 +11290,7 @@ function bjDeal(){
     bjDealerHoleShown=true;
     bjDealerHand[0].hidden=false;
     bjGameOver=true;
-    bjBalance-=bjBet;
-    bjUpdateBalance();
+    // stake already deducted — just show loss
     bjSetStatus('Dealer Blackjack! You lose.');
     bjShowActions(false);
     bjRender();
@@ -11094,8 +11311,7 @@ function bjHit(){
     bjDealerHoleShown=true;
     bjDealerHand[0].hidden=false;
     bjGameOver=true;
-    bjBalance-=bjBet;
-    bjUpdateBalance();
+    // stake already deducted at deal
     playTone(150, 0.3, 'sawtooth', 0.25);
     setTimeout(() => window.abSayBJ?.('bust'), 400);
     bjSetStatus('Bust! You lose '+bjBet+' credits.');
@@ -11123,17 +11339,18 @@ function bjStand(){
   bjGameOver=true;
   bjShowActions(false);
   if(dt>21||pt>dt){
-    bjBalance+=bjBet;
+    bjBalance+=bjBet*2; // return stake + profit
     bjUpdateBalance();
     playFanfare('small');
     setTimeout(() => window.abSayBJ?.('win', '+'+bjBet+' credits'), 500);
     bjSetStatus('You win '+bjBet+' credits! (Player: '+pt+', Dealer: '+dt+')');
   } else if(pt===dt){
+    bjBalance+=bjBet; // return stake
+    bjUpdateBalance();
     window.abSayBJ?.('push');
     bjSetStatus('Push! ('+pt+' vs '+dt+')');
   } else {
-    bjBalance-=bjBet;
-    bjUpdateBalance();
+    // stake already deducted at deal
     playTone(150, 0.3, 'sawtooth', 0.25);
     setTimeout(() => window.abSayBJ?.('lose'), 400);
     bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
@@ -11143,8 +11360,11 @@ function bjStand(){
 
 function bjDouble(){
   if(bjGameOver) return;
-  if(bjBalance<bjBet){bjSetStatus('Not enough credits to double!');return;}
+  const extraBet = bjBet; // original bet amount
+  if(bjBalance<extraBet){bjSetStatus('Not enough credits to double!');return;}
+  bjBalance-=extraBet; // deduct extra stake
   bjBet*=2;
+  bjUpdateBalance();
   bjEnsureDeck();
   bjPlayerHand.push(bjDeck.pop());
   _bjAnimPlayer=1;
@@ -11153,8 +11373,7 @@ function bjDouble(){
     bjDealerHoleShown=true;
     bjDealerHand[0].hidden=false;
     bjGameOver=true;
-    bjBalance-=bjBet;
-    bjUpdateBalance();
+    // both stakes already deducted
     bjSetStatus('Doubled & Bust! You lose '+bjBet+' credits.');
     bjShowActions(false);
     bjRender();
@@ -11346,6 +11565,7 @@ function bjUpdateBalance(){
 
   <div class="sf-header">
     <span class="sf-brand">🎹 AquaTune Studio</span>
+    <canvas id="studio-osc" width="100" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
     <div class="sf-transport">
       <button class="t-btn seq-play-btn" onclick="seqPlay()">▶ Play</button>
       <button class="t-btn seq-stop-btn active" onclick="seqStop()">■ Stop</button>
@@ -11366,11 +11586,12 @@ function bjUpdateBalance(){
   </div>
 
   <div class="sf-tabs">
-    <button class="sf-tab active" id="stab-synth"  onclick="switchSynthTab('synth')">🎹 Synth</button>
-    <button class="sf-tab"        id="stab-drums"  onclick="switchSynthTab('drums')">🥁 Drums</button>
-    <button class="sf-tab"        id="stab-fx"     onclick="switchSynthTab('fx')">🎛️ FX</button>
-    <button class="sf-tab"        id="stab-bass"   onclick="switchSynthTab('bass')">🎸 Bass</button>
-    <button class="sf-tab"        id="stab-sfx"    onclick="switchSynthTab('sfx')">🔊 SFX</button>
+    <button class="sf-tab active" id="stab-synth"   onclick="switchSynthTab('synth')">🎹 Synth</button>
+    <button class="sf-tab"        id="stab-drums"   onclick="switchSynthTab('drums')">🥁 Drums</button>
+    <button class="sf-tab"        id="stab-fx"      onclick="switchSynthTab('fx')">🎛️ FX</button>
+    <button class="sf-tab"        id="stab-bass"    onclick="switchSynthTab('bass')">🎸 Bass</button>
+    <button class="sf-tab"        id="stab-sfx"     onclick="switchSynthTab('sfx')">🔊 SFX</button>
+    <button class="sf-tab"        id="stab-arrange" onclick="switchSynthTab('arrange')">📋 Arrange</button>
   </div>
 
   <!-- SYNTH PANEL -->
@@ -11503,6 +11724,26 @@ function bjUpdateBalance(){
   <!-- SFX PANEL -->
   <div class="sf-panel" id="spanel-sfx">
     <div id="sfx-grid"></div>
+  </div>
+
+  <!-- ARRANGE PANEL -->
+  <div class="sf-panel" id="spanel-arrange">
+    <div style="font-size:9px;color:var(--text2);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Pattern Slots</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px" id="pat-slots-row">
+      <!-- built by buildPatternUI() -->
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <span style="font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px">Arrangement</span>
+      <label style="font-size:9px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer">
+        <input type="checkbox" id="arrange-enable-chk" onchange="arrangeEnabled=this.checked" style="width:11px;height:11px">
+        Follow arrangement
+      </label>
+      <button onclick="clearArrange()" style="font-size:8px;padding:2px 6px;border-radius:6px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
+    </div>
+    <div style="display:flex;gap:2px;flex-wrap:wrap" id="arrange-bars-row">
+      <!-- built by buildPatternUI() -->
+    </div>
+    <div style="font-size:8px;color:var(--text2);margin-top:6px;opacity:0.6">Click a pattern slot then click a bar to assign · Click filled bar to clear</div>
   </div>
 
 </div>

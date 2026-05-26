@@ -7589,6 +7589,7 @@ function seqPlay() {
   if (seqPlaying) return;
   initActx(); seqPlaying = true; seqStep = 0;
   _scheduledStep = 0; _lastVisStep = -1;
+  _stepTimes.fill(Number.MAX_VALUE); // prevent stale zeros from lighting up the playhead
   _nextNoteTime = actx.currentTime + 0.05;
   _schedTimer = setInterval(scheduler, SCHED_INTERVAL);
   rafLoop(); _syncTransportBtns();
@@ -7731,13 +7732,20 @@ function buildSynthSeq() {
       if (tie) btn.classList.add('seq-step-tie');
       if (val > 1) btn.title = `${val} steps`;
       btn.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return; // let right-click reach contextmenu
         e.preventDefault();
         if (isTieStep(ni, s)) return;
-        synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
+        if (e.shiftKey && synthSeqData[ni][s] > 0) {
+          // Shift+click on active note: cycle length 1→2→3→4→1
+          synthSeqData[ni][s] = (synthSeqData[ni][s] % 4) + 1;
+        } else {
+          synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
+        }
         refreshSynthRow(ni);
       });
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
+        if (isTieStep(ni, s)) return;
         if (synthSeqData[ni][s] > 0) {
           synthSeqData[ni][s] = (synthSeqData[ni][s] % 4) + 1;
           refreshSynthRow(ni);
@@ -7757,7 +7765,7 @@ function clearSynthSeq() {
 }
 function clearDrumSeq() {
   drumSeqData.forEach(row => row.fill(false));
-  document.querySelectorAll('#drum-seq .seq-step').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#drum-seq .seq-step').forEach(b => { b.classList.remove('on'); b.style.opacity = ''; });
 }
 function clearBassSeq() {
   bassSeqData.forEach(row => row.fill(false));
@@ -11404,7 +11412,7 @@ function bjUpdateBalance(){
     </div>
     <div id="synth-keys"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Piano Roll</span><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <div class="seq-hdr"><span title="Click to add/remove · Shift+click or right-click active note to extend length">Piano Roll</span><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <button onclick="randomizeSynth()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,150,100,0.15);border:1px solid rgba(0,150,100,0.3);color:#007a50;cursor:pointer">🎲</button>
         <select id="synth-key-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(0,150,100,0.3);background:rgba(255,255,255,0.85);color:#007a50;cursor:pointer">
           <option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option>

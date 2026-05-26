@@ -7220,6 +7220,14 @@ const activeNotes = {};
 
 /* ---- flyout toggle ---- */
 let _synthInited = false, _fxInited = false, _bassInited = false, _sfxInited = false, _keysInited = false;
+let _sfDrag = null;
+function _sfMouseMove(e) {
+  if (!_sfDrag) return;
+  const fl = document.getElementById('synth-flyout');
+  fl.style.left = (e.clientX - _sfDrag.sx) + 'px';
+  fl.style.top  = (e.clientY - _sfDrag.sy) + 'px';
+}
+function _sfMouseUp() { _sfDrag = null; }
 function toggleSynthFlyout() {
   const fl = document.getElementById('synth-flyout');
   const btn = document.getElementById('synth-btn');
@@ -7236,22 +7244,17 @@ function toggleSynthFlyout() {
     document.getElementById('bpm-inp').addEventListener('input', e => {
       seqBpm = Math.max(40, Math.min(240, parseInt(e.target.value)||128));
     });
-    // Draggable header
+    // Draggable header (listeners registered once — stored as named fns to avoid accumulation)
     const hdr = fl.querySelector('.sf-header');
-    let sfDrag = null;
     hdr.addEventListener('mousedown', e => {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       const r = fl.getBoundingClientRect();
       fl.style.transform = 'none';
       fl.style.left = r.left + 'px'; fl.style.top = r.top + 'px';
-      sfDrag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
+      _sfDrag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
     });
-    document.addEventListener('mousemove', e => {
-      if (!sfDrag) return;
-      fl.style.left = (e.clientX - sfDrag.sx) + 'px';
-      fl.style.top  = (e.clientY - sfDrag.sy) + 'px';
-    });
-    document.addEventListener('mouseup', () => { sfDrag = null; });
+    document.addEventListener('mousemove', _sfMouseMove);
+    document.addEventListener('mouseup',   _sfMouseUp);
   }
 }
 
@@ -7575,6 +7578,12 @@ let _arrangeBarIdx = 0;
 
 function stepDuration() { return 60 / seqBpm / 4; }
 
+/* ---- pre-allocated chord intervals (avoids allocation per note in scheduler) ---- */
+const CHORD_INTERVALS = { maj:[4,7], min:[3,7], sus4:[5,7], dim:[3,6] };
+
+/* ---- cached slider values (avoids DOM reads in scheduler hot path) ---- */
+let _cachedAtk = 0.01, _cachedRel = 0.35, _cachedBassDec = 0.4;
+
 /* ---- step-column DOM cache (perf) ---- */
 let _stepColCache = null;
 function _invalidateStepCache() { _stepColCache = null; }
@@ -7596,25 +7605,26 @@ function scheduleSynthNote(noteFull, startTime, dur) {
   const freq = noteFreq(noteBase, noteOct);
   const osc = cx.createOscillator(), g = cx.createGain();
   osc.type = synthWave; osc.frequency.value = freq;
-  const atk = parseFloat(document.getElementById('atk-sl')?.value || 0.01);
-  const rel = parseFloat(document.getElementById('rel-sl')?.value || 0.35);
+  const atk = _cachedAtk, rel = _cachedRel;
   g.gain.setValueAtTime(0.001, startTime);
   g.gain.linearRampToValueAtTime(0.2, startTime + Math.min(atk, dur * 0.3));
   g.gain.setValueAtTime(0.2, startTime + Math.max(0, dur - Math.min(rel, dur * 0.5)));
   g.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
   osc.connect(g); g.connect(synthDest());
   osc.start(startTime); osc.stop(startTime + dur + 0.01);
+  osc.onended = () => { osc.disconnect(); g.disconnect(); };
 }
 
 function scheduleBassNote(note, startTime) {
   const cx = actx, freq = noteFreq(note, bassOct);
   const osc = cx.createOscillator(), g = cx.createGain();
-  const dec = parseFloat(document.getElementById('bass-dec-sl')?.value || 0.4);
+  const dec = _cachedBassDec;
   osc.type = bassWave; osc.frequency.value = freq;
   g.gain.setValueAtTime(0.35, startTime);
   g.gain.exponentialRampToValueAtTime(0.001, startTime + dec);
   osc.connect(g); g.connect(bassDest());
   osc.start(startTime); osc.stop(startTime + dec + 0.02);
+  osc.onended = () => { osc.disconnect(); g.disconnect(); };
 }
 
 function isTieStep(ni, s) {
@@ -7658,8 +7668,10 @@ function refreshSequencerUI() {
       btn.style.opacity = drumSeqData[di][s] ? (0.4 + (drumSeqVel[di][s]||80)/100*0.6) : '';
     }
   });
-  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni));
-  SEQ_NOTES.forEach((_, ni) => refreshKeysRow(ni));
+  const synthRows = document.querySelectorAll('#synth-seq .seq-row');
+  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni, synthRows[ni]));
+  const keysRows = document.querySelectorAll('#keys-seq .seq-row');
+  SEQ_NOTES.forEach((_, ni) => refreshKeysRow(ni, keysRows[ni]));
   document.querySelectorAll('#bass-seq .seq-step').forEach(btn => {
     const ni = parseInt(btn.dataset.row), s = parseInt(btn.dataset.col);
     if (!isNaN(ni) && !isNaN(s)) btn.classList.toggle('on', !!bassSeqData?.[ni]?.[s]);
@@ -7705,9 +7717,7 @@ function scheduleStep(step, time) {
     const noteDur = len * dur * 0.95;
     scheduleSynthNote(noteFull, time, noteDur);
     if (synthChordMode) {
-      const intervals = synthChordType === 'maj' ? [4, 7]
-                      : synthChordType === 'min' ? [3, 7]
-                      : synthChordType === 'sus4' ? [5, 7] : [3, 6];
+      const intervals = CHORD_INTERVALS[synthChordType] || CHORD_INTERVALS.maj;
       intervals.forEach(semi => {
         const ri = ni + semi;
         if (ri < SEQ_NOTES.length) scheduleSynthNote(SEQ_NOTES[ri], time, noteDur);
@@ -7752,11 +7762,15 @@ let _oscBuf = null;
 function drawOsc() {
   const canvas = document.getElementById('studio-osc');
   if (!canvas || !analyserNode) return;
-  const ctx2d = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
   if (!_oscBuf || _oscBuf.length !== analyserNode.fftSize) _oscBuf = new Uint8Array(analyserNode.fftSize);
   const buf = _oscBuf;
   analyserNode.getByteTimeDomainData(buf);
+  // Skip redraw when silent (all samples near midpoint 128)
+  let silent = true;
+  for (let i = 0; i < buf.length; i += 4) { if (Math.abs(buf[i] - 128) > 2) { silent = false; break; } }
+  if (silent) return;
+  const ctx2d = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
   ctx2d.clearRect(0, 0, W, H);
   ctx2d.beginPath();
   ctx2d.strokeStyle = 'rgba(80,200,255,0.9)';
@@ -7825,15 +7839,15 @@ function changeStepCount(n) {
 }
 
 function updateDrumRowMuteViz(di) {
-  const rows = document.querySelectorAll('#drum-seq .seq-row');
-  if (rows[di]) rows[di].classList.toggle('drum-muted', drumMuted[di]);
-  const btn = rows[di]?.querySelector('.drum-mute-btn');
+  const row = document.querySelector(`#drum-seq .seq-row:nth-child(${di + 1})`);
+  if (row) row.classList.toggle('drum-muted', drumMuted[di]);
+  const btn = row?.querySelector('.drum-mute-btn');
   if (btn) btn.classList.toggle('active', drumMuted[di]);
 }
 
-function refreshSynthRow(ni) {
-  const rows = document.querySelectorAll('#synth-seq .seq-row');
-  const row = rows[ni]; if (!row) return;
+function refreshSynthRow(ni, row) {
+  if (!row) row = document.querySelectorAll('#synth-seq .seq-row')[ni];
+  if (!row) return;
   const btns = row.querySelectorAll('.seq-step');
   btns.forEach((btn, s) => {
     const val = synthSeqData[ni][s];
@@ -7879,6 +7893,7 @@ function buildDrumSeq() {
     muteBtn.addEventListener('click', e => { e.stopPropagation(); drumMuted[di] = !drumMuted[di]; updateDrumRowMuteViz(di); });
     lbl.appendChild(nameSpan); lbl.appendChild(muteBtn);
     row.appendChild(lbl);
+    const rowFrag = document.createDocumentFragment();
     for (let s = 0; s < seqStepCount; s++) {
       const btn = document.createElement('div');
       btn.className = 'seq-step' + (s % 4 === 0 ? ' b4' : '');
@@ -7903,8 +7918,9 @@ function buildDrumSeq() {
         btn.classList.toggle('on', on);
         btn.style.opacity = on ? (0.4 + (drumSeqVel[di][s]||80) / 100 * 0.6) : '';
       });
-      row.appendChild(btn);
+      rowFrag.appendChild(btn);
     }
+    row.appendChild(rowFrag);
     el.appendChild(row);
   });
 }
@@ -7923,6 +7939,7 @@ function buildSynthSeq() {
     lbl.className = 'seq-rlabel ' + (isBlack ? 'rlabel-black' : 'rlabel-white');
     lbl.textContent = noteFull;
     row.appendChild(lbl);
+    const synthFrag = document.createDocumentFragment();
     for (let s = 0; s < seqStepCount; s++) {
       const btn = document.createElement('div');
       btn.className = 'seq-step' + (s % 4 === 0 ? ' b4' : '');
@@ -7934,11 +7951,10 @@ function buildSynthSeq() {
       if (tie) btn.classList.add('seq-step-tie');
       if (val > 1) btn.title = `${val} steps`;
       btn.addEventListener('pointerdown', e => {
-        if (e.button !== 0) return; // let right-click reach contextmenu
+        if (e.button !== 0) return;
         e.preventDefault();
         if (isTieStep(ni, s)) return;
         if (e.shiftKey && synthSeqData[ni][s] > 0) {
-          // Shift+click on active note: cycle length 1→2→3→4→1
           synthSeqData[ni][s] = (synthSeqData[ni][s] % 4) + 1;
         } else {
           synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
@@ -7953,8 +7969,9 @@ function buildSynthSeq() {
           refreshSynthRow(ni);
         }
       });
-      row.appendChild(btn);
+      synthFrag.appendChild(btn);
     }
+    row.appendChild(synthFrag);
     el.appendChild(row);
   });
   // Scroll to show C4 area (row 23 from top in 48-row layout)
@@ -8125,6 +8142,7 @@ function buildBassSeq() {
     lbl.style.background=isBlack?'rgba(20,30,60,0.12)':'rgba(0,80,200,0.06)';
     lbl.style.color=isBlack?'rgba(0,100,200,0.6)':'var(--text2)';
     row.appendChild(lbl);
+    const bassFrag = document.createDocumentFragment();
     for(let s=0;s<seqStepCount;s++){
       const btn=document.createElement('div');
       btn.className='seq-step'+(s%4===0?' b4':''); btn.dataset.col=s; btn.dataset.row=ni;
@@ -8137,8 +8155,9 @@ function buildBassSeq() {
         bassSeqData[ni][s]=!bassSeqData[ni][s];
         btn.classList.toggle('on',bassSeqData[ni][s]);
       });
-      row.appendChild(btn);
+      bassFrag.appendChild(btn);
     }
+    row.appendChild(bassFrag);
     el.appendChild(row);
   });
 }
@@ -8176,6 +8195,8 @@ function scheduleKeysNote(noteFull, t, dur) {
     osc1.connect(g1); osc2.connect(g2); g1.connect(out); g2.connect(out);
     osc1.start(t); osc2.start(t);
     osc1.stop(t + Math.max(dur, 0.5) + 0.05); osc2.stop(t + 0.22);
+    osc1.onended = () => { osc1.disconnect(); g1.disconnect(); };
+    osc2.onended = () => { osc2.disconnect(); g2.disconnect(); };
   } else if (keysVoice === 'organ') {
     // Hammond-style: 4 harmonic sines, fully sustained
     [1, 2, 3, 4].forEach((h, i) => {
@@ -8188,9 +8209,9 @@ function scheduleKeysNote(noteFull, t, dur) {
       g.gain.linearRampToValueAtTime(0.001, t + dur);
       osc.connect(g); g.connect(out);
       osc.start(t); osc.stop(t + dur + 0.05);
+      osc.onended = () => { osc.disconnect(); g.disconnect(); };
     });
   } else if (keysVoice === 'vibes') {
-    // Vibraphone: sine with fast attack, slow decay, gentle tremolo
     const osc = actx.createOscillator(), g = actx.createGain();
     const lfo = actx.createOscillator(), lg = actx.createGain();
     osc.type = 'sine'; osc.frequency.value = freq;
@@ -8203,8 +8224,8 @@ function scheduleKeysNote(noteFull, t, dur) {
     osc.connect(g); g.connect(out);
     lfo.start(t); osc.start(t);
     osc.stop(t + decLen + 0.05); lfo.stop(t + decLen + 0.05);
+    osc.onended = () => { osc.disconnect(); g.disconnect(); lfo.disconnect(); lg.disconnect(); };
   } else if (keysVoice === 'clav') {
-    // Clavinet: sawtooth through bandpass, tight pluck
     const osc = actx.createOscillator(), flt = actx.createBiquadFilter(), g = actx.createGain();
     osc.type = 'sawtooth'; osc.frequency.value = freq;
     flt.type = 'bandpass'; flt.frequency.value = freq * 2.5; flt.Q.value = 5;
@@ -8213,8 +8234,8 @@ function scheduleKeysNote(noteFull, t, dur) {
     g.gain.exponentialRampToValueAtTime(0.001, t + decLen);
     osc.connect(flt); flt.connect(g); g.connect(out);
     osc.start(t); osc.stop(t + decLen + 0.02);
+    osc.onended = () => { osc.disconnect(); flt.disconnect(); g.disconnect(); };
   } else if (keysVoice === 'strings') {
-    // Strings pad: two detuned saws, slow attack
     const osc1 = actx.createOscillator(), osc2 = actx.createOscillator(), g = actx.createGain();
     osc1.type = 'sawtooth'; osc1.frequency.value = freq;
     osc2.type = 'sawtooth'; osc2.frequency.value = freq * 1.004;
@@ -8227,6 +8248,7 @@ function scheduleKeysNote(noteFull, t, dur) {
     osc1.connect(g); osc2.connect(g); g.connect(out);
     osc1.start(t); osc2.start(t);
     osc1.stop(t + dur + 0.3); osc2.stop(t + dur + 0.3);
+    osc1.onended = () => { osc1.disconnect(); osc2.disconnect(); g.disconnect(); };
   } else {
     // Pad: warm triangle + detuned sine, slow attack
     const osc1 = actx.createOscillator(), osc2 = actx.createOscillator(), g = actx.createGain();
@@ -8241,6 +8263,7 @@ function scheduleKeysNote(noteFull, t, dur) {
     osc1.connect(g); osc2.connect(g); g.connect(out);
     osc1.start(t); osc2.start(t);
     osc1.stop(t + dur + 0.4); osc2.stop(t + dur + 0.4);
+    osc1.onended = () => { osc1.disconnect(); osc2.disconnect(); g.disconnect(); };
   }
 }
 
@@ -8283,9 +8306,9 @@ function isKeysTieStep(ni, s) {
   return false;
 }
 
-function refreshKeysRow(ni) {
-  const rows = document.querySelectorAll('#keys-seq .seq-row');
-  const row = rows[ni]; if (!row) return;
+function refreshKeysRow(ni, row) {
+  if (!row) row = document.querySelectorAll('#keys-seq .seq-row')[ni];
+  if (!row) return;
   row.querySelectorAll('.seq-step').forEach((btn, s) => {
     const val = keysSeqData[ni][s];
     const isTie = isKeysTieStep(ni, s);
@@ -8312,6 +8335,7 @@ function buildKeysSeq() {
     lbl.style.background = isBlack ? 'rgba(60,30,0,0.12)' : 'rgba(180,100,0,0.07)';
     lbl.style.color = isBlack ? 'rgba(180,100,0,0.7)' : 'var(--text2)';
     row.appendChild(lbl);
+    const keysFrag = document.createDocumentFragment();
     for (let s = 0; s < seqStepCount; s++) {
       const btn = document.createElement('div');
       btn.className = 'seq-step' + (s % 4 === 0 ? ' b4' : '');
@@ -8340,8 +8364,9 @@ function buildKeysSeq() {
         if (isKeysTieStep(ni, s)) return;
         if (keysSeqData[ni][s] > 0) { keysSeqData[ni][s] = (keysSeqData[ni][s] % 4) + 1; refreshKeysRow(ni); }
       });
-      row.appendChild(btn);
+      keysFrag.appendChild(btn);
     }
+    row.appendChild(keysFrag);
     el.appendChild(row);
   });
   requestAnimationFrame(() => { el.scrollTop = 23 * 20; });
@@ -9393,7 +9418,44 @@ function randomizeSynth() {
       synthSeqData[ni][s] = len;
     }
   }
-  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni));
+  const synthRows = document.querySelectorAll('#synth-seq .seq-row');
+  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni, synthRows[ni]));
+}
+
+function randomizeKeys() {
+  keysSeqData.forEach(row => row.fill(0));
+  const key = document.getElementById('keys-key-sel')?.value || 'C';
+  const scaleName = document.getElementById('keys-scale-sel')?.value || 'pentatonic';
+  const SCALES = {major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],pentatonic:[0,2,4,7,9],blues:[0,3,5,6,7,10],dorian:[0,2,3,5,7,9,10]};
+  const KEY_OFF = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+  const NOTE_SEMI = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+  const intervals = SCALES[scaleName] || SCALES.pentatonic;
+  const root = KEY_OFF[key] || 0;
+  const inScale = [];
+  SEQ_NOTES.forEach((n, ni) => {
+    const m = n.match(/^([A-G]#?)(\d)$/);
+    if (!m) return;
+    if (intervals.includes((NOTE_SEMI[m[1]] - root + 12) % 12)) inScale.push(ni);
+  });
+  if (!inScale.length) return;
+  // Voice-aware density: pads/strings sparser, clav/organ denser
+  const sparse = ['strings','pad'].includes(keysVoice);
+  const midPoint = Math.floor(inScale.length / 2);
+  let lastIdx = midPoint;
+  for (let s = 0; s < seqStepCount; s++) {
+    const onBeat = s % 4 === 0;
+    const prob = onBeat ? (sparse ? 0.6 : 0.85) : (sparse ? 0.12 : 0.22);
+    if (Math.random() < prob) {
+      const delta = Math.floor(Math.random() * 5) - 2;
+      lastIdx = Math.max(0, Math.min(inScale.length - 1, lastIdx + delta));
+      const ni = inScale[lastIdx];
+      const maxLen = sparse ? 3 : 2;
+      const len = Math.random() < 0.35 ? Math.min(maxLen, 2) : 1;
+      keysSeqData[ni][s] = len;
+    }
+  }
+  const keysRows = document.querySelectorAll('#keys-seq .seq-row');
+  SEQ_NOTES.forEach((_, ni) => refreshKeysRow(ni, keysRows[ni]));
 }
 
 /* ── MIDI EXPORT ── */
@@ -11838,10 +11900,10 @@ function bjUpdateBalance(){
 
   <div class="sf-tabs">
     <button class="sf-tab active" id="stab-synth"   onclick="switchSynthTab('synth')">🎹 Synth</button>
+    <button class="sf-tab"        id="stab-keys"    onclick="switchSynthTab('keys')">🎹 Keys</button>
     <button class="sf-tab"        id="stab-drums"   onclick="switchSynthTab('drums')">🥁 Drums</button>
     <button class="sf-tab"        id="stab-fx"      onclick="switchSynthTab('fx')">🎛️ FX</button>
     <button class="sf-tab"        id="stab-bass"    onclick="switchSynthTab('bass')">🎸 Bass</button>
-    <button class="sf-tab"        id="stab-keys"    onclick="switchSynthTab('keys')">🎹 Keys</button>
     <button class="sf-tab"        id="stab-sfx"     onclick="switchSynthTab('sfx')">🔊 SFX</button>
     <button class="sf-tab"        id="stab-arrange" onclick="switchSynthTab('arrange')">📋 Arrange</button>
   </div>
@@ -11875,11 +11937,11 @@ function bjUpdateBalance(){
       </div>
       <div class="sc-group">
         <span class="sc-label">Atk</span>
-        <input class="sc-range" id="atk-sl" type="range" min="0.001" max="1" step="0.001" value="0.01">
+        <input class="sc-range" id="atk-sl" type="range" min="0.001" max="1" step="0.001" value="0.01" oninput="_cachedAtk=parseFloat(this.value)">
       </div>
       <div class="sc-group">
         <span class="sc-label">Rel</span>
-        <input class="sc-range" id="rel-sl" type="range" min="0.05" max="3" step="0.01" value="0.35">
+        <input class="sc-range" id="rel-sl" type="range" min="0.05" max="3" step="0.01" value="0.35" oninput="_cachedRel=parseFloat(this.value)">
       </div>
       <span style="color:var(--text2);font-size:8px;margin-left:auto;white-space:nowrap;opacity:0.6">A S D F G H J · W E T Y U</span>
     </div>
@@ -11960,7 +12022,7 @@ function bjUpdateBalance(){
         <span id="bass-oct-disp" style="color:var(--accent);font-size:11px;min-width:14px;text-align:center;font-weight:700">2</span>
         <button class="wbtn" onclick="shiftBassOct(1)">+</button>
       </div>
-      <div class="sc-group"><span class="sc-label">Decay</span><input class="sc-range" id="bass-dec-sl" type="range" min="0.05" max="1.5" step="0.01" value="0.4"></div>
+      <div class="sc-group"><span class="sc-label">Decay</span><input class="sc-range" id="bass-dec-sl" type="range" min="0.05" max="1.5" step="0.01" value="0.4" oninput="_cachedBassDec=parseFloat(this.value)"></div>
       <span style="color:rgba(0,80,180,0.45);font-size:8px;margin-left:auto">Z X C V B N M</span>
     </div>
     <div id="bass-keys"></div>
@@ -11997,7 +12059,15 @@ function bjUpdateBalance(){
     <div class="seq-section" style="margin-top:6px">
       <div class="seq-hdr">
         <span title="Click · Shift+click or right-click to extend note length">Keys Roll</span>
-        <div style="display:flex;gap:4px">
+        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+          <button onclick="randomizeKeys()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(180,100,0,0.15);border:1px solid rgba(180,100,0,0.3);color:#a05800;cursor:pointer">🎲</button>
+          <select id="keys-key-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(180,100,0,0.3);background:rgba(255,255,255,0.85);color:#a05800;cursor:pointer">
+            <option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option>
+          </select>
+          <select id="keys-scale-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(180,100,0,0.3);background:rgba(255,255,255,0.85);color:#a05800;cursor:pointer">
+            <option value="pentatonic">Penta</option><option value="major">Major</option>
+            <option value="minor">Minor</option><option value="blues">Blues</option><option value="dorian">Dorian</option>
+          </select>
           <button onclick="clearKeysSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
         </div>
       </div>

@@ -728,9 +728,15 @@
       background:linear-gradient(180deg,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0) 100%);
     }
     .seq-step.cur { outline:2px solid var(--accent) !important; outline-offset:-1px; z-index:1; }
-    .seq-step:hover:not(.on) { background:linear-gradient(180deg,rgba(200,228,255,0.95),rgba(175,215,255,0.9)); }
+    .seq-step:hover:not(.on):not(.seq-step-tie) { background:linear-gradient(180deg,rgba(200,228,255,0.95),rgba(175,215,255,0.9)); }
+    .seq-step.seq-step-tie { background:var(--accent); opacity:0.42; border-color:var(--accent); cursor:default; box-shadow:none; pointer-events:none; }
     .rlabel-black { background:var(--seq-label-black-bg, rgba(30,30,50,0.85)); color:var(--seq-label-black-color, #fff); }
     .rlabel-white { background:var(--seq-label-white-bg, rgba(230,240,255,0.7)); color:var(--seq-label-white-color, var(--text)); }
+    .drum-mute-btn { width:14px;height:14px;border-radius:3px;font-size:7px;font-weight:800;cursor:pointer;border:1px solid rgba(0,0,0,0.2);padding:0;line-height:1;background:rgba(200,50,50,0.1);color:rgba(180,40,40,0.8);flex-shrink:0; }
+    .drum-mute-btn.active { background:rgba(200,50,50,0.75);color:#fff; }
+    .seq-row.drum-muted .seq-rlabel { opacity:0.35; }
+    .seq-row.drum-muted .seq-step { opacity:0.15!important; pointer-events:none; }
+    .stepcount-btn.sel { background:rgba(255,255,255,0.28)!important; border-color:rgba(255,255,255,0.5)!important; }
 
     /* Drum pads — Aero rubber button style */
     #drum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; height:96px; flex-shrink:0; margin-bottom:8px; }
@@ -7131,8 +7137,17 @@ const _s=document.createElement('script');_s.src='https://www.youtube.com/iframe
 /* ── SYNTH + DRUM PAD ─────────────────────────────────────── */
 let actx = null;
 let synthMasterGain = null, drumMasterGain = null, bassMasterGain = null;
+let masterComp = null;
+let _drumVelScale = 1.0;
 function initActx() {
-  if (!actx) { actx = new (window.AudioContext||window.webkitAudioContext)(); initFilter(); }
+  if (!actx) {
+    actx = new (window.AudioContext||window.webkitAudioContext)();
+    masterComp = actx.createDynamicsCompressor();
+    masterComp.threshold.value = -18; masterComp.knee.value = 30;
+    masterComp.ratio.value = 8; masterComp.attack.value = 0.003; masterComp.release.value = 0.25;
+    masterComp.connect(actx.destination);
+    initFilter();
+  }
   if (actx.state === 'suspended') actx.resume();
   return actx;
 }
@@ -7141,16 +7156,18 @@ function drumDest() {
   if (!drumMasterGain) {
     drumMasterGain = actx.createGain();
     drumMasterGain.gain.value = +(localStorage.getItem('aq_vol_drum') || 1);
-    drumMasterGain.connect(actx.destination);
+    drumMasterGain.connect(masterComp);
   }
-  return drumMasterGain;
+  if (_drumVelScale === 1.0) return drumMasterGain;
+  const vg = actx.createGain(); vg.gain.value = _drumVelScale;
+  vg.connect(drumMasterGain); return vg;
 }
 function bassDest() {
   initActx();
   if (!bassMasterGain) {
     bassMasterGain = actx.createGain();
     bassMasterGain.gain.value = +(localStorage.getItem('aq_vol_bass') || 1);
-    bassMasterGain.connect(actx.destination);
+    bassMasterGain.connect(masterComp);
   }
   return bassMasterGain;
 }
@@ -7166,7 +7183,7 @@ function initFilter() {
   filterNode.type = 'lowpass';
   filterNode.frequency.value = 8000;
   filterNode.Q.value = 1;
-  filterNode.connect(actx.destination);
+  filterNode.connect(masterComp || actx.destination);
 }
 function updateFilter() {
   if (!filterNode) return;
@@ -7179,7 +7196,7 @@ function synthDest() {
   if (!synthMasterGain) {
     synthMasterGain = actx.createGain();
     synthMasterGain.gain.value = +(localStorage.getItem('aq_vol_synth') || 1);
-    synthMasterGain.connect(filterNode || actx.destination);
+    synthMasterGain.connect(filterNode || masterComp || actx.destination);
   }
   return synthMasterGain;
 }
@@ -7351,67 +7368,72 @@ function mkNoise(cx, dur) {
   const src = cx.createBufferSource(); src.buffer=buf; return src;
 }
 
-function drumKick() {
-  const cx=initActx(), g=cx.createGain(), osc=cx.createOscillator();
-  osc.frequency.setValueAtTime(180,cx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.42);
-  g.gain.setValueAtTime(1.1,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.42);
-  osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.44);
+function drumKick(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const g=cx.createGain(), osc=cx.createOscillator();
+  osc.frequency.setValueAtTime(180,t);
+  osc.frequency.exponentialRampToValueAtTime(0.01,t+0.42);
+  g.gain.setValueAtTime(1.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.42);
+  osc.connect(g); g.connect(drumDest()); osc.start(t); osc.stop(t+0.44);
 }
-function drumSnare() {
-  const cx=initActx();
-  const ng=cx.createGain(); ng.gain.setValueAtTime(0.65,cx.currentTime); ng.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.2);
+function drumSnare(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const ng=cx.createGain(); ng.gain.setValueAtTime(0.65,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.2);
   const n=mkNoise(cx,0.22); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=1600;
-  n.connect(flt); flt.connect(ng); ng.connect(drumDest()); n.start();
+  n.connect(flt); flt.connect(ng); ng.connect(drumDest()); n.start(t);
   const osc=cx.createOscillator(), og=cx.createGain();
-  osc.frequency.value=185; og.gain.setValueAtTime(0.45,cx.currentTime); og.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.09);
-  osc.connect(og); og.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.1);
+  osc.frequency.value=185; og.gain.setValueAtTime(0.45,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+  osc.connect(og); og.connect(drumDest()); osc.start(t); osc.stop(t+0.1);
 }
-function drumHihat() {
-  const cx=initActx(), g=cx.createGain();
-  g.gain.setValueAtTime(0.32,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.055);
+function drumHihat(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const g=cx.createGain();
+  g.gain.setValueAtTime(0.32,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.055);
   const n=mkNoise(cx,0.07); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=8500;
-  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(t);
 }
-function drumOpenHH() {
-  const cx=initActx(), g=cx.createGain();
-  g.gain.setValueAtTime(0.38,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.38);
+function drumOpenHH(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const g=cx.createGain();
+  g.gain.setValueAtTime(0.38,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.38);
   const n=mkNoise(cx,0.4); const flt=cx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=7200;
-  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(t);
 }
-function drumClap() {
-  const cx=initActx();
+function drumClap(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
   [0,0.012,0.022].forEach(delay => {
     const g=cx.createGain(), n=mkNoise(cx,0.12), flt=cx.createBiquadFilter();
     flt.type='bandpass'; flt.frequency.value=1300; flt.Q.value=0.7;
-    g.gain.setValueAtTime(0,cx.currentTime+delay);
-    g.gain.linearRampToValueAtTime(0.55,cx.currentTime+delay+0.005);
-    g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+delay+0.14);
-    n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(cx.currentTime+delay);
+    g.gain.setValueAtTime(0,t+delay);
+    g.gain.linearRampToValueAtTime(0.55,t+delay+0.005);
+    g.gain.exponentialRampToValueAtTime(0.001,t+delay+0.14);
+    n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(t+delay);
   });
 }
-function drumTom() {
-  const cx=initActx(), osc=cx.createOscillator(), g=cx.createGain();
-  osc.frequency.setValueAtTime(100,cx.currentTime); osc.frequency.exponentialRampToValueAtTime(0.01,cx.currentTime+0.32);
-  g.gain.setValueAtTime(0.85,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.3);
-  osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.33);
+function drumTom(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const osc=cx.createOscillator(), g=cx.createGain();
+  osc.frequency.setValueAtTime(100,t); osc.frequency.exponentialRampToValueAtTime(0.01,t+0.32);
+  g.gain.setValueAtTime(0.85,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+  osc.connect(g); g.connect(drumDest()); osc.start(t); osc.stop(t+0.33);
 }
-function drumCrash() {
-  const cx=initActx(), g=cx.createGain();
-  g.gain.setValueAtTime(0.42,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+1.3);
+function drumCrash(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
+  const g=cx.createGain();
+  g.gain.setValueAtTime(0.42,t); g.gain.exponentialRampToValueAtTime(0.001,t+1.3);
   const n=mkNoise(cx,1.35); const flt=cx.createBiquadFilter(); flt.type='bandpass'; flt.frequency.value=6200; flt.Q.value=0.28;
-  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start();
-  const g2=cx.createGain(); g2.gain.setValueAtTime(0.18,cx.currentTime); g2.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.9);
+  n.connect(flt); flt.connect(g); g.connect(drumDest()); n.start(t);
+  const g2=cx.createGain(); g2.gain.setValueAtTime(0.18,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.9);
   const n2=mkNoise(cx,0.95); const flt2=cx.createBiquadFilter(); flt2.type='highpass'; flt2.frequency.value=10500;
-  n2.connect(flt2); flt2.connect(g2); g2.connect(drumDest()); n2.start();
+  n2.connect(flt2); flt2.connect(g2); g2.connect(drumDest()); n2.start(t);
 }
-function drumCowbell() {
-  const cx=initActx();
+function drumCowbell(t) {
+  const cx=initActx(); t=t!==undefined?t:cx.currentTime;
   [562,845].forEach(f => {
     const osc=cx.createOscillator(), g=cx.createGain();
     osc.type='square'; osc.frequency.value=f;
-    g.gain.setValueAtTime(0.28,cx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,cx.currentTime+0.58);
-    osc.connect(g); g.connect(drumDest()); osc.start(); osc.stop(cx.currentTime+0.6);
+    g.gain.setValueAtTime(0.28,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.58);
+    osc.connect(g); g.connect(drumDest()); osc.start(t); osc.stop(t+0.6);
   });
 }
 
@@ -7440,68 +7462,140 @@ function hitDrum(el, fn) {
 }
 
 /* ---- sequencer ---- */
-const SEQ_STEPS = 16;
-/* piano roll rows (top = high, bottom = low) — 2 octaves */
+const SEQ_STEPS = 16; // initial array size — runtime uses seqStepCount
+/* piano roll rows (top = high, bottom = low) — 4 octaves C2–B5 */
 const SEQ_NOTES = [
+  'B5','A#5','A5','G#5','G5','F#5','F5','E5','D#5','D5','C#5','C5',
   'B4','A#4','A4','G#4','G4','F#4','F4','E4','D#4','D4','C#4','C4',
-  'B3','A#3','A3','G#3','G3','F#3','F3','E3','D#3','D3','C#3','C3'
+  'B3','A#3','A3','G#3','G3','F#3','F3','E3','D#3','D3','C#3','C3',
+  'B2','A#2','A2','G#2','G2','F#2','F2','E2','D#2','D2','C#2','C2'
 ];
 const drumSeqData  = Array.from({length:8},  () => new Array(SEQ_STEPS).fill(false));
-const synthSeqData = Array.from({length:24}, () => new Array(SEQ_STEPS).fill(false));
-let seqBpm = 128, seqPlaying = false, seqStep = 0, _seqTimer = null;
+const synthSeqData = Array.from({length:48}, () => new Array(SEQ_STEPS).fill(0));
+let seqBpm = 128, seqPlaying = false, seqStep = 0;
+let seqStepCount = 16;
+let seqSwing = 0;
+let _nextNoteTime = 0, _scheduledStep = 0;
+let _stepTimes = new Array(64).fill(0);
+let _lastVisStep = -1;
+let _schedTimer = null, _rafId = null;
+const LOOKAHEAD = 0.1, SCHED_INTERVAL = 25;
+let drumMuted = new Array(8).fill(false);
+let drumSeqVel = Array.from({length:8}, () => new Array(16).fill(80));
+let synthChordMode = false, synthChordType = 'maj';
 
-function seqInterval() { return 60000 / seqBpm / 4; }
+function stepDuration() { return 60 / seqBpm / 4; }
 
-function seqTick() {
-  if (!seqPlaying) return;
+function scheduleSynthNote(noteFull, startTime, dur) {
+  const cx = actx;
+  const m = noteFull.match(/^([A-G]#?)(\d)$/);
+  const noteBase = m ? m[1] : noteFull, noteOct = m ? parseInt(m[2]) : synthOct;
+  const freq = noteFreq(noteBase, noteOct);
+  const osc = cx.createOscillator(), g = cx.createGain();
+  osc.type = synthWave; osc.frequency.value = freq;
+  const atk = parseFloat(document.getElementById('atk-sl')?.value || 0.01);
+  const rel = parseFloat(document.getElementById('rel-sl')?.value || 0.35);
+  g.gain.setValueAtTime(0.001, startTime);
+  g.gain.linearRampToValueAtTime(0.2, startTime + Math.min(atk, dur * 0.3));
+  g.gain.setValueAtTime(0.2, startTime + Math.max(0, dur - Math.min(rel, dur * 0.5)));
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+  osc.connect(g); g.connect(synthDest());
+  osc.start(startTime); osc.stop(startTime + dur + 0.01);
+}
 
-  /* highlight playhead */
-  document.querySelectorAll('.seq-step.cur').forEach(el => el.classList.remove('cur'));
-  document.querySelectorAll(`.seq-step[data-col="${seqStep}"]`).forEach(el => el.classList.add('cur'));
+function scheduleBassNote(note, startTime) {
+  const cx = actx, freq = noteFreq(note, bassOct);
+  const osc = cx.createOscillator(), g = cx.createGain();
+  const dec = parseFloat(document.getElementById('bass-dec-sl')?.value || 0.4);
+  osc.type = bassWave; osc.frequency.value = freq;
+  g.gain.setValueAtTime(0.35, startTime);
+  g.gain.exponentialRampToValueAtTime(0.001, startTime + dec);
+  osc.connect(g); g.connect(bassDest());
+  osc.start(startTime); osc.stop(startTime + dec + 0.02);
+}
 
-  /* drums */
-  drumSeqData.forEach((row, di) => { if (row[seqStep]) DRUM_PADS[di].fn(); });
+function isTieStep(ni, s) {
+  for (let k = 1; k <= 4 && k <= s; k++) {
+    if (synthSeqData[ni][s - k] >= k + 1) return true;
+  }
+  return false;
+}
 
-  /* synth notes */
-  const dur = seqInterval() / 1000 * 0.72;
-  SEQ_NOTES.forEach((noteFull, ni) => {
-    if (!synthSeqData[ni][seqStep]) return;
-    const cx = initActx();
-    // Parse note name like 'C4' -> note='C', oct=4
-    const m = noteFull.match(/^([A-G]#?)(\d)$/);
-    const noteBase = m ? m[1] : noteFull;
-    const noteOct  = m ? parseInt(m[2]) : synthOct;
-    const freq = noteFreq(noteBase, noteOct);
-    const osc = cx.createOscillator();
-    const g   = cx.createGain();
-    osc.type = synthWave;
-    osc.frequency.value = freq;
-    g.gain.setValueAtTime(0.2, cx.currentTime);
-    g.gain.setValueAtTime(0.2, cx.currentTime + dur * 0.68);
-    g.gain.exponentialRampToValueAtTime(0.0001, cx.currentTime + dur);
-    osc.connect(g); g.connect(synthDest());
-    osc.start(); osc.stop(cx.currentTime + dur + 0.01);
+function scheduleStep(step, time) {
+  const dur = stepDuration();
+  drumSeqData.forEach((row, di) => {
+    if (drumMuted[di] || !row[step]) return;
+    _drumVelScale = (drumSeqVel[di][step] || 80) / 100;
+    DRUM_PADS[di].fn(time);
+    _drumVelScale = 1.0;
   });
-
-  /* bass */
+  SEQ_NOTES.forEach((noteFull, ni) => {
+    const len = synthSeqData[ni][step];
+    if (!len || isTieStep(ni, step)) return;
+    const noteDur = len * dur * 0.95;
+    scheduleSynthNote(noteFull, time, noteDur);
+    if (synthChordMode) {
+      const intervals = synthChordType === 'maj' ? [4, 7]
+                      : synthChordType === 'min' ? [3, 7]
+                      : synthChordType === 'sus4' ? [5, 7] : [3, 6];
+      intervals.forEach(semi => {
+        const ri = ni + semi;
+        if (ri < SEQ_NOTES.length) scheduleSynthNote(SEQ_NOTES[ri], time, noteDur);
+      });
+    }
+  });
   if (typeof bassSeqData !== 'undefined') {
     bassSeqData.forEach((noteRow, ni) => {
-      if (!noteRow[seqStep]) return;
-      const nb = SEQ_NOTES[ni].replace(/\d$/,'');
-      playBass(nb);
+      if (!noteRow[step]) return;
+      const nb = BASS_SEQ_NOTES[ni].replace(/\d$/, '');
+      scheduleBassNote(nb, time);
     });
   }
+}
 
-  seqStep = (seqStep + 1) % SEQ_STEPS;
-  _seqTimer = setTimeout(seqTick, seqInterval());
+function advanceStep() {
+  const dur = stepDuration();
+  const swing = (seqSwing > 0 && _scheduledStep % 2 === 1) ? (seqSwing / 100 * dur) : 0;
+  _nextNoteTime += dur + swing;
+  _scheduledStep = (_scheduledStep + 1) % seqStepCount;
+}
+
+function scheduler() {
+  if (!actx) return;
+  if (actx.state === 'suspended') actx.resume();
+  while (_nextNoteTime < actx.currentTime + LOOKAHEAD) {
+    _stepTimes[_scheduledStep] = _nextNoteTime;
+    scheduleStep(_scheduledStep, _nextNoteTime);
+    advanceStep();
+  }
+}
+
+function rafLoop() {
+  if (!seqPlaying) return;
+  const now = actx.currentTime;
+  let vis = -1;
+  for (let i = 0; i < seqStepCount; i++) {
+    if (_stepTimes[i] <= now) vis = i;
+  }
+  if (vis !== -1 && vis !== _lastVisStep) {
+    document.querySelectorAll('.seq-step.cur').forEach(el => el.classList.remove('cur'));
+    document.querySelectorAll(`.seq-step[data-col="${vis}"]`).forEach(el => el.classList.add('cur'));
+    _lastVisStep = vis;
+  }
+  _rafId = requestAnimationFrame(rafLoop);
 }
 
 function seqPlay() {
   if (seqPlaying) return;
-  initActx(); seqPlaying = true; seqStep = 0; seqTick(); _syncTransportBtns();
+  initActx(); seqPlaying = true; seqStep = 0;
+  _scheduledStep = 0; _lastVisStep = -1;
+  _nextNoteTime = actx.currentTime + 0.05;
+  _schedTimer = setInterval(scheduler, SCHED_INTERVAL);
+  rafLoop(); _syncTransportBtns();
 }
 function seqStop() {
-  seqPlaying = false; clearTimeout(_seqTimer);
+  seqPlaying = false;
+  clearInterval(_schedTimer); cancelAnimationFrame(_rafId);
   document.querySelectorAll('.seq-step.cur').forEach(el => el.classList.remove('cur'));
   seqStep = 0; _syncTransportBtns();
 }
@@ -7510,21 +7604,79 @@ function _syncTransportBtns() {
   document.querySelectorAll('.seq-stop-btn').forEach(b => b.classList.toggle('active', !seqPlaying));
 }
 
+function changeStepCount(n) {
+  const was = seqPlaying; if (was) seqStop();
+  seqStepCount = n;
+  drumSeqData.forEach(row => { while (row.length < n) row.push(false); });
+  drumSeqVel.forEach(row => { while (row.length < n) row.push(80); });
+  synthSeqData.forEach(row => { while (row.length < n) row.push(0); });
+  bassSeqData.forEach(row => { while (row.length < n) row.push(false); });
+  ['drum-seq','synth-seq','bass-seq'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; delete el.dataset.built; }
+  });
+  buildDrumSeq(); buildSynthSeq(); buildBassSeq();
+  document.querySelectorAll('.stepcount-btn').forEach(b =>
+    b.classList.toggle('sel', parseInt(b.dataset.steps) === n));
+  if (was) seqPlay();
+}
+
+function updateDrumRowMuteViz(di) {
+  const rows = document.querySelectorAll('#drum-seq .seq-row');
+  if (rows[di]) rows[di].classList.toggle('drum-muted', drumMuted[di]);
+  const btn = rows[di]?.querySelector('.drum-mute-btn');
+  if (btn) btn.classList.toggle('active', drumMuted[di]);
+}
+
+function refreshSynthRow(ni) {
+  const rows = document.querySelectorAll('#synth-seq .seq-row');
+  const row = rows[ni]; if (!row) return;
+  const btns = row.querySelectorAll('.seq-step');
+  btns.forEach((btn, s) => {
+    const val = synthSeqData[ni][s];
+    const isTie = isTieStep(ni, s);
+    btn.classList.toggle('on', val > 0 && !isTie);
+    btn.classList.toggle('seq-step-tie', isTie);
+    btn.title = val > 1 ? `${val} steps` : '';
+  });
+}
+
+function toggleChordMode() {
+  synthChordMode = !synthChordMode;
+  const btn = document.getElementById('chord-mode-btn');
+  if (btn) {
+    btn.textContent = 'Chord:' + (synthChordMode ? 'ON' : 'OFF');
+    btn.style.background = synthChordMode ? 'rgba(0,100,200,0.35)' : 'rgba(0,100,200,0.12)';
+  }
+}
+
 function buildDrumSeq() {
   const el = document.getElementById('drum-seq');
-  if (el.dataset.built) return;
-  el.dataset.built = '1';
+  el.innerHTML = ''; el.dataset.built = '1';
+  const gap = seqStepCount >= 32 ? '1px' : '2px';
   DRUM_PADS.forEach((pad, di) => {
     const pc = PAD_COLORS[di % PAD_COLORS.length];
     const row = document.createElement('div');
     row.className = 'seq-row';
+    row.style.gridTemplateColumns = `52px repeat(${seqStepCount},1fr)`;
+    row.style.gap = gap;
+    if (drumMuted[di]) row.classList.add('drum-muted');
+    // Label + mute button
     const lbl = document.createElement('div');
     lbl.className = 'seq-rlabel';
-    lbl.textContent = pad.name;
-    lbl.style.background = pc + '33';
-    lbl.style.color = pc;
+    lbl.style.cssText = `background:${pc}33;color:${pc};display:flex;align-items:center;gap:2px;padding:0 2px;`;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = pad.name;
+    nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px;';
+    const muteBtn = document.createElement('button');
+    muteBtn.className = 'drum-mute-btn' + (drumMuted[di] ? ' active' : '');
+    muteBtn.textContent = 'M';
+    muteBtn.title = 'Mute';
+    muteBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); });
+    muteBtn.addEventListener('click', e => { e.stopPropagation(); drumMuted[di] = !drumMuted[di]; updateDrumRowMuteViz(di); });
+    lbl.appendChild(nameSpan); lbl.appendChild(muteBtn);
     row.appendChild(lbl);
-    for (let s = 0; s < SEQ_STEPS; s++) {
+    for (let s = 0; s < seqStepCount; s++) {
       const btn = document.createElement('div');
       btn.className = 'seq-step' + (s % 4 === 0 ? ' b4' : '');
       btn.dataset.col = s;
@@ -7532,10 +7684,21 @@ function buildDrumSeq() {
       btn.style.setProperty('--led-bg',    pc + '88');
       btn.style.setProperty('--led-border', pc + 'cc');
       btn.style.setProperty('--led-glow',   pc + '99');
+      if (drumSeqData[di][s]) {
+        btn.classList.add('on');
+        btn.style.opacity = 0.4 + (drumSeqVel[di][s] || 80) / 100 * 0.6;
+      }
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
-        drumSeqData[di][s] = !drumSeqData[di][s];
-        btn.classList.toggle('on', drumSeqData[di][s]);
+        const on = !drumSeqData[di][s];
+        drumSeqData[di][s] = on;
+        if (on) {
+          if (e.shiftKey) drumSeqVel[di][s] = Math.min(100, (drumSeqVel[di][s]||80) + 20);
+          else if (e.altKey) drumSeqVel[di][s] = Math.max(20, (drumSeqVel[di][s]||80) - 20);
+          else drumSeqVel[di][s] = 80;
+        }
+        btn.classList.toggle('on', on);
+        btn.style.opacity = on ? (0.4 + (drumSeqVel[di][s]||80) / 100 * 0.6) : '';
       });
       row.appendChild(btn);
     }
@@ -7545,35 +7708,52 @@ function buildDrumSeq() {
 
 function buildSynthSeq() {
   const el = document.getElementById('synth-seq');
-  if (el.dataset.built) return;
-  el.dataset.built = '1';
+  el.innerHTML = ''; el.dataset.built = '1';
+  const gap = seqStepCount >= 32 ? '1px' : '2px';
   SEQ_NOTES.forEach((noteFull, ni) => {
     const isBlack = noteFull.includes('#');
     const row = document.createElement('div');
     row.className = 'seq-row';
+    row.style.gridTemplateColumns = `38px repeat(${seqStepCount},1fr)`;
+    row.style.gap = gap;
     const lbl = document.createElement('div');
     lbl.className = 'seq-rlabel ' + (isBlack ? 'rlabel-black' : 'rlabel-white');
     lbl.textContent = noteFull;
     row.appendChild(lbl);
-    for (let s = 0; s < SEQ_STEPS; s++) {
+    for (let s = 0; s < seqStepCount; s++) {
       const btn = document.createElement('div');
       btn.className = 'seq-step' + (s % 4 === 0 ? ' b4' : '');
       btn.dataset.col = s;
       btn.dataset.row = ni;
+      const val = synthSeqData[ni][s];
+      const tie = isTieStep(ni, s);
+      if (val > 0 && !tie) btn.classList.add('on');
+      if (tie) btn.classList.add('seq-step-tie');
+      if (val > 1) btn.title = `${val} steps`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
-        synthSeqData[ni][s] = !synthSeqData[ni][s];
-        btn.classList.toggle('on', synthSeqData[ni][s]);
+        if (isTieStep(ni, s)) return;
+        synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
+        refreshSynthRow(ni);
+      });
+      btn.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (synthSeqData[ni][s] > 0) {
+          synthSeqData[ni][s] = (synthSeqData[ni][s] % 4) + 1;
+          refreshSynthRow(ni);
+        }
       });
       row.appendChild(btn);
     }
     el.appendChild(row);
   });
+  // Scroll to show C4 area (row 23 from top in 48-row layout)
+  requestAnimationFrame(() => { el.scrollTop = 23 * 20; });
 }
 
 function clearSynthSeq() {
-  synthSeqData.forEach(row => row.fill(false));
-  document.querySelectorAll('#synth-seq .seq-step').forEach(b => b.classList.remove('on'));
+  synthSeqData.forEach(row => row.fill(0));
+  document.querySelectorAll('#synth-seq .seq-step').forEach(b => { b.classList.remove('on','seq-step-tie'); b.title=''; });
 }
 function clearDrumSeq() {
   drumSeqData.forEach(row => row.fill(false));
@@ -7586,7 +7766,7 @@ function clearBassSeq() {
 function randomizeBass() {
   bassSeqData.forEach(row => row.fill(false));
   const musicalRows = [0, 2, 4, 5, 7, 9, 10];
-  for (let s = 0; s < SEQ_STEPS; s++) {
+  for (let s = 0; s < seqStepCount; s++) {
     if (Math.random() < 0.32) {
       const ni = musicalRows[Math.floor(Math.random() * musicalRows.length)];
       if (ni < bassSeqData.length) bassSeqData[ni][s] = true;
@@ -7639,14 +7819,15 @@ function initFX() {
   _fxInited = true;
   initActx();
   const cx = actx;
-  dryNode = cx.createGain(); dryNode.gain.value=1; dryNode.connect(cx.destination);
+  const dest = masterComp || cx.destination;
+  dryNode = cx.createGain(); dryNode.gain.value=1; dryNode.connect(dest);
   dlyNode = cx.createDelay(2); dlyNode.delayTime.value=0.375;
   dlyFbk  = cx.createGain(); dlyFbk.gain.value=0.4;
   dlyWet  = cx.createGain(); dlyWet.gain.value=0;
-  dlyNode.connect(dlyFbk); dlyFbk.connect(dlyNode); dlyNode.connect(dlyWet); dlyWet.connect(cx.destination);
+  dlyNode.connect(dlyFbk); dlyFbk.connect(dlyNode); dlyNode.connect(dlyWet); dlyWet.connect(dest);
   revNode = cx.createConvolver();
   revWet  = cx.createGain(); revWet.gain.value=0;
-  revNode.connect(revWet); revWet.connect(cx.destination);
+  revNode.connect(revWet); revWet.connect(dest);
   rebuildReverb();
   // re-route filter output through FX bus
   filterNode.disconnect(); filterNode.connect(dryNode); filterNode.connect(dlyNode); filterNode.connect(revNode);
@@ -7719,24 +7900,28 @@ function buildBassKeys() {
 }
 
 const bassSeqData=Array.from({length:12},()=>new Array(SEQ_STEPS).fill(false));
-const BASS_SEQ_NOTES = SEQ_NOTES.slice(0, 12);
+const BASS_SEQ_NOTES = ['B3','A#3','A3','G#3','G3','F#3','F3','E3','D#3','D3','C#3','C3'];
 function buildBassSeq() {
   const el=document.getElementById('bass-seq');
-  if(el.dataset.built)return; el.dataset.built='1';
+  el.innerHTML=''; el.dataset.built='1';
+  const gap = seqStepCount >= 32 ? '1px' : '2px';
   BASS_SEQ_NOTES.forEach((note,ni)=>{
     const isBlack=note.includes('#');
     const row=document.createElement('div'); row.className='seq-row';
+    row.style.gridTemplateColumns=`38px repeat(${seqStepCount},1fr)`;
+    row.style.gap=gap;
     const lbl=document.createElement('div'); lbl.className='seq-rlabel';
     lbl.textContent=note;
     lbl.style.background=isBlack?'rgba(20,30,60,0.12)':'rgba(0,80,200,0.06)';
     lbl.style.color=isBlack?'rgba(0,100,200,0.6)':'var(--text2)';
     row.appendChild(lbl);
-    for(let s=0;s<SEQ_STEPS;s++){
+    for(let s=0;s<seqStepCount;s++){
       const btn=document.createElement('div');
-      btn.className='seq-step'+(s%4===0?' b4':''); btn.dataset.col=s;
+      btn.className='seq-step'+(s%4===0?' b4':''); btn.dataset.col=s; btn.dataset.row=ni;
       btn.style.setProperty('--led-bg','rgba(0,140,80,0.55)');
       btn.style.setProperty('--led-border','rgba(0,200,100,0.72)');
       btn.style.setProperty('--led-glow','rgba(0,180,90,0.55)');
+      if(bassSeqData[ni][s]) btn.classList.add('on');
       btn.addEventListener('pointerdown',e=>{
         e.preventDefault();
         bassSeqData[ni][s]=!bassSeqData[ni][s];
@@ -8720,30 +8905,76 @@ function minimizeBoard() {
 
 /* ── RANDOMIZE PATTERNS ── */
 function randomizeDrums() {
-  drumSeqData.forEach((row, di) => {
-    const density = [0.5, 0.3, 0.25, 0.15, 0.2, 0.15, 0.1, 0.1][di] || 0.2;
-    row.forEach((_, s) => { row[s] = Math.random() < density; });
+  const genre = document.getElementById('drum-genre-sel')?.value || 'straight';
+  drumSeqData.forEach(row => row.fill(false));
+  // Base 16-step patterns per drum row: [kick,snare,hihat,ohh,clap,tom,crash,cowbell]
+  const P16 = {
+    straight: [[0,8],[4,12],[0,2,4,6,8,10,12,14],[],[4,12],[],[],[]],
+    hiphop:   [[0,3,8,10],[4,12],[0,2,4,6,8,10,12,14],[],[4,12],[],[],[]],
+    house:    [[0,4,8,12],[4,12],[0,4,8,12],[2,6,10,14],[],[],[0],[]],
+    trap:     [[0,6,10],[8],[],[],[],[],[],[]],
+    dnb:      [[0,12],[4,12],[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[],[],[],[],[]],
+    jazz:     [[0],[],[0,2,4,6,8,10,12,14],[],[],[],[],[]],
+  };
+  const base = P16[genre] || P16.straight;
+  const rep = seqStepCount / 16;
+  base.forEach((steps, di) => {
+    steps.forEach(s => {
+      for (let r = 0; r < rep; r++) {
+        const idx = s + r * 16;
+        if (idx < seqStepCount) drumSeqData[di][idx] = true;
+      }
+    });
   });
+  if (genre === 'hiphop') {
+    [6,14].forEach(s => { if (Math.random()<0.3) drumSeqData[1][s]=true; });
+    [1,3,5,7,9,11,13,15].forEach(s => { if (Math.random()<0.5) drumSeqData[2][s]=true; });
+  }
+  if (genre === 'trap') {
+    for (let s=0;s<seqStepCount;s++) { if (Math.random()<0.7) drumSeqData[2][s]=true; }
+  }
+  if (genre === 'jazz') {
+    for (let s=1;s<seqStepCount;s+=2) { if (Math.random()<0.2) drumSeqData[0][s]=true; }
+    for (let s=0;s<seqStepCount;s++) { if (drumSeqData[2][s]&&Math.random()<0.2) drumSeqData[2][s]=false; }
+  }
+  if (Math.random()<0.4) drumSeqData[0][seqStepCount-2]=true;
   document.querySelectorAll('#drum-seq .seq-step').forEach(btn => {
-    const di = parseInt(btn.dataset.row); const s = parseInt(btn.dataset.col);
-    if (!isNaN(di) && !isNaN(s)) btn.classList.toggle('on', drumSeqData[di][s]);
+    const di=parseInt(btn.dataset.row), s=parseInt(btn.dataset.col);
+    if (!isNaN(di)&&!isNaN(s)) {
+      btn.classList.toggle('on', !!drumSeqData[di][s]);
+      btn.style.opacity = drumSeqData[di][s] ? (0.4 + (drumSeqVel[di][s]||80)/100*0.6) : '';
+    }
   });
 }
 function randomizeSynth() {
-  synthSeqData.forEach(row => row.fill(false));
-  const activeNotes = [];
-  const scale = [0,2,4,7,9];
-  for (let i = 0; i < 3 + Math.floor(Math.random()*3); i++) activeNotes.push(scale[Math.floor(Math.random()*scale.length)] + 12);
-  for (let s = 0; s < SEQ_STEPS; s++) {
-    if (Math.random() < 0.5) {
-      const ni = activeNotes[Math.floor(Math.random()*activeNotes.length)];
-      if (ni < synthSeqData.length) synthSeqData[ni][s] = true;
+  synthSeqData.forEach(row => row.fill(0));
+  const key = document.getElementById('synth-key-sel')?.value || 'C';
+  const scaleName = document.getElementById('synth-scale-sel')?.value || 'pentatonic';
+  const SCALES = {major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],pentatonic:[0,2,4,7,9],blues:[0,3,5,6,7,10],dorian:[0,2,3,5,7,9,10]};
+  const KEY_OFF = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+  const NOTE_SEMI = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+  const intervals = SCALES[scaleName] || SCALES.pentatonic;
+  const root = KEY_OFF[key] || 0;
+  const inScale = [];
+  SEQ_NOTES.forEach((n, ni) => {
+    const m = n.match(/^([A-G]#?)(\d)$/);
+    if (!m) return;
+    if (intervals.includes((NOTE_SEMI[m[1]] - root + 12) % 12)) inScale.push(ni);
+  });
+  if (!inScale.length) return;
+  const mid = Math.floor(inScale.length / 2);
+  let lastIdx = mid;
+  for (let s = 0; s < seqStepCount; s++) {
+    const onBeat = s % 4 === 0;
+    if (Math.random() < (onBeat ? 0.85 : 0.25)) {
+      const delta = Math.floor(Math.random()*5) - 2;
+      lastIdx = Math.max(0, Math.min(inScale.length-1, lastIdx + delta));
+      const ni = inScale[lastIdx];
+      const len = Math.random() < 0.3 ? 2 : 1;
+      synthSeqData[ni][s] = len;
     }
   }
-  document.querySelectorAll('#synth-seq .seq-step').forEach(btn => {
-    const ni = parseInt(btn.dataset.row); const s = parseInt(btn.dataset.col);
-    if (!isNaN(ni) && !isNaN(s)) btn.classList.toggle('on', synthSeqData[ni][s]);
-  });
+  SEQ_NOTES.forEach((_, ni) => refreshSynthRow(ni));
 }
 
 /* ── MIDI EXPORT ── */
@@ -8796,7 +9027,8 @@ function exportMidi() {
     const midiNote = GM_DRUMS[pad.name] || 38;
     drumSeqData[di].forEach((on, s) => {
       if (on) {
-        drumEvents.push({tick: s*stepDur, type:'on', ch:9, note:midiNote, vel:100});
+        const vel = Math.round((drumSeqVel[di][s] || 80) / 100 * 127);
+        drumEvents.push({tick: s*stepDur, type:'on', ch:9, note:midiNote, vel});
         drumEvents.push({tick: s*stepDur+stepDur-1, type:'off', ch:9, note:midiNote, vel:0});
       }
     });
@@ -8805,10 +9037,11 @@ function exportMidi() {
   const synthEvents = [];
   SEQ_NOTES.forEach((noteName, ni) => {
     const midiNote = noteNameToMidi(noteName);
-    synthSeqData[ni].forEach((on, s) => {
-      if (on) {
+    synthSeqData[ni].forEach((val, s) => {
+      if (val > 0 && !isTieStep(ni, s)) {
+        const len = val || 1;
         synthEvents.push({tick: s*stepDur, type:'on', ch:0, note:midiNote, vel:90});
-        synthEvents.push({tick: s*stepDur+stepDur-1, type:'off', ch:0, note:midiNote, vel:0});
+        synthEvents.push({tick: s*stepDur+stepDur*len-1, type:'off', ch:0, note:midiNote, vel:0});
       }
     });
   });
@@ -11111,6 +11344,15 @@ function bjUpdateBalance(){
       <input class="bpm-inp" id="bpm-inp" type="number" min="40" max="240" value="128">
       <span class="bpm-lbl">BPM</span>
       <button class="t-btn" onclick="exportMidi()" title="Export MIDI">💾 MIDI</button>
+      <span style="display:inline-block;width:1px;height:16px;background:rgba(255,255,255,0.3);margin:0 2px;vertical-align:middle"></span>
+      <span class="bpm-lbl">Steps</span>
+      <button class="t-btn stepcount-btn sel" data-steps="16" onclick="changeStepCount(16)">16</button>
+      <button class="t-btn stepcount-btn" data-steps="32" onclick="changeStepCount(32)">32</button>
+      <button class="t-btn stepcount-btn" data-steps="64" onclick="changeStepCount(64)">64</button>
+      <span class="bpm-lbl" style="margin-left:4px">Swing</span>
+      <input id="swing-inp" type="range" min="0" max="50" step="1" value="0"
+             style="width:44px;height:5px;accent-color:rgba(255,255,255,0.85);cursor:pointer;vertical-align:middle"
+             oninput="seqSwing=parseInt(this.value)">
     </div>
     <button class="sf-close" onclick="toggleSynthFlyout()" title="Close">✕</button>
   </div>
@@ -11162,8 +11404,22 @@ function bjUpdateBalance(){
     </div>
     <div id="synth-keys"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Piano Roll</span><div style="display:flex;gap:4px"><button onclick="randomizeSynth()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,150,100,0.15);border:1px solid rgba(0,150,100,0.3);color:#007a50;cursor:pointer">🎲</button><button onclick="clearSynthSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div></div>
-      <div class="seq-grid" id="synth-seq"></div>
+      <div class="seq-hdr"><span>Piano Roll</span><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        <button onclick="randomizeSynth()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,150,100,0.15);border:1px solid rgba(0,150,100,0.3);color:#007a50;cursor:pointer">🎲</button>
+        <select id="synth-key-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(0,150,100,0.3);background:rgba(255,255,255,0.85);color:#007a50;cursor:pointer">
+          <option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option>
+        </select>
+        <select id="synth-scale-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(0,150,100,0.3);background:rgba(255,255,255,0.85);color:#007a50;cursor:pointer">
+          <option value="pentatonic">Penta</option><option value="major">Major</option>
+          <option value="minor">Minor</option><option value="blues">Blues</option><option value="dorian">Dorian</option>
+        </select>
+        <button id="chord-mode-btn" onclick="toggleChordMode()" style="font-size:8px;padding:2px 6px;border-radius:8px;background:rgba(0,100,200,0.12);border:1px solid rgba(0,100,200,0.25);color:#0068b8;cursor:pointer">Chord:OFF</button>
+        <select id="chord-type-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(0,100,200,0.25);background:rgba(255,255,255,0.85);color:#0068b8;cursor:pointer" onchange="synthChordType=this.value">
+          <option value="maj">Maj</option><option value="min">Min</option><option value="sus4">Sus4</option><option value="dim">Dim</option>
+        </select>
+        <button onclick="clearSynthSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
+      </div></div>
+      <div class="seq-grid" id="synth-seq" style="max-height:200px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -11172,7 +11428,15 @@ function bjUpdateBalance(){
     <div class="sc-row" style="margin-bottom:6px"><div class="sc-group"><span class="sc-label">Vol</span><input class="sc-range" id="drum-vol-sl" type="range" min="0" max="1" step="0.01" value="1" oninput="setDrumVol(this.value)"></div></div>
     <div id="drum-grid"></div>
     <div class="seq-section">
-      <div class="seq-hdr"><span>Step Sequencer</span><div style="display:flex;gap:4px"><button onclick="randomizeDrums()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.15);border:1px solid rgba(0,100,200,0.3);color:#0068b8;cursor:pointer">🎲</button><button onclick="clearDrumSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button></div></div>
+      <div class="seq-hdr"><span>Step Sequencer</span><div style="display:flex;gap:4px;align-items:center">
+        <button onclick="randomizeDrums()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,100,200,0.15);border:1px solid rgba(0,100,200,0.3);color:#0068b8;cursor:pointer">🎲</button>
+        <select id="drum-genre-sel" style="font-size:8px;border-radius:6px;padding:1px 4px;border:1px solid rgba(0,100,200,0.3);background:rgba(255,255,255,0.85);color:#0068b8;cursor:pointer">
+          <option value="straight">Straight</option><option value="hiphop">Hip-Hop</option>
+          <option value="house">House</option><option value="trap">Trap</option>
+          <option value="dnb">DnB</option><option value="jazz">Jazz</option>
+        </select>
+        <button onclick="clearDrumSeq()" style="font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.25);color:#c00;cursor:pointer">✕ Clear</button>
+      </div></div>
       <div class="seq-grid" id="drum-seq"></div>
     </div>
   </div>

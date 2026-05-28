@@ -8811,15 +8811,16 @@ function showLeaderboardModal(game) {
   }).join('') : '<div style="opacity:.5;font-size:13px;padding:8px 0">No scores yet — play a game!</div>';
 
   const modal = document.createElement('div');
+  modal.className = 'lb-modal-overlay';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)';
   modal.innerHTML = `<div style="background:var(--panel-bg);border:1.5px solid var(--border);border-radius:var(--panel-radius,12px);padding:20px 24px;min-width:280px;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <strong style="font-size:15px;color:var(--text)">🏆 ${title} Best Times</strong>
-      <button onclick="this.closest('[style]').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);line-height:1">×</button>
+      <button onclick="this.closest('.lb-modal-overlay').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);line-height:1">×</button>
     </div>
     <div>${rows}</div>
     <div style="margin-top:12px;text-align:right">
-      <button onclick="localStorage.removeItem('aq_lb_${game}');this.closest('[style]').remove();toast('Leaderboard cleared')" style="font-size:11px;opacity:.5;background:none;border:none;cursor:pointer;color:var(--text)">Clear</button>
+      <button onclick="localStorage.removeItem('aq_lb_${game}');this.closest('.lb-modal-overlay').remove();toast('Leaderboard cleared')" style="font-size:11px;opacity:.5;background:none;border:none;cursor:pointer;color:var(--text)">Clear</button>
     </div>
   </div>`;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });

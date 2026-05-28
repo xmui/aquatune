@@ -6007,6 +6007,8 @@ function deletePlaylist(id, e) {
   playlists = playlists.filter(p => p.id !== id);
   savePls();
   if (activePlId === id) { activePlId = null; document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
+  toast('Playlist deleted');
+  renderPls();
 }
 function renderPls() {
   const box=document.getElementById('pl-list');
@@ -6080,17 +6082,6 @@ function openAddPlMulti(videos) {
   openModal('addpl-modal');
 }
 function savePls() { localStorage.setItem('yt_pls',JSON.stringify(playlists)); renderPls(); }
-
-function deletePlaylist(id) {
-  if (!confirm('Delete this playlist?')) return;
-  playlists = playlists.filter(p => p.id !== id);
-  if (activePlId === id) {
-    activePlId = null;
-    document.getElementById('results').innerHTML = '<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>';
-  }
-  savePls();
-  toast('Playlist deleted');
-}
 
 // ─────────────────────────────────────────────────────────
 //  SESSION MIX
@@ -8769,19 +8760,19 @@ function saveLeaderboard(game, entry) {
   let board = [];
   try { board = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
   board.push(entry);
-  // Sort by time ascending (best = lowest time), keep top 10
   board.sort((a, b) => (a.time || 0) - (b.time || 0));
   board = board.slice(0, 10);
   localStorage.setItem(key, JSON.stringify(board));
+  // Return rank (1-based), or 0 if entry didn't make top 10
+  const rank = board.findIndex(e => e.date === entry.date) + 1;
+  return rank || 0;
 }
 function getLeaderboard(game) {
   try { return JSON.parse(localStorage.getItem('aq_lb_' + game) || '[]'); } catch { return []; }
 }
-function showLeaderboardToast(game, resultStr) {
-  const board = getLeaderboard(game);
-  const pos = board.findIndex(e => e.date === board[board.length - 1]?.date);
-  const rank = pos + 1;
-  const msg = rank === 1 ? `New best! ${resultStr} 🏆` : `${resultStr} — #${rank} on your board`;
+function showLeaderboardToast(game, resultStr, rank) {
+  if (!rank) { toast(resultStr); return; }
+  const msg = rank === 1 ? `New best! ${resultStr} 🏆` : `${resultStr} — #${rank} on board`;
   toast(msg);
 }
 
@@ -11126,8 +11117,8 @@ function picrossOnWin() {
   unlockTheme('deepwater');
   addCoins && addCoins(15);
   playFanfare('win');
-  saveLeaderboard('picross', { time: _pcSeconds, size: _pcSize, date: Date.now() });
-  showLeaderboardToast('picross', `${_pcSeconds}s (${_pcSize}×${_pcSize})`);
+  const _pcRank = saveLeaderboard('picross', { time: _pcSeconds, size: _pcSize, date: Date.now() });
+  showLeaderboardToast('picross', `${_pcSeconds}s (${_pcSize}×${_pcSize})`, _pcRank);
   toast('🎉 Picross solved! +15 🪙');
   try {
     if(window._currentRoomId && typeof sendRoomChatMsg==='function')
@@ -11667,8 +11658,8 @@ function solOnWin(){
   unlockTheme('leopard');
   addCoins && addCoins(20);
   playFanfare('win');
-  saveLeaderboard('solitaire', { moves: solMoves, time: solSeconds, date: Date.now() });
-  showLeaderboardToast('solitaire', `${solMoves} moves, ${solSeconds}s`);
+  const _solRank = saveLeaderboard('solitaire', { moves: solMoves, time: solSeconds, date: Date.now() });
+  showLeaderboardToast('solitaire', `${solMoves} moves, ${solSeconds}s`, _solRank);
   setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
   try {
     if(window._currentRoomId && typeof sendRoomChatMsg==='function')
@@ -12051,8 +12042,8 @@ function minesCheckWin(){
     playFanfare('win');
     addCoins && addCoins(10);
     setTimeout(() => window.abSayMines?.('win', minesSeconds + 's'), 600);
-    saveLeaderboard('mines', { time: minesSeconds, diff: minesDiff || 'easy', date: Date.now() });
-    showLeaderboardToast('mines', minesSeconds + 's');
+    const _minesRank = saveLeaderboard('mines', { time: minesSeconds, diff: minesDiff || 'easy', date: Date.now() });
+    showLeaderboardToast('mines', minesSeconds + 's', _minesRank);
   }
 }
 

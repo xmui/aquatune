@@ -137,7 +137,11 @@
     #user-chip { display:none; }
 
     /* ── MAIN GRID ──────────────────────────────────────── */
-    #main { display:grid;grid-template-columns:276px 1fr 292px;flex:1;gap:12px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
+    #main { display:grid;grid-template-columns:276px 1fr 0 292px;flex:1;gap:12px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
+    #main.chat-open { grid-template-columns:276px 1fr 288px 292px; }
+    #chat-col { overflow:hidden;display:flex;flex-direction:column;min-width:0;transition:opacity .2s; }
+    #main:not(.chat-open) #chat-col { opacity:0;pointer-events:none; }
+    #main.chat-open #chat-col { opacity:1; }
 
     /* ── PANEL BASE ─────────────────────────────────────── */
     .panel {
@@ -795,6 +799,12 @@
       font-family:'M PLUS Rounded 1c',Tahoma,'Segoe UI',Arial,sans-serif;
       overflow:hidden;
       resize:both;
+    }
+    /* Column mode: board-wrap fills the chat column naturally */
+    #chat-col #board-wrap {
+      width:100%; height:100%; max-width:none; max-height:none;
+      border-radius:var(--panel-radius); resize:none;
+      box-shadow:none; border:1.5px solid var(--border);
     }
     /* Aero title bar */
     .board-titlebar {
@@ -1553,6 +1563,7 @@
       /* hide desktop-only header buttons on mobile */
       #apps-menu-wrap, #gear-btn, #board-btn { display: none !important; }
 
+      #chat-col { display: none !important; }
       #main {
         display: flex;
         flex-direction: column;
@@ -3725,6 +3736,9 @@ body.perf-mode #aqua-gun { display: none !important; }
         </div>
       </div>
     </div>
+
+    <!-- CHAT COL: AquaChat panel (collapsible 4th column on desktop) -->
+    <div id="chat-col"></div>
 
     <!-- RIGHT: queue / related / channel -->
     <div id="right" class="panel">
@@ -6277,8 +6291,9 @@ function toggleCollapse(side) {
 function updateGrid() {
   const lc = document.getElementById('left').classList.contains('collapsed');
   const rc = document.getElementById('right').classList.contains('collapsed');
+  const cc = document.getElementById('main').classList.contains('chat-open');
   document.getElementById('main').style.gridTemplateColumns =
-    `${lc ? '18px' : '272px'} 1fr ${rc ? '18px' : '290px'}`;
+    `${lc ? '18px' : '272px'} 1fr ${cc ? '286px' : '0'} ${rc ? '18px' : '290px'}`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -9558,8 +9573,24 @@ function boardUpdateBadge() {
   else { b.textContent='● Local'; b.className='board-fb-badge local'; }
 }
 
+function _moveBoardWrapTo(targetId) {
+  const wrap = document.getElementById('board-wrap');
+  const target = document.getElementById(targetId);
+  if (wrap && target && wrap.parentElement?.id !== targetId) {
+    target.appendChild(wrap);
+  }
+}
 function openBoard() {
-  document.getElementById('board-overlay').classList.add('show');
+  const main = document.getElementById('main');
+  // Column mode on desktop, overlay on mobile
+  if (window.innerWidth >= 900) {
+    _moveBoardWrapTo('chat-col');
+    main.classList.add('chat-open');
+    document.getElementById('board-overlay').classList.remove('show');
+  } else {
+    _moveBoardWrapTo('board-overlay');
+    document.getElementById('board-overlay').classList.add('show');
+  }
   document.getElementById('board-wrap').classList.remove('minimized');
   const inp = document.getElementById('board-fb-inp');
   if (inp && boardFbUrl) inp.value = boardFbUrl;
@@ -9567,18 +9598,24 @@ function openBoard() {
   localStorage.setItem('aq_board_seen_ts', _lastSeenPostTs);
   const badge = document.getElementById('chat-badge');
   if (badge) badge.style.display = 'none';
-  document.getElementById('board-btn').classList.add('active');
+  const hdrBadge = document.getElementById('chat-badge-hdr');
+  if (hdrBadge) hdrBadge.style.display = 'none';
+  document.getElementById('board-btn')?.classList.add('active');
   boardLoadAndRender();
   boardStartSse();
+  updateGrid();
 }
 function closeBoard() {
+  document.getElementById('main').classList.remove('chat-open');
   document.getElementById('board-overlay').classList.remove('show');
-  document.getElementById('board-btn').classList.remove('active');
+  document.getElementById('board-btn')?.classList.remove('active');
   boardStopSse();
+  updateGrid();
 }
 function toggleBoard() {
-  const ov = document.getElementById('board-overlay');
-  if (ov.classList.contains('show')) { closeBoard(); } else { openBoard(); }
+  const isOpen = document.getElementById('main').classList.contains('chat-open') ||
+                 document.getElementById('board-overlay').classList.contains('show');
+  if (isOpen) { closeBoard(); } else { openBoard(); }
 }
 
 async function boardPost(e) {

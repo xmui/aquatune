@@ -7253,33 +7253,6 @@ if (window.matchMedia('(max-width: 768px)').matches) {
   switchMobPanel('player');
 }
 
-// ─────────────────────────────────────────────────────────
-//  COIN SYSTEM
-// ─────────────────────────────────────────────────────────
-let _coins = parseInt(localStorage.getItem('aq_coins') || '0');
-let _coinTimer = null;
-function addCoins(n) {
-  _coins += n;
-  localStorage.setItem('aq_coins', _coins);
-  const el = document.getElementById('coin-count');
-  if (el) el.textContent = _coins;
-}
-function startCoinEarn() {
-  clearInterval(_coinTimer);
-  _coinTimer = setInterval(() => { addCoins(1); }, 60000); // 1 coin per minute watching
-}
-// Initialize coin display
-(function() {
-  const el = document.getElementById('coin-count');
-  if (el) el.textContent = _coins;
-  // Daily bonus
-  const lastDaily = localStorage.getItem('aq_last_daily');
-  const now = Date.now();
-  if (!lastDaily || (now - parseInt(lastDaily)) > 86400000) {
-    localStorage.setItem('aq_last_daily', now);
-    if (lastDaily) { addCoins(10); toast('🪙 Daily bonus: +10 coins!'); }
-  }
-})();
 
 // ─────────────────────────────────────────────────────────
 //  HOST SYNC
@@ -7304,19 +7277,7 @@ setTimeout(claimHostIfNeeded, 1500);
 //  NOTIFICATION CHIME FOR CHAT
 // ─────────────────────────────────────────────────────────
 window._chatChimeEnabled = true;
-function playChatChime() {
-  if (!window._chatChimeEnabled) return;
-  try {
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 880; o.type = 'sine';
-    g.gain.setValueAtTime(0.3, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.4);
-    o.start(); o.stop(ctx.currentTime+0.4);
-  } catch {}
-}
+function playChatChime() { playChatTone?.(); }
 
 // ─────────────────────────────────────────────────────────
 //  INIT
@@ -8772,9 +8733,13 @@ let _coins = parseInt(localStorage.getItem('aq_coins') || '0');
 let _coinEarnTimer = null;
 (function() {
   const last = parseInt(localStorage.getItem('aq_last_daily') || '0');
-  if (Date.now() - last > 86400000) {
+  if (last && Date.now() - last > 86400000) {
     _coins += 10;
     localStorage.setItem('aq_coins', _coins);
+    localStorage.setItem('aq_last_daily', Date.now());
+    // Show toast after DOM ready
+    setTimeout(() => typeof toast === 'function' && toast('🪙 Daily bonus: +10 coins!'), 2500);
+  } else if (!last) {
     localStorage.setItem('aq_last_daily', Date.now());
   }
 })();

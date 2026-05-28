@@ -12,3 +12,4 @@ const app = initializeApp({
 });
 
 export const db = getDatabase(app);
+window._aqDb = db;

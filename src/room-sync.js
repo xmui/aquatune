@@ -1,5 +1,7 @@
-import { ref, set, push, onValue, onChildAdded, onDisconnect, remove } from 'firebase/database';
+import { ref, set, push, query, orderByChild, limitToLast, get, onValue, onChildAdded, onDisconnect, remove } from 'firebase/database';
 import { db } from './firebase.js';
+// Expose Firebase functions for leaderboard access from index.html
+window._fbFns = { push, ref, query, orderByChild, limitToLast, get };
 
 const GLOBAL_CHAT_PATH = 'globalChat';
 const SEEK_TOLERANCE   = 3.0; // seconds before forcing a seek correction

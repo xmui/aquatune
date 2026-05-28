@@ -4833,18 +4833,21 @@ document.addEventListener('visibilitychange', function() {
   } else {
     // On return: retry until playback confirms — mobile JS was suspended so
     // the in-flight 80ms counter never ran
-    if (_wasPlayingBeforeHide) {
+    const shouldResume = _wasPlayingBeforeHide || (window._currentRoomId && !window._isRoomHost && playing);
+    if (shouldResume) {
       _wasPlayingBeforeHide = false;
       let attempts = 0;
       clearInterval(_resumeRetryTimer);
       _resumeRetryTimer = setInterval(() => {
-        if (playing || ++attempts > 15) { clearInterval(_resumeRetryTimer); return; }
+        const actuallyPlaying = player && typeof player.getPlayerState === 'function'
+          && typeof YT !== 'undefined' && player.getPlayerState() === YT.PlayerState.PLAYING;
+        if (actuallyPlaying || ++attempts > 25) { clearInterval(_resumeRetryTimer); return; }
         if (currentSource === 'soundcloud' && scWidget && scReady) {
           try { scWidget.play(); } catch(_) {}
         } else if (player && ready) {
           try { player.playVideo(); } catch(_) {}
         }
-      }, 150);
+      }, 100);
     }
   }
 });
@@ -4894,9 +4897,10 @@ function onState(e) {
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     // If tab is hidden and we were playing, this is an unwanted auto-pause — fight it
-    if (e.data === S.PAUSED && _wasPlayingBeforeHide) {
-      setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
-      return;
+    const guestUnwanted = window._currentRoomId && !window._isRoomHost && !window._applyingRemote;
+    if (e.data === S.PAUSED && (_wasPlayingBeforeHide || guestUnwanted)) {
+      if (!document.hidden) setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
+      return; // preserve playing=true; resume handled on tab-return or via 80ms retry
     }
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';

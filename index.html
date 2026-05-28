@@ -1252,7 +1252,7 @@
     .theme-swatch[data-locked="1"] { opacity:0.55;background:rgba(0,0,0,0.04);color:var(--text2);font-style:italic; }
     .theme-section { border-top:1px solid var(--border);padding-top:10px;margin-top:10px; }
     /* ── COIN DISPLAY ───────────────────────────────────── */
-    #coin-display { display:flex;align-items:center;gap:3px;color:#fff;font-weight:700;font-size:11px;flex-shrink:0; }
+    #coin-display { display:flex;align-items:center;gap:3px;color:var(--coin-color,#ffd700);font-weight:700;font-size:11px;flex-shrink:0;text-shadow:0 1px 3px rgba(0,0,0,0.3); }
     .theme-label { font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700; }
 
     /* ── MODALS ─────────────────────────────────────────── */
@@ -3837,11 +3837,6 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
-      </label>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="chat-chime-chk" onchange="_chatChimeEnabled=this.checked" checked style="cursor:pointer"> 🔔 Chat notification sound
       </label>
     </div>
     <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:8px">

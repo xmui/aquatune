@@ -25,6 +25,10 @@
       --text2:   #2a6888;
       --r:       22px;
       --r-btn:   999px;
+      --panel-radius: 22px;
+      --btn-radius:   999px;
+      --panel-blur:   18px;
+      --panel-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1);
       --hdr-bg:  linear-gradient(180deg,#48d8f8 0%,#18b8d8 46%,#0ea8cc 54%,#0898bc 100%);
       --ps:      0 8px 36px rgba(0,100,180,0.18), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.18);
       --shine:   inset 0 1.5px 0 rgba(255,255,255,0.95);
@@ -35,6 +39,12 @@
       --seq-label-black-color: #fff;
       --seq-label-white-bg: rgba(230,240,255,0.7);
       --seq-label-white-color: var(--text);
+      --panel-radius: 22px;
+      --btn-radius: 999px;
+      --panel-blur: 18px;
+      --panel-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1);
+      --hdr-shine: linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 100%);
+      --coin-color: #f4b800;
     }
     *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
     html,body { height:100%; overflow:hidden; font-family:var(--font-ui); color:var(--text); font-size:13px; }
@@ -45,39 +55,6 @@
     #bg {
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
-    }
-    .orb { position:absolute; border-radius:50%; }
-    /* Large white glowing orb — top-left */
-    .o1 { width:700px;height:700px;
-          background:radial-gradient(circle at 38% 38%, rgba(255,255,255,0.94) 0%, rgba(210,242,255,0.65) 50%, transparent 78%);
-          filter:blur(52px); top:-190px;left:-180px; animation:orbA 14s ease-in-out infinite; }
-    /* Aqua tinted orb — bottom-right */
-    .o2 { width:560px;height:560px;
-          background:radial-gradient(circle at 52% 48%, rgba(160,232,255,0.78) 0%, rgba(100,210,250,0.5) 50%, transparent 78%);
-          filter:blur(65px); bottom:-150px;right:-100px; animation:orbB 18s ease-in-out infinite; }
-    /* Accent tint orb — center-right drift */
-    .o3 { width:420px;height:420px;
-          background:radial-gradient(circle at 50% 50%, rgba(0,200,240,0.22) 0%, rgba(0,180,220,0.10) 55%, transparent 80%);
-          filter:blur(48px); top:36%;left:40%; animation:orbC 22s ease-in-out infinite; }
-    @keyframes orbA {
-      0%   { transform:translate(0,0) scale(1); }
-      22%  { transform:translate(90px,-60px) scale(1.08); }
-      50%  { transform:translate(-70px,50px) scale(0.93); }
-      78%  { transform:translate(40px,80px) scale(1.05); }
-      100% { transform:translate(0,0) scale(1); }
-    }
-    @keyframes orbB {
-      0%   { transform:translate(0,0) scale(1); }
-      30%  { transform:translate(-100px,70px) scale(1.1); }
-      60%  { transform:translate(60px,-80px) scale(0.94); }
-      85%  { transform:translate(-40px,30px) scale(1.04); }
-      100% { transform:translate(0,0) scale(1); }
-    }
-    @keyframes orbC {
-      0%   { transform:translate(0,0) scale(1); }
-      35%  { transform:translate(110px,-90px) scale(1.15); }
-      65%  { transform:translate(-80px,60px) scale(0.9); }
-      100% { transform:translate(0,0) scale(1); }
     }
 
     /* ── APP SHELL ──────────────────────────────────────── */
@@ -133,10 +110,10 @@
     #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
     .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
     #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
-    #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
-#weather:hover { opacity:0.8; }
-#wx-icon { font-size:16px; line-height:1; }
-#wx-temp { font-size:12px; font-weight:700; color:#fff; }
+    #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 4px; transition:opacity .15s; background:none; border:none; }
+    #weather:hover { opacity:0.8; }
+    #wx-icon { font-size:16px; line-height:1; }
+    #wx-temp { font-size:12px; font-weight:700; color:#fff; }
     #auth-area { display:flex;align-items:center;gap:8px;flex-shrink:0; }
     #gear-btn, #kbd-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
@@ -160,15 +137,19 @@
     #user-chip { display:none; }
 
     /* ── MAIN GRID ──────────────────────────────────────── */
-    #main { display:grid;grid-template-columns:276px 1fr 292px;flex:1;gap:12px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
+    #main { display:grid;grid-template-columns:276px 1fr 0 292px;flex:1;gap:12px;overflow:hidden;min-height:0;transition:grid-template-columns .22s ease; }
+    #main.chat-open { grid-template-columns:276px 1fr 288px 292px; }
+    #chat-col { overflow:hidden;display:flex;flex-direction:column;min-width:0;transition:opacity .2s; }
+    #main:not(.chat-open) #chat-col { opacity:0;pointer-events:none; }
+    #main.chat-open #chat-col { opacity:1; }
 
     /* ── PANEL BASE ─────────────────────────────────────── */
     .panel {
       background: linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(215,240,255,0.62) 100%);
-      backdrop-filter: blur(18px) saturate(1.3);
+      backdrop-filter: blur(var(--panel-blur)) saturate(1.3);
       border: 1.5px solid rgba(100,210,245,0.42);
-      border-radius: var(--r);
-      box-shadow: 0 10px 40px rgba(0,100,180,0.16), 0 2px 8px rgba(0,140,210,0.10), inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(160,220,255,0.2);
+      border-radius: var(--panel-radius);
+      box-shadow: var(--panel-shadow), inset 0 -1px 0 rgba(160,220,255,0.2);
       overflow:hidden; display:flex; flex-direction:column; position:relative;
     }
 
@@ -819,6 +800,12 @@
       overflow:hidden;
       resize:both;
     }
+    /* Column mode: board-wrap fills the chat column naturally */
+    #chat-col #board-wrap {
+      width:100%; height:100%; max-width:none; max-height:none;
+      border-radius:var(--panel-radius); resize:none;
+      box-shadow:none; border:1.5px solid var(--border);
+    }
     /* Aero title bar */
     .board-titlebar {
       background: var(--hdr-bg);
@@ -1261,7 +1248,11 @@
     }
     .theme-swatch:hover { border-color:var(--accent);color:var(--accent); }
     .theme-swatch.on { background:var(--accent);color:#fff;border-color:var(--accent); }
+    .theme-swatch.theme-locked { opacity:0.55;background:rgba(0,0,0,0.04);color:var(--text2);font-style:italic; }
+    .theme-swatch[data-locked="1"] { opacity:0.55;background:rgba(0,0,0,0.04);color:var(--text2);font-style:italic; }
     .theme-section { border-top:1px solid var(--border);padding-top:10px;margin-top:10px; }
+    /* ── COIN DISPLAY ───────────────────────────────────── */
+    #coin-display { display:flex;align-items:center;gap:3px;color:var(--coin-color,#ffd700);font-weight:700;font-size:11px;flex-shrink:0;text-shadow:0 1px 3px rgba(0,0,0,0.3); }
     .theme-label { font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700; }
 
     /* ── MODALS ─────────────────────────────────────────── */
@@ -1572,6 +1563,7 @@
       /* hide desktop-only header buttons on mobile */
       #apps-menu-wrap, #gear-btn, #board-btn { display: none !important; }
 
+      #chat-col { display: none !important; }
       #main {
         display: flex;
         flex-direction: column;
@@ -3481,6 +3473,12 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=neon] .vb { background: linear-gradient(0deg, #cc00cc 0%, #ff00ff 55%, #ff88ff 100%) !important; box-shadow: 0 0 6px rgba(255,0,255,0.6); }
 [data-era=pixel] .vb { background: #44bb44 !important; border-radius: 0 !important; }
 [data-era=mono90s] .vb { background: #fff !important; border-radius: 0 !important; }
+[data-era=deepwater] .panel { background: rgba(0,30,80,0.88) !important; border-color: rgba(0,180,216,0.3) !important; }
+[data-era=deepwater] .vb { background: linear-gradient(0deg, #0077b6 0%, #00b4d8 55%, #90e0ef 100%) !important; }
+[data-era=leopard] .panel { background: rgba(238,235,228,0.97) !important; border-color: rgba(100,100,80,0.2) !important; }
+[data-era=leopard] .vb { background: linear-gradient(0deg, #0065d1 0%, #4da6ff 55%, #90c8ff 100%) !important; }
+[data-era=aero] .panel { background: rgba(220,235,252,0.72) !important; border-color: rgba(80,140,220,0.3) !important; }
+[data-era=aero] .vb { background: linear-gradient(0deg, #2a6fb4 0%, #5ab4f0 55%, #90c8ff 100%) !important; }
 
   </style>
 </head>
@@ -3531,7 +3529,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
   </div>
 </div>
-<div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div id="bg"></div>
 <div id="app">
 
   <!-- HEADER -->
@@ -3560,6 +3558,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
+      <span id="coin-display" style="color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;gap:3px;opacity:0.9">🪙 <span id="coin-count">0</span></span>
       <span id="chat-badge" style="display:none"></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
 
@@ -3567,7 +3566,7 @@ body.perf-mode #aqua-gun { display: none !important; }
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
       <div id="apps-menu-wrap">
-        <button id="apps-btn" onclick="toggleAppsMenu()" title="Apps">
+        <button id="apps-btn" onclick="toggleAppsMenu()" ontouchend="toggleAppsMenu();event.preventDefault()" title="Apps">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="7.5" y="2" width="5" height="5" rx="1.2"/><rect x="13" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="7.5" width="5" height="5" rx="1.2"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><rect x="13" y="7.5" width="5" height="5" rx="1.2"/><rect x="2" y="13" width="5" height="5" rx="1.2"/><rect x="7.5" y="13" width="5" height="5" rx="1.2"/><rect x="13" y="13" width="5" height="5" rx="1.2"/></svg>
         </button>
         <div id="apps-menu">
@@ -3617,7 +3616,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           </div>
         </div>
       </div>
-      <button id="gear-btn" onclick="toggleThemePanel()" title="Customize theme">&#9881;</button>
+      <button id="gear-btn" onclick="toggleThemePanel()" ontouchend="toggleThemePanel();event.preventDefault()" title="Customize theme">&#9881;</button>
     </div>
   </div>
 
@@ -3653,9 +3652,9 @@ body.perf-mode #aqua-gun { display: none !important; }
           <div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>
         </div>
         <div id="pl-wrap">
-          <div class="sec-hdr">
-            <span class="sec-ttl">Playlists</span>
-            <div class="sec-btns">
+          <div class="sec-hdr" style="cursor:pointer" onclick="togglePlSection()" title="Toggle playlists">
+            <span class="sec-ttl" style="display:flex;align-items:center;gap:5px">Playlists<span id="pl-toggle-arrow" style="font-size:9px;opacity:.6">▼</span></span>
+            <div class="sec-btns" onclick="event.stopPropagation()">
               <div class="ico-btn" onclick="openSessionMix()" title="Session Mix — create playlist from history">S</div>
               <div class="ico-btn" onclick="addYtPlPrompt()" title="Add YouTube playlist">Y</div>
               <div class="ico-btn" onclick="newPlaylistPrompt()" title="New local playlist">+</div>
@@ -3737,6 +3736,9 @@ body.perf-mode #aqua-gun { display: none !important; }
       </div>
     </div>
 
+    <!-- CHAT COL: AquaChat panel (collapsible 4th column on desktop) -->
+    <div id="chat-col"></div>
+
     <!-- RIGHT: queue / related / channel -->
     <div id="right" class="panel">
       <button class="collapse-btn" id="right-collapse-btn" onclick="toggleCollapse('right')" title="Collapse">&#8250;</button>
@@ -3786,16 +3788,19 @@ body.perf-mode #aqua-gun { display: none !important; }
   </div>
   <div class="theme-label" style="margin-bottom:6px">Theme</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
-    <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
-    <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
-    <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
-    <button class="theme-swatch"   data-theme="mono90s"   onclick="selectTheme('mono90s',this)">Mono 90s</button>
-    <button class="theme-swatch"   data-theme="frost"     onclick="selectTheme('frost',this)">Frost</button>
-    <button class="theme-swatch"   data-theme="glass"     onclick="selectTheme('glass',this)">Glass</button>
-    <button class="theme-swatch"   data-theme="retro"     data-unlock-label="Classic" onclick="selectTheme('retro',this)">Classic</button>
-    <button class="theme-swatch"   data-theme="neon"      data-unlock-label="Neon"    onclick="selectTheme('neon',this)">Neon</button>
-    <button class="theme-swatch"   data-theme="pixel"     data-unlock-label="Pixel"   onclick="selectTheme('pixel',this)">Pixel</button>
+    <button class="theme-swatch on" data-theme="default"   onclick="selectTheme('default',this)">Aqua</button>
+    <button class="theme-swatch"   data-theme="macos"      onclick="selectTheme('macos',this)">Brushed</button>
+    <button class="theme-swatch"   data-theme="nintendo"   onclick="selectTheme('nintendo',this)">Handheld</button>
+    <button class="theme-swatch"   data-theme="dark"       onclick="selectTheme('dark',this)">Midnight</button>
+    <button class="theme-swatch"   data-theme="mono90s"    onclick="selectTheme('mono90s',this)">Mono 90s</button>
+    <button class="theme-swatch"   data-theme="frost"      onclick="selectTheme('frost',this)">Frost</button>
+    <button class="theme-swatch"   data-theme="glass"      onclick="selectTheme('glass',this)">Glass</button>
+    <button class="theme-swatch"   data-theme="retro"      onclick="selectTheme('retro',this)">Classic</button>
+    <button class="theme-swatch"   data-theme="neon"       onclick="selectTheme('neon',this)">Neon</button>
+    <button class="theme-swatch"   data-theme="pixel"      onclick="selectTheme('pixel',this)">Pixel</button>
+    <button class="theme-swatch theme-locked" data-theme="leopard"   onclick="selectTheme('leopard',this)" title="Win Solitaire to unlock">🔒 Aqua Max</button>
+    <button class="theme-swatch theme-locked" data-theme="aero"      onclick="selectTheme('aero',this)"    title="Hit Slots jackpot to unlock">🔒 Vista Glass</button>
+    <button class="theme-swatch theme-locked" data-theme="deepwater" onclick="selectTheme('deepwater',this)" title="Complete Picross to unlock">🔒 Deepwater</button>
   </div>
   <div class="theme-section">
     <div class="theme-label">Weather location</div>
@@ -3826,6 +3831,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="chat-chime-chk" onchange="window._chatChimeEnabled=this.checked;localStorage.setItem('aq_chat_chime',this.checked?'1':'0')" style="cursor:pointer"> 🔔 Chat notification sound
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
       </label>
     </div>
@@ -3838,8 +3848,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;align-items:center;gap:8px;font-size:11px">
           <label style="white-space:nowrap;color:var(--text2);width:52px">Density</label>
-          <input type="range" id="bubble-density-rng" min="1" max="60" value="3" oninput="setBubbleDensity(this.value);document.getElementById('bubble-density-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
-          <span id="bubble-density-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">3</span>
+          <input type="range" id="bubble-density-rng" min="1" max="60" value="1" oninput="setBubbleDensity(this.value);document.getElementById('bubble-density-val').textContent=this.value" style="flex:1;accent-color:var(--accent)">
+          <span id="bubble-density-val" style="width:22px;text-align:right;color:var(--text);font-weight:700">1</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px">
           <label style="white-space:nowrap;color:var(--text2);width:52px">Gravity</label>
@@ -4133,7 +4143,12 @@ function pipedToVid(item) {
   const qs = item.url ? (item.url.split('?')[1] || '') : '';
   const id = new URLSearchParams(qs).get('v') || item.videoId || '';
   const chId = item.uploaderUrl?.split('/channel/')?.[1]?.split('/')?.[0] || '';
-  return { id, title: decodeHtml(item.title || id), channelTitle: decodeHtml(item.uploaderName || item.uploader || ''), channelId: chId, thumbnail: id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : '' };
+  return { id, title: decodeHtml(item.title || id), channelTitle: decodeHtml(item.uploaderName || item.uploader || ''), channelId: chId, thumbnail: id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : '', duration: item.duration || 0 };
+}
+function fmtDuration(s) {
+  if (!s || s <= 0) return '';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -4181,85 +4196,126 @@ function invidiousToVid(item) {
     channelTitle: item.author || '',
     channelId: item.authorId || '',
     thumbnail: item.videoId ? `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg` : '',
+    duration: item.lengthSeconds || 0,
   };
 }
 
-// Try Piped first, fall back to Invidious. Returns array of vid objects (may be empty).
+async function freeSearchVideos(q) {
+  const { videos } = await freeSearch(q);
+  return videos;
+}
+
+// Try Piped first, fall back to Invidious. Returns {videos, playlists}.
 async function freeSearch(q) {
   try {
-    // Use videos filter (broader — captures full album uploads, live sets, etc.)
-    const d = await pipedRace('search', { q, filter: 'videos' });
-    const items = (d.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id);
-    if (items.length) return items;
+    const [vidData, plData] = await Promise.allSettled([
+      pipedRace('search', { q, filter: 'videos' }),
+      pipedRace('search', { q, filter: 'playlists' }),
+    ]);
+    const videos    = vidData.status === 'fulfilled' ? (vidData.value.items || []).filter(x => x.url || x.videoId).map(pipedToVid).filter(v => v.id) : [];
+    const playlists = plData.status === 'fulfilled'  ? (plData.value.items || []).filter(x => x.url && (x.name || x.title)) : [];
+    if (videos.length || playlists.length) return { videos, playlists };
   } catch {}
   // Piped failed — try Invidious
   try {
     const d = await invidiousRace('search', { q, type: 'video' });
-    return (Array.isArray(d) ? d : []).filter(x => x.videoId).map(invidiousToVid).filter(v => v.id);
+    return { videos: (Array.isArray(d) ? d : []).filter(x => x.videoId).map(invidiousToVid).filter(v => v.id), playlists: [] };
   } catch {}
-  return [];
+  return { videos: [], playlists: [] };
 }
 
 // ─────────────────────────────────────────────────────────
 //  THEMES
 // ─────────────────────────────────────────────────────────
 const THEMES = {
-  default: { accent:'#00b4e0', accent2:'#00ddb8', text:'#062030', text2:'#2a6888',
-             bg:'linear-gradient(155deg,#7ec8f0 0%,#a8e0fb 28%,#c0eeff 52%,#9ad8f4 76%,#7ac8ec 100%)',
-             hdr:'linear-gradient(180deg,#48d8f8 0%,#18b8d8 46%,#0ea8cc 54%,#0898bc 100%)',
-             panel:'rgba(255,255,255,0.93)', border:'rgba(0,180,220,0.28)',
-             font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'default', scheme:'light' },
-  macos:   { accent:'#0070c9', accent2:'#34aadc', text:'#1a1a1a', text2:'#6c6c6c',
-             bg:'linear-gradient(180deg,#e0e0e0 0%,#c8c8c8 100%)',
-             hdr:'linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%)',
-             panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
-             font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light' },
-  nintendo:{ accent:'#e4000f', accent2:'#ff4444', text:'#1a1a2e', text2:'#555570',
-             bg:'linear-gradient(180deg,#e8e8ec 0%,#d4d4da 100%)',
-             hdr:'linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%)',
-             panel:'rgba(255,255,255,0.99)', border:'rgba(0,0,0,0.18)',
-             font:"'Arial Rounded MT Bold',Arial,Helvetica,sans-serif", era:'nintendo', scheme:'light' },
-  retro:   { accent:'#000080', accent2:'#0000cc', text:'#000000', text2:'#444444',
-             bg:'#008080',
-             hdr:'linear-gradient(180deg,#0a0ab0 0%,#000096 100%)',
-             panel:'#d4d0c8', border:'rgba(0,0,0,0.22)',
-             font:'Arial,Helvetica,sans-serif', era:'retro', scheme:'light' },
-  dark:    { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0',
-             bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)',
-             hdr:'linear-gradient(180deg,#0a2040,#05101e)',
-             panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)',
-             font:"'Segoe UI',system-ui,sans-serif", era:'dark', scheme:'dark' },
-  mono90s: { accent:'#ffffff', accent2:'#aaaaaa', text:'#ffffff', text2:'#aaaaaa',
-             bg:'#000000',
-             hdr:'#000000',
-             panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)',
-             font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark' },
-  frost:   { accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
-             bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
-             hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
-             panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
-             font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#60a8f8', accent2:'#90c8ff', text:'#ddeeff', text2:'#90b8e0',
-             bg:'linear-gradient(135deg, #0a1428 0%, #060e1e 40%, #0a1428 100%)',
-             hdr:'linear-gradient(180deg, rgba(80,140,240,0.72) 0%, rgba(40,100,210,0.65) 100%)',
-             panel:'rgba(20,50,110,0.65)', border:'rgba(120,180,255,0.35)',
-             font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
-  neon:    { accent:'#ff00ff', accent2:'#00ffff',
-             text:'#ffffff', text2:'#dd99ff',
-             bg:'linear-gradient(135deg, #0a0015 0%, #150030 50%, #000a20 100%)',
-             hdr:'linear-gradient(180deg, rgba(255,0,255,0.75), rgba(0,200,255,0.65))',
-             panel:'rgba(20,0,50,0.92)',
-             border:'rgba(255,0,255,0.4)',
-             font:"'Courier New',monospace",
-             era:'neon', scheme:'dark' },
-  pixel:   { accent:'#44bb44', accent2:'#88ff88',
-             text:'#aaffaa', text2:'#66cc66',
-             bg:'#001100',
-             hdr:'linear-gradient(180deg, #006600, #004400)',
-             panel:'rgba(0,40,0,0.94)',
-             border:'rgba(0,200,0,0.35)',
-             font:"'Courier New',Courier,monospace",
-             era:'pixel', scheme:'dark' },
+  default:   { label:'Aqua',        accent:'#00b4e0', accent2:'#00ddb8', text:'#062030', text2:'#2a6888',
+               bg:'linear-gradient(155deg,#7ec8f0 0%,#a8e0fb 28%,#c0eeff 52%,#9ad8f4 76%,#7ac8ec 100%)',
+               hdr:'linear-gradient(180deg,#48d8f8 0%,#18b8d8 46%,#0ea8cc 54%,#0898bc 100%)',
+               panel:'rgba(255,255,255,0.93)', border:'rgba(0,180,220,0.28)',
+               font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'default', scheme:'light',
+               panelRadius:'22px', btnRadius:'999px', panelBlur:'18' },
+  macos:     { label:'Brushed',     accent:'#0070c9', accent2:'#34aadc', text:'#1a1a1a', text2:'#6c6c6c',
+               bg:'linear-gradient(180deg,#d8d8d8 0%,#c0c0c0 100%)',
+               hdr:'linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%)',
+               panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
+               font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light',
+               panelRadius:'12px', btnRadius:'8px', panelBlur:'8' },
+  nintendo:  { label:'Handheld',    accent:'#e4000f', accent2:'#ff4444', text:'#1a1a2e', text2:'#555570',
+               bg:'linear-gradient(180deg,#e8e8ec 0%,#d4d4da 100%)',
+               hdr:'linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%)',
+               panel:'rgba(255,255,255,0.99)', border:'rgba(0,0,0,0.18)',
+               font:"'Arial Rounded MT Bold',Arial,Helvetica,sans-serif", era:'nintendo', scheme:'light',
+               panelRadius:'18px', btnRadius:'12px', panelBlur:'6' },
+  retro:     { label:'Classic',     accent:'#000080', accent2:'#0000cc', text:'#000000', text2:'#444444',
+               bg:'#008080',
+               hdr:'linear-gradient(180deg,#0a0ab0 0%,#000096 100%)',
+               panel:'#d4d0c8', border:'rgba(0,0,0,0.22)',
+               font:'Arial,Helvetica,sans-serif', era:'retro', scheme:'light',
+               panelRadius:'0px', btnRadius:'0px', panelBlur:'0' },
+  dark:      { label:'Midnight',    accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0',
+               bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)',
+               hdr:'linear-gradient(180deg,#0a2040,#05101e)',
+               panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)',
+               font:"'Segoe UI',system-ui,sans-serif", era:'dark', scheme:'dark',
+               panelRadius:'18px', btnRadius:'999px', panelBlur:'20' },
+  mono90s:   { label:'Mono 90s',    accent:'#00ff00', accent2:'#00cc00', text:'#00ff00', text2:'#00aa00',
+               bg:'#000000',
+               hdr:'#111111',
+               panel:'rgba(0,0,0,0.95)', border:'rgba(0,255,0,0.4)',
+               font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark',
+               panelRadius:'0px', btnRadius:'0px', panelBlur:'0' },
+  frost:     { label:'Frost',       accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
+               bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
+               hdr:'linear-gradient(180deg, rgba(200,220,245,0.95) 0%, rgba(160,195,235,0.92) 100%)',
+               panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
+               font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light',
+               panelRadius:'16px', btnRadius:'999px', panelBlur:'22' },
+  glass:     { label:'Glass',       accent:'#60a8f8', accent2:'#90c8ff', text:'#ddeeff', text2:'#90b8e0',
+               bg:'linear-gradient(135deg, #0a1428 0%, #060e1e 40%, #0a1428 100%)',
+               hdr:'linear-gradient(180deg, rgba(80,140,240,0.72) 0%, rgba(40,100,210,0.65) 100%)',
+               panel:'rgba(20,50,110,0.65)', border:'rgba(120,180,255,0.35)',
+               font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark',
+               panelRadius:'14px', btnRadius:'12px', panelBlur:'28' },
+  neon:      { label:'Neon',        accent:'#e040fb', accent2:'#00e5ff',
+               text:'#f0e0ff', text2:'#cc99ee',
+               bg:'linear-gradient(135deg, #0a0015 0%, #150030 50%, #000a20 100%)',
+               hdr:'linear-gradient(180deg, rgba(180,0,220,0.8), rgba(0,180,255,0.7))',
+               panel:'rgba(25,0,55,0.94)',
+               border:'rgba(200,0,255,0.4)',
+               font:"'Segoe UI',system-ui,sans-serif",
+               era:'neon', scheme:'dark',
+               panelRadius:'8px', btnRadius:'999px', panelBlur:'16' },
+  pixel:     { label:'Pixel',       accent:'#44bb44', accent2:'#88ff88',
+               text:'#aaffaa', text2:'#66cc66',
+               bg:'#001100',
+               hdr:'linear-gradient(180deg, #006600, #004400)',
+               panel:'rgba(0,40,0,0.94)',
+               border:'rgba(0,200,0,0.35)',
+               font:"'Courier New',Courier,monospace",
+               era:'pixel', scheme:'dark',
+               panelRadius:'0px', btnRadius:'0px', panelBlur:'0' },
+  // Unlockable themes
+  leopard:   { label:'Aqua Max',    accent:'#0065d1', accent2:'#4da6ff', text:'#1a1a1a', text2:'#555',
+               bg:'linear-gradient(180deg,#c8c8c8 0%,#b0b0b0 40%,#a0a0a0 100%)',
+               hdr:'linear-gradient(180deg,#5a82b0 0%,#3a62a0 38%,#2a5290 65%,#1a4280 100%)',
+               panel:'rgba(238,235,228,0.97)', border:'rgba(120,120,100,0.22)',
+               font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif",
+               era:'leopard', scheme:'light',
+               panelRadius:'12px', btnRadius:'8px', panelBlur:'6' },
+  aero:      { label:'Vista Glass', accent:'#2a6fb4', accent2:'#5ab4f0', text:'#1a1a1a', text2:'#444',
+               bg:'linear-gradient(160deg,#d8e8f4 0%,#c0d4e8 50%,#b0c8e0 100%)',
+               hdr:'linear-gradient(180deg,rgba(180,210,245,0.95) 0%,rgba(120,170,230,0.9) 50%,rgba(70,130,215,0.95) 100%)',
+               panel:'rgba(220,235,252,0.72)', border:'rgba(80,140,220,0.3)',
+               font:"'Segoe UI','Trebuchet MS',Arial,sans-serif",
+               era:'aero', scheme:'light',
+               panelRadius:'8px', btnRadius:'6px', panelBlur:'32' },
+  deepwater: { label:'Deepwater',   accent:'#0077b6', accent2:'#00b4d8', text:'#e0f4ff', text2:'#90c8e0',
+               bg:'linear-gradient(160deg,#03045e 0%,#023e8a 40%,#0077b6 100%)',
+               hdr:'linear-gradient(180deg,#0096c7 0%,#023e8a 100%)',
+               panel:'rgba(0,50,100,0.88)', border:'rgba(0,180,216,0.3)',
+               font:"'Segoe UI',system-ui,Arial,sans-serif",
+               era:'deepwater', scheme:'dark',
+               panelRadius:'16px', btnRadius:'999px', panelBlur:'20' },
 };
 let currentTheme = 'default';
 
@@ -4285,8 +4341,6 @@ function applyAccentToDOM(accent) {
   r.setProperty('--hdr-bg', `linear-gradient(180deg, ${light} 0%, ${accent} 50%, ${deep} 100%)`);
   r.setProperty('--prog-fill', accent);
   r.setProperty('--border', `rgba(${rgb},0.25)`);
-  const o3 = document.querySelector('.o3');
-  if (o3) o3.style.background = `rgba(${rgb},0.18)`;
   document.querySelectorAll('.tab.on').forEach(el => el.style.background = `linear-gradient(180deg,rgba(255,255,255,0.36) 0%,rgba(255,255,255,0.06) 50%,rgba(0,0,0,0.04) 100%), linear-gradient(180deg,${light} 0%,${accent} 100%)`);
 }
 
@@ -4298,6 +4352,9 @@ function applyTheme(name, customAccent) {
   r.setProperty('--text2', t.text2);
   r.setProperty('--panel', t.panel);
   r.setProperty('--border',t.border);
+  r.setProperty('--panel-radius', t.panelRadius || '22px');
+  r.setProperty('--btn-radius',   t.btnRadius   || '999px');
+  r.setProperty('--panel-blur',   (t.panelBlur  || '18') + 'px');
   document.getElementById('bg').style.background = t.bg;
   if (customAccent) {
     applyAccentToDOM(customAccent);
@@ -4305,15 +4362,13 @@ function applyTheme(name, customAccent) {
     r.setProperty('--accent',  t.accent);
     r.setProperty('--accent2', t.accent2);
     r.setProperty('--hdr-bg',  t.hdr);
-    const o3 = document.querySelector('.o3');
-    if (o3) {
-      const hex = t.accent.replace('#','');
-      const rv = parseInt(hex.slice(0,2),16), gv = parseInt(hex.slice(2,4),16), bv = parseInt(hex.slice(4,6),16);
-      o3.style.background = `rgba(${rv},${gv},${bv},0.15)`;
-    }
     // Clear any inline tab styles left by a previous custom accent so CSS class rules take over
     document.querySelectorAll('.tab.on').forEach(el => el.style.background = '');
   }
+  r.setProperty('--panel-radius', t.panelRadius || '22px');
+  r.setProperty('--btn-radius',   t.btnRadius   || '999px');
+  const pb = t.panelBlur != null ? t.panelBlur : '18px';
+  r.setProperty('--panel-blur', String(pb).endsWith('px') ? pb : pb + 'px');
   document.documentElement.dataset.scheme = (t.scheme || 'light');
   document.documentElement.dataset.era = t.era || 'default';
   r.setProperty('--font-ui', t.font || "Tahoma,'Segoe UI',Arial,sans-serif");
@@ -4337,6 +4392,44 @@ function applyTheme(name, customAccent) {
   currentTheme = name;
   window._vizColor = accent;
 }
+// ── THEME UNLOCK SYSTEM ────────────────────────────────────
+const _LOCKED_THEMES = new Set(['leopard','aero','deepwater']);
+let _unlockedThemes = new Set(JSON.parse(localStorage.getItem('aq_unlocked') || '[]'));
+function isThemeUnlocked(name) { return !_LOCKED_THEMES.has(name) || _unlockedThemes.has(name); }
+function unlockTheme(name) {
+  if (!_LOCKED_THEMES.has(name) || _unlockedThemes.has(name)) return;
+  _unlockedThemes.add(name);
+  localStorage.setItem('aq_unlocked', JSON.stringify([..._unlockedThemes]));
+  const label = THEMES[name]?.label || name;
+  toast('🎨 Theme unlocked: ' + label + '!');
+  refreshThemeSwatches();
+}
+function refreshThemeSwatches() {
+  document.querySelectorAll('.theme-swatch').forEach(btn => {
+    const n = btn.dataset.theme;
+    if (!n) return;
+    const locked = !isThemeUnlocked(n);
+    btn.dataset.locked = locked ? '1' : '';
+    if (!locked) {
+      btn.style.opacity = '';
+      btn.title = THEMES[n]?.label || n;
+      btn.disabled = false;
+    }
+  });
+}
+function selectTheme(name, btn) {
+  if (!isThemeUnlocked(name)) { toast('🔒 Win a game to unlock this theme!'); return; }
+  applyTheme(name, null);
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  const saved = JSON.parse(localStorage.getItem('yt_theme') || '{}');
+  saved.preset = name; saved.customAccent = null;
+  localStorage.setItem('yt_theme', JSON.stringify(saved));
+  const inp = document.getElementById('custom-accent-inp');
+  if (inp) inp.value = THEMES[name]?.accent || '#00b4e0';
+  toast('Theme: ' + (THEMES[name]?.label || name));
+}
+
 function toggleAppsMenu() {
   const menu = document.getElementById('apps-menu');
   const btn  = document.getElementById('apps-btn');
@@ -4359,16 +4452,6 @@ function focusSearch() {
     setTimeout(() => document.getElementById('q')?.focus(), 60);
   }
 }
-function selectTheme(name, btn) {
-  applyTheme(name, null);
-  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('on'));
-  btn.classList.add('on');
-  const saved = JSON.parse(localStorage.getItem('yt_theme') || '{}');
-  saved.preset = name; saved.customAccent = null;
-  localStorage.setItem('yt_theme', JSON.stringify(saved));
-  document.getElementById('custom-accent-inp').value = THEMES[name]?.accent || '#00b4e0';
-  toast('Theme: ' + btn.textContent);
-}
 function applyCustomAccent(val) {
   applyAccentToDOM(val);
   const saved = JSON.parse(localStorage.getItem('yt_theme') || '{}');
@@ -4382,43 +4465,12 @@ function loadSavedTheme() {
       applyTheme(s.preset, s.customAccent || null);
       const btn = document.querySelector(`.theme-swatch[data-theme="${s.preset}"]`);
       if (btn) { document.querySelectorAll('.theme-swatch').forEach(x => x.classList.remove('on')); btn.classList.add('on'); }
-      if (s.customAccent) document.getElementById('custom-accent-inp').value = s.customAccent;
+      if (s.customAccent) { const inp = document.getElementById('custom-accent-inp'); if(inp) inp.value = s.customAccent; }
     }
   } catch {}
+  refreshThemeSwatches();
 }
 
-// ── WIN-UNLOCK THEMES ────────────────────────────────────
-function getUnlockedThemes() {
-  try { return JSON.parse(localStorage.getItem('aq_unlocked_themes') || '[]'); } catch { return []; }
-}
-function unlockTheme(name) {
-  const unlocked = getUnlockedThemes();
-  if (unlocked.includes(name)) return;
-  unlocked.push(name);
-  localStorage.setItem('aq_unlocked_themes', JSON.stringify(unlocked));
-  showThemeUnlockToast(name);
-  renderThemeSwatches();
-}
-function showThemeUnlockToast(themeName) {
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 20px;border-radius:20px;z-index:9999;font-size:13px;pointer-events:none;transition:opacity .5s';
-  t.textContent = '🔓 Theme unlocked: ' + themeName + '!';
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 600); }, 3000);
-}
-function renderThemeSwatches() {
-  const unlocked = getUnlockedThemes();
-  ['retro', 'neon', 'pixel'].forEach(name => {
-    const btn = document.querySelector('.theme-swatch[data-theme="' + name + '"]');
-    if (!btn) return;
-    const isUnlocked = unlocked.includes(name);
-    btn.disabled = !isUnlocked;
-    btn.style.opacity = isUnlocked ? '1' : '0.45';
-    btn.title = isUnlocked ? name : 'Win a game to unlock!';
-    btn.dataset.unlockLabel = btn.dataset.unlockLabel || btn.textContent;
-    btn.textContent = isUnlocked ? (btn.dataset.unlockLabel || name) : ('🔒 ' + (btn.dataset.unlockLabel || name));
-  });
-}
 
 // ── REMOTE MODE ──────────────────────────────────────────
 let _remoteMode = localStorage.getItem('aq_remote') === '1';
@@ -4651,7 +4703,7 @@ async function loadYtPlaylist(plId) {
 //  STATE
 // ─────────────────────────────────────────────────────────
 let player = null, ready = false;
-let current = null, queue = [], origQueue = [];
+let current = null, queue = [], origQueue = [], playHistory = [];
 let currentSource = 'youtube'; // 'youtube' | 'soundcloud'
 // Expose key globals for module scripts (room-sync.js etc.)
 // (function declarations like renderQueue/playVideo are already global; let vars need explicit exposure)
@@ -4776,9 +4828,24 @@ window.onYouTubeIframeAPIReady = () => {
       },
       onStateChange: onState,
       onError: e => {
+        const code = e.data;
         const m={2:'Invalid video',5:'Playback error',100:'Video unavailable — may be region-blocked',101:'Cannot embed this video',150:'Cannot embed this video',153:'Cannot embed this video'};
         toast(m[e.data] || `Player error ${e.data}`);
-        if ([100,101,150,153].includes(e.data) && current) setTimeout(() => toast('Tip: try searching for an alternate upload'), 3500);
+        if ([101,150,5].includes(e.data) && current) {
+          setTimeout(() => {
+            const t = document.createElement('div');
+            t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.88);color:#fff;padding:8px 16px;border-radius:12px;z-index:9999;font-size:11px;display:flex;gap:8px;align-items:center;';
+            t.innerHTML = '🌐 Region-restricted? <button style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:2px 10px;cursor:pointer;font-size:11px;">Try Mirror</button>';
+            t.querySelector('button').onclick = () => {
+              const inv = `https://inv.nadeko.net/embed/${current.id}`;
+              const yt = document.getElementById('yt-player');
+              if (yt) { const fr = document.createElement('iframe'); fr.src=inv; fr.allow='autoplay;fullscreen'; fr.style.cssText='width:100%;height:100%;border:none;'; yt.innerHTML=''; yt.appendChild(fr); }
+              t.remove();
+            };
+            document.body.appendChild(t);
+            setTimeout(() => t?.remove(), 8000);
+          }, 800);
+        }
       },
     }
   });
@@ -4792,18 +4859,21 @@ function onState(e) {
     if (window.__beatUpdateFn) window.__beatUpdateFn(true);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
+    startCoinEarn?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     // If tab is hidden and we were playing, this is an unwanted auto-pause — fight it
     if (e.data === S.PAUSED && _wasPlayingBeforeHide) {
       setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
       return;
     }
+    stopCoinEarn?.();
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     if (window._canControl && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
+    stopCoinEarn?.();
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
@@ -5146,10 +5216,23 @@ async function doSearch() {
   // Piped → Invidious fallback
   box.innerHTML = '<div class="empty">Searching...</div>';
   try {
-    const items = await freeSearch(raw);
-    if (!items.length) { box.innerHTML = '<div class="empty">No results found</div>'; return; }
+    const { videos, playlists } = await freeSearch(raw);
+    if (!videos.length && !playlists.length) { box.innerHTML = '<div class="empty">No results found</div>'; return; }
     box.innerHTML = '';
-    items.forEach(v => box.appendChild(makeResultItem(v)));
+    if (playlists.length) {
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);padding:6px 4px 2px;';
+      hdr.textContent = '📀 Playlists';
+      box.appendChild(hdr);
+      playlists.slice(0, 4).forEach(pl => box.appendChild(makePlaylistResult(pl)));
+    }
+    if (videos.length && playlists.length) {
+      const hdr2 = document.createElement('div');
+      hdr2.style.cssText = 'font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);padding:6px 4px 2px;';
+      hdr2.textContent = '🎵 Videos';
+      box.appendChild(hdr2);
+    }
+    videos.forEach(v => box.appendChild(makeResultItem(v)));
   } catch {
     const enc = encodeURIComponent(raw);
     box.innerHTML = `<div class="empty">Search unavailable on this network.<br><br>Paste a YouTube URL or video ID directly,<br><a href="https://www.youtube.com/results?search_query=${enc}" target="_blank" rel="noopener">search on YouTube</a> and paste the link,<br>or click <strong>Sign in</strong> above.</div>`;
@@ -5166,8 +5249,10 @@ document.getElementById('q').addEventListener('paste', () => {
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 function makeResultItem(v) {
+  const dur = v.duration ? fmtDuration(v.duration) : '';
+  const longBadge = v.duration > 1800 ? '<span style="font-size:9px;background:rgba(120,80,0,0.15);color:#a06000;border-radius:4px;padding:1px 4px;margin-left:3px">📀</span>' : '';
   const el = document.createElement('div'); el.className = 'r-item';
-  el.innerHTML = `<img class="r-thumb" src="${esc(v.thumbnail)}" loading="lazy" alt="" onerror="this.style.visibility='hidden'"><div class="r-info"><div class="r-title">${esc(v.title)}</div><div class="r-ch">${esc(v.channelTitle)}</div></div><div class="r-acts"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb" title="Play after current song">&#9654;Next</button><button class="mb">+PL</button></div>`;
+  el.innerHTML = `<img class="r-thumb" src="${esc(v.thumbnail)}" loading="lazy" alt="" onerror="this.style.visibility='hidden'"><div class="r-info"><div class="r-title">${esc(v.title)}</div><div class="r-ch">${esc(v.channelTitle)}${dur ? `<span style="font-size:9px;opacity:.6;margin-left:4px">${dur}</span>` : ''}${longBadge}</div></div><div class="r-acts"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb" title="Play after current song">&#9654;Next</button><button class="mb">+PL</button></div>`;
   const [btnPlay, btnQ, btnN, btnPL] = el.querySelectorAll('.mb');
   btnPlay.onclick = e => { e.stopPropagation(); playVideo(v); };
   btnQ.onclick    = e => { e.stopPropagation(); addToQueue(v); };
@@ -5216,6 +5301,7 @@ function playNext(v) {
 }
 function popQueue() {
   if (!queue.length) return;
+  if (current) playHistory.push(current);
   const v = queue.shift(); playVideo(v); renderQueue();
 }
 let dragSrcIdx = null;
@@ -5510,7 +5596,7 @@ async function discSelectAlbum(album) {
   // Fallback: search YouTube with specific "artist - album" query and filter for relevance
   try {
     const q = `${artistName} - ${album.title}`;
-    const raw = (await freeSearch(q)).slice(0, 12);
+    const raw = (await freeSearchVideos(q)).slice(0, 12);
     const lArtist = artistName.toLowerCase();
     const albumWords = album.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const relevant = raw.filter(v => {
@@ -5608,7 +5694,7 @@ function renderDiscView() {
         const tracks = discState.ytResults.filter(v => v._isTrack);
         const lArtist = albumArtist.toLowerCase();
         const res = await Promise.allSettled(tracks.map(async v => {
-          const results = await freeSearch(`${albumArtist} ${v.title}`);
+          const results = await freeSearchVideos(`${albumArtist} ${v.title}`);
           const tw = v.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
           return results.find(r => { const t = r.title.toLowerCase(); return t.includes(lArtist) || tw.some(w => t.includes(w)); }) || results[0];
         }));
@@ -5636,7 +5722,7 @@ function renderDiscView() {
         row.innerHTML = `<span class="art-track-num">${esc(String(v.num || i + 1))}</span><div class="art-track-info"><div class="art-track-title">${esc(v.title)}</div></div><div class="r-acts" style="flex-shrink:0"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb">+PL</button></div>`;
         const searchTrack = async () => {
           const q = `${albumArtist} ${v.title}`;
-          const results = await freeSearch(q);
+          const results = await freeSearchVideos(q);
           const lArtist = albumArtist.toLowerCase();
           const titleWords = v.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
           return results.find(r => {
@@ -5685,7 +5771,7 @@ async function fetchAutomix(videoId) {
         if (similar.length) {
           const pick = similar[Math.floor(Math.random() * Math.min(similar.length, 6))];
           const q = `${pick.artist?.name || artist} ${pick.name}`;
-          const results = await freeSearch(q);
+          const results = await freeSearchVideos(q);
           const found = results.find(v => v.id && !isStale(v));
           if (found) { playVideo(found); toast('Automix: playing similar track'); return; }
         }
@@ -5801,7 +5887,7 @@ async function fetchChannel() {
             const tlSearchAll = async () => {
               const lA = inArtist.toLowerCase();
               const res = await Promise.allSettled(tracks2.map(async t2 => {
-                const r = await freeSearch(`${inArtist} ${t2.name}`);
+                const r = await freeSearchVideos(`${inArtist} ${t2.name}`);
                 const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
                 return r.find(x=>{ const rt=x.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || r[0];
               }));
@@ -5825,7 +5911,7 @@ async function fetchChannel() {
               const trow = document.createElement('div'); trow.className = 'art-track';
               trow.innerHTML = `<span class="art-track-num">${t2['@attr']?.rank || ti+1}</span><div class="art-track-info"><div class="art-track-title">${esc(t2.name)}</div></div><div class="r-acts" style="flex-shrink:0"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb">+PL</button></div>`;
               const searchRow = async () => {
-                const r = await freeSearch(`${inArtist} ${t2.name}`);
+                const r = await freeSearchVideos(`${inArtist} ${t2.name}`);
                 const lA = inArtist.toLowerCase();
                 const tw = t2.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
                 return r.find(x=>{ const rt=x.title.toLowerCase(); return rt.includes(lA)||tw.some(w=>rt.includes(w)); }) || r[0];
@@ -5851,7 +5937,7 @@ async function fetchChannel() {
         // Fallback: search YouTube for "artist - album" and filter for relevance
         try {
           const q = `${info?.name || artistName} - ${album.name}`;
-          const results = await freeSearch(q);
+          const results = await freeSearchVideos(q);
           const lA = (info?.name || artistName).toLowerCase();
           const aw = album.name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
           const fnd = results.find(r=>{ const t=r.title.toLowerCase(); return t.includes(lA)||aw.some(w=>t.includes(w)); }) || results[0];
@@ -5879,7 +5965,7 @@ async function fetchChannel() {
         </div>
         <div class="r-acts" style="flex-shrink:0"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb">+PL</button></div>`;
       const searchFn = async () => {
-        const results = await freeSearch(`${info?.name || artistName} ${t.name}`);
+        const results = await freeSearchVideos(`${info?.name || artistName} ${t.name}`);
         return results.find(x => x.id) || results[0] || null;
       };
       const [btnP, btnQ2, btnPL2] = row.querySelectorAll('.mb');
@@ -5915,6 +6001,25 @@ function renderVidList(box, items) {
 // ─────────────────────────────────────────────────────────
 //  PLAYLISTS
 // ─────────────────────────────────────────────────────────
+function deletePlaylist(id, e) {
+  if (e) e.stopPropagation();
+  const pl = playlists.find(p => p.id === id);
+  if (!pl) return;
+  if (!confirm(`Delete playlist "${pl.name}"?`)) return;
+  playlists = playlists.filter(p => p.id !== id);
+  savePls();
+  if (activePlId === id) { activePlId = null; document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
+  toast('Playlist deleted');
+  renderPls();
+}
+let _plSectionOpen = true;
+function togglePlSection() {
+  _plSectionOpen = !_plSectionOpen;
+  const list = document.getElementById('pl-list');
+  const arrow = document.getElementById('pl-toggle-arrow');
+  if (list) list.style.display = _plSectionOpen ? '' : 'none';
+  if (arrow) arrow.textContent = _plSectionOpen ? '▼' : '▶';
+}
 function renderPls() {
   const box=document.getElementById('pl-list');
   if (!playlists.length) { box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:5px 7px">No playlists yet</div>'; return; }
@@ -5922,7 +6027,7 @@ function renderPls() {
   playlists.forEach(pl => {
     const el=document.createElement('div'); el.className='pl-item'+(activePlId===pl.id?' active':'');
     const badge=pl.ytId?`<span class="pl-yt">YT</span>`:`<span class="pl-cnt">${pl.videos?.length??0}</span>`;
-    el.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(pl.name)}</span>${badge}`;
+    el.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(pl.name)}</span>${badge}<button onclick="event.stopPropagation();deletePlaylist(${pl.id})" title="Delete playlist" style="background:none;border:none;cursor:pointer;color:rgba(200,60,60,0.4);font-size:11px;padding:0 2px;flex-shrink:0;transition:color .12s" onmouseover="this.style.color='rgba(200,60,60,0.9)'" onmouseout="this.style.color='rgba(200,60,60,0.4)'">🗑</button>`;
     el.onclick=()=>pl.ytId?viewYtPl(pl):viewPl(pl.id); box.appendChild(el);
   });
 }
@@ -5931,7 +6036,7 @@ function viewPl(id) {
   activePlId=id; renderPls();
   const box=document.getElementById('results'); box.innerHTML='';
   const hdr=document.createElement('div'); hdr.id='pl-view-hdr';
-  hdr.innerHTML=`<button id="back-btn" onclick="backToSearch()">&#8592;</button><span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pl.name)}</span><button class="mb" onclick="playPl(${id})" style="padding:3px 8px">Play all</button>`;
+  hdr.innerHTML=`<button id="back-btn" onclick="backToSearch()">&#8592;</button><span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pl.name)}</span><button class="mb" onclick="playPl(${id})" style="padding:3px 8px">▶ All</button><button class="mb" onclick="shufflePlayPl(${id})" style="padding:3px 8px">🔀</button><button class="mb" onclick="queueAllPl(${id})" style="padding:3px 6px">+Q</button>`;
   box.appendChild(hdr);
   if (!pl.videos.length) { const e=document.createElement('div'); e.className='empty'; e.textContent='Playlist is empty'; box.appendChild(e); return; }
   pl.videos.forEach(v => {
@@ -5943,7 +6048,21 @@ function viewPl(id) {
   });
 }
 async function viewYtPl(pl) { activePlId=pl.id; renderPls(); document.getElementById('q').value=pl.ytId; await loadYtPlaylist(pl.ytId); }
-function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); renderQueue(); toast(`Playing: ${pl.name}`); }
+function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); origQueue=[...queue]; renderQueue(); toast(`Playing: ${pl.name}`); }
+function shufflePlayPl(id) {
+  if (_guestBlocked()) return;
+  const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return;
+  const shuffled=[...pl.videos];
+  for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+  playVideo(shuffled[0]); queue=shuffled.slice(1); origQueue=[...queue]; renderQueue();
+  toast(`🔀 Shuffling: ${pl.name}`);
+}
+function queueAllPl(id) {
+  if (_guestBlocked()) return;
+  const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return;
+  pl.videos.forEach(v=>addToQueue(v));
+  toast(`+${pl.videos.length} to queue`);
+}
 function backToSearch() { activePlId=null; renderPls(); document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
 function newPlaylistPrompt() { document.getElementById('pl-name-inp').value=''; openModal('pl-modal'); setTimeout(()=>document.getElementById('pl-name-inp').focus(),80); }
 function confirmNewPl() { const name=document.getElementById('pl-name-inp').value.trim(); if(!name) return; playlists.push({id:Date.now(),name,videos:[]}); savePls(); closeModal('pl-modal'); toast(`Playlist "${name}" created`); }
@@ -6132,9 +6251,16 @@ function toggleShuffle() {
   shuffle = !shuffle;
   if (shuffle) {
     origQueue = [...queue];
-    for (let i=queue.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [queue[i],queue[j]]=[queue[j],queue[i]]; }
+    const remaining = queue.filter(v => !playHistory.find(h => h.id === v.id));
+    const played = queue.filter(v => playHistory.find(h => h.id === v.id));
+    for (let i=remaining.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [remaining[i],remaining[j]]=[remaining[j],remaining[i]]; }
+    queue = [...remaining, ...played];
   } else {
-    if (origQueue.length) queue = [...origQueue];
+    if (origQueue.length) {
+      // Only restore songs still present in the shuffled queue (not already-played ones)
+      const remaining = new Set(queue.map(v => v.id));
+      queue = origQueue.filter(v => remaining.has(v.id));
+    }
     origQueue = [];
   }
   renderQueue();
@@ -6182,8 +6308,9 @@ function toggleCollapse(side) {
 function updateGrid() {
   const lc = document.getElementById('left').classList.contains('collapsed');
   const rc = document.getElementById('right').classList.contains('collapsed');
+  const cc = document.getElementById('main').classList.contains('chat-open');
   document.getElementById('main').style.gridTemplateColumns =
-    `${lc ? '18px' : '272px'} 1fr ${rc ? '18px' : '290px'}`;
+    `${lc ? '18px' : '272px'} 1fr ${cc ? '286px' : '0'} ${rc ? '18px' : '290px'}`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -7143,6 +7270,32 @@ if (window.matchMedia('(max-width: 768px)').matches) {
   switchMobPanel('player');
 }
 
+
+// ─────────────────────────────────────────────────────────
+//  HOST SYNC
+// ─────────────────────────────────────────────────────────
+function claimHostIfNeeded() {
+  const roomId = window._currentRoomId;
+  if (!roomId) return;
+  const myId = window._myClientId || sessionStorage.getItem('aq_client_id');
+  if (!myId) return;
+  const stored = localStorage.getItem('aq_host_' + roomId);
+  if (stored === myId) {
+    window._isRoomHost = true;
+    window._canControl = true;
+    document.body.classList.remove('room-guest');
+    document.body.classList.add('room-host');
+  }
+}
+// Check host status after room join
+setTimeout(claimHostIfNeeded, 1500);
+
+// ─────────────────────────────────────────────────────────
+//  NOTIFICATION CHIME FOR CHAT
+// ─────────────────────────────────────────────────────────
+window._chatChimeEnabled = true;
+function playChatChime() { playChatTone?.(); }
+
 // ─────────────────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────────────────
@@ -7253,7 +7406,7 @@ function toggleSynthFlyout() {
   const fl = document.getElementById('synth-flyout');
   const btn = document.getElementById('synth-btn');
   const open = fl.classList.toggle('open');
-  btn.classList.toggle('active', open);
+  btn?.classList.toggle('active', open);
   if (open && !_synthInited) {
     _synthInited = true;
     initActx();
@@ -8584,13 +8737,99 @@ async function fetchWeather() {
     const geo = await fetch(`https://api.zippopotam.us/us/${zip}`).then(r=>r.ok?r.json():null);
     const lat = geo ? parseFloat(geo.places[0].latitude)  :  40.015;
     const lon = geo ? parseFloat(geo.places[0].longitude) : -105.270;
-    const city = geo ? geo.places[0]['place name'] : 'Boulder';
     const wx = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`).then(r=>r.json());
     const cw = wx.current_weather;
     document.getElementById('wx-icon').textContent = WX_CODES[cw.weathercode] || '🌡️';
     document.getElementById('wx-temp').textContent = Math.round(cw.temperature) + '°F';
+    // City name is intentionally not shown to keep header clean
   } catch(e) { document.getElementById('wx-temp').textContent = '--°F'; }
 }
+
+// ── COIN SYSTEM ────────────────────────────────────────────
+let _coins = parseInt(localStorage.getItem('aq_coins') || '0');
+let _coinEarnTimer = null;
+(function() {
+  const last = parseInt(localStorage.getItem('aq_last_daily') || '0');
+  if (last && Date.now() - last > 86400000) {
+    _coins += 10;
+    localStorage.setItem('aq_coins', _coins);
+    localStorage.setItem('aq_last_daily', Date.now());
+    // Show toast after DOM ready
+    setTimeout(() => typeof toast === 'function' && toast('🪙 Daily bonus: +10 coins!'), 2500);
+  } else if (!last) {
+    localStorage.setItem('aq_last_daily', Date.now());
+  }
+})();
+function updateCoinDisplay() {
+  const el = document.getElementById('coin-count');
+  if (el) el.textContent = _coins;
+}
+function addCoins(n) {
+  _coins += n;
+  localStorage.setItem('aq_coins', _coins);
+  updateCoinDisplay();
+}
+function startCoinEarn() {
+  if (_coinEarnTimer) return;
+  _coinEarnTimer = setInterval(() => addCoins(1), 60000);
+}
+function stopCoinEarn() {
+  clearInterval(_coinEarnTimer);
+  _coinEarnTimer = null;
+}
+
+// ── Leaderboards ──────────────────────────────────────────
+function saveLeaderboard(game, entry) {
+  const key = 'aq_lb_' + game;
+  let board = [];
+  try { board = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
+  board.push(entry);
+  board.sort((a, b) => (a.time || 0) - (b.time || 0));
+  board = board.slice(0, 10);
+  localStorage.setItem(key, JSON.stringify(board));
+  // Return rank (1-based), or 0 if entry didn't make top 10
+  const rank = board.findIndex(e => e.date === entry.date) + 1;
+  return rank || 0;
+}
+function getLeaderboard(game) {
+  try { return JSON.parse(localStorage.getItem('aq_lb_' + game) || '[]'); } catch { return []; }
+}
+function showLeaderboardToast(game, resultStr, rank) {
+  if (!rank) { toast(resultStr); return; }
+  const msg = rank === 1 ? `New best! ${resultStr} 🏆` : `${resultStr} — #${rank} on board`;
+  toast(msg);
+}
+
+function showLeaderboardModal(game) {
+  const board = getLeaderboard(game);
+  const labels = { solitaire: 'Solitaire', mines: 'Minesweeper', picross: 'Picross' };
+  const title  = labels[game] || game;
+  const rows = board.length ? board.map((e, i) => {
+    let detail = '';
+    if (game === 'solitaire') detail = `${e.moves || '?'} moves · ${e.time || 0}s`;
+    else if (game === 'mines') detail = `${e.time || 0}s · ${e.diff || '?'}`;
+    else if (game === 'picross') detail = `${e.time || 0}s · ${e.size || '?'}×${e.size || '?'}`;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${medal} ${detail}</span><span style="opacity:.5;font-size:11px">${new Date(e.date||0).toLocaleDateString()}</span></div>`;
+  }).join('') : '<div style="opacity:.5;font-size:13px;padding:8px 0">No scores yet — play a game!</div>';
+
+  const modal = document.createElement('div');
+  modal.className = 'lb-modal-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)';
+  modal.innerHTML = `<div style="background:var(--panel-bg);border:1.5px solid var(--border);border-radius:var(--panel-radius,12px);padding:20px 24px;min-width:280px;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong style="font-size:15px;color:var(--text)">🏆 ${title} Best Times</strong>
+      <button onclick="this.closest('.lb-modal-overlay').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);line-height:1">×</button>
+    </div>
+    <div>${rows}</div>
+    <div style="margin-top:12px;text-align:right">
+      <button onclick="localStorage.removeItem('aq_lb_${game}');this.closest('.lb-modal-overlay').remove();toast('Leaderboard cleared')" style="font-size:11px;opacity:.5;background:none;border:none;cursor:pointer;color:var(--text)">Clear</button>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 function saveWeatherZip() {
   const v = (document.getElementById('wx-zip-inp')?.value||'').trim();
   if (v) { _wxZip = v; localStorage.setItem(WX_ZIP_KEY, v); }
@@ -8831,8 +9070,8 @@ function updateTheaterControls() {
 // ─────────────────────────────────────────────────────────
 //  SLOT MACHINE
 // ─────────────────────────────────────────────────────────
-const SLOT_SYMS = ['🎵','7️⃣','💎','⭐','🍒','🔔','🍋','🍇'];
-const SLOT_PAYS = { '🎵': 50, '7️⃣': 20, '💎': 15, '⭐': 10, '🍒': 5 };
+const SLOT_SYMS = ['🐬','🎵','7️⃣','💎','⭐','🍒','🔔','🍋','🍇'];
+const SLOT_PAYS = { '🐬': 75, '🎵': 50, '7️⃣': 20, '💎': 15, '⭐': 10, '🍒': 5 };
 let slotsCredits = +(localStorage.getItem('aq_slots_credits') || 100);
 let slotsBet = 5, slotsSpinning = false;
 let _slotsInited = false;
@@ -8916,6 +9155,8 @@ function evaluateSlots(syms) {
     msg = `JACKPOT! ${a}${b}${c} +${win}`;
     setTimeout(() => window.abSaySlots?.('jackpot', `${a}${b}${c} +${win} credits`), 800);
     unlockTheme('neon');
+    unlockTheme('aero');
+    addCoins && addCoins(30);
     // Announce jackpot in global chat
     setTimeout(() => {
       const uname = localStorage.getItem('aq_username') || 'Someone';
@@ -8947,7 +9188,7 @@ function evaluateSlots(syms) {
 let _rippleEnabled = localStorage.getItem('aq_ripple') !== '0';
 function setRippleEnabled(on) { _rippleEnabled = on; localStorage.setItem('aq_ripple', on ? '1' : '0'); }
 let _bubblesEnabled = localStorage.getItem('aq_bubbles') !== '0';
-let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 3);
+let _bubbleDensity  = +(localStorage.getItem('aq_bubble_density') ?? 1);
 let _bubbleGravity  = +(localStorage.getItem('aq_bubble_gravity') ?? 80);
 let _bubbleSize     = +(localStorage.getItem('aq_bubble_size')    ?? 16);
 window._bubblesEnabled = _bubblesEnabled;
@@ -9067,7 +9308,8 @@ function playBoardDing() {
 function updateChatBadge(posts) {
   const badge = document.getElementById('chat-badge');
   if (!badge) return;
-  const isOpen = document.getElementById('board-overlay').classList.contains('show');
+  const isOpen = document.getElementById('board-overlay').classList.contains('show')
+    || document.getElementById('main').classList.contains('chat-open');
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
   const mobBadge = document.getElementById('mob-chat-tab-badge');
@@ -9090,7 +9332,10 @@ function updateChatBadge(posts) {
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);
-  if (newArrivals.length && _boardKnownMaxTs > 0) playBoardDing();
+  if (newArrivals.length && _boardKnownMaxTs > 0) {
+    playBoardDing();
+    if (!document.getElementById('board-overlay').classList.contains('show')) playChatChime();
+  }
   _boardKnownMaxTs = posts.reduce((m, p) => Math.max(m, p.ts), _boardKnownMaxTs);
 }
 
@@ -9341,8 +9586,24 @@ function boardUpdateBadge() {
   else { b.textContent='● Local'; b.className='board-fb-badge local'; }
 }
 
+function _moveBoardWrapTo(targetId) {
+  const wrap = document.getElementById('board-wrap');
+  const target = document.getElementById(targetId);
+  if (wrap && target && wrap.parentElement?.id !== targetId) {
+    target.appendChild(wrap);
+  }
+}
 function openBoard() {
-  document.getElementById('board-overlay').classList.add('show');
+  const main = document.getElementById('main');
+  // Column mode on desktop, overlay on mobile
+  if (window.innerWidth >= 900) {
+    _moveBoardWrapTo('chat-col');
+    main.classList.add('chat-open');
+    document.getElementById('board-overlay').classList.remove('show');
+  } else {
+    _moveBoardWrapTo('board-overlay');
+    document.getElementById('board-overlay').classList.add('show');
+  }
   document.getElementById('board-wrap').classList.remove('minimized');
   const inp = document.getElementById('board-fb-inp');
   if (inp && boardFbUrl) inp.value = boardFbUrl;
@@ -9350,18 +9611,24 @@ function openBoard() {
   localStorage.setItem('aq_board_seen_ts', _lastSeenPostTs);
   const badge = document.getElementById('chat-badge');
   if (badge) badge.style.display = 'none';
-  document.getElementById('board-btn').classList.add('active');
+  const hdrBadge = document.getElementById('chat-badge-hdr');
+  if (hdrBadge) hdrBadge.style.display = 'none';
+  document.getElementById('board-btn')?.classList.add('active');
   boardLoadAndRender();
   boardStartSse();
+  updateGrid();
 }
 function closeBoard() {
+  document.getElementById('main').classList.remove('chat-open');
   document.getElementById('board-overlay').classList.remove('show');
-  document.getElementById('board-btn').classList.remove('active');
+  document.getElementById('board-btn')?.classList.remove('active');
   boardStopSse();
+  updateGrid();
 }
 function toggleBoard() {
-  const ov = document.getElementById('board-overlay');
-  if (ov.classList.contains('show')) { closeBoard(); } else { openBoard(); }
+  const isOpen = document.getElementById('main').classList.contains('chat-open') ||
+                 document.getElementById('board-overlay').classList.contains('show');
+  if (isOpen) { closeBoard(); } else { openBoard(); }
 }
 
 async function boardPost(e) {
@@ -10207,15 +10474,17 @@ function splashShowCreate() {
   document.getElementById('sp-join-row').style.display = 'none';
   document.getElementById('sp-create-code').focus();
 }
+function _saveRoomSession(roomId, isHost) {
+  sessionStorage.setItem('aq_sess_room', roomId);
+  sessionStorage.setItem('aq_sess_host', isHost ? '1' : '0');
+  sessionStorage.setItem('aq_sess_ts', Date.now());
+}
 function splashCreate() {
   if (!_requireName()) return;
-  const hostId = localStorage.getItem('aq_host_id') || (() => {
-    const id = Array.from({length:12},()=>'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*36)]).join('');
-    localStorage.setItem('aq_host_id', id); return id;
-  })();
   const custom = document.getElementById('sp-create-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   const roomId = custom || Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
   window.location.hash = roomId;
+  _saveRoomSession(roomId, true);
   closeSplash();
   window.initRoom?.(roomId, true);
   updateRoomChatLabel(roomId);
@@ -10230,6 +10499,7 @@ function splashJoinConfirm() {
   const code = document.getElementById('sp-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   if (!code) { document.getElementById('sp-code').focus(); return; }
   window.location.hash = code;
+  _saveRoomSession(code, false);
   closeSplash();
   window.initRoom?.(code, false);
   updateRoomChatLabel(code);
@@ -10239,9 +10509,14 @@ function splashSolo() {
   if (name) localStorage.setItem('aq_username', name);
   closeSplash();
 }
+let _splashMinDone = false, _splashReadyFn = null;
+setTimeout(() => { _splashMinDone = true; if (_splashReadyFn) _splashReadyFn(); }, 2000);
+function splashReady(fn) { if (_splashMinDone) fn(); else _splashReadyFn = fn; }
 function closeSplash() {
-  const sp = document.getElementById('splash');
-  if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
+  splashReady(() => {
+    const sp = document.getElementById('splash');
+    if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
+  });
 }
 function copyRoomLink() {
   const url = window.location.href;
@@ -10361,6 +10636,7 @@ function playFanfare(level = 'win') {
 
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {
+  if (!window._chatChimeEnabled) return;
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const o = ac.createOscillator(), g = ac.createGain();
@@ -10493,9 +10769,10 @@ function sendTheaterChatMsg() {
 window.appendRoomChatMsg = function(p) {
   const log = document.getElementById('room-log');
   if (log) {
-    const placeholder = log.querySelector('div[style]');
+    const placeholder = log.querySelector('.board-empty-log');
     if (placeholder) placeholder.remove();
     renderChatMsg(log, p);
+    log.scrollTop = log.scrollHeight;
     const myName = localStorage.getItem('aq_username');
     if (p.username !== myName) playChatTone();
   }
@@ -10554,8 +10831,14 @@ function sendPaintTo(target) {
 function updateRoomChatLabel(roomId) {
   const lbl = document.getElementById('room-chat-tab-label');
   const bar = document.getElementById('room-chat-id-bar');
+  const hint = document.getElementById('room-join-hint');
+  const boardRoomBar = document.getElementById('board-room-bar');
+  const boardRoomCode = document.getElementById('board-room-code');
   if (lbl) lbl.textContent = roomId ? `#${roomId}` : 'Room';
   if (bar) { bar.textContent = roomId ? `🏠 Room  ·  ${roomId}` : ''; bar.style.display = roomId ? 'block' : 'none'; }
+  if (hint) hint.style.display = roomId ? 'none' : '';
+  if (boardRoomBar) boardRoomBar.style.display = roomId ? 'flex' : 'none';
+  if (boardRoomCode) boardRoomCode.textContent = roomId ? `🏠 #${roomId}` : '';
 }
 // Close paint send menu on outside click
 document.addEventListener('click', e => {
@@ -10565,6 +10848,8 @@ document.addEventListener('click', e => {
 
 /* ── DOMContentLoaded setup ── */
 document.addEventListener('DOMContentLoaded', () => {
+  updateCoinDisplay?.();
+  refreshThemeSwatches?.();
   // Show saved username in header (priority over Google)
   const savedUname = localStorage.getItem('aq_username');
   if (savedUname) {
@@ -10578,6 +10863,11 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('user-av').style.display = 'none';
     }
   }
+
+  // Init chat chime setting
+  window._chatChimeEnabled = localStorage.getItem('aq_chat_chime') !== '0';
+  const chimeChk = document.getElementById('chat-chime-chk');
+  if (chimeChk) chimeChk.checked = window._chatChimeEnabled;
 
   const bchk = document.getElementById('bubbles-chk');
   if (bchk) bchk.checked = _bubblesEnabled;
@@ -10624,27 +10914,47 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // Service worker for background audio
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  // Splash: logo lights up, then show room selection
-  setTimeout(() => {
-    // Switch lit logo to pulse animation
-    const lit = document.getElementById('sp-logo-lit');
-    if (lit) lit.classList.add('done');
-    const roomUi = document.getElementById('splash-room');
-    if (roomUi) {
-      roomUi.style.display = 'flex';
+  // Auto-restore previous room session (e.g. on refresh)
+  (() => {
+    const savedRoom = sessionStorage.getItem('aq_sess_room');
+    const wasHost   = sessionStorage.getItem('aq_sess_host') === '1';
+    const savedTs   = parseInt(sessionStorage.getItem('aq_sess_ts') || '0');
+    if (savedRoom && Date.now() - savedTs < 600000) {
+      // Restore within 10 minutes — bypass splash
+      window.location.hash = savedRoom;
       const savedName = localStorage.getItem('aq_username');
-      const nameInp = document.getElementById('sp-name');
-      if (savedName && nameInp) nameInp.value = savedName;
-      // If URL already has a room hash, pre-fill join
-      const hash = window.location.hash.slice(1);
-      if (hash) {
-        const codeInp = document.getElementById('sp-code');
-        const joinRow = document.getElementById('sp-join-row');
-        if (codeInp) codeInp.value = hash;
-        if (joinRow) joinRow.style.display = 'flex';
-      }
+      if (savedName) window.myName = savedName;
+      _saveRoomSession(savedRoom, wasHost);
+      setTimeout(() => {
+        window.initRoom?.(savedRoom, wasHost);
+        updateRoomChatLabel?.(savedRoom);
+        closeSplash();
+        if (wasHost) toast('🔑 Re-joined as host');
+      }, 600);
+      return;
     }
-  }, 1500);
+    // Splash: logo lights up, then show room selection
+    setTimeout(() => {
+      // Switch lit logo to pulse animation
+      const lit = document.getElementById('sp-logo-lit');
+      if (lit) lit.classList.add('done');
+      const roomUi = document.getElementById('splash-room');
+      if (roomUi) {
+        roomUi.style.display = 'flex';
+        const savedName = localStorage.getItem('aq_username');
+        const nameInp = document.getElementById('sp-name');
+        if (savedName && nameInp) nameInp.value = savedName;
+        // If URL already has a room hash, pre-fill join
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          const codeInp = document.getElementById('sp-code');
+          const joinRow = document.getElementById('sp-join-row');
+          if (codeInp) codeInp.value = hash;
+          if (joinRow) joinRow.style.display = 'flex';
+        }
+      }
+    }, 1500);
+  })();
   // Inject emote CSS (data URIs live only in CSS, never in HTML)
   buildEmoteCss();
   // Build emoji bars lazily (after DOM ready)
@@ -10656,8 +10966,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listen to global chat
   window.listenGlobalChat?.((p) => {
     const log = document.getElementById('global-log');
-    if (log) renderChatMsg(log, p);
+    if (log) { renderChatMsg(log, p); log.scrollTop = log.scrollHeight; }
     renderTheaterChatMsg(p);
+    // Notification chime when panel closed
+    if (!document.getElementById('board-overlay')?.classList.contains('show') &&
+        p.username !== localStorage.getItem('aq_username')) {
+      playChatTone?.();
+    }
   });
 
   // Init perf mode checkbox
@@ -10691,12 +11006,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── PICROSS ──────────────────────────────────────────
 let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
+let _pcSeconds = 0, _pcTimerInt = null;
+function _pcStartTimer() { _pcStopTimer(); _pcSeconds = 0; _pcTimerInt = setInterval(() => { _pcSeconds++; }, 1000); }
+function _pcStopTimer() { if (_pcTimerInt) { clearInterval(_pcTimerInt); _pcTimerInt = null; } }
 let _picrossInited = false;
 
+function _picrossLineDeductions(clues, line) {
+  // Returns updated line (0=unknown, 1=filled, -1=empty) via overlap method
+  const n = line.length;
+  const result = [...line];
+  if (clues[0] === 0) { return result.map(() => -1); }
+  const minLen = clues.reduce((a,b) => a+b, 0) + clues.length - 1;
+  if (minLen > n) return result; // invalid (shouldn't happen)
+
+  // Left-most placement
+  const leftPos = [];
+  let pos = 0;
+  for (let i = 0; i < clues.length; i++) {
+    leftPos.push(pos); pos += clues[i] + 1;
+  }
+  // Right-most placement
+  const rightPos = [];
+  pos = n - clues[clues.length-1];
+  for (let i = clues.length - 1; i >= 0; i--) {
+    rightPos[i] = pos; pos -= (i > 0 ? clues[i-1] + 1 : 0);
+    if (i > 0) pos = n - clues.slice(0, i).reduce((a,b)=>a+b,0) - (i) - clues[i];
+  }
+  // Recalculate rightPos properly
+  const rp = [];
+  pos = n;
+  for (let i = clues.length - 1; i >= 0; i--) {
+    pos -= clues[i]; rp[i] = pos; pos -= 1;
+  }
+  // Overlap: cells covered by both left and right placements are definitely filled
+  for (let i = 0; i < clues.length; i++) {
+    const lStart = leftPos[i], rEnd = rp[i] + clues[i];
+    const overlapStart = rp[i], overlapEnd = leftPos[i] + clues[i];
+    for (let c = overlapStart; c < overlapEnd; c++) {
+      if (c >= 0 && c < n) result[c] = 1;
+    }
+  }
+  // Cells before first left-start are empty
+  for (let c = 0; c < leftPos[0]; c++) result[c] = -1;
+  for (let c = rp[clues.length-1] + clues[clues.length-1]; c < n; c++) result[c] = -1;
+  return result;
+}
+
+function _picrossCanSolveUniquely(size, rowClues, colClues) {
+  // Simple constraint propagation — returns true if all cells are determined
+  const board = Array(size * size).fill(0);
+  let changed = true;
+  let iters = 0;
+  while (changed && iters < size * 4) {
+    changed = false; iters++;
+    for (let r = 0; r < size; r++) {
+      const line = Array.from({length: size}, (_,c) => board[r*size+c]);
+      const result = _picrossLineDeductions(rowClues[r], line);
+      for (let c = 0; c < size; c++) {
+        if (result[c] !== 0 && board[r*size+c] === 0) { board[r*size+c] = result[c]; changed = true; }
+      }
+    }
+    for (let c = 0; c < size; c++) {
+      const line = Array.from({length: size}, (_,r) => board[r*size+c]);
+      const result = _picrossLineDeductions(colClues[c], line);
+      for (let r = 0; r < size; r++) {
+        if (result[r] !== 0 && board[r*size+c] === 0) { board[r*size+c] = result[r]; changed = true; }
+      }
+    }
+  }
+  return board.every(v => v !== 0);
+}
+
 function generatePicross(size) {
-  const density = 0.5 + Math.random() * 0.2;
-  const grid = Array.from({length: size*size}, () => Math.random() < density ? 1 : 0);
-  function getRowClue(row) {
+  function makeGrid() {
+    const density = 0.45 + Math.random() * 0.2;
+    return Array.from({length: size*size}, () => Math.random() < density ? 1 : 0);
+  }
+  function getRowClue(grid, row) {
     const clues = []; let run = 0;
     for (let c = 0; c < size; c++) {
       if (grid[row*size+c]) run++;
@@ -10705,7 +11091,7 @@ function generatePicross(size) {
     if (run) clues.push(run);
     return clues.length ? clues : [0];
   }
-  function getColClue(col) {
+  function getColClue(grid, col) {
     const clues = []; let run = 0;
     for (let r = 0; r < size; r++) {
       if (grid[r*size+col]) run++;
@@ -10714,8 +11100,18 @@ function generatePicross(size) {
     if (run) clues.push(run);
     return clues.length ? clues : [0];
   }
-  const rowClues = Array.from({length: size}, (_,r) => getRowClue(r));
-  const colClues = Array.from({length: size}, (_,c) => getColClue(c));
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const grid = makeGrid();
+    const rowClues = Array.from({length: size}, (_,r) => getRowClue(grid, r));
+    const colClues = Array.from({length: size}, (_,c) => getColClue(grid, c));
+    if (size <= 12 || _picrossCanSolveUniquely(size, rowClues, colClues)) {
+      return { size, grid, rowClues, colClues, name: `${size}×${size}` };
+    }
+  }
+  // Fallback: return last generated puzzle even if not uniquely solvable
+  const grid = makeGrid();
+  const rowClues = Array.from({length: size}, (_,r) => getRowClue(grid, r));
+  const colClues = Array.from({length: size}, (_,c) => getColClue(grid, c));
   return { size, grid, rowClues, colClues, name: `${size}×${size}` };
 }
 
@@ -10735,14 +11131,25 @@ function loadPicrossPuzzle(puzzle) {
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  _pcStartTimer();
 }
 function picrossNewPuzzle() {
   const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
   loadPicrossPuzzle(generatePicross(size));
 }
 function picrossOnWin() {
+  _pcStopTimer();
   unlockTheme('pixel');
+  unlockTheme('deepwater');
+  addCoins && addCoins(15);
   playFanfare('win');
+  const _pcRank = saveLeaderboard('picross', { time: _pcSeconds, size: _pcSize, date: Date.now() });
+  showLeaderboardToast('picross', `${_pcSeconds}s (${_pcSize}×${_pcSize})`, _pcRank);
+  toast('🎉 Picross solved! +15 🪙');
+  try {
+    if(window._currentRoomId && typeof sendRoomChatMsg==='function')
+      sendRoomChatMsg('◼ ' + (window._userName||'Someone') + ' solved a Picross puzzle!');
+  } catch(e){}
   setTimeout(() => window.abSayPicross?.('solved', _pcPuzzle?.name || null), 700);
 }
 function pcGetClues(arr, size, isRow) {
@@ -10863,6 +11270,7 @@ function resetPicross() {
   _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  _pcStartTimer();
 }
 // drag for picross
 (function() {
@@ -10887,10 +11295,20 @@ const SOL_SUITS = ['♠','♥','♦','♣'];
 const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SOL_RED   = new Set(['♥','♦']);
 let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
-let solSelected=null, solMoves=0;
+let solSelected=null, solMoves=0, solSeconds=0;
 let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
 let solDragState=null, solUndoStack=[], solFlipSet=new Set();
-let _solitaireInited=false;
+let _solitaireInited=false, _solTimerInt=null;
+
+function solStartTimer() {
+  if (_solTimerInt) return;
+  _solTimerInt = setInterval(() => {
+    solSeconds++;
+    const el = document.getElementById('sol-timer');
+    if (el) el.textContent = 'Time: ' + Math.floor(solSeconds/60) + ':' + String(solSeconds%60).padStart(2,'0');
+  }, 1000);
+}
+function solStopTimer() { clearInterval(_solTimerInt); _solTimerInt = null; }
 
 function solSaveState() {
   solUndoStack.push({
@@ -10952,7 +11370,9 @@ function newSolitaireGame(){
   }
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
-  solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
+  solSelected=null; solMoves=0; solSeconds=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
+  solStopTimer(); solStartTimer();
+  const te = document.getElementById('sol-timer'); if(te) te.textContent = 'Time: 0:00';
   solRender();
 }
 
@@ -11064,8 +11484,8 @@ function solRender(){
   }
 
   // Status
-  const st=document.getElementById('sol-status');
-  if(st) st.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
+  const movesLbl=document.getElementById('sol-moves-lbl')||document.getElementById('sol-status');
+  if(movesLbl) movesLbl.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){
@@ -11225,8 +11645,8 @@ function solCheckAutoComplete(){
   if(!allFaceUp) return;
   if(solFoundations.every(function(f){return f.length===13;})) return;
   _solAutoCompleting=true;
-  const st=document.getElementById('sol-status');
-  if(st) st.textContent='Auto-completing…';
+  const movLbl2=document.getElementById('sol-moves-lbl')||document.getElementById('sol-status');
+  if(movLbl2) movLbl2.textContent='Auto-completing…';
   setTimeout(solRunAutoComplete,200);
 }
 
@@ -11260,14 +11680,47 @@ function solRunAutoComplete(){
 }
 
 function solOnWin(){
-  unlockTheme('retro');
+  solStopTimer();
+  unlockTheme('leopard');
+  addCoins && addCoins(20);
   playFanfare('win');
+  const _solRank = saveLeaderboard('solitaire', { moves: solMoves, time: solSeconds, date: Date.now() });
+  showLeaderboardToast('solitaire', `${solMoves} moves, ${solSeconds}s`, _solRank);
   setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
+  try {
+    if(window._currentRoomId && typeof sendRoomChatMsg==='function')
+      sendRoomChatMsg('🃏 ' + (window._userName||'Someone') + ' won Solitaire in ' + solMoves + ' moves!');
+  } catch(e){}
   const banner=document.createElement('div');
-  banner.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);border-radius:inherit;z-index:200;color:#fff;font-size:22px;font-weight:bold;text-align:center;flex-direction:column;gap:8px;pointer-events:none;';
-  banner.innerHTML='<div>🎉 You Win!</div><div style="font-size:13px;opacity:.85">'+solMoves+' moves</div>';
+  banner.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:9999;color:#fff;font-size:24px;font-weight:bold;text-align:center;flex-direction:column;gap:10px;';
+  banner.innerHTML='<div style="font-size:48px">🎉</div><div>You Win!</div><div style="font-size:14px;opacity:.85">'+solMoves+' moves · +20 🪙</div>';
+  document.body.appendChild(banner);
+  setTimeout(function(){banner.remove();},4000);
+  // Classic Windows card bounce animation
   const wrap=document.getElementById('solitaire-wrap');
-  if(wrap){wrap.style.position='relative';wrap.appendChild(banner);setTimeout(function(){banner.remove();},3500);}
+  if(!wrap) return;
+  const cards=wrap.querySelectorAll('.sol-card.face');
+  cards.forEach(function(card,i){
+    setTimeout(function(){
+      const clone=card.cloneNode(true);
+      clone.style.cssText='position:fixed;z-index:10000;pointer-events:none;width:62px;height:90px;border-radius:6px;';
+      const rect=card.getBoundingClientRect();
+      clone.style.left=rect.left+'px';
+      clone.style.top=rect.top+'px';
+      document.body.appendChild(clone);
+      let x=rect.left, y=rect.top;
+      const vx=(Math.random()-0.5)*10, vy=-(4+Math.random()*6);
+      let vy2=vy;
+      function bounce(){
+        x+=vx; y+=vy2; vy2+=0.6;
+        if(y+90>window.innerHeight){vy2=-Math.abs(vy2)*0.65; y=window.innerHeight-90;}
+        clone.style.left=x+'px'; clone.style.top=y+'px';
+        if(y<window.innerHeight+100) requestAnimationFrame(bounce);
+        else clone.remove();
+      }
+      requestAnimationFrame(bounce);
+    }, i*30);
+  });
 }
 
 // ── SOLITAIRE DRAG ────────────────────────────────────
@@ -11384,10 +11837,11 @@ function openMines(show=true){
   else{w.style.display='none';}
 }
 
+let minesDiff = 'easy';
 function setMinesDiff(d){
-  if(d===0){minesW=9;minesH=9;minesCt=10;}
-  else if(d===1){minesW=16;minesH=16;minesCt=40;}
-  else if(d===2){minesW=30;minesH=16;minesCt=99;}
+  if(d===0){minesW=9;minesH=9;minesCt=10;minesDiff='easy';}
+  else if(d===1){minesW=16;minesH=16;minesCt=40;minesDiff='intermediate';}
+  else if(d===2){minesW=30;minesH=16;minesCt=99;minesDiff='expert';}
   newMinesGame();
 }
 
@@ -11612,8 +12066,10 @@ function minesCheckWin(){
     minesFlagCount=minesCt;
     minesUpdateCounter();
     playFanfare('win');
+    addCoins && addCoins(10);
     setTimeout(() => window.abSayMines?.('win', minesSeconds + 's'), 600);
-    setTimeout(function(){alert('You win! Time: '+minesSeconds+'s');},100);
+    const _minesRank = saveLeaderboard('mines', { time: minesSeconds, diff: minesDiff || 'easy', date: Date.now() });
+    showLeaderboardToast('mines', minesSeconds + 's', _minesRank);
   }
 }
 
@@ -11710,6 +12166,12 @@ function bjHandTotal(hand){
 
 function bjDeal(){
   if(!bjGameOver) return; // block re-dealing mid-hand
+  if(bjBalance<=0){
+    bjBalance=25;
+    bjUpdateBalance();
+    bjSetStatus('🏦 Loaned 25 coins — play wisely!');
+    toast('💸 You got a 25-coin loan!');
+  }
   const betInp=document.getElementById('bj-bet');
   bjBet=Math.max(1,Math.min(bjBalance,parseInt(betInp?betInp.value:10)||10));
   if(bjBet>bjBalance){bjSetStatus('Not enough credits!');return;}
@@ -11958,6 +12420,12 @@ function bjUpdateBalance(){
       <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 <span id="room-chat-tab-label">Room</span></button>
     </div>
 
+    <!-- Room quick-actions bar -->
+    <div id="board-room-bar" style="display:none;padding:4px 8px;background:rgba(0,80,160,0.08);border-bottom:1px solid rgba(0,80,160,0.12);align-items:center;gap:6px;font-size:10px;flex-wrap:wrap">
+      <span id="board-room-code" style="font-weight:700;color:var(--accent);flex:1"></span>
+      <button onclick="copyRoomLink()" style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:700">📎 Invite</button>
+    </div>
+
     <!-- Global chat pane -->
     <div class="board-chat-pane active" id="bpane-global">
       <div id="global-log" class="board-log" style="flex:1;overflow-y:auto"></div>
@@ -11975,7 +12443,7 @@ function bjUpdateBalance(){
     <div class="board-chat-pane" id="bpane-room">
       <div id="room-chat-id-bar" style="display:none;padding:4px 10px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.9);background:var(--hdr-bg);letter-spacing:.5px;flex-shrink:0"></div>
       <div id="room-log" class="board-log" style="flex:1;overflow-y:auto">
-        <div class="board-empty-log">Join or create a room to use room chat</div>
+        <div class="board-empty-log" id="room-join-hint">Join or create a room to use room chat</div>
       </div>
       <div class="board-input-area">
         <div class="board-emoji-bar" id="room-emoji-bar" style="display:none"></div>
@@ -12325,8 +12793,8 @@ function bjUpdateBalance(){
       <button class="slots-btn" onclick="adjustBet(5)">+ Bet</button>
     </div>
     <div id="slots-paytable">
-      <span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span><span>💎💎💎 = 15×</span>
-      <span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span><span>Any 3 match = 3×</span>
+      <span>🐬🐬🐬 = 75×</span><span>🎵🎵🎵 = 50×</span><span>7️⃣7️⃣7️⃣ = 20×</span>
+      <span>💎💎💎 = 15×</span><span>⭐⭐⭐ = 10×</span><span>🍒🍒🍒 = 5×</span>
       <span>2 match = 1×</span>
     </div>
   </div>
@@ -12342,6 +12810,7 @@ function bjUpdateBalance(){
       <option value="15">15×15</option>
       <option value="20">20×20</option>
     </select>
+    <button onclick="showLeaderboardModal('picross')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:4px;padding:1px 5px;font-size:11px;cursor:pointer;position:relative;z-index:1">🏆</button>
     <button onclick="openPicross(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1">✕</button>
   </div>
   <div id="picross-body">
@@ -12374,12 +12843,16 @@ function bjUpdateBalance(){
         <option value="3" selected>Draw 3</option>
         <option value="hard">Hard</option>
       </select>
+      <button class="sol-titlebtn" onclick="showLeaderboardModal('solitaire')">🏆</button>
       <button class="sol-titlebtn" onclick="solUndo()">↩</button>
       <button class="sol-titlebtn" onclick="newSolitaireGame()">New</button>
       <button class="sol-titlebtn sol-close" onclick="openSolitaire(false)">×</button>
     </div>
   </div>
-  <div id="sol-status">Moves: 0</div>
+  <div id="sol-status" style="display:flex;justify-content:space-between">
+    <span id="sol-moves-lbl">Moves: 0</span>
+    <span id="sol-timer">Time: 0:00</span>
+  </div>
   <div id="sol-area">
     <div id="sol-top-row">
       <div id="sol-stock" onclick="solDrawCard()"></div>
@@ -12398,6 +12871,7 @@ function bjUpdateBalance(){
 <div id="mines-wrap" style="display:none">
   <div class="sol-titlebar" id="mines-titlebar">
     <span>Minesweeper</span>
+    <button class="sol-titlebtn" onclick="showLeaderboardModal('mines')">🏆</button>
     <button class="sol-titlebtn sol-close" onclick="openMines(false)">×</button>
   </div>
   <div id="mines-controls">

@@ -137,8 +137,16 @@ window.initRoom = function(roomId, isHost) {
   setInterval(() => set(presRef, presData()), 25000);
 
   // Watch presence for member count + panel
+  let _prevPresenceSize = 0;
   onValue(ref(db, `rooms/${roomId}/presence`), snap => {
-    _presenceMap = snap.exists() ? snap.val() : {};
+    const newMap = snap.exists() ? snap.val() : {};
+    const newSize = Object.keys(newMap).length;
+    // Play join chime when someone new appears (skip first load and own join)
+    if (_prevPresenceSize > 0 && newSize > _prevPresenceSize) {
+      if (window.playTone) window.playTone(528, 0.14, 'sine', 0.12);
+    }
+    _prevPresenceSize = newSize;
+    _presenceMap = newMap;
     renderMembersPanel(); // count update happens inside renderMembersPanel now
   });
 
@@ -254,6 +262,9 @@ window.sendRoomMessage = function(msg, imageData) {
 };
 
 window.leaveRoom = function() {
+  sessionStorage.removeItem('aq_sess_room');
+  sessionStorage.removeItem('aq_sess_host');
+  sessionStorage.removeItem('aq_sess_ts');
   window.location.hash = '';
   window.location.reload();
 };

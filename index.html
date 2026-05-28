@@ -10991,10 +10991,78 @@ document.addEventListener('DOMContentLoaded', () => {
 let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
 let _picrossInited = false;
 
+function _picrossLineDeductions(clues, line) {
+  // Returns updated line (0=unknown, 1=filled, -1=empty) via overlap method
+  const n = line.length;
+  const result = [...line];
+  if (clues[0] === 0) { return result.map(() => -1); }
+  const minLen = clues.reduce((a,b) => a+b, 0) + clues.length - 1;
+  if (minLen > n) return result; // invalid (shouldn't happen)
+
+  // Left-most placement
+  const leftPos = [];
+  let pos = 0;
+  for (let i = 0; i < clues.length; i++) {
+    leftPos.push(pos); pos += clues[i] + 1;
+  }
+  // Right-most placement
+  const rightPos = [];
+  pos = n - clues[clues.length-1];
+  for (let i = clues.length - 1; i >= 0; i--) {
+    rightPos[i] = pos; pos -= (i > 0 ? clues[i-1] + 1 : 0);
+    if (i > 0) pos = n - clues.slice(0, i).reduce((a,b)=>a+b,0) - (i) - clues[i];
+  }
+  // Recalculate rightPos properly
+  const rp = [];
+  pos = n;
+  for (let i = clues.length - 1; i >= 0; i--) {
+    pos -= clues[i]; rp[i] = pos; pos -= 1;
+  }
+  // Overlap: cells covered by both left and right placements are definitely filled
+  for (let i = 0; i < clues.length; i++) {
+    const lStart = leftPos[i], rEnd = rp[i] + clues[i];
+    const overlapStart = rp[i], overlapEnd = leftPos[i] + clues[i];
+    for (let c = overlapStart; c < overlapEnd; c++) {
+      if (c >= 0 && c < n) result[c] = 1;
+    }
+  }
+  // Cells before first left-start are empty
+  for (let c = 0; c < leftPos[0]; c++) result[c] = -1;
+  for (let c = rp[clues.length-1] + clues[clues.length-1]; c < n; c++) result[c] = -1;
+  return result;
+}
+
+function _picrossCanSolveUniquely(size, rowClues, colClues) {
+  // Simple constraint propagation — returns true if all cells are determined
+  const board = Array(size * size).fill(0);
+  let changed = true;
+  let iters = 0;
+  while (changed && iters < size * 4) {
+    changed = false; iters++;
+    for (let r = 0; r < size; r++) {
+      const line = Array.from({length: size}, (_,c) => board[r*size+c]);
+      const result = _picrossLineDeductions(rowClues[r], line);
+      for (let c = 0; c < size; c++) {
+        if (result[c] !== 0 && board[r*size+c] === 0) { board[r*size+c] = result[c]; changed = true; }
+      }
+    }
+    for (let c = 0; c < size; c++) {
+      const line = Array.from({length: size}, (_,r) => board[r*size+c]);
+      const result = _picrossLineDeductions(colClues[c], line);
+      for (let r = 0; r < size; r++) {
+        if (result[r] !== 0 && board[r*size+c] === 0) { board[r*size+c] = result[r]; changed = true; }
+      }
+    }
+  }
+  return board.every(v => v !== 0);
+}
+
 function generatePicross(size) {
-  const density = 0.5 + Math.random() * 0.2;
-  const grid = Array.from({length: size*size}, () => Math.random() < density ? 1 : 0);
-  function getRowClue(row) {
+  function makeGrid() {
+    const density = 0.45 + Math.random() * 0.2;
+    return Array.from({length: size*size}, () => Math.random() < density ? 1 : 0);
+  }
+  function getRowClue(grid, row) {
     const clues = []; let run = 0;
     for (let c = 0; c < size; c++) {
       if (grid[row*size+c]) run++;
@@ -11003,7 +11071,7 @@ function generatePicross(size) {
     if (run) clues.push(run);
     return clues.length ? clues : [0];
   }
-  function getColClue(col) {
+  function getColClue(grid, col) {
     const clues = []; let run = 0;
     for (let r = 0; r < size; r++) {
       if (grid[r*size+col]) run++;
@@ -11012,8 +11080,18 @@ function generatePicross(size) {
     if (run) clues.push(run);
     return clues.length ? clues : [0];
   }
-  const rowClues = Array.from({length: size}, (_,r) => getRowClue(r));
-  const colClues = Array.from({length: size}, (_,c) => getColClue(c));
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const grid = makeGrid();
+    const rowClues = Array.from({length: size}, (_,r) => getRowClue(grid, r));
+    const colClues = Array.from({length: size}, (_,c) => getColClue(grid, c));
+    if (size <= 12 || _picrossCanSolveUniquely(size, rowClues, colClues)) {
+      return { size, grid, rowClues, colClues, name: `${size}×${size}` };
+    }
+  }
+  // Fallback: return last generated puzzle even if not uniquely solvable
+  const grid = makeGrid();
+  const rowClues = Array.from({length: size}, (_,r) => getRowClue(grid, r));
+  const colClues = Array.from({length: size}, (_,c) => getColClue(grid, c));
   return { size, grid, rowClues, colClues, name: `${size}×${size}` };
 }
 
@@ -11192,10 +11270,20 @@ const SOL_SUITS = ['♠','♥','♦','♣'];
 const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SOL_RED   = new Set(['♥','♦']);
 let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
-let solSelected=null, solMoves=0;
+let solSelected=null, solMoves=0, solSeconds=0;
 let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
 let solDragState=null, solUndoStack=[], solFlipSet=new Set();
-let _solitaireInited=false;
+let _solitaireInited=false, _solTimerInt=null;
+
+function solStartTimer() {
+  if (_solTimerInt) return;
+  _solTimerInt = setInterval(() => {
+    solSeconds++;
+    const el = document.getElementById('sol-timer');
+    if (el) el.textContent = 'Time: ' + Math.floor(solSeconds/60) + ':' + String(solSeconds%60).padStart(2,'0');
+  }, 1000);
+}
+function solStopTimer() { clearInterval(_solTimerInt); _solTimerInt = null; }
 
 function solSaveState() {
   solUndoStack.push({
@@ -11257,7 +11345,9 @@ function newSolitaireGame(){
   }
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
-  solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
+  solSelected=null; solMoves=0; solSeconds=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
+  solStopTimer(); solStartTimer();
+  const te = document.getElementById('sol-timer'); if(te) te.textContent = 'Time: 0:00';
   solRender();
 }
 
@@ -11369,8 +11459,8 @@ function solRender(){
   }
 
   // Status
-  const st=document.getElementById('sol-status');
-  if(st) st.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
+  const movesLbl=document.getElementById('sol-moves-lbl')||document.getElementById('sol-status');
+  if(movesLbl) movesLbl.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){
@@ -11530,8 +11620,8 @@ function solCheckAutoComplete(){
   if(!allFaceUp) return;
   if(solFoundations.every(function(f){return f.length===13;})) return;
   _solAutoCompleting=true;
-  const st=document.getElementById('sol-status');
-  if(st) st.textContent='Auto-completing…';
+  const movLbl2=document.getElementById('sol-moves-lbl')||document.getElementById('sol-status');
+  if(movLbl2) movLbl2.textContent='Auto-completing…';
   setTimeout(solRunAutoComplete,200);
 }
 
@@ -11565,10 +11655,11 @@ function solRunAutoComplete(){
 }
 
 function solOnWin(){
+  solStopTimer();
   unlockTheme('leopard');
   addCoins && addCoins(20);
   playFanfare('win');
-  saveLeaderboard('solitaire', { moves: solMoves, date: Date.now() });
+  saveLeaderboard('solitaire', { moves: solMoves, time: solSeconds, date: Date.now() });
   setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
   try {
     if(window._currentRoomId && typeof sendRoomChatMsg==='function')
@@ -12724,7 +12815,10 @@ function bjUpdateBalance(){
       <button class="sol-titlebtn sol-close" onclick="openSolitaire(false)">×</button>
     </div>
   </div>
-  <div id="sol-status">Moves: 0</div>
+  <div id="sol-status" style="display:flex;justify-content:space-between">
+    <span id="sol-moves-lbl">Moves: 0</span>
+    <span id="sol-timer">Time: 0:00</span>
+  </div>
   <div id="sol-area">
     <div id="sol-top-row">
       <div id="sol-stock" onclick="solDrawCard()"></div>

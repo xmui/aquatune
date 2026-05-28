@@ -254,6 +254,9 @@ window.sendRoomMessage = function(msg, imageData) {
 };
 
 window.leaveRoom = function() {
+  sessionStorage.removeItem('aq_sess_room');
+  sessionStorage.removeItem('aq_sess_host');
+  sessionStorage.removeItem('aq_sess_ts');
   window.location.hash = '';
   window.location.reload();
 };

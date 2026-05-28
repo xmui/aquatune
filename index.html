@@ -8783,6 +8783,35 @@ function showLeaderboardToast(game, resultStr) {
   toast(msg);
 }
 
+function showLeaderboardModal(game) {
+  const board = getLeaderboard(game);
+  const labels = { solitaire: 'Solitaire', mines: 'Minesweeper', picross: 'Picross' };
+  const title  = labels[game] || game;
+  const rows = board.length ? board.map((e, i) => {
+    let detail = '';
+    if (game === 'solitaire') detail = `${e.moves || '?'} moves · ${e.time || 0}s`;
+    else if (game === 'mines') detail = `${e.time || 0}s · ${e.diff || '?'}`;
+    else if (game === 'picross') detail = `${e.time || 0}s · ${e.size || '?'}×${e.size || '?'}`;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${medal} ${detail}</span><span style="opacity:.5;font-size:11px">${new Date(e.date||0).toLocaleDateString()}</span></div>`;
+  }).join('') : '<div style="opacity:.5;font-size:13px;padding:8px 0">No scores yet — play a game!</div>';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)';
+  modal.innerHTML = `<div style="background:var(--panel-bg);border:1.5px solid var(--border);border-radius:var(--panel-radius,12px);padding:20px 24px;min-width:280px;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong style="font-size:15px;color:var(--text)">🏆 ${title} Best Times</strong>
+      <button onclick="this.closest('[style]').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);line-height:1">×</button>
+    </div>
+    <div>${rows}</div>
+    <div style="margin-top:12px;text-align:right">
+      <button onclick="localStorage.removeItem('aq_lb_${game}');this.closest('[style]').remove();toast('Leaderboard cleared')" style="font-size:11px;opacity:.5;background:none;border:none;cursor:pointer;color:var(--text)">Clear</button>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 function saveWeatherZip() {
   const v = (document.getElementById('wx-zip-inp')?.value||'').trim();
   if (v) { _wxZip = v; localStorage.setItem(WX_ZIP_KEY, v); }
@@ -10958,6 +10987,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── PICROSS ──────────────────────────────────────────
 let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
+let _pcSeconds = 0, _pcTimerInt = null;
+function _pcStartTimer() { _pcStopTimer(); _pcSeconds = 0; _pcTimerInt = setInterval(() => { _pcSeconds++; }, 1000); }
+function _pcStopTimer() { if (_pcTimerInt) { clearInterval(_pcTimerInt); _pcTimerInt = null; } }
 let _picrossInited = false;
 
 function _picrossLineDeductions(clues, line) {
@@ -11080,16 +11112,20 @@ function loadPicrossPuzzle(puzzle) {
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  _pcStartTimer();
 }
 function picrossNewPuzzle() {
   const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
   loadPicrossPuzzle(generatePicross(size));
 }
 function picrossOnWin() {
+  _pcStopTimer();
   unlockTheme('pixel');
   unlockTheme('deepwater');
   addCoins && addCoins(15);
   playFanfare('win');
+  saveLeaderboard('picross', { time: _pcSeconds, size: _pcSize, date: Date.now() });
+  showLeaderboardToast('picross', `${_pcSeconds}s (${_pcSize}×${_pcSize})`);
   toast('🎉 Picross solved! +15 🪙');
   try {
     if(window._currentRoomId && typeof sendRoomChatMsg==='function')
@@ -11215,6 +11251,7 @@ function resetPicross() {
   _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  _pcStartTimer();
 }
 // drag for picross
 (function() {
@@ -11629,6 +11666,7 @@ function solOnWin(){
   addCoins && addCoins(20);
   playFanfare('win');
   saveLeaderboard('solitaire', { moves: solMoves, time: solSeconds, date: Date.now() });
+  showLeaderboardToast('solitaire', `${solMoves} moves, ${solSeconds}s`);
   setTimeout(function(){window.abSaySolitaire?.('win',solMoves+' moves');},600);
   try {
     if(window._currentRoomId && typeof sendRoomChatMsg==='function')
@@ -12753,6 +12791,7 @@ function bjUpdateBalance(){
       <option value="15">15×15</option>
       <option value="20">20×20</option>
     </select>
+    <button onclick="showLeaderboardModal('picross')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:4px;padding:1px 5px;font-size:11px;cursor:pointer;position:relative;z-index:1">🏆</button>
     <button onclick="openPicross(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;position:relative;z-index:1">✕</button>
   </div>
   <div id="picross-body">
@@ -12785,6 +12824,7 @@ function bjUpdateBalance(){
         <option value="3" selected>Draw 3</option>
         <option value="hard">Hard</option>
       </select>
+      <button class="sol-titlebtn" onclick="showLeaderboardModal('solitaire')">🏆</button>
       <button class="sol-titlebtn" onclick="solUndo()">↩</button>
       <button class="sol-titlebtn" onclick="newSolitaireGame()">New</button>
       <button class="sol-titlebtn sol-close" onclick="openSolitaire(false)">×</button>
@@ -12812,6 +12852,7 @@ function bjUpdateBalance(){
 <div id="mines-wrap" style="display:none">
   <div class="sol-titlebar" id="mines-titlebar">
     <span>Minesweeper</span>
+    <button class="sol-titlebtn" onclick="showLeaderboardModal('mines')">🏆</button>
     <button class="sol-titlebtn sol-close" onclick="openMines(false)">×</button>
   </div>
   <div id="mines-controls">

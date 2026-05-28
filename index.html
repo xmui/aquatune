@@ -9237,12 +9237,51 @@ function spinSlots(){
   const msg=document.getElementById('slots-msg');if(msg)msg.textContent='';
   const wl=document.getElementById('slots-win-line');if(wl)wl.textContent='';
   updateSlotsUI(); playTone(400,0.08,'square',0.1);
-  // Generate new grid and animate
+  // Build each reel strip: result symbols at TOP, many random symbols below.
+  // Animation scrolls from bottom → top (translateY: negative → 0),
+  // so symbols appear to fall DOWN into the window.
+  const SPIN_H = 84, SPIN_ROWS = 22;
+  let doneReels = 0;
   for(let r=0;r<3;r++) _slotsGrid[r]=Array.from({length:3},()=>_slotPick());
   [0,1,2].forEach(r=>{
     const strip=document.getElementById(`slot-strip-${r}`);if(!strip)return;
-    strip.style.filter='blur(3px)';
-    setTimeout(()=>{strip.style.filter='';_slotsRenderReel(r);if(r===2)setTimeout(_slotsAfterSpin,100);},350+r*130);
+    // Build strip: [result[0], result[1], result[2], ...SPIN_ROWS random]
+    const allSyms=[..._slotsGrid[r]];
+    for(let j=0;j<SPIN_ROWS;j++) allSyms.push(_slotPick());
+    strip.innerHTML='';
+    allSyms.forEach(s=>{
+      const d=document.createElement('div');
+      d.className='slot-sym'+(s.cls?' '+s.cls:'');
+      d.textContent=s.sym; strip.appendChild(d);
+    });
+    // Start with strip positioned so the LAST 3 random symbols are visible
+    const startY=-(SPIN_ROWS*SPIN_H); // negative → strip is up, we see the bottom rows
+    strip.style.transition='none';
+    strip.style.transform=`translateY(${startY}px)`;
+    strip.style.filter='blur(5px)';
+    // Stagger: reel 0 stops first, reel 2 last
+    const delay=r*220;
+    const dur=1300+r*300; // ms: 1300, 1600, 1900
+    setTimeout(()=>{
+      let t0=null;
+      function easeOut(t){return 1-Math.pow(1-t,3);}
+      function tick(now){
+        if(!t0) t0=now;
+        const t=Math.min((now-t0)/dur,1);
+        const y=startY*(1-easeOut(t)); // startY→0
+        strip.style.transform=`translateY(${y.toFixed(1)}px)`;
+        // blur fades out over first 45% of animation
+        const bl=Math.max(0,(0.45-t)/0.45*5);
+        strip.style.filter=bl>0.2?`blur(${bl.toFixed(1)}px)`:'';
+        if(t<1){requestAnimationFrame(tick);}
+        else{
+          strip.style.transform='translateY(0)';strip.style.filter='';
+          _slotsRenderReel(r); // trim to 3 symbols
+          doneReels++;if(doneReels===3)setTimeout(_slotsAfterSpin,80);
+        }
+      }
+      requestAnimationFrame(tick);
+    },delay);
   });
 }
 function _slotsAfterSpin(){

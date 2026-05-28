@@ -10819,9 +10819,13 @@ function updateRoomChatLabel(roomId) {
   const lbl = document.getElementById('room-chat-tab-label');
   const bar = document.getElementById('room-chat-id-bar');
   const hint = document.getElementById('room-join-hint');
+  const boardRoomBar = document.getElementById('board-room-bar');
+  const boardRoomCode = document.getElementById('board-room-code');
   if (lbl) lbl.textContent = roomId ? `#${roomId}` : 'Room';
   if (bar) { bar.textContent = roomId ? `🏠 Room  ·  ${roomId}` : ''; bar.style.display = roomId ? 'block' : 'none'; }
   if (hint) hint.style.display = roomId ? 'none' : '';
+  if (boardRoomBar) boardRoomBar.style.display = roomId ? 'flex' : 'none';
+  if (boardRoomCode) boardRoomCode.textContent = roomId ? `🏠 #${roomId}` : '';
 }
 // Close paint send menu on outside click
 document.addEventListener('click', e => {
@@ -12392,6 +12396,12 @@ function bjUpdateBalance(){
     <div class="board-chat-tabs">
       <button class="board-chat-tab active" id="bctab-global" onclick="switchBoardTab('global')">🌐 Global</button>
       <button class="board-chat-tab" id="bctab-room" onclick="switchBoardTab('room')">🏠 <span id="room-chat-tab-label">Room</span></button>
+    </div>
+
+    <!-- Room quick-actions bar -->
+    <div id="board-room-bar" style="display:none;padding:4px 8px;background:rgba(0,80,160,0.08);border-bottom:1px solid rgba(0,80,160,0.12);align-items:center;gap:6px;font-size:10px;flex-wrap:wrap">
+      <span id="board-room-code" style="font-weight:700;color:var(--accent);flex:1"></span>
+      <button onclick="copyRoomLink()" style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:700">📎 Invite</button>
     </div>
 
     <!-- Global chat pane -->

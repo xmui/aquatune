@@ -4148,7 +4148,12 @@ function pipedToVid(item) {
   const qs = item.url ? (item.url.split('?')[1] || '') : '';
   const id = new URLSearchParams(qs).get('v') || item.videoId || '';
   const chId = item.uploaderUrl?.split('/channel/')?.[1]?.split('/')?.[0] || '';
-  return { id, title: decodeHtml(item.title || id), channelTitle: decodeHtml(item.uploaderName || item.uploader || ''), channelId: chId, thumbnail: id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : '' };
+  return { id, title: decodeHtml(item.title || id), channelTitle: decodeHtml(item.uploaderName || item.uploader || ''), channelId: chId, thumbnail: id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : '', duration: item.duration || 0 };
+}
+function fmtDuration(s) {
+  if (!s || s <= 0) return '';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -4196,6 +4201,7 @@ function invidiousToVid(item) {
     channelTitle: item.author || '',
     channelId: item.authorId || '',
     thumbnail: item.videoId ? `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg` : '',
+    duration: item.lengthSeconds || 0,
   };
 }
 
@@ -5248,8 +5254,10 @@ document.getElementById('q').addEventListener('paste', () => {
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
 function makeResultItem(v) {
+  const dur = v.duration ? fmtDuration(v.duration) : '';
+  const longBadge = v.duration > 1800 ? '<span style="font-size:9px;background:rgba(120,80,0,0.15);color:#a06000;border-radius:4px;padding:1px 4px;margin-left:3px">📀</span>' : '';
   const el = document.createElement('div'); el.className = 'r-item';
-  el.innerHTML = `<img class="r-thumb" src="${esc(v.thumbnail)}" loading="lazy" alt="" onerror="this.style.visibility='hidden'"><div class="r-info"><div class="r-title">${esc(v.title)}</div><div class="r-ch">${esc(v.channelTitle)}</div></div><div class="r-acts"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb" title="Play after current song">&#9654;Next</button><button class="mb">+PL</button></div>`;
+  el.innerHTML = `<img class="r-thumb" src="${esc(v.thumbnail)}" loading="lazy" alt="" onerror="this.style.visibility='hidden'"><div class="r-info"><div class="r-title">${esc(v.title)}</div><div class="r-ch">${esc(v.channelTitle)}${dur ? `<span style="font-size:9px;opacity:.6;margin-left:4px">${dur}</span>` : ''}${longBadge}</div></div><div class="r-acts"><button class="mb">Play</button><button class="mb">+Q</button><button class="mb" title="Play after current song">&#9654;Next</button><button class="mb">+PL</button></div>`;
   const [btnPlay, btnQ, btnN, btnPL] = el.querySelectorAll('.mb');
   btnPlay.onclick = e => { e.stopPropagation(); playVideo(v); };
   btnQ.onclick    = e => { e.stopPropagation(); addToQueue(v); };

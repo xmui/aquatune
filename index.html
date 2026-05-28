@@ -3560,7 +3560,6 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div id="auth-area">
       <span id="coin-display" style="color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;gap:3px;opacity:0.9">🪙 <span id="coin-count">0</span></span>
       <span id="chat-badge" style="display:none"></span>
-      <span id="coin-display">🪙 <span id="coin-count">0</span></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
 
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
@@ -9283,7 +9282,8 @@ function playBoardDing() {
 function updateChatBadge(posts) {
   const badge = document.getElementById('chat-badge');
   if (!badge) return;
-  const isOpen = document.getElementById('board-overlay').classList.contains('show');
+  const isOpen = document.getElementById('board-overlay').classList.contains('show')
+    || document.getElementById('main').classList.contains('chat-open');
   if (isOpen) { badge.style.display = 'none'; return; }
   const unseen = posts.filter(p => p.ts > _lastSeenPostTs).length;
   const mobBadge = document.getElementById('mob-chat-tab-badge');

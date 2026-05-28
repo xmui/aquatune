@@ -4866,12 +4866,14 @@ function onState(e) {
       setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
       return;
     }
+    stopCoinEarn?.();
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     if (window._canControl && !window._applyingRemote && e.data === S.PAUSED) window.broadcastRoomState?.();
   } else if (e.data === S.ENDED) {
+    stopCoinEarn?.();
     playing = false; document.getElementById('play-btn').classList.remove('playing'); onEnded();
     if (rBtn) rBtn.textContent = '▶';
     if (window.__beatUpdateFn) window.__beatUpdateFn(false);

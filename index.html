@@ -348,9 +348,10 @@
     #viz-opacity-inp { width:70px; accent-color:#fff; cursor:pointer; }
     #viz-canvas-wrap { position:absolute; inset:0; z-index:10; }
     #viz-canvas-wrap:hover #viz-preset-bar { display:flex !important; }
-    #viz-toggle-btn { background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.25); border-radius:8px;
-      color:rgba(255,255,255,0.7); font-size:11px; padding:3px 8px; cursor:pointer; transition:all .15s; }
-    #viz-toggle-btn:hover,#viz-toggle-btn.active { background:rgba(140,0,255,0.5); border-color:rgba(200,100,255,0.6); color:#fff; }
+    #viz-toggle-btn { background:transparent; border:1px solid rgba(255,255,255,0.18); border-radius:6px;
+      color:rgba(255,255,255,0.6); font-size:12px; padding:2px 6px; cursor:pointer; transition:all .15s;
+      line-height:1; flex-shrink:0; }
+    #viz-toggle-btn:hover,#viz-toggle-btn.active { background:rgba(140,0,255,0.45); border-color:rgba(200,100,255,0.6); color:#fff; }
 
     /* info strip */
     #info-strip {
@@ -3604,8 +3605,6 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
-      <button id="viz-toggle-btn" onclick="toggleVizOverlay()" title="Visualizer overlay">🌀</button>
-
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
@@ -3792,6 +3791,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           <span class="vi">Vol</span>
           <input id="vol" type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
           <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix" style="display:none">Automix</button>
+          <button id="viz-toggle-btn" onclick="toggleVizOverlay()" title="Visualizer overlay">🌀</button>
         </div>
       </div>
     </div>
@@ -8906,8 +8906,17 @@ function _getVizData() {
   }
   const t = Date.now() / 1000, amp = window.playing ? 1 : 0.04, N = 128;
   const freq = new Uint8Array(N), time = new Uint8Array(N);
+  // Layered sines to mimic a real spectrum: bass hump at low bins, rolling mids, sparkle highs
+  const bass   = Math.abs(Math.sin(t * 1.1)) * 0.85 + Math.abs(Math.sin(t * 0.7)) * 0.15;
+  const mid    = Math.abs(Math.sin(t * 2.3 + 1)) * 0.6 + Math.abs(Math.sin(t * 1.7)) * 0.4;
+  const beat   = Math.pow(Math.max(0, Math.sin(t * 3.14)), 6); // kick transient
   for (let i = 0; i < N; i++) {
-    freq[i] = amp * 255 * Math.abs(Math.sin(t * (0.4 + i * 0.05) + i * 0.2));
+    const norm = i / N;
+    const bassEnv  = Math.exp(-norm * 6)  * (bass + beat * 0.8);
+    const midEnv   = Math.exp(-Math.pow(norm - 0.25, 2) * 30) * mid;
+    const highEnv  = norm > 0.5 ? Math.abs(Math.sin(t * 4.1 + i * 0.3)) * 0.25 * (1 - norm) : 0;
+    const noise    = (Math.random() * 0.08 - 0.04);
+    freq[i] = Math.min(255, amp * 255 * Math.max(0, bassEnv + midEnv + highEnv + noise));
     time[i] = 128 + amp * 90 * Math.sin(t * 2.5 + i * 0.12);
   }
   return { freq, time, live: false };

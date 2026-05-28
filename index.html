@@ -3652,9 +3652,9 @@ body.perf-mode #aqua-gun { display: none !important; }
           <div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>
         </div>
         <div id="pl-wrap">
-          <div class="sec-hdr">
-            <span class="sec-ttl">Playlists</span>
-            <div class="sec-btns">
+          <div class="sec-hdr" style="cursor:pointer" onclick="togglePlSection()" title="Toggle playlists">
+            <span class="sec-ttl" style="display:flex;align-items:center;gap:5px">Playlists<span id="pl-toggle-arrow" style="font-size:9px;opacity:.6">▼</span></span>
+            <div class="sec-btns" onclick="event.stopPropagation()">
               <div class="ico-btn" onclick="openSessionMix()" title="Session Mix — create playlist from history">S</div>
               <div class="ico-btn" onclick="addYtPlPrompt()" title="Add YouTube playlist">Y</div>
               <div class="ico-btn" onclick="newPlaylistPrompt()" title="New local playlist">+</div>
@@ -6009,6 +6009,14 @@ function deletePlaylist(id, e) {
   toast('Playlist deleted');
   renderPls();
 }
+let _plSectionOpen = true;
+function togglePlSection() {
+  _plSectionOpen = !_plSectionOpen;
+  const list = document.getElementById('pl-list');
+  const arrow = document.getElementById('pl-toggle-arrow');
+  if (list) list.style.display = _plSectionOpen ? '' : 'none';
+  if (arrow) arrow.textContent = _plSectionOpen ? '▼' : '▶';
+}
 function renderPls() {
   const box=document.getElementById('pl-list');
   if (!playlists.length) { box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:5px 7px">No playlists yet</div>'; return; }
@@ -6025,7 +6033,7 @@ function viewPl(id) {
   activePlId=id; renderPls();
   const box=document.getElementById('results'); box.innerHTML='';
   const hdr=document.createElement('div'); hdr.id='pl-view-hdr';
-  hdr.innerHTML=`<button id="back-btn" onclick="backToSearch()">&#8592;</button><span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pl.name)}</span><button class="mb" onclick="playPl(${id})" style="padding:3px 8px">Play all</button>`;
+  hdr.innerHTML=`<button id="back-btn" onclick="backToSearch()">&#8592;</button><span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pl.name)}</span><button class="mb" onclick="playPl(${id})" style="padding:3px 8px">▶ All</button><button class="mb" onclick="shufflePlayPl(${id})" style="padding:3px 8px">🔀</button><button class="mb" onclick="queueAllPl(${id})" style="padding:3px 6px">+Q</button>`;
   box.appendChild(hdr);
   if (!pl.videos.length) { const e=document.createElement('div'); e.className='empty'; e.textContent='Playlist is empty'; box.appendChild(e); return; }
   pl.videos.forEach(v => {
@@ -6037,7 +6045,21 @@ function viewPl(id) {
   });
 }
 async function viewYtPl(pl) { activePlId=pl.id; renderPls(); document.getElementById('q').value=pl.ytId; await loadYtPlaylist(pl.ytId); }
-function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); renderQueue(); toast(`Playing: ${pl.name}`); }
+function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); origQueue=[...queue]; renderQueue(); toast(`Playing: ${pl.name}`); }
+function shufflePlayPl(id) {
+  if (_guestBlocked()) return;
+  const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return;
+  const shuffled=[...pl.videos];
+  for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+  playVideo(shuffled[0]); queue=shuffled.slice(1); origQueue=[...queue]; renderQueue();
+  toast(`🔀 Shuffling: ${pl.name}`);
+}
+function queueAllPl(id) {
+  if (_guestBlocked()) return;
+  const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return;
+  pl.videos.forEach(v=>addToQueue(v));
+  toast(`+${pl.videos.length} to queue`);
+}
 function backToSearch() { activePlId=null; renderPls(); document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
 function newPlaylistPrompt() { document.getElementById('pl-name-inp').value=''; openModal('pl-modal'); setTimeout(()=>document.getElementById('pl-name-inp').focus(),80); }
 function confirmNewPl() { const name=document.getElementById('pl-name-inp').value.trim(); if(!name) return; playlists.push({id:Date.now(),name,videos:[]}); savePls(); closeModal('pl-modal'); toast(`Playlist "${name}" created`); }

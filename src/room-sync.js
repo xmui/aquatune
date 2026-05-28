@@ -137,8 +137,24 @@ window.initRoom = function(roomId, isHost) {
   setInterval(() => set(presRef, presData()), 25000);
 
   // Watch presence for member count + panel
+  let _prevPresenceKeys = new Set();
   onValue(ref(db, `rooms/${roomId}/presence`), snap => {
-    _presenceMap = snap.exists() ? snap.val() : {};
+    const newMap = snap.exists() ? snap.val() : {};
+    const newKeys = new Set(Object.keys(newMap));
+    // Play join chime for newly arrived users (not on first load, not for self)
+    if (_prevPresenceKeys.size > 0) {
+      for (const uid of newKeys) {
+        if (!_prevPresenceKeys.has(uid) && uid !== myUserId) {
+          window.playJoinChime?.();
+          // Post a join message to room chat
+          const username = newMap[uid]?.username || 'Someone';
+          window.appendRoomChatMsg?.({ username: '🔔 System', text: `${username} joined the room`, ts: Date.now(), system: true });
+          break;
+        }
+      }
+    }
+    _prevPresenceKeys = newKeys;
+    _presenceMap = newMap;
     renderMembersPanel(); // count update happens inside renderMembersPanel now
   });
 

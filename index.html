@@ -46,39 +46,7 @@
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
     }
-    .orb { position:absolute; border-radius:50%; }
-    /* Large white glowing orb — top-left */
-    .o1 { width:700px;height:700px;
-          background:radial-gradient(circle at 38% 38%, rgba(255,255,255,0.94) 0%, rgba(210,242,255,0.65) 50%, transparent 78%);
-          filter:blur(52px); top:-190px;left:-180px; animation:orbA 14s ease-in-out infinite; }
-    /* Aqua tinted orb — bottom-right */
-    .o2 { width:560px;height:560px;
-          background:radial-gradient(circle at 52% 48%, rgba(160,232,255,0.78) 0%, rgba(100,210,250,0.5) 50%, transparent 78%);
-          filter:blur(65px); bottom:-150px;right:-100px; animation:orbB 18s ease-in-out infinite; }
-    /* Accent tint orb — center-right drift */
-    .o3 { width:420px;height:420px;
-          background:radial-gradient(circle at 50% 50%, rgba(0,200,240,0.22) 0%, rgba(0,180,220,0.10) 55%, transparent 80%);
-          filter:blur(48px); top:36%;left:40%; animation:orbC 22s ease-in-out infinite; }
-    @keyframes orbA {
-      0%   { transform:translate(0,0) scale(1); }
-      22%  { transform:translate(90px,-60px) scale(1.08); }
-      50%  { transform:translate(-70px,50px) scale(0.93); }
-      78%  { transform:translate(40px,80px) scale(1.05); }
-      100% { transform:translate(0,0) scale(1); }
-    }
-    @keyframes orbB {
-      0%   { transform:translate(0,0) scale(1); }
-      30%  { transform:translate(-100px,70px) scale(1.1); }
-      60%  { transform:translate(60px,-80px) scale(0.94); }
-      85%  { transform:translate(-40px,30px) scale(1.04); }
-      100% { transform:translate(0,0) scale(1); }
-    }
-    @keyframes orbC {
-      0%   { transform:translate(0,0) scale(1); }
-      35%  { transform:translate(110px,-90px) scale(1.15); }
-      65%  { transform:translate(-80px,60px) scale(0.9); }
-      100% { transform:translate(0,0) scale(1); }
-    }
+    .orb { display:none; }
 
     /* ── APP SHELL ──────────────────────────────────────── */
     #app { position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;padding:8px 12px 12px;gap:12px; }
@@ -3531,7 +3499,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
   </div>
 </div>
-<div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div id="bg"></div>
 <div id="app">
 
   <!-- HEADER -->

@@ -12950,39 +12950,39 @@ function bjUpdateBalance(){
 <script type="module" src="/src/room-sync.js"></script>
 
 <!-- SLOT MACHINE -->
-<div id="slots-wrap">
-  <div id="slots-titlebar">
-    <span>🎰 AquaSlots</span>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span id="slots-credits" class="aq-credits-display" style="font-size:14px;font-weight:800;color:#ffd700"></span>
-      <button onclick="toggleSlots()" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
-    </div>
-  </div>
-  <div id="slots-body">
-    <div id="slots-free-spins-banner"></div>
-    <div id="slots-reels">
-      <div class="slot-reel" id="slot-reel-0"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-0"></div></div>
-      <div class="slot-reel" id="slot-reel-1"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-1"></div></div>
-      <div class="slot-reel" id="slot-reel-2"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-2"></div></div>
-    </div>
-    <div id="slots-win-line"></div>
-    <div id="slots-msg"></div>
-    <div id="slots-bet-row">
-      <span id="slots-bet-label">Bet:</span>
-      <button class="slots-btn" onclick="slotsAdjustBet(-5)">−</button>
-      <input id="slots-bet-inp" type="number" min="1" value="10" style="width:54px;text-align:center;background:rgba(0,0,0,0.4);border:1px solid rgba(180,80,255,0.3);border-radius:6px;color:#ffd700;font-size:13px;font-weight:700;padding:3px 6px">
-      <button class="slots-btn" onclick="slotsAdjustBet(5)">+</button>
-    </div>
-    <div id="slots-controls">
-      <button id="slots-spin-btn" class="slots-btn slots-spin" onclick="spinSlots()">SPIN 🎰</button>
-    </div>
-    <div id="slots-paytable">
-      <span>🃏 Wild</span><span>💫×3 Free Spins</span><span>💎×3 = 50×</span>
-      <span>👑×3 = 30×</span><span>🎵×3 = 15×</span><span>⭐×3 = 8×</span>
-      <span>🍒×3 = 4×</span><span>🍋×3 = 2×</span><span>5 paylines</span>
-    </div>
-  </div>
-</div>
+      <div id="slots-wrap">
+        <div id="slots-titlebar">
+          <span>🎰 AquaSlots</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="slots-credits" class="aq-credits-display" style="font-size:14px;font-weight:800;color:#ffd700"></span>
+            <button onclick="toggleSlots()" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+          </div>
+        </div>
+        <div id="slots-body">
+          <div id="slots-free-spins-banner"></div>
+          <div id="slots-reels">
+            <div class="slot-reel" id="slot-reel-0"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-0"></div></div>
+            <div class="slot-reel" id="slot-reel-1"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-1"></div></div>
+            <div class="slot-reel" id="slot-reel-2"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-2"></div></div>
+          </div>
+          <div id="slots-win-line"></div>
+          <div id="slots-msg"></div>
+          <div id="slots-bet-row">
+            <span id="slots-bet-label">Bet:</span>
+            <button class="slots-btn" onclick="slotsAdjustBet(-5)">−</button>
+            <input id="slots-bet-inp" type="number" min="1" value="10">
+            <button class="slots-btn" onclick="slotsAdjustBet(5)">+</button>
+          </div>
+          <div id="slots-controls">
+            <button id="slots-spin-btn" class="slots-btn slots-spin" onclick="spinSlots()">SPIN 🎰</button>
+          </div>
+          <div id="slots-paytable">
+            <span>🃏 Wild</span><span>💫×3 Free Spins</span><span>💎×3 = 50×</span>
+            <span>👑×3 = 30×</span><span>🎵×3 = 15×</span><span>⭐×3 = 8×</span>
+            <span>🍒×3 = 4×</span><span>🍋×3 = 2×</span><span>5 lines</span>
+          </div>
+        </div>
+      </div>
 
 <!-- PICROSS -->
 <div id="picross-wrap">

@@ -7031,12 +7031,12 @@ const APPS = {
   settings:  { el:'win-settings',   name:'Settings' },
   synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout(), nativeDrag:true },
   paint:     { el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
-  slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots() },
-  solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire() },
-  picross:   { el:'picross-wrap',   name:'Picross',    tb:'#picross-titlebar',   openFn:()=>openPicross() },
-  mines:     { el:'mines-wrap',     name:'Minesweeper',tb:'#mines-titlebar',     openFn:()=>openMines() },
-  blackjack: { el:'blackjack-wrap', name:'Blackjack',  tb:'#blackjack-titlebar', openFn:()=>openBlackjack() },
-  rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm() },
+  slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots(),     nativeDrag:true },
+  solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire(),   nativeDrag:true },
+  picross:   { el:'picross-wrap',   name:'Picross',    tb:'#picross-titlebar',   openFn:()=>openPicross(),     nativeDrag:true },
+  mines:     { el:'mines-wrap',     name:'Minesweeper',tb:'#mines-titlebar',     openFn:()=>openMines(),       nativeDrag:true },
+  blackjack: { el:'blackjack-wrap', name:'Blackjack',  tb:'#blackjack-titlebar', openFn:()=>openBlackjack(),   nativeDrag:true },
+  rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
 const OS = {

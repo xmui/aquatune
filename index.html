@@ -133,6 +133,8 @@
     #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
     .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
     #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
+    #hdr-credits { font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
+    #hdr-credits:hover { background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.4); }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -3595,6 +3597,7 @@ body.perf-mode #aqua-gun { display: none !important; }
         <span id="wx-icon">🌤️</span>
         <span id="wx-temp">--°F</span>
       </div>
+      <span id="hdr-credits" class="aq-credits-display" onclick="claimDailyCredits()" title="Claim daily credits">💰 100</span>
     </div>
     <div id="room-badge">
       <span id="room-badge-code"></span>
@@ -9240,7 +9243,7 @@ function spinSlots(){
     slotsBet=Math.max(1,Math.min(aqGetCredits(),slotsBet));
     if(aqGetCredits()<slotsBet){
       const msg=document.getElementById('slots-msg');if(msg)msg.textContent='Not enough credits!';
-      if(aqGetCredits()<=0){aqSetCredits(25);if(window.toast)window.toast('🎰 Back to 25 credits');updateSlotsUI();}
+      if(aqGetCredits()<=0&&window.toast)window.toast('Out of credits — claim your daily bonus 🎁');
       return;
     }
     aqSetCredits(aqGetCredits()-slotsBet);
@@ -12297,7 +12300,8 @@ function aqGetCredits() {
   return v === null ? (localStorage.setItem('aq_credits','100'), 100) : (parseInt(v,10)||0);
 }
 function aqSetCredits(n) {
-  localStorage.setItem('aq_credits', Math.max(0, Math.round(n)));
+  const safe = isFinite(n) ? Math.max(0, Math.round(n)) : aqGetCredits();
+  localStorage.setItem('aq_credits', safe);
   aqRefreshCreditDisplays();
 }
 function aqAddCredits(n) { aqSetCredits(aqGetCredits() + n); }
@@ -12331,6 +12335,8 @@ function updateDailyClaimUI() {
   }
 }
 setInterval(updateDailyClaimUI, 1000);
+// Populate header credit badge (and any other displays) once on load
+aqRefreshCreditDisplays();
 
 // ── BLACKJACK ────────────────────────────────────────
 const BJ_SUITS=['♠','♥','♦','♣'];
@@ -12584,8 +12590,7 @@ function bjUpdateBalance(){
   const el=document.getElementById('bj-bal');
   if(el) el.textContent=aqGetCredits(); aqRefreshCreditDisplays();
   if(aqGetCredits()<=0){
-    bjSetStatus("You're out! Back to 25 credits...");
-    setTimeout(function(){aqSetCredits(25); bjUpdateBalance();bjSetStatus('');bjRender();},1500);
+    bjSetStatus("Out of credits! Claim your daily bonus 🎁");
   }
 }
 

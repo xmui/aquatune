@@ -591,10 +591,10 @@
 
     #synth-flyout {
       position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:min(860px, 96vw); min-width:340px; height:520px; max-height:92vh;
-      background:var(--synth-bg, linear-gradient(170deg, rgba(255,255,255,0.97) 0%, rgba(218,238,255,0.94) 100%));
+      width:min(860px, 96vw); min-width:340px; height:540px; max-height:92vh;
+      background:var(--panel);
       backdrop-filter:blur(28px) saturate(1.5);
-      border:2px solid rgba(255,255,255,0.85);
+      border:1.5px solid var(--border);
       border-radius:12px 12px 8px 8px;
       box-shadow:0 24px 80px rgba(0,60,150,0.4);
       z-index:450;
@@ -603,24 +603,32 @@
     #synth-flyout.open { display:flex; }
     [data-scheme=dark] #synth-flyout { background: rgba(8,20,50,0.98); border-color: rgba(56,189,248,0.3); }
 
-    /* Header bar — matches paint/chat titlebar */
-    .sf-header {
-      display:flex; align-items:center; gap:10px; padding:5px 10px 6px; flex-shrink:0;
+    /* AquaSynth titlebar (drag handle, title, close-right) */
+    #synth-titlebar {
+      display:flex; align-items:center; gap:8px; padding:5px 10px 6px; flex-shrink:0;
       background:var(--hdr-bg);
       box-shadow:0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
-      position:relative; overflow:visible; cursor:move;
-      border-radius:10px 10px 0 0; user-select:none;
+      position:relative; overflow:hidden; cursor:move;
+      border-radius:12px 12px 0 0; user-select:none;
     }
-    .sf-header::after {
+    #synth-titlebar::after {
       content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
       background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%,rgba(255,255,255,0) 100%);
-      border-radius:10px 10px 0 0;
+      border-radius:12px 12px 0 0;
     }
-    .sf-brand {
-      font-size:10px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
-      color:rgba(255,255,255,0.92); text-shadow:0 1px 3px rgba(0,0,0,0.25); white-space:nowrap; z-index:1; flex-shrink:0;
+    /* Transport controls row */
+    .sf-header {
+      display:flex; align-items:center; gap:10px; padding:5px 10px 6px; flex-shrink:0;
+      background:var(--hdr-bg); border-top:1px solid rgba(255,255,255,0.1);
+      position:relative; overflow:visible;
     }
-    .sf-drag { display:flex; align-items:center; color:rgba(255,255,255,0.55); font-size:14px; cursor:move; padding:0 4px; z-index:1; flex:1; user-select:none; justify-content:center; }
+    .sf-brand { display:none; }
+    .sf-drag { display:none; }
+    #sf-step-row {
+      display:flex; align-items:center; gap:6px; padding:3px 10px 4px; flex-shrink:0;
+      background:var(--synth-bg, var(--panel));
+      border-bottom:1px solid rgba(255,255,255,0.1);
+    }
     .sf-transport { display:flex; align-items:center; gap:5px; z-index:1; overflow-x:auto; flex:1; min-width:0; scrollbar-width:none; }
     .sf-transport::-webkit-scrollbar { display:none; }
     .sf-close { background:rgba(200,40,40,0.7); border:1px solid rgba(255,255,255,0.4); color:#fff; border-radius:50%; width:18px; height:18px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1; line-height:1; padding:0; transition:background .12s; margin-left:6px; }
@@ -1202,14 +1210,17 @@
     #slots-wrap.open { display:flex; }
     /* ── Beat Tap rhythm game ── */
     #rhythm-wrap { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:392px; max-width:96vw; border-radius:14px; z-index:810; flex-direction:column;
-      background:linear-gradient(160deg,#05121f 0%,#0a0a25 50%,#1a0530 100%);
-      border:1.5px solid rgba(80,200,255,0.4); box-shadow:0 0 60px rgba(0,180,255,0.22),0 20px 60px rgba(0,0,0,0.7); }
+      width:392px; max-width:96vw; border-radius:12px 12px 8px 8px; z-index:810; flex-direction:column;
+      background:var(--panel); border:1.5px solid var(--border);
+      box-shadow:0 20px 60px rgba(0,40,120,0.25); }
     #rhythm-wrap.open { display:flex; }
-    #rhythm-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
-      background:linear-gradient(180deg,rgba(0,140,220,0.5),rgba(40,10,120,0.4));
-      border-radius:12px 12px 0 0; border-bottom:1px solid rgba(80,200,255,0.25); }
-    #rhythm-titlebar span { font-size:14px; font-weight:800; color:#cdeeff; letter-spacing:0.5px; }
+    #rhythm-titlebar { display:flex; align-items:center; justify-content:space-between; padding:5px 8px 6px;
+      background:var(--hdr-bg); border-radius:10px 10px 0 0; cursor:move; user-select:none;
+      position:relative; overflow:hidden; }
+    #rhythm-titlebar::after { content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%);
+      border-radius:10px 10px 0 0; }
+    #rhythm-titlebar span { font-size:13px; font-weight:700; color:#fff; letter-spacing:0.3px; position:relative; z-index:1; }
     #rhythm-body { padding:12px 14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
     #rhythm-canvas { width:100%; max-width:360px; border-radius:10px; background:rgba(0,0,0,0.35);
       border:1px solid rgba(120,200,255,0.18); touch-action:manipulation; }
@@ -1221,7 +1232,7 @@
     #rhythm-controls { display:flex; gap:8px; align-items:center; width:100%; max-width:360px; justify-content:center; }
     #rhythm-start-btn { font-size:13px; font-weight:800; padding:6px 22px; border-radius:10px; cursor:pointer;
       color:#04121f; background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
-    #rhythm-msg { font-size:11px; color:rgba(180,220,255,0.7); text-align:center; min-height:14px; }
+    #rhythm-msg { font-size:11px; color:var(--text2); text-align:center; min-height:14px; }
     #slots-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
       background:linear-gradient(180deg,rgba(160,30,220,0.6),rgba(80,10,150,0.4));
       border-radius:12px 12px 0 0; border-bottom:1px solid rgba(180,80,255,0.25); }
@@ -3631,13 +3642,7 @@ body.perf-mode #aqua-gun { display: none !important; }
    THEME REDESIGNS (appended — later rules win on equal specificity)
    ════════════════════════════════════════════════════════════════ */
 
-/* ── SNOW LEOPARD (macos): authentic brushed aluminum ── */
-[data-era=macos] #hdr {
-  background: linear-gradient(180deg,#fcfcfc 0%,#dcdcdc 50%,#c4c4c4 51%,#d2d2d2 100%) !important;
-  border-bottom:1px solid #909090 !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95) !important;
-}
-[data-era=macos] #hdr::after { display:none !important; }
+/* ── SILVER (macos): accent-blue header ── */
 [data-era=macos] #hdr-clock, [data-era=macos] #wx-temp, [data-era=macos] #hdr-credits,
 [data-era=macos] #room-badge-code, [data-era=macos] #room-badge-members {
   color:#333 !important; text-shadow:0 1px 0 rgba(255,255,255,0.7) !important;
@@ -4250,7 +4255,7 @@ body.immersive #immersive-bg.active {
   <div class="settings-section-hdr">Appearance</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">macOS</button>
+    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Silver</button>
     <button class="theme-swatch"   data-theme="myspace"   onclick="selectTheme('myspace',this)">My Space</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
@@ -7849,10 +7854,10 @@ function toggleSynthFlyout() {
     document.getElementById('bpm-inp').addEventListener('input', e => {
       seqBpm = Math.max(40, Math.min(240, parseInt(e.target.value)||128));
     });
-    // Draggable — allow dragging by header except buttons/inputs/transport
-    const hdr = fl.querySelector('.sf-header');
+    // Draggable — grab the dedicated titlebar row
+    const hdr = fl.querySelector('#synth-titlebar');
     hdr.addEventListener('mousedown', e => {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('.sf-transport')) return;
+      if (e.target.tagName === 'BUTTON') return;
       const r = fl.getBoundingClientRect();
       fl.style.transform = 'none';
       fl.style.left = r.left + 'px'; fl.style.top = r.top + 'px';
@@ -13533,10 +13538,12 @@ function bjUpdateBalance(){
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->
 <div id="synth-flyout">
 
-  <div class="sf-header">
+  <div id="synth-titlebar">
+    <span style="flex:1;font-size:13px;font-weight:700;color:#fff;user-select:none;position:relative;z-index:1">🎹 AquaTune Studio</span>
     <button class="sf-close" onclick="toggleSynthFlyout()" title="Close">✕</button>
-    <span class="sf-brand">🎹 AquaTune Studio</span>
-    <span class="sf-drag" title="Drag to move">⠿</span>
+  </div>
+
+  <div class="sf-header">
     <canvas id="studio-osc" width="140" height="26" style="border-radius:4px;background:rgba(0,0,0,0.25);vertical-align:middle;margin-right:4px;flex-shrink:0"></canvas>
     <div class="sf-transport">
       <button class="t-btn seq-play-btn" onclick="seqPlay()">▶ Play</button>
@@ -13544,16 +13551,18 @@ function bjUpdateBalance(){
       <input class="bpm-inp" id="bpm-inp" type="number" min="40" max="240" value="128" oninput="seqBpm=Math.max(40,Math.min(240,parseInt(this.value)||128))">
       <span class="bpm-lbl">BPM</span>
       <button class="t-btn" onclick="exportMidi()" title="Export MIDI">💾 MIDI</button>
-      <span style="display:inline-block;width:1px;height:16px;background:rgba(255,255,255,0.3);margin:0 2px;vertical-align:middle"></span>
-      <span class="bpm-lbl">Steps</span>
-      <button class="t-btn stepcount-btn sel" data-steps="16" onclick="changeStepCount(16)">16</button>
-      <button class="t-btn stepcount-btn" data-steps="32" onclick="changeStepCount(32)">32</button>
-      <button class="t-btn stepcount-btn" data-steps="64" onclick="changeStepCount(64)">64</button>
       <span class="bpm-lbl" style="margin-left:4px">Swing</span>
       <input id="swing-inp" type="range" min="0" max="50" step="1" value="0"
              style="width:44px;height:5px;accent-color:rgba(255,255,255,0.85);cursor:pointer;vertical-align:middle"
              oninput="seqSwing=parseInt(this.value)">
     </div>
+  </div>
+
+  <div id="sf-step-row">
+    <span class="bpm-lbl">Steps:</span>
+    <button class="t-btn stepcount-btn sel" data-steps="16" onclick="changeStepCount(16)">16</button>
+    <button class="t-btn stepcount-btn" data-steps="32" onclick="changeStepCount(32)">32</button>
+    <button class="t-btn stepcount-btn" data-steps="64" onclick="changeStepCount(64)">64</button>
   </div>
 
   <div class="sf-tabs">

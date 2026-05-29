@@ -288,6 +288,9 @@ window.initRoom = function(roomId, isHost, opts) {
   const codeEl = document.getElementById('room-badge-code');
   if (badge)  badge.style.display = 'flex';
   if (codeEl) codeEl.textContent  = `#${roomId}${isHost ? ' 👑' : ''}`;
+
+  // Host: reveal the (empty) song-requests badge
+  if (isHost) window.renderRequestsPanel?.();
 };
 
 // Host grants/revokes DJ control to a guest

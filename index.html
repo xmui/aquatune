@@ -2101,6 +2101,20 @@
 .room-member-btn.revoke { border-color: rgba(200,40,40,0.4); color: #c02020; }
 .room-member-btn.revoke:hover { background: rgba(200,40,40,0.85); color: #fff; border-color: transparent; }
 [data-scheme=dark] #room-members-panel { background: rgba(8,20,50,0.98); }
+#room-requests-panel {
+  display: none; position: fixed; z-index: 900;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0,40,120,0.22);
+  min-width: 240px; max-width: 320px; overflow: hidden; flex-direction: column;
+}
+#room-requests-panel.open { display: flex; }
+#room-requests-list { max-height: 320px; overflow-y: auto; }
+.room-req-thumb { width: 40px; height: 30px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.room-req-info { flex: 1; min-width: 0; }
+.room-req-title { font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-req-by { font-size: 9px; color: var(--text2); }
+#room-requests-badge { background: rgba(255,160,0,0.25); border: 1px solid rgba(255,180,0,0.4); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+[data-scheme=dark] #room-requests-panel { background: rgba(8,20,50,0.98); }
 
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
@@ -3629,6 +3643,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div id="room-badge">
       <span id="room-badge-code"></span>
       <span id="room-badge-members" onclick="toggleMembersPanel()" style="cursor:pointer" title="Members">👤 1</span>
+      <span id="room-requests-badge" onclick="toggleRequestsPanel()" style="cursor:pointer;display:none" title="Song requests">🎵 <span id="room-requests-count">0</span></span>
       <button onclick="copyRoomLink()" title="Copy room link">🔗</button>
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
@@ -5344,7 +5359,7 @@ function makePlaylistResult(it) {
 // ─────────────────────────────────────────────────────────
 function addToQueue(v) {
   if (window._currentRoomId && !window._canControl) {
-    window.guestAddToRoomQueue?.(v);
+    window.requestSong?.(v); // gated: host must approve
     return;
   }
   queue.push(v);
@@ -5355,7 +5370,7 @@ function addToQueue(v) {
 }
 function playNext(v) {
   if (window._currentRoomId && !window._canControl) {
-    window.guestAddToRoomQueue?.(v);
+    window.requestSong?.(v); // gated: host must approve
     return;
   }
   // Insert at position 0 so it plays immediately after the current song (queue is consumed by shift())
@@ -10850,6 +10865,74 @@ document.addEventListener('click', e => {
   if (!panel.contains(e.target) && e.target.id !== 'room-badge-members') closeMembersPanel();
 });
 
+// ── Host: song requests panel ──
+window._pendingRequests = {};
+window.onSongRequest = function(req) {
+  if (!window._isRoomHost || !req || !req._id) return;
+  window._pendingRequests[req._id] = req;
+  renderRequestsPanel();
+  window.playJoinChime?.();
+  if (window.toast) window.toast(`🎵 ${req.byName || 'Someone'} requested a song`);
+};
+window.renderRequestsPanel = renderRequestsPanel;
+function renderRequestsPanel() {
+  const ids = Object.keys(window._pendingRequests);
+  const badge = document.getElementById('room-requests-badge');
+  const count = document.getElementById('room-requests-count');
+  if (count) count.textContent = ids.length;
+  if (badge) badge.style.display = (window._isRoomHost && ids.length) ? '' : (window._isRoomHost ? 'inline-block' : 'none');
+  const list = document.getElementById('room-requests-list');
+  if (!list) return;
+  if (!ids.length) { list.innerHTML = '<div class="room-member-row" style="opacity:.6">No pending requests</div>'; return; }
+  list.innerHTML = '';
+  ids.forEach(id => {
+    const r = window._pendingRequests[id];
+    const row = document.createElement('div');
+    row.className = 'room-member-row';
+    const thumb = r.thumbnail ? `<img class="room-req-thumb" src="${esc(r.thumbnail)}" alt="">` : '';
+    row.innerHTML = `${thumb}<div class="room-req-info"><div class="room-req-title">${esc(r.title || 'Unknown')}</div><div class="room-req-by">from ${esc(r.byName || 'Guest')}</div></div>
+      <button class="room-member-btn" onclick="hostApproveRequest('${id}')">✓</button>
+      <button class="room-member-btn revoke" onclick="hostDeclineRequest('${id}')">✕</button>`;
+    list.appendChild(row);
+  });
+}
+window.hostApproveRequest = function(id) {
+  const r = window._pendingRequests[id];
+  if (!r) return;
+  const video = { id: r.videoId, title: r.title || r.videoId, channelTitle: r.channelTitle || '',
+    thumbnail: r.thumbnail || `https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`, source: 'youtube' };
+  window.approveRequest?.(id, video);
+  delete window._pendingRequests[id];
+  renderRequestsPanel();
+  if (window.toast) window.toast('✓ Added to queue');
+};
+window.hostDeclineRequest = function(id) {
+  window.declineRequest?.(id);
+  delete window._pendingRequests[id];
+  renderRequestsPanel();
+};
+function toggleRequestsPanel() {
+  const panel = document.getElementById('room-requests-panel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) { closeRequestsPanel(); return; }
+  const anchor = document.getElementById('room-requests-badge');
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    panel.style.top = (r.bottom + 6) + 'px';
+    panel.style.left = Math.max(8, r.left - 120) + 'px';
+  }
+  renderRequestsPanel();
+  panel.classList.add('open');
+}
+function closeRequestsPanel() {
+  document.getElementById('room-requests-panel')?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const panel = document.getElementById('room-requests-panel');
+  if (!panel?.classList.contains('open')) return;
+  if (!panel.contains(e.target) && !e.target.closest('#room-requests-badge')) closeRequestsPanel();
+});
+
 /* ── BOARD CHAT TABS ── */
 function switchBoardTab(tab) {
   ['global','room'].forEach(t => {
@@ -13296,6 +13379,13 @@ function bjUpdateBalance(){
     <button onclick="closeMembersPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
   </div>
   <div id="room-members-list"></div>
+</div>
+<div id="room-requests-panel">
+  <div id="room-members-panel-hdr">
+    <span>🎵 Song Requests</span>
+    <button onclick="closeRequestsPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
+  </div>
+  <div id="room-requests-list"><div class="room-member-row" style="opacity:.6">No pending requests</div></div>
 </div>
 </body>
 </html>

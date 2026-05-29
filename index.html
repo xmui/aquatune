@@ -48,8 +48,8 @@
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
     }
-    #immersive-bg { position:absolute; inset:-40px; background-size:cover; background-position:center;
-      filter:blur(60px) brightness(0.5) saturate(1.2); opacity:0; transition:opacity .8s ease,background-image .8s ease;
+    #immersive-bg { position:absolute; inset:-40px; background-size:300% 300%; background-position:0% 50%;
+      filter:blur(60px) brightness(0.5) saturate(1.4); opacity:0; transition:opacity .8s ease;
       transform:scale(1.1); pointer-events:none; }
     body.immersive #immersive-bg.active { opacity:1; }
     body.immersive .orb { opacity:0.15; transition:opacity .8s ease; }
@@ -347,7 +347,7 @@
 
     /* ── VIDEO VISUALIZER OVERLAY ─────────────────────────── */
     #viz-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
-      display:none; z-index:10; border-radius:inherit; }
+      z-index:10; border-radius:inherit; }
     #viz-preset-bar { display:none; position:absolute; bottom:0; left:0; right:0; z-index:12;
       padding:6px 10px; background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);
       display:none; flex-direction:row; align-items:center; gap:8px; border-radius:0 0 inherit inherit; }
@@ -1336,6 +1336,7 @@
       border-radius:14px 0 0 14px;box-shadow:-4px 4px 24px rgba(0,40,120,0.18);
       padding:16px;transform:translateX(100%);
       transition:transform .26s cubic-bezier(.4,0,.2,1);
+      overflow-y:auto; max-height:calc(100vh - 60px); scrollbar-width:thin;
     }
     #theme-panel.open { transform:translateX(0); }
     .theme-hdr { display:flex;justify-content:space-between;align-items:center;margin-bottom:14px; }
@@ -2309,7 +2310,7 @@ body.perf-mode #aqua-gun { display: none !important; }
   border-radius: 14px !important;
 }
 [data-era=macos] #hdr {
-  background: linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%) !important;
+  background: linear-gradient(180deg,#3a94e0 0%,#0070c9 50%,#005ba8 100%) !important;
   border-radius: 12px !important;
   box-shadow: 0 4px 18px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.32) !important;
 }
@@ -2318,7 +2319,7 @@ body.perf-mode #aqua-gun { display: none !important; }
 }
 [data-era=macos] .board-titlebar,
 [data-era=macos] #paint-titlebar {
-  background: linear-gradient(180deg,#7aa8dc 0%,#3a70b2 100%) !important;
+  background: linear-gradient(180deg,#3a94e0 0%,#005ba8 100%) !important;
   border-radius: 12px 12px 0 0 !important;
 }
 [data-era=macos] .board-titlebar::after,
@@ -2895,23 +2896,24 @@ body.perf-mode #aqua-gun { display: none !important; }
   color: #1a1a1a;
 }
 
-/* ── GLASS THEME (Vista Aero-inspired) ── */
+/* ── GLASS THEME (Blueprint / Brutalist Indigo) ── */
 [data-era=glass] #board-wrap, [data-era=glass] #theme-panel,
-[data-era=glass] .panel {
-  backdrop-filter: blur(32px) saturate(1.6);
-  background: rgba(20,50,120,0.28) !important;
-  border: 1px solid rgba(120,180,255,0.35) !important;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 20px 60px rgba(0,20,80,0.5) !important;
+[data-era=glass] .panel, [data-era=glass] #ctrl-bubble {
+  background:#fff !important; backdrop-filter:none !important;
+  border:3px solid #0a1a4a !important; border-radius:4px !important;
+  box-shadow:6px 6px 0 #0a1a4a !important;
 }
 [data-era=glass] #hdr {
-  backdrop-filter: blur(24px) saturate(1.4);
-  border-bottom: 1px solid rgba(120,180,255,0.25) !important;
+  background:#0a1a4a !important; backdrop-filter:none !important;
+  border-bottom:3px solid #0057ff !important; box-shadow:0 4px 0 #0057ff !important;
 }
+[data-era=glass] #hdr::after { display:none !important; }
+[data-era=glass] #logo img { filter: drop-shadow(2px 2px 0 #0057ff) !important; }
 [data-era=glass] .mbtn {
-  background: linear-gradient(180deg, rgba(80,140,255,0.4), rgba(40,100,220,0.3)) !important;
-  border: 1px solid rgba(140,200,255,0.4) !important;
-  color: #fff !important;
-  backdrop-filter: blur(8px);
+  background:#fff !important; color:#0a0a1a !important;
+  border:2.5px solid #0a1a4a !important; border-radius:3px !important;
+  font-weight:900 !important; box-shadow:3px 3px 0 #0a1a4a !important;
+  backdrop-filter:none !important;
 }
 
     /* ── APPS MENU / LAUNCHER ───────────────────────────── */
@@ -3352,15 +3354,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     }
     .th-chat-tab.active { color:#0cf !important; border-bottom-color:#0cf; background:rgba(255,255,255,0.08) !important; }
     #th-theater-btn {
-      background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
-      border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
-      width:30px; height:30px; cursor:pointer; color:#fff; font-size:15px;
-      display:flex; align-items:center; justify-content:center; transition:all .18s;
-      box-shadow: 0 2px 8px rgba(0,80,160,0.2), inset 0 1px 0 rgba(255,255,255,0.45);
-      flex-shrink: 0;
+      background:transparent; border:1px solid rgba(255,255,255,0.18); border-radius:6px;
+      color:rgba(255,255,255,0.6); font-size:12px; padding:2px 6px; cursor:pointer; transition:all .18s;
+      line-height:1; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     }
-    #th-theater-btn:hover { background:rgba(255,255,255,0.36); box-shadow:0 3px 12px rgba(0,80,160,0.28), inset 0 1px 0 rgba(255,255,255,0.55); }
-    #th-theater-btn.active { background:rgba(255,255,255,0.32); border-color:rgba(255,255,255,0.75); }
+    #th-theater-btn:hover, #th-theater-btn.active { background:rgba(140,0,255,0.45); border-color:rgba(200,100,255,0.6); color:#fff; }
 
     /* Remote mode indicator */
     body.remote-mode::after {
@@ -3557,25 +3555,26 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=frost] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); border: 1px solid rgba(60,100,180,0.4); }
 [data-era=frost] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); }
 
-/* GLASS (Aero) — frosted glass, more opaque controls */
-[data-era=glass] .pb {
-  background: rgba(60,110,220,0.45) !important;
-  border: 1px solid rgba(140,200,255,0.5) !important;
-  border-radius: 8px !important;
-  color: #fff !important;
-  backdrop-filter: blur(12px) !important;
-  box-shadow: 0 2px 8px rgba(0,0,80,0.4), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+/* GLASS (Blueprint) — bold indigo controls */
+[data-era=glass] .pb, [data-era=glass] .cb, [data-era=glass] .mb, [data-era=glass] .ico-btn,
+[data-era=glass] .q-btn, [data-era=glass] .tab, [data-era=glass] .sm-tab, [data-era=glass] .sp-opt-btn {
+  background:#fff !important; color:#0a0a1a !important; border:2.5px solid #0a1a4a !important;
+  border-radius:3px !important; font-weight:900 !important; box-shadow:3px 3px 0 #0a1a4a !important;
+  backdrop-filter:none !important; transition:transform .08s, box-shadow .08s !important;
 }
-[data-era=glass] .pb:hover { background: rgba(80,140,255,0.6) !important; box-shadow: 0 4px 16px rgba(80,140,255,0.5) !important; }
+[data-era=glass] .pb:hover, [data-era=glass] .cb:hover, [data-era=glass] .mbtn:hover,
+[data-era=glass] .q-btn:hover {
+  background:#0057ff !important; color:#fff !important;
+  box-shadow:5px 5px 0 #00c2ff !important; transform:translate(-1px,-1px) !important;
+}
+[data-era=glass] .pb:active, [data-era=glass] .mbtn:active { transform:translate(2px,2px) !important; box-shadow:1px 1px 0 #0a1a4a !important; }
 [data-era=glass] #play-btn {
-  background: linear-gradient(180deg, rgba(120,180,255,0.75), rgba(60,120,240,0.7)) !important;
-  border: 1px solid rgba(180,220,255,0.6) !important;
-  color: #fff !important;
-  backdrop-filter: blur(16px) !important;
-  box-shadow: 0 4px 16px rgba(40,100,255,0.5), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+  background:#0057ff !important; color:#fff !important;
+  border:3px solid #0a1a4a !important; border-radius:4px !important; box-shadow:4px 4px 0 #0a1a4a !important;
 }
-[data-era=glass] #prog::-webkit-slider-thumb { background: rgba(120,180,255,0.9); border: 1px solid rgba(200,230,255,0.7); box-shadow: 0 0 8px rgba(120,180,255,0.6); }
-[data-era=glass] #vol::-webkit-slider-thumb { background: rgba(120,180,255,0.9); border: 1px solid rgba(200,230,255,0.7); }
+[data-era=glass] #play-btn:hover { background:#00c2ff !important; }
+[data-era=glass] #prog::-webkit-slider-thumb { background:#0057ff; border:2px solid #0a1a4a; border-radius:2px; box-shadow:none; }
+[data-era=glass] #vol::-webkit-slider-thumb { background:#0057ff; border:2px solid #0a1a4a; border-radius:2px; }
 
 /* NEON — glowing borders */
 [data-era=neon] .pb {
@@ -3729,41 +3728,19 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=frost] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#bcdcf6,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.6) !important; }
 [data-era=frost] #splash { background: linear-gradient(180deg,#dcecfb 0%,#b6d4ee 100%) !important; }
 
-/* ── GLASS → Y2K / Dreamcast / Jet Set Radio ── */
-[data-era=glass] .panel, [data-era=glass] #board-wrap, [data-era=glass] #theme-panel, [data-era=glass] #ctrl-bubble {
-  background:#fffdf7 !important; backdrop-filter:none !important;
-  border:3px solid #16140d !important; border-radius:4px !important; box-shadow:6px 6px 0 #16140d !important;
-}
-[data-era=glass] #hdr {
-  background: linear-gradient(110deg,#ff6a00 0%,#ff1f8e 55%,#00e5ff 100%) !important; backdrop-filter:none !important;
-  border-bottom:3px solid #16140d !important; box-shadow:0 4px 0 #16140d !important;
-}
-[data-era=glass] #hdr::after { display:none !important; }
-[data-era=glass] #logo img { filter: drop-shadow(2px 2px 0 #16140d) !important; }
-[data-era=glass] .pb, [data-era=glass] .cb, [data-era=glass] .mb, [data-era=glass] .mbtn, [data-era=glass] .ico-btn,
-[data-era=glass] .q-btn, [data-era=glass] .tab, [data-era=glass] .sm-tab, [data-era=glass] .sp-opt-btn {
-  background:#fff !important; color:#16140d !important; border:2.5px solid #16140d !important;
-  border-radius:3px !important; font-weight:900 !important; box-shadow:3px 3px 0 #16140d !important;
-  backdrop-filter:none !important; transition:transform .08s, box-shadow .08s !important;
-}
-[data-era=glass] .pb:hover, [data-era=glass] .cb:hover, [data-era=glass] .mbtn:hover, [data-era=glass] .q-btn:hover {
-  transform: skewX(-7deg) translate(-1px,-1px) !important; box-shadow:5px 5px 0 #ff1f8e !important; background:#ffe8a0 !important;
-}
-[data-era=glass] .pb:active, [data-era=glass] .mbtn:active { transform: translate(2px,2px) !important; box-shadow:1px 1px 0 #16140d !important; }
-[data-era=glass] #play-btn {
-  background:#ff6a00 !important; color:#16140d !important; border:3px solid #16140d !important; border-radius:4px !important; box-shadow:4px 4px 0 #16140d !important;
-}
-[data-era=glass] #play-btn:hover { background:#00e5ff !important; }
-[data-era=glass] .tab.on, [data-era=glass] .sm-tab.on, [data-era=glass] #search-btn { background:#ff6a00 !important; color:#16140d !important; }
+/* ── GLASS → Blueprint (indigo brutalist) — remaining rules ── */
+[data-era=glass] .tab.on, [data-era=glass] .sm-tab.on,
+[data-era=glass] #search-btn { background:#0057ff !important; color:#fff !important; }
 [data-era=glass] #q, [data-era=glass] input[type=text], [data-era=glass] textarea, [data-era=glass] select {
-  background:#fff !important; border:2.5px solid #16140d !important; color:#16140d !important; border-radius:3px !important; font-weight:700 !important;
+  background:#fff !important; border:2.5px solid #0a1a4a !important; color:#0a0a1a !important; border-radius:3px !important; font-weight:700 !important;
 }
-[data-era=glass] ::-webkit-scrollbar-thumb { background:#ff1f8e !important; border:2px solid #16140d !important; border-radius:0 !important; }
-[data-era=glass] #prog::-webkit-slider-thumb, [data-era=glass] #vol::-webkit-slider-thumb { background:#ff6a00 !important; border:2px solid #16140d !important; border-radius:2px !important; box-shadow:none !important; }
-[data-era=glass] #prog-fill { background:#ff1f8e !important; }
-[data-era=glass] .vb { background: linear-gradient(0deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; border-radius:0 !important; }
-[data-era=glass] #splash { background: linear-gradient(135deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; }
-[data-era=glass] #splash-room { border:3px solid #16140d !important; box-shadow:8px 8px 0 #16140d !important; border-radius:4px !important; background:#fffdf7 !important; }
+[data-era=glass] ::-webkit-scrollbar-thumb { background:#0057ff !important; border:2px solid #0a1a4a !important; border-radius:0 !important; }
+[data-era=glass] #prog-fill { background:#0057ff !important; }
+[data-era=glass] .vb { background: linear-gradient(0deg,#0057ff,#00c2ff) !important; border-radius:0 !important; }
+[data-era=glass] #splash { background: linear-gradient(135deg,#0a1a4a 0%,#0d2a6a 50%,#0057ff 100%) !important; }
+[data-era=glass] #splash-room { border:3px solid #0a1a4a !important; box-shadow:8px 8px 0 #0a1a4a !important; border-radius:4px !important; background:#fff !important; }
+[data-era=glass] .board-titlebar, [data-era=glass] #paint-titlebar { background:#0a1a4a !important; color:#fff !important; }
+[data-era=glass] .board-titlebar::after, [data-era=glass] #paint-titlebar::after { display:none !important; }
 
 /* ── NEON → tasteful cheesy casino (gold & velvet) ── */
 [data-era=neon] .panel, [data-era=neon] #board-wrap, [data-era=neon] #theme-panel, [data-era=neon] #ctrl-bubble {
@@ -3849,6 +3826,75 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=pixel] .vb { background:#ffd166 !important; border-radius:0 !important; }
 [data-era=pixel] #splash { background:#0f0f23 !important; }
 [data-era=pixel] #splash-room { background:#1c1c3a !important; border-radius:0 !important; box-shadow:0 0 0 3px #0f0f23,0 0 0 6px #4a4a7a !important; }
+
+/* ── GLOBAL THEMING FIXES (use CSS vars, apply to all themes) ─── */
+/* Discover tab */
+#disc-back { background:var(--panel) !important; color:var(--accent) !important; border-color:var(--border) !important; }
+#disc-nav { background:var(--panel) !important; border-color:var(--border) !important; }
+.disc-sec { color:var(--text) !important; border-left-color:var(--accent) !important; }
+.disc-bc { color:var(--text2) !important; }
+#related-list { background:transparent; color:var(--text); }
+
+/* Chat message theming */
+.board-log { background:transparent; }
+.bmsg-bubble { background:rgba(0,112,200,0.08); color:var(--text); }
+.bmsg-name { color:var(--accent) !important; }
+.bmsg-time, .bmsg-sub { color:var(--text2) !important; }
+[data-era=neon] .bmsg-bubble { background:rgba(255,215,0,0.08) !important; }
+[data-era=pixel] .bmsg-bubble { background:rgba(255,209,102,0.1) !important; }
+[data-era=glass] .bmsg-bubble { background:rgba(0,87,255,0.08) !important; color:#0a0a1a !important; }
+
+/* Missing board-titlebar coverage for new themes */
+[data-era=frost] .board-titlebar, [data-era=frost] #paint-titlebar { background:linear-gradient(180deg,rgba(220,236,251,0.98),rgba(182,212,238,0.96)) !important; color:#1a3a5a !important; }
+[data-era=neon] .board-titlebar, [data-era=neon] #paint-titlebar { background:linear-gradient(180deg,#3a0512,#5a0a1a) !important; border-color:rgba(255,215,0,0.4) !important; }
+[data-era=pixel] .board-titlebar, [data-era=pixel] #paint-titlebar { background:#0f0f23 !important; color:#ffd166 !important; border-bottom:3px solid #457b9d !important; }
+
+/* Paint theming */
+#paint-wrap { border-color:var(--border) !important; }
+#paint-toolbar { background:var(--panel) !important; border-bottom-color:var(--border) !important; }
+.ptool { background:var(--panel) !important; border-color:var(--border) !important; color:var(--text) !important; }
+.ptool:hover, .ptool.active { background:var(--accent) !important; color:#fff !important; border-color:var(--accent) !important; }
+[data-era=pixel] #paint-toolbar { background:#0f0f23 !important; border-color:#457b9d !important; }
+[data-era=pixel] .ptool { background:#1c1c3a !important; color:#ffd166 !important; border-color:#457b9d !important; border-radius:0 !important; }
+[data-era=pixel] .ptool:hover, [data-era=pixel] .ptool.active { background:#457b9d !important; color:#fff !important; }
+[data-era=glass] #paint-toolbar { background:#f0f4ff !important; border-color:#0a1a4a !important; }
+[data-era=glass] .ptool { background:#fff !important; color:#0a0a1a !important; border:2px solid #0a1a4a !important; border-radius:3px !important; }
+[data-era=glass] .ptool:hover, [data-era=glass] .ptool.active { background:#0057ff !important; color:#fff !important; border-color:#0057ff !important; }
+
+/* Rhythm titlebar — draggable */
+#rhythm-titlebar { cursor:move; user-select:none; }
+
+/* Settings section headers */
+.settings-section-hdr {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--text2); margin:14px 0 6px; padding-bottom:4px;
+  border-bottom:1px solid var(--border);
+}
+.settings-help-row {
+  display:flex; align-items:flex-start; gap:6px; padding:3px 0;
+  font-size:11px; color:var(--text); line-height:1.4;
+}
+.settings-help-row .shi { font-size:13px; flex-shrink:0; }
+.settings-help-row .shd { font-size:10px; color:var(--text2); margin-top:1px; }
+#help-section summary {
+  font-size:11px; font-weight:700; color:var(--accent); cursor:pointer;
+  padding:6px 0 4px; list-style:none; display:flex; align-items:center; gap:5px;
+}
+#help-section summary::-webkit-details-marker { display:none; }
+#help-section[open] summary::before { content:'▾ '; }
+#help-section:not([open]) summary::before { content:'▸ '; }
+
+/* Immersive animated gradient background */
+@keyframes immersiveShift {
+  0%   { background-position:0% 50%;   filter:blur(60px) brightness(.48) saturate(1.6) hue-rotate(0deg); }
+  50%  { background-position:100% 50%; filter:blur(60px) brightness(.50) saturate(1.9) hue-rotate(18deg); }
+  100% { background-position:0% 100%;  filter:blur(60px) brightness(.48) saturate(1.6) hue-rotate(-10deg); }
+}
+body.immersive #immersive-bg.active {
+  opacity:1;
+  animation:immersiveShift 12s ease-in-out infinite alternate;
+  background-size:300% 300%;
+}
 
   </style>
 </head>
@@ -3945,7 +3991,6 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
-      <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
@@ -4149,6 +4194,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           <input id="vol" type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
           <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix" style="display:none">Automix</button>
           <button id="viz-toggle-btn" onclick="toggleVizOverlay()" title="Visualizer overlay">🌀</button>
+          <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
         </div>
       </div>
     </div>
@@ -4197,13 +4243,14 @@ body.perf-mode #aqua-gun { display: none !important; }
 <!-- THEME PANEL -->
 <div id="theme-panel">
   <div class="theme-hdr">
-    <span>Customize</span>
+    <span>Settings</span>
     <button class="theme-close" onclick="toggleThemePanel()">&#215;</button>
   </div>
-  <div class="theme-label" style="margin-bottom:6px">Theme</div>
+
+  <div class="settings-section-hdr">Appearance</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Snow Leopard</button>
+    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">macOS</button>
     <button class="theme-swatch"   data-theme="myspace"   onclick="selectTheme('myspace',this)">My Space</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
@@ -4214,17 +4261,19 @@ body.perf-mode #aqua-gun { display: none !important; }
     <button class="theme-swatch"   data-theme="neon"      data-unlock-label="Neon"    onclick="selectTheme('neon',this)">Neon</button>
     <button class="theme-swatch"   data-theme="pixel"     data-unlock-label="Pixel"   onclick="selectTheme('pixel',this)">Pixel</button>
   </div>
-  <div class="theme-section">
-    <div class="theme-label">Weather location</div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <input class="m-inp" id="wx-zip-inp" type="text" placeholder="ZIP code (e.g. 80301)" maxlength="10" style="flex:1;font-size:11px;padding:5px 8px" value="">
-      <button class="mbtn" onclick="saveWeatherZip()" style="white-space:nowrap">Update</button>
-    </div>
-    <div style="font-size:9px;color:var(--text2);margin-top:4px">Default: Boulder CO (80301)</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+    <input type="color" id="custom-accent-inp" value="#0068b8" oninput="applyCustomAccent(this.value)" style="width:36px;height:28px;border:none;cursor:pointer;background:none;padding:0;border-radius:6px;">
+    <span style="font-size:10px;color:var(--text2)">Custom accent color</span>
   </div>
-  <div class="theme-section">
-    <div class="theme-label">Effects</div>
+
+  <div class="settings-section-hdr">Visual Effects</div>
+  <div class="theme-section" style="padding-top:0">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="immersive-mode-chk" onchange="setImmersiveMode(this.checked)" style="cursor:pointer"> 🖼️ Immersive mode
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="bubbles-chk" onchange="setBubblesEnabled(this.checked)" style="cursor:pointer"> Cursor bubbles
       </label>
@@ -4240,21 +4289,6 @@ body.perf-mode #aqua-gun { display: none !important; }
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
       </label>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="immersive-mode-chk" onchange="setImmersiveMode(this.checked)" style="cursor:pointer"> 🖼️ Immersive mode (blurred art bg)
-      </label>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
-      </label>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:8px">
-      <label style="white-space:nowrap;color:var(--text2);width:52px">🎮 SFX</label>
-      <input type="range" id="game-vol-rng" min="0" max="100" value="100" oninput="setGameVol(this.value/100);document.getElementById('game-vol-val').textContent=this.value+'%'" style="flex:1;accent-color:var(--accent)">
-      <span id="game-vol-val" style="width:30px;text-align:right;color:var(--text);font-weight:700">100%</span>
     </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
       <div style="padding-top:8px;display:flex;flex-direction:column;gap:5px">
@@ -4276,41 +4310,38 @@ body.perf-mode #aqua-gun { display: none !important; }
       </div>
     </div>
   </div>
-  <div class="theme-section">
-    <div class="theme-label">Custom accent</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <input type="color" id="custom-accent-inp" value="#0068b8" oninput="applyCustomAccent(this.value)" style="width:36px;height:28px;border:none;cursor:pointer;background:none;padding:0;border-radius:6px;">
-      <span style="font-size:10px;color:var(--text2)">Pick any accent color</span>
+  <div class="settings-section-hdr">Audio &amp; Sync</div>
+  <div class="theme-section" style="padding-top:0">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+      <label style="white-space:nowrap;color:var(--text2);width:52px">🎮 SFX</label>
+      <input type="range" id="game-vol-rng" min="0" max="100" value="100" oninput="setGameVol(this.value/100);document.getElementById('game-vol-val').textContent=this.value+'%'" style="flex:1;accent-color:var(--accent)">
+      <span id="game-vol-val" style="width:30px;text-align:right;color:var(--text);font-weight:700">100%</span>
     </div>
-  </div>
-  <div class="theme-section">
-    <div class="theme-label">Google account</div>
-    <button id="google-btn" onclick="toggleGoogleMode()" title="Sign in with Google for full search (optional)">
-      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-      Sign in with Google
-    </button>
-    <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;border-radius:10px;background:rgba(0,180,220,0.08);border:1px solid var(--border)">
-      <img id="user-av" src="" alt="" style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.65);object-fit:cover;flex-shrink:0">
-      <div style="flex:1;min-width:0">
-        <div id="user-nm" style="font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-        <div style="font-size:9px;color:var(--text2)">Signed in</div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="remote-mode-chk" onchange="setRemoteMode(this.checked)" style="cursor:pointer"> 📡 Remote mode (mute, control only)
+      </label>
+    </div>
+    <div style="margin-top:8px">
+      <div class="theme-label" style="margin-bottom:4px">Notifications</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+          <input type="checkbox" id="notif-sound-chk" onchange="localStorage.setItem('aq_notif_sound',this.checked?'1':'0')" style="cursor:pointer" checked> Chat &amp; join sounds
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px">
+          Volume <input type="range" id="notif-vol-sl" min="0" max="1" step="0.05" value="0.18"
+            oninput="localStorage.setItem('aq_notif_vol',this.value)" style="flex:1;cursor:pointer">
+        </label>
       </div>
-      <button id="signout-btn" onclick="signOut()" style="background:none;border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:8px;cursor:pointer;font-size:10px">Sign out</button>
-    </div>
-    <div style="font-size:9px;color:var(--text2);margin-top:5px">Optional — enables playlist access &amp; full search</div>
-  </div>
-  <div class="theme-section" style="padding-top:8px">
-    <div class="theme-label">Daily Credits</div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <button id="daily-claim-btn" onclick="claimDailyCredits()" disabled
-        style="padding:4px 10px;border-radius:16px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">
-        🎁 Claim
-      </button>
-      <span id="daily-claim-timer" style="font-size:10px;color:var(--text2)">Loading...</span>
     </div>
   </div>
-  <div class="theme-section">
-    <div class="theme-label">Layout</div>
+
+  <div class="settings-section-hdr">Widgets &amp; Layout</div>
+  <div class="theme-section" style="padding-top:0">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+      <input class="m-inp" id="wx-zip-inp" type="text" placeholder="Weather ZIP (e.g. 80301)" maxlength="10" style="flex:1;font-size:11px;padding:5px 8px" value="">
+      <button class="mbtn" onclick="saveWeatherZip()" style="white-space:nowrap">Update</button>
+    </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="layout-visualizer" onchange="setLayoutOpt('visualizer',this.checked)" style="cursor:pointer" checked> Show visualizer
@@ -4328,17 +4359,49 @@ body.perf-mode #aqua-gun { display: none !important; }
         <input type="checkbox" id="layout-hints" onchange="setLayoutOpt('hints',this.checked)" style="cursor:pointer" checked> Keyboard hints
       </label>
     </div>
-    <div class="theme-label" style="margin-top:12px">Notifications</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="notif-sound-chk" onchange="localStorage.setItem('aq_notif_sound',this.checked?'1':'0')" style="cursor:pointer" checked> Chat &amp; join sounds
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px">
-        Volume <input type="range" id="notif-vol-sl" min="0" max="1" step="0.05" value="0.18"
-          oninput="localStorage.setItem('aq_notif_vol',this.value)" style="flex:1;cursor:pointer">
-      </label>
+  </div>
+
+  <div class="settings-section-hdr">Account</div>
+  <div class="theme-section" style="padding-top:0">
+    <button id="google-btn" onclick="toggleGoogleMode()" title="Sign in with Google for full search (optional)">
+      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Sign in with Google
+    </button>
+    <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;border-radius:10px;background:rgba(0,180,220,0.08);border:1px solid var(--border)">
+      <img id="user-av" src="" alt="" style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,0.65);object-fit:cover;flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <div id="user-nm" style="font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <div style="font-size:9px;color:var(--text2)">Signed in</div>
+      </div>
+      <button id="signout-btn" onclick="signOut()" style="background:none;border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:8px;cursor:pointer;font-size:10px">Sign out</button>
+    </div>
+    <div style="font-size:9px;color:var(--text2);margin-top:5px;margin-bottom:10px">Optional — enables playlist access &amp; full search</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button id="daily-claim-btn" onclick="claimDailyCredits()" disabled
+        style="padding:4px 10px;border-radius:16px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">
+        🎁 Daily Credits
+      </button>
+      <span id="daily-claim-timer" style="font-size:10px;color:var(--text2)">Loading...</span>
     </div>
   </div>
+
+  <div class="settings-section-hdr">Help &amp; Features</div>
+  <details id="help-section" style="margin-bottom:8px">
+    <summary>Show feature guide</summary>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:8px">
+      <div class="settings-help-row"><span class="shi">🎵</span><div><div>Music Player</div><div class="shd">Search YouTube, queue tracks, shuffle &amp; skip</div></div></div>
+      <div class="settings-help-row"><span class="shi">🏠</span><div><div>Rooms</div><div class="shd">Create/join rooms, listen together &amp; chat live</div></div></div>
+      <div class="settings-help-row"><span class="shi">🌐</span><div><div>Public Lobby</div><div class="shd">Browse &amp; join active public rooms</div></div></div>
+      <div class="settings-help-row"><span class="shi">🎶</span><div><div>Beat Tap</div><div class="shd">Rhythm game — tap D F J K to the beat</div></div></div>
+      <div class="settings-help-row"><span class="shi">🎰</span><div><div>Games</div><div class="shd">Slots, Blackjack, Solitaire, Picross, Minesweeper</div></div></div>
+      <div class="settings-help-row"><span class="shi">🎹</span><div><div>AquaSynth</div><div class="shd">Multi-instrument step sequencer</div></div></div>
+      <div class="settings-help-row"><span class="shi">🎨</span><div><div>AquaPaint</div><div class="shd">Pixel canvas — draw &amp; share to chat</div></div></div>
+      <div class="settings-help-row"><span class="shi">✨</span><div><div>Immersive Mode</div><div class="shd">Apple Music-style animated art background</div></div></div>
+      <div class="settings-help-row"><span class="shi">🌀</span><div><div>Visualizer</div><div class="shd">Spectrum / waveform / circular overlay</div></div></div>
+      <div class="settings-help-row"><span class="shi">💰</span><div><div>Credits</div><div class="shd">Earn credits in games, claim daily bonus</div></div></div>
+      <div class="settings-help-row"><span class="shi">⌨️</span><div><div>Shortcuts</div><div class="shd">Space play/pause · N next · ← → seek · M mute</div></div></div>
+    </div>
+  </details>
 </div>
 
 <!-- MODALS -->
@@ -4653,7 +4716,7 @@ const THEMES = {
              font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'default', scheme:'light' },
   macos:   { accent:'#0070c9', accent2:'#34aadc', text:'#1a1a1a', text2:'#6c6c6c',
              bg:'linear-gradient(180deg,#e0e0e0 0%,#c8c8c8 100%)',
-             hdr:'linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%)',
+             hdr:'linear-gradient(180deg,#3a94e0 0%,#0070c9 50%,#005ba8 100%)',
              panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
              font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light' },
   myspace: { accent:'#003399', accent2:'#ff8800', text:'#1a1a1a', text2:'#33558c',
@@ -4686,10 +4749,10 @@ const THEMES = {
              hdr:'linear-gradient(180deg, rgba(232,244,255,0.78) 0%, rgba(176,212,245,0.7) 100%)',
              panel:'rgba(235,246,255,0.62)', border:'rgba(150,200,245,0.7)',
              font:"'Segoe UI',Frutiger,'Helvetica Neue',Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#ff6a00', accent2:'#00e5ff', text:'#16140d', text2:'#5a5446',
-             bg:'linear-gradient(135deg, #f2efe6 0%, #e6e2d6 50%, #efe9da 100%)',
-             hdr:'linear-gradient(110deg, #ff6a00 0%, #ff1f8e 55%, #00e5ff 100%)',
-             panel:'rgba(255,253,247,0.92)', border:'#16140d',
+  glass:   { accent:'#0057ff', accent2:'#00c2ff', text:'#0a0a1a', text2:'#3a3a5a',
+             bg:'linear-gradient(135deg,#e8eeff 0%,#d8e4ff 50%,#eef0ff 100%)',
+             hdr:'#0a1a4a',
+             panel:'rgba(255,255,255,0.95)', border:'#0a1a4a',
              font:"'Arial Black','Arial Narrow',Impact,system-ui,sans-serif", era:'glass', scheme:'light' },
   neon:    { accent:'#ffd700', accent2:'#ff3b6b',
              text:'#fff4d6', text2:'#d8b48a',
@@ -10947,18 +11010,44 @@ function setPerfMode(on) {
 // Apply perf mode on load before DOM settles
 if (_perfMode) document.body.classList.add('perf-mode');
 
-// ── Immersive mode: blurred now-playing artwork background ──
+// ── Immersive mode: Apple Music-style animated color background ──
 window._immersive = localStorage.getItem('aq_immersive') === '1';
+
+function _extractImmersiveColors(url, cb) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 12;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, 12, 12);
+      const d = ctx.getImageData(0, 0, 12, 12).data;
+      const pick = (i) => `rgb(${d[i]},${d[i+1]},${d[i+2]})`;
+      // corners + center + off-center for variety
+      cb([pick(0), pick(4*4*4), pick(8*4*4), pick(44*4), pick(80*4), pick(120*4)]);
+    } catch(e) {
+      cb(['#1a1a2e','#16213e','#0f3460','#533483','#2a0045','#003060']);
+    }
+  };
+  img.onerror = () => cb(['#1a1a2e','#16213e','#0f3460','#533483','#2a0045','#003060']);
+  img.src = url;
+}
+
 function updateImmersiveBg(url) {
   const el = document.getElementById('immersive-bg');
   if (!el) return;
   if (window._immersive && url) {
-    el.style.backgroundImage = `url("${url}")`;
-    el.classList.add('active');
+    _extractImmersiveColors(url, (colors) => {
+      const grad = `conic-gradient(from 0deg at 40% 40%, ${colors.join(',')}, ${colors[0]})`;
+      el.style.backgroundImage = grad;
+      el.classList.add('active');
+    });
   } else {
     el.classList.remove('active');
   }
 }
+
 function setImmersiveMode(on) {
   window._immersive = !!on;
   localStorage.setItem('aq_immersive', on ? '1' : '0');
@@ -13293,6 +13382,25 @@ function bjUpdateBalance(){
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('blackjack-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',function(){drag=null;});
+})();
+
+// Draggable Beat Tap (rhythm) window
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('#rhythm-titlebar')) return;
+    if(e.target.tagName==='BUTTON') return;
+    const w=document.getElementById('rhythm-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag) return;
+    const w=document.getElementById('rhythm-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
   document.addEventListener('mouseup',function(){drag=null;});

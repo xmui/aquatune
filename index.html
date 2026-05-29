@@ -46,6 +46,11 @@
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
     }
+    #immersive-bg { position:absolute; inset:-40px; background-size:cover; background-position:center;
+      filter:blur(60px) brightness(0.5) saturate(1.2); opacity:0; transition:opacity .8s ease,background-image .8s ease;
+      transform:scale(1.1); pointer-events:none; }
+    body.immersive #immersive-bg.active { opacity:1; }
+    body.immersive .orb { opacity:0.15; transition:opacity .8s ease; }
     .orb { position:absolute; border-radius:50%; }
     /* Large glow orb — top-left (tinted by theme) */
     .o1 { width:700px;height:700px;
@@ -3576,7 +3581,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     </div>
   </div>
 </div>
-<div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div id="bg"><div id="immersive-bg"></div><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
   <!-- HEADER -->
@@ -3884,6 +3889,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="immersive-mode-chk" onchange="setImmersiveMode(this.checked)" style="cursor:pointer"> 🖼️ Immersive mode (blurred art bg)
       </label>
     </div>
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
@@ -4803,6 +4813,7 @@ function restoreSession() {
       document.getElementById('np-title').textContent = current.title;
       document.getElementById('np-ch').textContent = current.channelTitle;
       const th = document.getElementById('np-thumb'); th.src = current.thumbnail; th.style.display = 'block';
+      if (window._immersive) updateImmersiveBg(current.thumbnail);
       document.getElementById('ph').style.display = 'none';
     }
   } catch {}
@@ -5022,6 +5033,7 @@ async function playSoundCloud(v) {
   document.getElementById('np-title').textContent = v.title;
   document.getElementById('np-ch').textContent = v.channelTitle || '';
   const th = document.getElementById('np-thumb'); th.src = v.thumbnail || ''; th.style.display = v.thumbnail ? 'block' : 'none';
+  if (window._immersive) updateImmersiveBg(v.thumbnail);
   renderQueue(); fetchRelated(v.id || ''); fetchChannel();
   addToHistory(v); fetchInfo(v);
   if (window.abSayTrack) abSayTrack(v);
@@ -5054,7 +5066,7 @@ async function playSoundCloud(v) {
       const artwork = (sound.artwork_url || sound.user?.avatar_url || '').replace(/-large\b/, '-t300x300');
       if (title)   { document.getElementById('np-title').textContent = title;  if (current) current.title = title; }
       if (author)  { document.getElementById('np-ch').textContent = author;    if (current) current.channelTitle = author; }
-      if (artwork) { const th = document.getElementById('np-thumb'); th.src = artwork; th.style.display = 'block'; if (current) current.thumbnail = artwork; }
+      if (artwork) { const th = document.getElementById('np-thumb'); th.src = artwork; th.style.display = 'block'; if (current) current.thumbnail = artwork; if (window._immersive) updateImmersiveBg(artwork); }
     });
   });
   scWidget.bind(SC.Widget.Events.PAUSE,  () => {
@@ -5085,6 +5097,7 @@ function playVideo(v) {
   document.getElementById('np-title').textContent = v.title;
   document.getElementById('np-ch').textContent = v.channelTitle || '';
   const th = document.getElementById('np-thumb'); th.src = v.thumbnail || ''; th.style.display = v.thumbnail ? 'block' : 'none';
+  if (window._immersive) updateImmersiveBg(v.thumbnail);
   const rTitle = document.getElementById('remote-title'); if (rTitle) rTitle.textContent = v.title || '';
   const rCh = document.getElementById('remote-ch'); if (rCh) rCh.textContent = v.channelTitle || '';
   const rThumb = document.getElementById('remote-thumb'); if (rThumb) { rThumb.src = v.thumbnail || ''; rThumb.style.display = v.thumbnail ? 'block' : 'none'; }
@@ -10577,6 +10590,33 @@ function setPerfMode(on) {
 }
 // Apply perf mode on load before DOM settles
 if (_perfMode) document.body.classList.add('perf-mode');
+
+// ── Immersive mode: blurred now-playing artwork background ──
+window._immersive = localStorage.getItem('aq_immersive') === '1';
+function updateImmersiveBg(url) {
+  const el = document.getElementById('immersive-bg');
+  if (!el) return;
+  if (window._immersive && url) {
+    el.style.backgroundImage = `url("${url}")`;
+    el.classList.add('active');
+  } else {
+    el.classList.remove('active');
+  }
+}
+function setImmersiveMode(on) {
+  window._immersive = !!on;
+  localStorage.setItem('aq_immersive', on ? '1' : '0');
+  document.body.classList.toggle('immersive', on);
+  updateImmersiveBg(window.current?.thumbnail);
+  const chk = document.getElementById('immersive-mode-chk');
+  if (chk) chk.checked = on;
+}
+// Apply on load
+if (window._immersive) {
+  document.body.classList.add('immersive');
+  const ichk = document.getElementById('immersive-mode-chk');
+  if (ichk) ichk.checked = true;
+}
 
 /* ── LAYOUT OPTIONS ── */
 const _layoutOpts = JSON.parse(localStorage.getItem('aq_layout') || '{}');

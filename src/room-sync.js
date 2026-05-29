@@ -143,6 +143,7 @@ window.initRoom = function(roomId, isHost, opts) {
   if (isHost) _roomHostUserId = myUserId;
   // Immediately dim controls for guests
   document.body.classList.toggle('room-guest', !isHost);
+  document.body.classList.add('in-room'); // reveals reaction bar + request affordances
 
   // Write own presence
   const username  = localStorage.getItem('aq_username') || 'Guest';

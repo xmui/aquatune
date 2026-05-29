@@ -14,6 +14,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap"></noscript>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"></noscript>
   <style>
     :root {
       --font-ui: Tahoma, 'Segoe UI', Arial, sans-serif;
@@ -46,6 +48,11 @@
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
     }
+    #immersive-bg { position:absolute; inset:-40px; background-size:cover; background-position:center;
+      filter:blur(60px) brightness(0.5) saturate(1.2); opacity:0; transition:opacity .8s ease,background-image .8s ease;
+      transform:scale(1.1); pointer-events:none; }
+    body.immersive #immersive-bg.active { opacity:1; }
+    body.immersive .orb { opacity:0.15; transition:opacity .8s ease; }
     .orb { position:absolute; border-radius:50%; }
     /* Large glow orb — top-left (tinted by theme) */
     .o1 { width:700px;height:700px;
@@ -133,6 +140,8 @@
     #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
     .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
     #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
+    #hdr-credits { font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
+    #hdr-credits:hover { background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.4); }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -348,9 +357,32 @@
     #viz-opacity-inp { width:70px; accent-color:#fff; cursor:pointer; }
     #viz-canvas-wrap { position:absolute; inset:0; z-index:10; }
     #viz-canvas-wrap:hover #viz-preset-bar { display:flex !important; }
-    #viz-toggle-btn { background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.25); border-radius:8px;
-      color:rgba(255,255,255,0.7); font-size:11px; padding:3px 8px; cursor:pointer; transition:all .15s; }
-    #viz-toggle-btn:hover,#viz-toggle-btn.active { background:rgba(140,0,255,0.5); border-color:rgba(200,100,255,0.6); color:#fff; }
+    /* Floating reaction emotes (rooms only) */
+    #reaction-layer { position:absolute; inset:0; z-index:14; pointer-events:none; overflow:hidden; }
+    #reaction-bar { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); z-index:15;
+      display:none; gap:4px; padding:5px 8px; border-radius:999px;
+      background:rgba(0,0,0,0.42); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.18);
+      opacity:0; transition:opacity .2s; }
+    #player-bubble:hover #reaction-bar { opacity:1; }
+    body.in-room #reaction-bar { display:flex; }
+    #reaction-bar button { background:transparent; border:none; font-size:18px; line-height:1; cursor:pointer;
+      padding:2px 4px; border-radius:8px; transition:transform .1s, background .15s; }
+    #reaction-bar button:hover { transform:scale(1.3); background:rgba(255,255,255,0.12); }
+    .reaction-float { position:absolute; bottom:48px; font-size:30px; pointer-events:none;
+      animation:reactFloat 3s ease-out forwards; will-change:transform,opacity;
+      filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+    .reaction-float .react-name { display:block; font-size:9px; color:#fff; text-align:center; opacity:0.85;
+      text-shadow:0 1px 3px rgba(0,0,0,0.8); margin-top:-2px; }
+    @keyframes reactFloat {
+      0%   { transform:translateY(0) scale(0.5); opacity:0; }
+      15%  { transform:translateY(-14px) scale(1.15); opacity:1; }
+      80%  { opacity:0.9; }
+      100% { transform:translateY(-180px) scale(1) translateX(var(--rx,0)); opacity:0; }
+    }
+    #viz-toggle-btn { background:transparent; border:1px solid rgba(255,255,255,0.18); border-radius:6px;
+      color:rgba(255,255,255,0.6); font-size:12px; padding:2px 6px; cursor:pointer; transition:all .15s;
+      line-height:1; flex-shrink:0; }
+    #viz-toggle-btn:hover,#viz-toggle-btn.active { background:rgba(140,0,255,0.45); border-color:rgba(200,100,255,0.6); color:#fff; }
 
     /* info strip */
     #info-strip {
@@ -1168,6 +1200,28 @@
       background:linear-gradient(160deg,#1a0035 0%,#0d0025 50%,#001a35 100%);
       border:1.5px solid rgba(180,80,255,0.4); box-shadow:0 0 60px rgba(140,0,255,0.25),0 20px 60px rgba(0,0,0,0.7); }
     #slots-wrap.open { display:flex; }
+    /* ── Beat Tap rhythm game ── */
+    #rhythm-wrap { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:392px; max-width:96vw; border-radius:14px; z-index:810; flex-direction:column;
+      background:linear-gradient(160deg,#05121f 0%,#0a0a25 50%,#1a0530 100%);
+      border:1.5px solid rgba(80,200,255,0.4); box-shadow:0 0 60px rgba(0,180,255,0.22),0 20px 60px rgba(0,0,0,0.7); }
+    #rhythm-wrap.open { display:flex; }
+    #rhythm-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
+      background:linear-gradient(180deg,rgba(0,140,220,0.5),rgba(40,10,120,0.4));
+      border-radius:12px 12px 0 0; border-bottom:1px solid rgba(80,200,255,0.25); }
+    #rhythm-titlebar span { font-size:14px; font-weight:800; color:#cdeeff; letter-spacing:0.5px; }
+    #rhythm-body { padding:12px 14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+    #rhythm-canvas { width:100%; max-width:360px; border-radius:10px; background:rgba(0,0,0,0.35);
+      border:1px solid rgba(120,200,255,0.18); touch-action:manipulation; }
+    #rhythm-keys { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:100%; max-width:360px; }
+    .rhythm-key { padding:12px 0; border-radius:10px; font-size:16px; font-weight:800; cursor:pointer;
+      color:#fff; background:color-mix(in srgb, var(--lc) 28%, transparent); border:1.5px solid var(--lc);
+      transition:transform .05s, background .1s; user-select:none; }
+    .rhythm-key:active, .rhythm-key.hit { background:var(--lc); transform:scale(0.94); }
+    #rhythm-controls { display:flex; gap:8px; align-items:center; width:100%; max-width:360px; justify-content:center; }
+    #rhythm-start-btn { font-size:13px; font-weight:800; padding:6px 22px; border-radius:10px; cursor:pointer;
+      color:#04121f; background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
+    #rhythm-msg { font-size:11px; color:rgba(180,220,255,0.7); text-align:center; min-height:14px; }
     #slots-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
       background:linear-gradient(180deg,rgba(160,30,220,0.6),rgba(80,10,150,0.4));
       border-radius:12px 12px 0 0; border-bottom:1px solid rgba(180,80,255,0.25); }
@@ -2071,6 +2125,37 @@
 .room-member-btn.revoke { border-color: rgba(200,40,40,0.4); color: #c02020; }
 .room-member-btn.revoke:hover { background: rgba(200,40,40,0.85); color: #fff; border-color: transparent; }
 [data-scheme=dark] #room-members-panel { background: rgba(8,20,50,0.98); }
+#room-requests-panel {
+  display: none; position: fixed; z-index: 900;
+  background: var(--panel); border: 1.5px solid var(--border);
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0,40,120,0.22);
+  min-width: 240px; max-width: 320px; overflow: hidden; flex-direction: column;
+}
+#room-requests-panel.open { display: flex; }
+#room-requests-list { max-height: 320px; overflow-y: auto; }
+.room-req-thumb { width: 40px; height: 30px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.room-req-info { flex: 1; min-width: 0; }
+.room-req-title { font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-req-by { font-size: 9px; color: var(--text2); }
+#room-requests-badge { background: rgba(255,160,0,0.25); border: 1px solid rgba(255,180,0,0.4); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+[data-scheme=dark] #room-requests-panel { background: rgba(8,20,50,0.98); }
+#lobby-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,20,50,0.55); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+#lobby-overlay.open { display: flex; }
+#lobby-overlay-card {
+  width: min(440px, 92vw); max-height: 80vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,30,90,0.4); overflow: hidden;
+}
+#lobby-overlay-hdr {
+  background: var(--hdr-bg); color: #fff; font-size: 13px; font-weight: 800;
+  padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+}
+#lobby-overlay-list { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+[data-scheme=dark] #lobby-overlay-card { background: rgba(8,20,50,0.98); }
 
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
@@ -2128,6 +2213,25 @@
 #sp-join-row {
   display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
 }
+#sp-create-pw {
+  width: 100%; padding: 7px 12px; border-radius: var(--r-btn);
+  border: 1.5px solid var(--border); background: #fff; color: var(--text);
+  font-size: 13px; text-align: center; outline: none; box-sizing: border-box; font-family: inherit;
+}
+#sp-lobby-row { display: none; width: 100%; flex-direction: column; gap: 6px; }
+#sp-lobby-list { width: 100%; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.sp-lobby-empty { font-size: 12px; color: var(--text2); text-align: center; padding: 14px; }
+.lobby-room {
+  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.7); cursor: pointer; text-align: left; transition: background .14s, border-color .14s;
+}
+.lobby-room:hover { border-color: var(--accent); background: #fff; }
+.lobby-room-info { flex: 1; min-width: 0; }
+.lobby-room-title { font-size: 12px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-room-sub { font-size: 10px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-room-meta { font-size: 11px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+[data-scheme=dark] .lobby-room { background: rgba(255,255,255,0.08); }
 #sp-code {
   width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
   border: 1.5px solid var(--border); background: #fff;
@@ -3524,6 +3628,228 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=pixel] .vb { background: #44bb44 !important; border-radius: 0 !important; }
 [data-era=mono90s] .vb { background: #fff !important; border-radius: 0 !important; }
 
+/* ════════════════════════════════════════════════════════════════
+   THEME REDESIGNS (appended — later rules win on equal specificity)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── SNOW LEOPARD (macos): authentic brushed aluminum ── */
+[data-era=macos] #hdr {
+  background: linear-gradient(180deg,#fcfcfc 0%,#dcdcdc 50%,#c4c4c4 51%,#d2d2d2 100%) !important;
+  border-bottom:1px solid #909090 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95) !important;
+}
+[data-era=macos] #hdr::after { display:none !important; }
+[data-era=macos] #hdr-clock, [data-era=macos] #wx-temp, [data-era=macos] #hdr-credits,
+[data-era=macos] #room-badge-code, [data-era=macos] #room-badge-members {
+  color:#333 !important; text-shadow:0 1px 0 rgba(255,255,255,0.7) !important;
+}
+[data-era=macos] #board-btn, [data-era=macos] #gear-btn, [data-era=macos] #apps-btn,
+[data-era=macos] #th-theater-btn, [data-era=macos] #viz-toggle-btn { color:#444 !important; }
+[data-era=macos] .panel, [data-era=macos] #ctrl-bubble, [data-era=macos] #board-wrap, [data-era=macos] #theme-panel {
+  background: linear-gradient(180deg,#f2f2f2,#dadada) !important;
+  border:1px solid #9c9c9c !important; border-radius:8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.18) !important;
+}
+[data-era=macos] #search-btn, [data-era=macos] .mbtn.p, [data-era=macos] .sp-opt-btn.sp-opt-create, [data-era=macos] .sp-btn.primary {
+  background: linear-gradient(180deg,#a8d4ff 0%,#4a9af0 48%,#1f7ae0 52%,#5aa8f5 100%) !important;
+  border:1px solid #1a6ac8 !important; color:#fff !important; border-radius:6px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 3px rgba(0,60,140,0.35) !important;
+  animation: aquaPulse 2.4s ease-in-out infinite !important;
+}
+@keyframes aquaPulse { 0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),0 1px 3px rgba(0,60,140,0.35);} 50%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.8),0 0 10px rgba(60,150,240,0.7);} }
+[data-era=macos] ::-webkit-scrollbar-thumb { background: linear-gradient(90deg,#cfe6ff,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.5) !important; }
+
+/* ── MY SPACE (myspace): 2007 web 2.0 ── */
+[data-era=myspace] .panel, [data-era=myspace] #board-wrap, [data-era=myspace] #theme-panel, [data-era=myspace] #ctrl-bubble {
+  background:#fff !important; border:1px solid #b8c4d4 !important; border-radius:0 !important;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15) !important; backdrop-filter:none !important;
+}
+[data-era=myspace] #hdr {
+  background: linear-gradient(180deg,#3a6ea5 0%,#003399 100%) !important; border-radius:0 !important;
+  border-bottom:2px solid #ff8800 !important; box-shadow:0 2px 4px rgba(0,0,0,0.25) !important;
+}
+[data-era=myspace] #hdr::after { display:none !important; }
+[data-era=myspace] .pb, [data-era=myspace] .cb, [data-era=myspace] .mb, [data-era=myspace] .mbtn,
+[data-era=myspace] .ico-btn, [data-era=myspace] .q-btn, [data-era=myspace] .sm-tab, [data-era=myspace] .sp-opt-btn {
+  background: linear-gradient(180deg,#ffffff 0%,#e6eef7 48%,#d2deee 52%,#e8eff7 100%) !important;
+  border:1px solid #7088aa !important; border-radius:4px !important; color:#003399 !important; font-weight:700 !important;
+  box-shadow: inset 0 1px 0 #fff !important;
+}
+[data-era=myspace] .pb:hover, [data-era=myspace] .mbtn:hover, [data-era=myspace] .q-btn:hover { background: linear-gradient(180deg,#fff,#dfeaf6) !important; border-color:#ff8800 !important; }
+[data-era=myspace] #play-btn {
+  background: linear-gradient(180deg,#4a8fd4 0%,#003399 100%) !important; color:#fff !important; border:1px solid #002266 !important;
+  border-radius:6px !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 5px rgba(0,30,90,0.4) !important;
+}
+[data-era=myspace] .tab { background:linear-gradient(180deg,#eef3f9,#dbe5f0) !important; color:#003399 !important; border-radius:4px 4px 0 0 !important; }
+[data-era=myspace] .tab.on, [data-era=myspace] #search-btn { background: linear-gradient(180deg,#ff9f33,#ff8800) !important; color:#fff !important; border-color:#cc6d00 !important; }
+[data-era=myspace] a, [data-era=myspace] .r-title, [data-era=myspace] .v-title { color:#0033cc !important; }
+[data-era=myspace] #q, [data-era=myspace] input[type=text], [data-era=myspace] textarea, [data-era=myspace] select {
+  background:#fff !important; border:1px solid #7088aa !important; color:#1a1a1a !important; border-radius:0 !important;
+}
+[data-era=myspace] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#4a8fd4,#003399) !important; border-radius:0 !important; }
+[data-era=myspace] #prog::-webkit-slider-thumb, [data-era=myspace] #vol::-webkit-slider-thumb { background:#ff8800 !important; border:1px solid #cc6d00 !important; }
+[data-era=myspace] #prog-fill { background:#003399 !important; }
+[data-era=myspace] .vb { background: linear-gradient(0deg,#003399,#4a8fd4 55%,#ff8800) !important; }
+[data-era=myspace] #splash { background:#6699cc !important; }
+[data-era=myspace] #splash-room { background:#fff !important; border:1px solid #b8c4d4 !important; border-radius:0 !important; }
+[data-era=myspace] #sp-room-titlebar { background: linear-gradient(180deg,#3a6ea5,#003399) !important; color:#fff !important; border-radius:0 !important; }
+
+/* ── FROST (Windows Vista Aero) ── */
+[data-era=frost] .panel, [data-era=frost] #board-wrap, [data-era=frost] #theme-panel, [data-era=frost] #ctrl-bubble {
+  background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(214,232,247,0.6) 100%) !important;
+  backdrop-filter: blur(18px) saturate(1.3) !important;
+  border:1px solid rgba(255,255,255,0.85) !important; border-radius:10px !important;
+  box-shadow: 0 0 0 1px rgba(120,180,235,0.45), inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 34px rgba(80,140,210,0.28) !important;
+}
+[data-era=frost] #hdr {
+  background: linear-gradient(180deg, rgba(244,250,255,0.82) 0%, rgba(190,222,250,0.74) 48%, rgba(150,200,240,0.7) 100%) !important;
+  backdrop-filter: blur(20px) saturate(1.3) !important;
+  border-bottom:1px solid rgba(255,255,255,0.8) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 14px rgba(80,140,210,0.25) !important;
+}
+[data-era=frost] #hdr::after { background: linear-gradient(180deg, rgba(255,255,255,0.55), transparent 60%) !important; }
+[data-era=frost] .pb, [data-era=frost] .cb, [data-era=frost] .mb, [data-era=frost] .mbtn,
+[data-era=frost] .ico-btn, [data-era=frost] .q-btn, [data-era=frost] .sp-opt-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,250,255,0.9) 49%, rgba(206,228,248,0.92) 51%, rgba(224,240,252,0.95) 100%) !important;
+  border:1px solid rgba(120,175,225,0.7) !important; border-radius:8px !important; color:#16365c !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 3px rgba(40,90,160,0.2) !important;
+}
+[data-era=frost] .pb:hover, [data-era=frost] .cb:hover, [data-era=frost] .mbtn:hover, [data-era=frost] .q-btn:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 0 10px rgba(120,190,255,0.7), 0 1px 4px rgba(40,90,160,0.25) !important;
+}
+[data-era=frost] #play-btn {
+  background: radial-gradient(circle at 50% 30%, #cfeaff 0%, #5aa6ee 46%, #2170c8 100%) !important;
+  border:1px solid rgba(255,255,255,0.85) !important; border-radius:999px !important; color:#fff !important;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -3px 8px rgba(0,40,100,0.4), 0 4px 16px rgba(40,110,200,0.5), 0 0 0 1px rgba(80,150,220,0.5) !important;
+}
+[data-era=frost] .tab.on, [data-era=frost] #search-btn { background: linear-gradient(180deg,#7ab8f5,#2e8bdf) !important; color:#fff !important; }
+[data-era=frost] #q, [data-era=frost] input[type=text], [data-era=frost] textarea, [data-era=frost] select {
+  background: rgba(255,255,255,0.9) !important; border:1px solid rgba(140,185,230,0.7) !important; color:#13243a !important; border-radius:6px !important;
+}
+[data-era=frost] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#bcdcf6,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.6) !important; }
+[data-era=frost] #splash { background: linear-gradient(180deg,#dcecfb 0%,#b6d4ee 100%) !important; }
+
+/* ── GLASS → Y2K / Dreamcast / Jet Set Radio ── */
+[data-era=glass] .panel, [data-era=glass] #board-wrap, [data-era=glass] #theme-panel, [data-era=glass] #ctrl-bubble {
+  background:#fffdf7 !important; backdrop-filter:none !important;
+  border:3px solid #16140d !important; border-radius:4px !important; box-shadow:6px 6px 0 #16140d !important;
+}
+[data-era=glass] #hdr {
+  background: linear-gradient(110deg,#ff6a00 0%,#ff1f8e 55%,#00e5ff 100%) !important; backdrop-filter:none !important;
+  border-bottom:3px solid #16140d !important; box-shadow:0 4px 0 #16140d !important;
+}
+[data-era=glass] #hdr::after { display:none !important; }
+[data-era=glass] #logo img { filter: drop-shadow(2px 2px 0 #16140d) !important; }
+[data-era=glass] .pb, [data-era=glass] .cb, [data-era=glass] .mb, [data-era=glass] .mbtn, [data-era=glass] .ico-btn,
+[data-era=glass] .q-btn, [data-era=glass] .tab, [data-era=glass] .sm-tab, [data-era=glass] .sp-opt-btn {
+  background:#fff !important; color:#16140d !important; border:2.5px solid #16140d !important;
+  border-radius:3px !important; font-weight:900 !important; box-shadow:3px 3px 0 #16140d !important;
+  backdrop-filter:none !important; transition:transform .08s, box-shadow .08s !important;
+}
+[data-era=glass] .pb:hover, [data-era=glass] .cb:hover, [data-era=glass] .mbtn:hover, [data-era=glass] .q-btn:hover {
+  transform: skewX(-7deg) translate(-1px,-1px) !important; box-shadow:5px 5px 0 #ff1f8e !important; background:#ffe8a0 !important;
+}
+[data-era=glass] .pb:active, [data-era=glass] .mbtn:active { transform: translate(2px,2px) !important; box-shadow:1px 1px 0 #16140d !important; }
+[data-era=glass] #play-btn {
+  background:#ff6a00 !important; color:#16140d !important; border:3px solid #16140d !important; border-radius:4px !important; box-shadow:4px 4px 0 #16140d !important;
+}
+[data-era=glass] #play-btn:hover { background:#00e5ff !important; }
+[data-era=glass] .tab.on, [data-era=glass] .sm-tab.on, [data-era=glass] #search-btn { background:#ff6a00 !important; color:#16140d !important; }
+[data-era=glass] #q, [data-era=glass] input[type=text], [data-era=glass] textarea, [data-era=glass] select {
+  background:#fff !important; border:2.5px solid #16140d !important; color:#16140d !important; border-radius:3px !important; font-weight:700 !important;
+}
+[data-era=glass] ::-webkit-scrollbar-thumb { background:#ff1f8e !important; border:2px solid #16140d !important; border-radius:0 !important; }
+[data-era=glass] #prog::-webkit-slider-thumb, [data-era=glass] #vol::-webkit-slider-thumb { background:#ff6a00 !important; border:2px solid #16140d !important; border-radius:2px !important; box-shadow:none !important; }
+[data-era=glass] #prog-fill { background:#ff1f8e !important; }
+[data-era=glass] .vb { background: linear-gradient(0deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; border-radius:0 !important; }
+[data-era=glass] #splash { background: linear-gradient(135deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; }
+[data-era=glass] #splash-room { border:3px solid #16140d !important; box-shadow:8px 8px 0 #16140d !important; border-radius:4px !important; background:#fffdf7 !important; }
+
+/* ── NEON → tasteful cheesy casino (gold & velvet) ── */
+[data-era=neon] .panel, [data-era=neon] #board-wrap, [data-era=neon] #theme-panel, [data-era=neon] #ctrl-bubble {
+  background: linear-gradient(180deg, rgba(40,10,18,0.96), rgba(20,4,10,0.97)) !important;
+  border:1px solid rgba(255,215,0,0.45) !important; border-radius:10px !important;
+  box-shadow: inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 22px rgba(120,0,30,0.4), 0 10px 40px rgba(0,0,0,0.6) !important;
+}
+[data-era=neon] #hdr {
+  background: linear-gradient(180deg,#3a0712,#5a0a1a) !important;
+  border-bottom:1px solid rgba(255,215,0,0.5) !important;
+  box-shadow: inset 0 -1px 0 rgba(255,215,0,0.3), 0 2px 18px rgba(120,0,30,0.5) !important;
+}
+[data-era=neon] #hdr::after {
+  content:'' !important; position:absolute !important; left:0 !important; right:0 !important; bottom:0 !important; top:auto !important;
+  height:7px !important; width:100% !important;
+  background: radial-gradient(circle at 11px 50%, #ffe680 0 2.5px, rgba(255,215,0,0.3) 3px, transparent 4px) repeat-x left center/22px 7px !important;
+  animation: casinoMarquee 1.1s steps(2) infinite !important; pointer-events:none !important; opacity:0.95 !important;
+}
+@keyframes casinoMarquee { to { background-position-x: 22px; } }
+[data-era=neon] .pb, [data-era=neon] .cb, [data-era=neon] .mb, [data-era=neon] .mbtn, [data-era=neon] .ico-btn, [data-era=neon] .q-btn, [data-era=neon] .sp-opt-btn {
+  background: linear-gradient(180deg, #2a0a12, #160509) !important;
+  border:1px solid rgba(255,215,0,0.55) !important; color:#ffd700 !important; border-radius:8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 0 8px rgba(255,180,0,0.15) !important;
+}
+[data-era=neon] .pb:hover, [data-era=neon] .mbtn:hover, [data-era=neon] .q-btn:hover {
+  box-shadow: inset 0 1px 0 rgba(255,215,0,0.4), 0 0 14px rgba(255,200,0,0.55) !important; color:#fff4c0 !important;
+}
+[data-era=neon] #play-btn {
+  background: radial-gradient(circle at 50% 35%, #ffe680 0%, #d4a017 45%, #1a0508 100%) !important;
+  border:2px solid #ffd700 !important; color:#3a0712 !important;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.25), 0 0 22px rgba(255,200,0,0.6) !important;
+}
+[data-era=neon] .tab.on, [data-era=neon] #search-btn, [data-era=neon] .mbtn.p { background: linear-gradient(180deg,#d4a017,#8a6a0a) !important; color:#1a0508 !important; }
+[data-era=neon] #q, [data-era=neon] input[type=text], [data-era=neon] textarea, [data-era=neon] select {
+  background: rgba(20,5,10,0.85) !important; border:1px solid rgba(255,215,0,0.4) !important; color:#ffe8b0 !important; border-radius:6px !important;
+}
+[data-era=neon] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#ffd700,#a07800) !important; border-radius:6px !important; }
+[data-era=neon] #prog::-webkit-slider-thumb, [data-era=neon] #vol::-webkit-slider-thumb { background:#ffd700 !important; box-shadow:0 0 6px rgba(255,200,0,0.8) !important; }
+[data-era=neon] #prog-fill { background: linear-gradient(90deg,#ffd700,#ff3b6b) !important; }
+[data-era=neon] .vb { background: linear-gradient(0deg,#8a0a1a,#ffd700) !important; box-shadow:0 0 5px rgba(255,200,0,0.4) !important; }
+[data-era=neon] #splash { background: radial-gradient(circle at 50% 30%,#3a0a3a,#1a041f 60%,#0a0210) !important; }
+
+/* ── PIXEL → true pixel-art (NES palette, hard bevels) ── */
+[data-era=pixel] body, [data-era=pixel] #q, [data-era=pixel] input, [data-era=pixel] textarea, [data-era=pixel] select,
+[data-era=pixel] button, [data-era=pixel] .r-title, [data-era=pixel] .v-title {
+  font-family:'VT323','Courier New',monospace !important; letter-spacing:0.5px !important;
+}
+[data-era=pixel] #sp-room-titlebar, [data-era=pixel] #slots-titlebar span, [data-era=pixel] #rhythm-titlebar span, [data-era=pixel] .theme-hdr span {
+  font-family:'Press Start 2P','Courier New',monospace !important; font-size:10px !important; letter-spacing:0 !important;
+}
+[data-era=pixel] img:not(#logo img):not(.r-thumb):not(.v-thumb):not(#np-thumb) { image-rendering: pixelated !important; }
+[data-era=pixel] .panel, [data-era=pixel] #board-wrap, [data-era=pixel] #theme-panel, [data-era=pixel] #ctrl-bubble {
+  background:#1c1c3a !important; border-radius:0 !important; backdrop-filter:none !important; border:none !important;
+  box-shadow: 0 0 0 3px #0f0f23, 0 0 0 6px #4a4a7a !important;
+}
+[data-era=pixel] #hdr {
+  background:#16163a !important; border-radius:0 !important; border-bottom:none !important;
+  box-shadow: inset 0 -4px 0 #4a4a7a !important;
+}
+[data-era=pixel] #hdr::after { display:none !important; }
+[data-era=pixel] .pb, [data-era=pixel] .cb, [data-era=pixel] .mb, [data-era=pixel] .mbtn, [data-era=pixel] .ico-btn,
+[data-era=pixel] .q-btn, [data-era=pixel] .tab, [data-era=pixel] .sm-tab, [data-era=pixel] .sp-opt-btn, [data-era=pixel] #search-btn {
+  background:#3a3a6a !important; color:#e8e8f0 !important; border:none !important; border-radius:0 !important;
+  box-shadow: inset -3px -3px 0 #1a1a40, inset 3px 3px 0 #6a6aaa !important; font-size:15px !important;
+}
+[data-era=pixel] .pb:active, [data-era=pixel] .mbtn:active, [data-era=pixel] .q-btn:active {
+  box-shadow: inset 3px 3px 0 #1a1a40, inset -3px -3px 0 #6a6aaa !important;
+}
+[data-era=pixel] #play-btn {
+  background:#e63946 !important; color:#fff !important; border-radius:0 !important; border:none !important;
+  box-shadow: inset -4px -4px 0 #8a1e28, inset 4px 4px 0 #ff6b78 !important;
+}
+[data-era=pixel] .tab.on, [data-era=pixel] #search-btn { background:#e63946 !important; }
+[data-era=pixel] #q, [data-era=pixel] input[type=text], [data-era=pixel] textarea, [data-era=pixel] select {
+  background:#0f0f23 !important; color:#e8e8f0 !important; border-radius:0 !important; border:none !important;
+  box-shadow: inset 2px 2px 0 #000, inset -2px -2px 0 #3a3a6a !important; font-size:15px !important;
+}
+[data-era=pixel] ::-webkit-scrollbar { width:14px !important; height:14px !important; }
+[data-era=pixel] ::-webkit-scrollbar-thumb { background:#4a4a7a !important; border-radius:0 !important; box-shadow: inset -2px -2px 0 #2a2a5a, inset 2px 2px 0 #6a6aaa !important; }
+[data-era=pixel] ::-webkit-scrollbar-track { background:#0f0f23 !important; }
+[data-era=pixel] #prog::-webkit-slider-thumb, [data-era=pixel] #vol::-webkit-slider-thumb { background:#ffd166 !important; border-radius:0 !important; box-shadow:none !important; width:14px !important; height:14px !important; }
+[data-era=pixel] #prog-fill { background:#e63946 !important; }
+[data-era=pixel] .vb { background:#ffd166 !important; border-radius:0 !important; }
+[data-era=pixel] #splash { background:#0f0f23 !important; }
+[data-era=pixel] #splash-room { background:#1c1c3a !important; border-radius:0 !important; box-shadow:0 0 0 3px #0f0f23,0 0 0 6px #4a4a7a !important; }
+
   </style>
 </head>
 <body>
@@ -3554,6 +3880,13 @@ body.perf-mode #aqua-gun { display: none !important; }
             <div class="sp-opt-sub">Enter a room code to sync with others</div>
           </div>
         </button>
+        <button class="sp-opt-btn" onclick="splashShowLobby()">
+          <span class="sp-opt-icon">&#127760;</span>
+          <div class="sp-opt-content">
+            <div class="sp-opt-label">Browse Rooms</div>
+            <div class="sp-opt-sub">See public rooms and hop in</div>
+          </div>
+        </button>
         <button class="sp-opt-btn" onclick="splashSolo()">
           <span class="sp-opt-icon">&#9834;</span>
           <div class="sp-opt-content">
@@ -3564,16 +3897,23 @@ body.perf-mode #aqua-gun { display: none !important; }
       </div>
       <div id="sp-create-row">
         <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;color:var(--text2)">
+          <input type="checkbox" id="sp-private-chk" onchange="document.getElementById('sp-create-pw').style.display=this.checked?'block':'none'"> 🔒 Private (locked, still listed)
+        </label>
+        <input id="sp-create-pw" type="password" placeholder="Room password" maxlength="24" autocomplete="off" style="display:none">
         <button class="sp-btn primary" onclick="splashCreate()">Create Room</button>
       </div>
       <div id="sp-join-row">
         <input id="sp-code" type="text" placeholder="Room code" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
         <button class="sp-btn primary" onclick="splashJoinConfirm()">Join Room</button>
       </div>
+      <div id="sp-lobby-row">
+        <div id="sp-lobby-list"><div class="sp-lobby-empty">Loading rooms…</div></div>
+      </div>
     </div>
   </div>
 </div>
-<div id="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div id="bg"><div id="immersive-bg"></div><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div id="app">
 
   <!-- HEADER -->
@@ -3594,18 +3934,18 @@ body.perf-mode #aqua-gun { display: none !important; }
         <span id="wx-icon">🌤️</span>
         <span id="wx-temp">--°F</span>
       </div>
+      <span id="hdr-credits" class="aq-credits-display" onclick="claimDailyCredits()" title="Claim daily credits">💰 100</span>
     </div>
     <div id="room-badge">
       <span id="room-badge-code"></span>
       <span id="room-badge-members" onclick="toggleMembersPanel()" style="cursor:pointer" title="Members">👤 1</span>
+      <span id="room-requests-badge" onclick="toggleRequestsPanel()" style="cursor:pointer;display:none" title="Song requests">🎵 <span id="room-requests-count">0</span></span>
       <button onclick="copyRoomLink()" title="Copy room link">🔗</button>
       <button onclick="leaveRoom()" class="leave-btn" title="Leave room"><span>Leave</span> ✕</button>
     </div>
     <div id="auth-area">
       <span id="chat-badge" style="display:none"></span>
       <button id="th-theater-btn" onclick="toggleTheater()" title="Theater mode">🎬</button>
-      <button id="viz-toggle-btn" onclick="toggleVizOverlay()" title="Visualizer overlay">🌀</button>
-
       <button id="board-btn" onclick="toggleBoard()" title="Chat">
         💬<span id="chat-badge-hdr" style="display:none;position:absolute;top:0;right:0;background:#FF4757;color:#fff;border-radius:999px;font-size:7px;font-weight:800;padding:0 3px;min-width:12px;text-align:center"></span>
       </button>
@@ -3635,6 +3975,9 @@ body.perf-mode #aqua-gun { display: none !important; }
             <button class="apps-game-btn" onclick="openBlackjack();toggleAppsMenu()">
               <span class="agb-icon">🃏</span><span class="agb-name">Blackjack</span>
             </button>
+            <button class="apps-game-btn" onclick="openRhythm();toggleAppsMenu()">
+              <span class="agb-icon">🎶</span><span class="agb-name">Beat Tap</span>
+            </button>
           </div>
           <div class="apps-menu-div"></div>
           <div class="apps-section-lbl">Tools</div>
@@ -3646,6 +3989,10 @@ body.perf-mode #aqua-gun { display: none !important; }
             <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
               <div class="apps-item-info"><div class="apps-item-name">AquaPaint</div><div class="apps-item-desc">Pixel art canvas</div></div>
+            </button>
+            <button class="apps-item" onclick="openLobbyOverlay();toggleAppsMenu()">
+              <span class="apps-item-icon">🌐</span>
+              <div class="apps-item-info"><div class="apps-item-name">Public Rooms</div><div class="apps-item-desc">Browse &amp; join live rooms</div></div>
             </button>
             <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()">
               <span class="apps-item-icon">⌨️</span>
@@ -3751,6 +4098,15 @@ body.perf-mode #aqua-gun { display: none !important; }
         <div id="ph">
           <div id="ph-txt">Search for a song, paste a YouTube link,<br>or enter a video ID to begin</div>
         </div>
+        <div id="reaction-layer"></div>
+        <div id="reaction-bar">
+          <button onclick="sendReaction('🔥')" title="React">🔥</button>
+          <button onclick="sendReaction('❤️')" title="React">❤️</button>
+          <button onclick="sendReaction('😂')" title="React">😂</button>
+          <button onclick="sendReaction('👍')" title="React">👍</button>
+          <button onclick="sendReaction('🎉')" title="React">🎉</button>
+          <button onclick="sendReaction('✨')" title="React">✨</button>
+        </div>
       </div>
       <div id="info-strip">
         <div id="info-strip-bar" onclick="toggleInfoExpand()">
@@ -3792,6 +4148,7 @@ body.perf-mode #aqua-gun { display: none !important; }
           <span class="vi">Vol</span>
           <input id="vol" type="range" min="0" max="100" value="80" oninput="setVol(this.value)">
           <button class="cb lit" id="automix-btn" onclick="toggleAutomix()" title="Automix" style="display:none">Automix</button>
+          <button id="viz-toggle-btn" onclick="toggleVizOverlay()" title="Visualizer overlay">🌀</button>
         </div>
       </div>
     </div>
@@ -3846,7 +4203,8 @@ body.perf-mode #aqua-gun { display: none !important; }
   <div class="theme-label" style="margin-bottom:6px">Theme</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
+    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Snow Leopard</button>
+    <button class="theme-swatch"   data-theme="myspace"   onclick="selectTheme('myspace',this)">My Space</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
     <button class="theme-swatch"   data-theme="mono90s"   onclick="selectTheme('mono90s',this)">Mono 90s</button>
@@ -3881,6 +4239,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="immersive-mode-chk" onchange="setImmersiveMode(this.checked)" style="cursor:pointer"> 🖼️ Immersive mode (blurred art bg)
       </label>
     </div>
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
@@ -4293,6 +4656,11 @@ const THEMES = {
              hdr:'linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%)',
              panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
              font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light' },
+  myspace: { accent:'#003399', accent2:'#ff8800', text:'#1a1a1a', text2:'#33558c',
+             bg:'linear-gradient(180deg,#6699cc 0%,#dfe9f2 120px,#dfe9f2 100%)',
+             hdr:'linear-gradient(180deg,#3a6ea5 0%,#003399 100%)',
+             panel:'#ffffff', border:'#b8c4d4',
+             font:"Verdana,Tahoma,Arial,sans-serif", era:'myspace', scheme:'light' },
   nintendo:{ accent:'#e4000f', accent2:'#ff4444', text:'#1a1a2e', text2:'#555570',
              bg:'linear-gradient(180deg,#e8e8ec 0%,#d4d4da 100%)',
              hdr:'linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%)',
@@ -4313,31 +4681,31 @@ const THEMES = {
              hdr:'#000000',
              panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)',
              font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark' },
-  frost:   { accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
-             bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
-             hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
-             panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
-             font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#60a8f8', accent2:'#90c8ff', text:'#ddeeff', text2:'#90b8e0',
-             bg:'linear-gradient(135deg, #0a1428 0%, #060e1e 40%, #0a1428 100%)',
-             hdr:'linear-gradient(180deg, rgba(80,140,240,0.72) 0%, rgba(40,100,210,0.65) 100%)',
-             panel:'rgba(20,50,110,0.65)', border:'rgba(120,180,255,0.35)',
-             font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
-  neon:    { accent:'#cc44ff', accent2:'#44ddff',
-             text:'#f0e0ff', text2:'#b88ee0',
-             bg:'linear-gradient(135deg, #0d0022 0%, #180038 50%, #000d24 100%)',
-             hdr:'linear-gradient(180deg, rgba(160,30,220,0.85), rgba(20,120,220,0.75))',
-             panel:'rgba(22,5,55,0.93)',
-             border:'rgba(180,60,255,0.38)',
-             font:"'Segoe UI',system-ui,sans-serif",
+  frost:   { accent:'#2e8bdf', accent2:'#9fd2ff', text:'#13243a', text2:'#3f6080',
+             bg:'linear-gradient(160deg, #d6e8f7 0%, #b9d6ee 45%, #cfe6f5 100%)',
+             hdr:'linear-gradient(180deg, rgba(232,244,255,0.78) 0%, rgba(176,212,245,0.7) 100%)',
+             panel:'rgba(235,246,255,0.62)', border:'rgba(150,200,245,0.7)',
+             font:"'Segoe UI',Frutiger,'Helvetica Neue',Arial,sans-serif", era:'frost', scheme:'light' },
+  glass:   { accent:'#ff6a00', accent2:'#00e5ff', text:'#16140d', text2:'#5a5446',
+             bg:'linear-gradient(135deg, #f2efe6 0%, #e6e2d6 50%, #efe9da 100%)',
+             hdr:'linear-gradient(110deg, #ff6a00 0%, #ff1f8e 55%, #00e5ff 100%)',
+             panel:'rgba(255,253,247,0.92)', border:'#16140d',
+             font:"'Arial Black','Arial Narrow',Impact,system-ui,sans-serif", era:'glass', scheme:'light' },
+  neon:    { accent:'#ffd700', accent2:'#ff3b6b',
+             text:'#fff4d6', text2:'#d8b48a',
+             bg:'radial-gradient(circle at 50% 30%, #3a0a3a 0%, #1a041f 45%, #0a0210 100%)',
+             hdr:'linear-gradient(180deg, #2a0512 0%, #5a0a1a 100%)',
+             panel:'rgba(28,8,14,0.94)',
+             border:'rgba(255,215,0,0.4)',
+             font:"'Georgia','Times New Roman',serif",
              era:'neon', scheme:'dark' },
-  pixel:   { accent:'#44bb44', accent2:'#88ff88',
-             text:'#aaffaa', text2:'#66cc66',
-             bg:'#001100',
-             hdr:'linear-gradient(180deg, #006600, #004400)',
-             panel:'rgba(0,40,0,0.94)',
-             border:'rgba(0,200,0,0.35)',
-             font:"'Courier New',Courier,monospace",
+  pixel:   { accent:'#e63946', accent2:'#ffd166',
+             text:'#e8e8f0', text2:'#8a8ab0',
+             bg:'#0f0f23',
+             hdr:'linear-gradient(180deg, #2a2a5a, #16163a)',
+             panel:'#1c1c3a',
+             border:'#4a4a7a',
+             font:"'VT323','Courier New',monospace",
              era:'pixel', scheme:'dark' },
 };
 let currentTheme = 'default';
@@ -4800,6 +5168,7 @@ function restoreSession() {
       document.getElementById('np-title').textContent = current.title;
       document.getElementById('np-ch').textContent = current.channelTitle;
       const th = document.getElementById('np-thumb'); th.src = current.thumbnail; th.style.display = 'block';
+      if (window._immersive) updateImmersiveBg(current.thumbnail);
       document.getElementById('ph').style.display = 'none';
     }
   } catch {}
@@ -4833,18 +5202,21 @@ document.addEventListener('visibilitychange', function() {
   } else {
     // On return: retry until playback confirms — mobile JS was suspended so
     // the in-flight 80ms counter never ran
-    if (_wasPlayingBeforeHide) {
+    const shouldResume = _wasPlayingBeforeHide || (window._currentRoomId && !window._isRoomHost && playing);
+    if (shouldResume) {
       _wasPlayingBeforeHide = false;
       let attempts = 0;
       clearInterval(_resumeRetryTimer);
       _resumeRetryTimer = setInterval(() => {
-        if (playing || ++attempts > 15) { clearInterval(_resumeRetryTimer); return; }
+        const actuallyPlaying = player && typeof player.getPlayerState === 'function'
+          && typeof YT !== 'undefined' && player.getPlayerState() === YT.PlayerState.PLAYING;
+        if (actuallyPlaying || ++attempts > 25) { clearInterval(_resumeRetryTimer); return; }
         if (currentSource === 'soundcloud' && scWidget && scReady) {
           try { scWidget.play(); } catch(_) {}
         } else if (player && ready) {
           try { player.playVideo(); } catch(_) {}
         }
-      }, 150);
+      }, 100);
     }
   }
 });
@@ -4894,9 +5266,10 @@ function onState(e) {
     if (window._canControl && !window._applyingRemote) window.broadcastRoomState?.();
   } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
     // If tab is hidden and we were playing, this is an unwanted auto-pause — fight it
-    if (e.data === S.PAUSED && _wasPlayingBeforeHide) {
-      setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
-      return;
+    const guestUnwanted = window._currentRoomId && !window._isRoomHost && !window._applyingRemote;
+    if (e.data === S.PAUSED && (_wasPlayingBeforeHide || guestUnwanted)) {
+      if (!document.hidden) setTimeout(() => { try { player.playVideo(); } catch(_) {} }, 80);
+      return; // preserve playing=true; resume handled on tab-return or via 80ms retry
     }
     playing = false; document.getElementById('play-btn').classList.remove('playing');
     if (rBtn) rBtn.textContent = '▶';
@@ -5015,6 +5388,7 @@ async function playSoundCloud(v) {
   document.getElementById('np-title').textContent = v.title;
   document.getElementById('np-ch').textContent = v.channelTitle || '';
   const th = document.getElementById('np-thumb'); th.src = v.thumbnail || ''; th.style.display = v.thumbnail ? 'block' : 'none';
+  if (window._immersive) updateImmersiveBg(v.thumbnail);
   renderQueue(); fetchRelated(v.id || ''); fetchChannel();
   addToHistory(v); fetchInfo(v);
   if (window.abSayTrack) abSayTrack(v);
@@ -5047,7 +5421,7 @@ async function playSoundCloud(v) {
       const artwork = (sound.artwork_url || sound.user?.avatar_url || '').replace(/-large\b/, '-t300x300');
       if (title)   { document.getElementById('np-title').textContent = title;  if (current) current.title = title; }
       if (author)  { document.getElementById('np-ch').textContent = author;    if (current) current.channelTitle = author; }
-      if (artwork) { const th = document.getElementById('np-thumb'); th.src = artwork; th.style.display = 'block'; if (current) current.thumbnail = artwork; }
+      if (artwork) { const th = document.getElementById('np-thumb'); th.src = artwork; th.style.display = 'block'; if (current) current.thumbnail = artwork; if (window._immersive) updateImmersiveBg(artwork); }
     });
   });
   scWidget.bind(SC.Widget.Events.PAUSE,  () => {
@@ -5078,6 +5452,7 @@ function playVideo(v) {
   document.getElementById('np-title').textContent = v.title;
   document.getElementById('np-ch').textContent = v.channelTitle || '';
   const th = document.getElementById('np-thumb'); th.src = v.thumbnail || ''; th.style.display = v.thumbnail ? 'block' : 'none';
+  if (window._immersive) updateImmersiveBg(v.thumbnail);
   const rTitle = document.getElementById('remote-title'); if (rTitle) rTitle.textContent = v.title || '';
   const rCh = document.getElementById('remote-ch'); if (rCh) rCh.textContent = v.channelTitle || '';
   const rThumb = document.getElementById('remote-thumb'); if (rThumb) { rThumb.src = v.thumbnail || ''; rThumb.style.display = v.thumbnail ? 'block' : 'none'; }
@@ -5293,7 +5668,7 @@ function makePlaylistResult(it) {
 // ─────────────────────────────────────────────────────────
 function addToQueue(v) {
   if (window._currentRoomId && !window._canControl) {
-    window.guestAddToRoomQueue?.(v);
+    window.requestSong?.(v); // gated: host must approve
     return;
   }
   queue.push(v);
@@ -5304,7 +5679,7 @@ function addToQueue(v) {
 }
 function playNext(v) {
   if (window._currentRoomId && !window._canControl) {
-    window.guestAddToRoomQueue?.(v);
+    window.requestSong?.(v); // gated: host must approve
     return;
   }
   // Insert at position 0 so it plays immediately after the current song (queue is consumed by shift())
@@ -8902,8 +9277,17 @@ function _getVizData() {
   }
   const t = Date.now() / 1000, amp = window.playing ? 1 : 0.04, N = 128;
   const freq = new Uint8Array(N), time = new Uint8Array(N);
+  // Layered sines to mimic a real spectrum: bass hump at low bins, rolling mids, sparkle highs
+  const bass   = Math.abs(Math.sin(t * 1.1)) * 0.85 + Math.abs(Math.sin(t * 0.7)) * 0.15;
+  const mid    = Math.abs(Math.sin(t * 2.3 + 1)) * 0.6 + Math.abs(Math.sin(t * 1.7)) * 0.4;
+  const beat   = Math.pow(Math.max(0, Math.sin(t * 3.14)), 6); // kick transient
   for (let i = 0; i < N; i++) {
-    freq[i] = amp * 255 * Math.abs(Math.sin(t * (0.4 + i * 0.05) + i * 0.2));
+    const norm = i / N;
+    const bassEnv  = Math.exp(-norm * 6)  * (bass + beat * 0.8);
+    const midEnv   = Math.exp(-Math.pow(norm - 0.25, 2) * 30) * mid;
+    const highEnv  = norm > 0.5 ? Math.abs(Math.sin(t * 4.1 + i * 0.3)) * 0.25 * (1 - norm) : 0;
+    const noise    = (Math.random() * 0.08 - 0.04);
+    freq[i] = Math.min(255, amp * 255 * Math.max(0, bassEnv + midEnv + highEnv + noise));
     time[i] = 128 + amp * 90 * Math.sin(t * 2.5 + i * 0.12);
   }
   return { freq, time, live: false };
@@ -9227,7 +9611,7 @@ function spinSlots(){
     slotsBet=Math.max(1,Math.min(aqGetCredits(),slotsBet));
     if(aqGetCredits()<slotsBet){
       const msg=document.getElementById('slots-msg');if(msg)msg.textContent='Not enough credits!';
-      if(aqGetCredits()<=0){aqSetCredits(25);if(window.toast)window.toast('🎰 Back to 25 credits');updateSlotsUI();}
+      if(aqGetCredits()<=0&&window.toast)window.toast('Out of credits — claim your daily bonus 🎁');
       return;
     }
     aqSetCredits(aqGetCredits()-slotsBet);
@@ -10237,6 +10621,7 @@ function closePaint() { document.getElementById('paint-wrap').classList.remove('
 function clearPaint() {
   const cv=document.getElementById('paint-canvas');
   const ctx=cv.getContext('2d');
+  paintSaveState();
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
 }
 function savePaint() {
@@ -10353,11 +10738,11 @@ function initPaint() {
     paintClearSelectionOverlay();
     _painting = true; _paintStart = p; lastPt = p;
     _paintSnapshot = ctx.getImageData(0, 0, cv.width, cv.height);
-    if (_paintTool === 'fill') { paintSaveState(); flood(p.x, p.y, pc.value); _painting = false; return; }
-    ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
+    // Save the pre-mutation state ONCE here for every canvas-modifying tool.
+    paintSaveState();
+    if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
     const sz = parseInt(ps.value);
     if (_paintTool === 'spray') {
-      paintSaveState();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = pc.value;
       const radius = 12;
@@ -10445,7 +10830,7 @@ function initPaint() {
       }
       return;
     }
-    if (_painting) paintSaveState();
+    // State was already saved (pre-mutation) in pointerdown.
     _painting = false; lastPt = null;
     ctx.globalCompositeOperation = 'source-over';
   });
@@ -10562,6 +10947,187 @@ function setPerfMode(on) {
 // Apply perf mode on load before DOM settles
 if (_perfMode) document.body.classList.add('perf-mode');
 
+// ── Immersive mode: blurred now-playing artwork background ──
+window._immersive = localStorage.getItem('aq_immersive') === '1';
+function updateImmersiveBg(url) {
+  const el = document.getElementById('immersive-bg');
+  if (!el) return;
+  if (window._immersive && url) {
+    el.style.backgroundImage = `url("${url}")`;
+    el.classList.add('active');
+  } else {
+    el.classList.remove('active');
+  }
+}
+function setImmersiveMode(on) {
+  window._immersive = !!on;
+  localStorage.setItem('aq_immersive', on ? '1' : '0');
+  document.body.classList.toggle('immersive', on);
+  updateImmersiveBg(window.current?.thumbnail);
+  const chk = document.getElementById('immersive-mode-chk');
+  if (chk) chk.checked = on;
+}
+// Apply on load
+if (window._immersive) {
+  document.body.classList.add('immersive');
+  const ichk = document.getElementById('immersive-mode-chk');
+  if (ichk) ichk.checked = true;
+}
+
+// ── Floating reaction emotes ──
+window.spawnReaction = function(emoji, name) {
+  const layer = document.getElementById('reaction-layer');
+  if (!layer) return;
+  const el = document.createElement('div');
+  el.className = 'reaction-float';
+  el.style.left = (10 + Math.random() * 80) + '%';
+  el.style.setProperty('--rx', (Math.random() * 80 - 40) + 'px');
+  el.textContent = emoji || '✨';
+  if (name) { const n = document.createElement('span'); n.className = 'react-name'; n.textContent = name; el.appendChild(n); }
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 3100);
+};
+
+// ── Beat Tap rhythm game (synth-generated track, real audio clock) ──
+let _rhythmInited=false, _rhythmRaf=null, _rhythmPlaying=false;
+let _rhythmChart=[], _rhythmStartT=0, _rhythmScore=0, _rhythmCombo=0, _rhythmBest=0, _rhythmJudge='', _rhythmJudgeT=0;
+let _rhythmHits=0, _rhythmTotal=0;
+const RHY_KEYS=['d','f','j','k'];
+const RHY_LANE_COLORS=['#ff5a87','#ffc24a','#4ad6ff','#8c6bff'];
+const RHY_APPROACH=1.9, RHY_LEADIN=2.2, RHY_HITWIN=0.22;
+const RHY_LANE_SOUNDS=[ t=>drumKick(t), t=>drumSnare(t), t=>drumHihat(t), t=>drumClap(t) ];
+function openRhythm(show=true){
+  const w=document.getElementById('rhythm-wrap'); if(!w) return;
+  const opening = show && !w.classList.contains('open');
+  w.classList.toggle('open', !!show);
+  if(!show){ rhythmStop(); return; }
+  if(opening){
+    aqRefreshCreditDisplays();
+    if(!_rhythmInited){ _rhythmInited=true; _rhythmBindKeys(); }
+    _rhythmDrawIdle();
+  }
+}
+function _rhythmGenChart(diff){
+  const bpm=[96,112,132][diff], beat=60/bpm, bars=12, sub=[2,2,4][diff], density=[0.4,0.55,0.7][diff];
+  const chart=[]; let lastLane=-1;
+  for(let b=0;b<bars*4;b++){
+    for(let s=0;s<sub;s++){
+      if(Math.random()<density){
+        let lane=Math.floor(Math.random()*4);
+        if(lane===lastLane && Math.random()<0.6) lane=(lane+1)%4;
+        lastLane=lane;
+        chart.push({time:(b*sub+s)*(beat/sub)+RHY_LEADIN, lane, hit:false, missed:false});
+      }
+    }
+  }
+  return chart;
+}
+function rhythmStart(){
+  if(_rhythmPlaying) return rhythmStop();
+  const cx=initActx();
+  const diff=parseInt(document.getElementById('rhythm-diff').value)||1;
+  _rhythmChart=_rhythmGenChart(diff);
+  _rhythmScore=0;_rhythmCombo=0;_rhythmBest=0;_rhythmHits=0;_rhythmTotal=_rhythmChart.length;
+  _rhythmStartT=cx.currentTime; _rhythmPlaying=true;
+  document.getElementById('rhythm-start-btn').textContent='■ Stop';
+  document.getElementById('rhythm-msg').textContent='Go!';
+  _rhythmChart.forEach(n=>{ try{ RHY_LANE_SOUNDS[n.lane](_rhythmStartT+n.time); }catch(_){} });
+  if(_rhythmRaf) cancelAnimationFrame(_rhythmRaf);
+  _rhythmLoop();
+}
+function rhythmStop(){
+  _rhythmPlaying=false;
+  if(_rhythmRaf){ cancelAnimationFrame(_rhythmRaf); _rhythmRaf=null; }
+  const b=document.getElementById('rhythm-start-btn'); if(b) b.textContent='▶ Start';
+}
+function rhythmEnd(){
+  rhythmStop();
+  const acc=_rhythmTotal?Math.round(_rhythmHits/_rhythmTotal*100):0;
+  const reward=Math.floor(_rhythmScore/200);
+  if(reward>0){ aqAddCredits(reward); if(window.toast) window.toast(`🎶 +${reward} credits!`); }
+  const msg=document.getElementById('rhythm-msg');
+  if(msg) msg.textContent=`Score ${_rhythmScore} · ${acc}% hit · max combo ${_rhythmBest} · +${reward} 💰`;
+  aqRefreshCreditDisplays();
+}
+function _rhythmJudgeHit(lane){
+  if(!_rhythmPlaying) return;
+  const now=initActx().currentTime-_rhythmStartT;
+  let best=null,bestDt=999;
+  for(const n of _rhythmChart){
+    if(n.lane!==lane||n.hit||n.missed) continue;
+    const dt=Math.abs(n.time-now);
+    if(dt<bestDt){bestDt=dt;best=n;}
+  }
+  if(best && bestDt<RHY_HITWIN){
+    best.hit=true; _rhythmHits++;
+    let pts;
+    if(bestDt<0.07){pts=100;_rhythmJudge='PERFECT';}
+    else if(bestDt<0.14){pts=60;_rhythmJudge='GREAT';}
+    else {pts=30;_rhythmJudge='GOOD';}
+    _rhythmCombo++; if(_rhythmCombo>_rhythmBest)_rhythmBest=_rhythmCombo;
+    _rhythmScore+=Math.round(pts*(1+Math.floor(_rhythmCombo/10)*0.5));
+    _rhythmJudgeT=now;
+  }
+}
+function _rhythmBindKeys(){
+  document.addEventListener('keydown', e=>{
+    const w=document.getElementById('rhythm-wrap');
+    if(!w||!w.classList.contains('open')||!_rhythmPlaying) return;
+    const lane=RHY_KEYS.indexOf(e.key.toLowerCase());
+    if(lane>=0){ e.preventDefault(); _rhythmJudgeHit(lane); _rhythmFlashKey(lane); }
+  });
+  document.querySelectorAll('.rhythm-key').forEach(btn=>{
+    const lane=parseInt(btn.dataset.lane);
+    btn.addEventListener('pointerdown', e=>{ e.preventDefault(); _rhythmJudgeHit(lane); _rhythmFlashKey(lane); });
+  });
+}
+function _rhythmFlashKey(lane){
+  const btn=document.querySelector(`.rhythm-key[data-lane="${lane}"]`);
+  if(btn){ btn.classList.add('hit'); setTimeout(()=>btn.classList.remove('hit'),90); }
+}
+function _rhythmDrawLanes(ctx,W,H){
+  const lw=W/4;
+  for(let i=0;i<4;i++){ ctx.fillStyle=i%2?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'; ctx.fillRect(i*lw,0,lw,H); }
+  const hy=H-60;
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,hy); ctx.lineTo(W,hy); ctx.stroke();
+}
+function _rhythmDrawIdle(){
+  const cv=document.getElementById('rhythm-canvas'); if(!cv) return;
+  const ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+  _rhythmDrawLanes(ctx,cv.width,cv.height);
+}
+function _rhythmLoop(){
+  _rhythmRaf=requestAnimationFrame(_rhythmLoop);
+  const cv=document.getElementById('rhythm-canvas'); if(!cv) return;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, hy=H-60, lw=W/4;
+  ctx.clearRect(0,0,W,H); _rhythmDrawLanes(ctx,W,H);
+  const now=initActx().currentTime-_rhythmStartT;
+  let remaining=0, lastTime=0;
+  for(const n of _rhythmChart){
+    lastTime=Math.max(lastTime,n.time);
+    if(n.hit) continue;
+    if(!n.missed && now-n.time>RHY_HITWIN){ n.missed=true; _rhythmCombo=0; _rhythmJudge='MISS'; _rhythmJudgeT=now; }
+    if(n.missed) continue;
+    remaining++;
+    const p=(now-(n.time-RHY_APPROACH))/RHY_APPROACH;
+    if(p<-0.05||p>1.2) continue;
+    const y=p*hy, cx2=n.lane*lw+lw/2;
+    ctx.fillStyle=RHY_LANE_COLORS[n.lane];
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx2-lw*0.36,y-10,lw*0.72,20,6); ctx.fill(); }
+    else ctx.fillRect(cx2-lw*0.36,y-10,lw*0.72,20);
+    ctx.fillStyle='rgba(255,255,255,0.28)'; ctx.fillRect(cx2-lw*0.36,y-10,lw*0.72,5);
+  }
+  if(now-_rhythmJudgeT<0.5 && _rhythmJudge){
+    ctx.fillStyle=_rhythmJudge==='MISS'?'#ff5a87':(_rhythmJudge==='PERFECT'?'#7dffe0':'#fff');
+    ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(_rhythmJudge, W/2, hy-40);
+  }
+  ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif'; ctx.textAlign='left'; ctx.fillText('Score '+_rhythmScore,8,22);
+  ctx.textAlign='right'; ctx.fillText('Combo '+_rhythmCombo,W-8,22);
+  if(_rhythmPlaying && now>lastTime+1.2 && remaining===0) rhythmEnd();
+}
+
 /* ── LAYOUT OPTIONS ── */
 const _layoutOpts = JSON.parse(localStorage.getItem('aq_layout') || '{}');
 
@@ -10614,6 +11180,7 @@ function _requireName() {
 function splashShowCreate() {
   document.getElementById('sp-create-row').style.display = 'flex';
   document.getElementById('sp-join-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'none';
   document.getElementById('sp-create-code').focus();
 }
 function splashCreate() {
@@ -10624,10 +11191,12 @@ function splashCreate() {
   })();
   const custom = document.getElementById('sp-create-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   const roomId = custom || Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
+  const isPrivate = !!document.getElementById('sp-private-chk')?.checked;
+  const password = isPrivate ? (document.getElementById('sp-create-pw')?.value || '') : '';
   window.location.hash = roomId;
   localStorage.setItem('aq_session_room', JSON.stringify({roomId, wasHost:true}));
   closeSplash();
-  window.initRoom?.(roomId, true);
+  window.initRoom?.(roomId, true, {isPrivate, password});
   updateRoomChatLabel(roomId);
   _clearRoomChatPlaceholder();
   updateRoomMgmtPanel();
@@ -10635,7 +11204,71 @@ function splashCreate() {
 function splashJoinToggle() {
   document.getElementById('sp-join-row').style.display = 'flex';
   document.getElementById('sp-create-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'none';
   document.getElementById('sp-code').focus();
+}
+let _lobbyUnsub = null;
+function splashShowLobby() {
+  if (!_requireName()) return;
+  document.getElementById('sp-create-row').style.display = 'none';
+  document.getElementById('sp-join-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'flex';
+  startLobby(renderSplashLobby);
+}
+function startLobby(renderFn) {
+  if (typeof window.listPublicRooms !== 'function') { renderFn([]); return; }
+  if (_lobbyUnsub) { try { _lobbyUnsub(); } catch(_){} }
+  _lobbyUnsub = window.listPublicRooms(renderFn);
+}
+function stopLobby() { if (_lobbyUnsub) { try { _lobbyUnsub(); } catch(_){} _lobbyUnsub = null; } }
+function _lobbyRoomsHTML(rooms) {
+  if (!rooms || !rooms.length) return '<div class="sp-lobby-empty">No active public rooms right now. Create one!</div>';
+  return rooms.map(r => {
+    const lock = r.isPrivate ? '🔒 ' : '';
+    const np = r.nowPlaying ? `▶ ${esc(r.nowPlaying.slice(0,40))}` : 'Idle';
+    return `<button class="lobby-room" onclick="joinFromLobby('${r.id}',${r.isPrivate?1:0},${r.hasPassword?1:0})">
+      <div class="lobby-room-info">
+        <div class="lobby-room-title">${lock}#${esc(r.id)} · ${esc(r.hostName)}</div>
+        <div class="lobby-room-sub">${np}</div>
+      </div>
+      <span class="lobby-room-meta">👤 ${r.memberCount}</span>
+    </button>`;
+  }).join('');
+}
+function renderSplashLobby(rooms) {
+  const el = document.getElementById('sp-lobby-list');
+  if (el) el.innerHTML = _lobbyRoomsHTML(rooms);
+}
+function renderOverlayLobby(rooms) {
+  const el = document.getElementById('lobby-overlay-list');
+  if (el) el.innerHTML = _lobbyRoomsHTML(rooms);
+}
+function openLobbyOverlay() {
+  const ov = document.getElementById('lobby-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  startLobby(renderOverlayLobby);
+}
+function closeLobbyOverlay() {
+  const ov = document.getElementById('lobby-overlay');
+  if (ov && ov.classList.contains('open')) { ov.classList.remove('open'); stopLobby(); }
+}
+async function joinFromLobby(roomId, isPrivate, hasPassword) {
+  let pw = '';
+  if (hasPassword) {
+    pw = prompt('This room is locked. Enter the password:') || '';
+    const ok = await window.checkRoomPassword?.(roomId, pw);
+    if (!ok) { toast('Wrong password'); return; }
+  }
+  stopLobby();
+  window.location.hash = roomId;
+  localStorage.setItem('aq_session_room', JSON.stringify({roomId, wasHost:false}));
+  if (document.getElementById('splash')) closeSplash();
+  closeLobbyOverlay();
+  window.initRoom?.(roomId, false);
+  updateRoomChatLabel(roomId);
+  _clearRoomChatPlaceholder();
+  updateRoomMgmtPanel();
 }
 function splashJoinConfirm() {
   if (!_requireName()) return;
@@ -10746,6 +11379,74 @@ document.addEventListener('click', e => {
   const panel = document.getElementById('room-members-panel');
   if (!panel?.classList.contains('open')) return;
   if (!panel.contains(e.target) && e.target.id !== 'room-badge-members') closeMembersPanel();
+});
+
+// ── Host: song requests panel ──
+window._pendingRequests = {};
+window.onSongRequest = function(req) {
+  if (!window._isRoomHost || !req || !req._id) return;
+  window._pendingRequests[req._id] = req;
+  renderRequestsPanel();
+  window.playJoinChime?.();
+  if (window.toast) window.toast(`🎵 ${req.byName || 'Someone'} requested a song`);
+};
+window.renderRequestsPanel = renderRequestsPanel;
+function renderRequestsPanel() {
+  const ids = Object.keys(window._pendingRequests);
+  const badge = document.getElementById('room-requests-badge');
+  const count = document.getElementById('room-requests-count');
+  if (count) count.textContent = ids.length;
+  if (badge) badge.style.display = (window._isRoomHost && ids.length) ? '' : (window._isRoomHost ? 'inline-block' : 'none');
+  const list = document.getElementById('room-requests-list');
+  if (!list) return;
+  if (!ids.length) { list.innerHTML = '<div class="room-member-row" style="opacity:.6">No pending requests</div>'; return; }
+  list.innerHTML = '';
+  ids.forEach(id => {
+    const r = window._pendingRequests[id];
+    const row = document.createElement('div');
+    row.className = 'room-member-row';
+    const thumb = r.thumbnail ? `<img class="room-req-thumb" src="${esc(r.thumbnail)}" alt="">` : '';
+    row.innerHTML = `${thumb}<div class="room-req-info"><div class="room-req-title">${esc(r.title || 'Unknown')}</div><div class="room-req-by">from ${esc(r.byName || 'Guest')}</div></div>
+      <button class="room-member-btn" onclick="hostApproveRequest('${id}')">✓</button>
+      <button class="room-member-btn revoke" onclick="hostDeclineRequest('${id}')">✕</button>`;
+    list.appendChild(row);
+  });
+}
+window.hostApproveRequest = function(id) {
+  const r = window._pendingRequests[id];
+  if (!r) return;
+  const video = { id: r.videoId, title: r.title || r.videoId, channelTitle: r.channelTitle || '',
+    thumbnail: r.thumbnail || `https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`, source: 'youtube' };
+  window.approveRequest?.(id, video);
+  delete window._pendingRequests[id];
+  renderRequestsPanel();
+  if (window.toast) window.toast('✓ Added to queue');
+};
+window.hostDeclineRequest = function(id) {
+  window.declineRequest?.(id);
+  delete window._pendingRequests[id];
+  renderRequestsPanel();
+};
+function toggleRequestsPanel() {
+  const panel = document.getElementById('room-requests-panel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) { closeRequestsPanel(); return; }
+  const anchor = document.getElementById('room-requests-badge');
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    panel.style.top = (r.bottom + 6) + 'px';
+    panel.style.left = Math.max(8, r.left - 120) + 'px';
+  }
+  renderRequestsPanel();
+  panel.classList.add('open');
+}
+function closeRequestsPanel() {
+  document.getElementById('room-requests-panel')?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const panel = document.getElementById('room-requests-panel');
+  if (!panel?.classList.contains('open')) return;
+  if (!panel.contains(e.target) && !e.target.closest('#room-requests-badge')) closeRequestsPanel();
 });
 
 /* ── BOARD CHAT TABS ── */
@@ -12284,7 +12985,8 @@ function aqGetCredits() {
   return v === null ? (localStorage.setItem('aq_credits','100'), 100) : (parseInt(v,10)||0);
 }
 function aqSetCredits(n) {
-  localStorage.setItem('aq_credits', Math.max(0, Math.round(n)));
+  const safe = isFinite(n) ? Math.max(0, Math.round(n)) : aqGetCredits();
+  localStorage.setItem('aq_credits', safe);
   aqRefreshCreditDisplays();
 }
 function aqAddCredits(n) { aqSetCredits(aqGetCredits() + n); }
@@ -12318,6 +13020,8 @@ function updateDailyClaimUI() {
   }
 }
 setInterval(updateDailyClaimUI, 1000);
+// Populate header credit badge (and any other displays) once on load
+aqRefreshCreditDisplays();
 
 // ── BLACKJACK ────────────────────────────────────────
 const BJ_SUITS=['♠','♥','♦','♣'];
@@ -12571,8 +13275,7 @@ function bjUpdateBalance(){
   const el=document.getElementById('bj-bal');
   if(el) el.textContent=aqGetCredits(); aqRefreshCreditDisplays();
   if(aqGetCredits()<=0){
-    bjSetStatus("You're out! Back to 25 credits...");
-    setTimeout(function(){aqSetCredits(25); bjUpdateBalance();bjSetStatus('');bjRender();},1500);
+    bjSetStatus("Out of credits! Claim your daily bonus 🎁");
   }
 }
 
@@ -13192,6 +13895,49 @@ function bjUpdateBalance(){
     <button onclick="closeMembersPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
   </div>
   <div id="room-members-list"></div>
+</div>
+<div id="room-requests-panel">
+  <div id="room-members-panel-hdr">
+    <span>🎵 Song Requests</span>
+    <button onclick="closeRequestsPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
+  </div>
+  <div id="room-requests-list"><div class="room-member-row" style="opacity:.6">No pending requests</div></div>
+</div>
+<div id="rhythm-wrap">
+  <div id="rhythm-titlebar">
+    <span>🎶 Beat Tap</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="rhythm-credits" class="aq-credits-display" style="font-size:13px;font-weight:800;color:#7dffe0"></span>
+      <button onclick="openRhythm(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+    </div>
+  </div>
+  <div id="rhythm-body">
+    <canvas id="rhythm-canvas" width="360" height="420"></canvas>
+    <div id="rhythm-keys">
+      <button class="rhythm-key" data-lane="0" style="--lc:#ff5a87">D</button>
+      <button class="rhythm-key" data-lane="1" style="--lc:#ffc24a">F</button>
+      <button class="rhythm-key" data-lane="2" style="--lc:#4ad6ff">J</button>
+      <button class="rhythm-key" data-lane="3" style="--lc:#8c6bff">K</button>
+    </div>
+    <div id="rhythm-controls">
+      <select id="rhythm-diff" style="font-size:12px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2)">
+        <option value="0">Easy</option>
+        <option value="1" selected>Normal</option>
+        <option value="2">Hard</option>
+      </select>
+      <button id="rhythm-start-btn" onclick="rhythmStart()">▶ Start</button>
+    </div>
+    <div id="rhythm-msg">Tap D F J K (or the buttons) as notes hit the line</div>
+  </div>
+</div>
+<div id="lobby-overlay" onclick="if(event.target===this)closeLobbyOverlay()">
+  <div id="lobby-overlay-card">
+    <div id="lobby-overlay-hdr">
+      <span>🌐 Public Rooms</span>
+      <button onclick="closeLobbyOverlay()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div id="lobby-overlay-list"><div class="sp-lobby-empty">Loading rooms…</div></div>
+  </div>
 </div>
 </body>
 </html>

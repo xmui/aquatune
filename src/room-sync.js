@@ -1,7 +1,15 @@
 import { ref, set, push, query, orderByChild, limitToLast, get, onValue, onChildAdded, onDisconnect, remove } from 'firebase/database';
 import { db } from './firebase.js';
-// Expose Firebase functions for leaderboard access from index.html
-window._fbFns = { push, ref, query, orderByChild, limitToLast, get };
+// Expose Firebase functions for leaderboard / lobby / reactions access from index.html
+window._fbFns = { push, ref, query, orderByChild, limitToLast, get, set, remove, onValue, onChildAdded, onDisconnect };
+
+// Lightweight non-cryptographic hash for password obfuscation (client-only model; not real security)
+function djb2(str) {
+  let h = 5381;
+  for (let i = 0; i < String(str).length; i++) h = ((h << 5) + h + String(str).charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+window._djb2 = djb2;
 
 const GLOBAL_CHAT_PATH = 'globalChat';
 const SEEK_TOLERANCE   = 3.0; // seconds before forcing a seek correction
@@ -39,6 +47,11 @@ window.broadcastRoomState = function(delay = 0) {
       updatedBy:  myUserId,
       updatedAt:  Date.now(),
     });
+    // Host keeps the lobby metadata fresh (now-playing + heartbeat)
+    if (window._isRoomHost) {
+      set(ref(db, `rooms/${window._currentRoomId}/meta/nowPlaying`), window.current?.title || '');
+      set(ref(db, `rooms/${window._currentRoomId}/meta/updatedAt`), Date.now());
+    }
   }, delay);
 };
 
@@ -122,16 +135,31 @@ function renderMembersPanel() {
 
 let _roomHostUserId = null;
 
-window.initRoom = function(roomId, isHost) {
+window.initRoom = function(roomId, isHost, opts) {
+  opts = opts || {};
   window._currentRoomId = roomId;
   window._isRoomHost    = isHost;
   window._canControl    = isHost;
   if (isHost) _roomHostUserId = myUserId;
   // Immediately dim controls for guests
   document.body.classList.toggle('room-guest', !isHost);
+  document.body.classList.add('in-room'); // reveals reaction bar + request affordances
 
   // Write own presence
   const username  = localStorage.getItem('aq_username') || 'Guest';
+
+  // Host: publish room metadata for the public lobby + store optional password hash
+  if (isHost) {
+    const isPrivate = !!opts.isPrivate;
+    const password  = opts.password || '';
+    set(ref(db, `rooms/${roomId}/meta`), {
+      hostName: username, title: `${username}'s room`, nowPlaying: '',
+      isPrivate, hasPassword: !!password, memberCount: 1,
+      createdAt: Date.now(), updatedAt: Date.now(),
+    });
+    onDisconnect(ref(db, `rooms/${roomId}/meta`)).remove();
+    if (password) set(ref(db, `rooms/${roomId}/auth`), djb2(password));
+  }
   const presRef   = ref(db, `rooms/${roomId}/presence/${myUserId}`);
   const presData  = () => ({ username, joinedAt: Date.now(), lastSeen: Date.now() });
   set(presRef, presData());
@@ -158,6 +186,11 @@ window.initRoom = function(roomId, isHost) {
     _prevPresenceKeys = newKeys;
     _presenceMap = newMap;
     renderMembersPanel(); // count update happens inside renderMembersPanel now
+    // Host keeps lobby member count fresh
+    if (window._isRoomHost) {
+      set(ref(db, `rooms/${roomId}/meta/memberCount`), newKeys.size);
+      set(ref(db, `rooms/${roomId}/meta/updatedAt`), Date.now());
+    }
   });
 
   // Watch permissions
@@ -205,6 +238,26 @@ window.initRoom = function(roomId, isHost) {
     });
   }
 
+  // Host: pick up gated song requests from permission-less guests
+  if (isHost) {
+    onChildAdded(ref(db, `rooms/${roomId}/requests`), snap => {
+      const req = snap.val();
+      if (req) window.onSongRequest?.({ ...req, _id: snap.key });
+    });
+  }
+
+  // Everyone: floating reaction emotes (ignore stale entries on join)
+  const _reactJoinTs = Date.now();
+  onChildAdded(ref(db, `rooms/${roomId}/reactions`), snap => {
+    const r = snap.val();
+    if (!r) return;
+    if (r.ts && Date.now() - r.ts < 6000 && r.byId !== myUserId) {
+      window.spawnReaction?.(r.emoji, r.byName);
+    }
+    // self-clean old nodes opportunistically
+    if (r.ts && Date.now() - r.ts > 8000) remove(snap.ref);
+  });
+
   // Room chat
   onChildAdded(ref(db, `rooms/${roomId}/messages`), snap => {
     const p = snap.val();
@@ -235,6 +288,9 @@ window.initRoom = function(roomId, isHost) {
   const codeEl = document.getElementById('room-badge-code');
   if (badge)  badge.style.display = 'flex';
   if (codeEl) codeEl.textContent  = `#${roomId}${isHost ? ' 👑' : ''}`;
+
+  // Host: reveal the (empty) song-requests badge
+  if (isHost) window.renderRequestsPanel?.();
 };
 
 // Host grants/revokes DJ control to a guest
@@ -261,6 +317,63 @@ window.guestAddToRoomQueue = function(v) {
   if (!window._currentRoomId) return;
   push(ref(db, `rooms/${window._currentRoomId}/guestQueue`), v);
   if (window.toast) window.toast('Added to room queue');
+};
+
+// ── Gated song requests (permission-less guests → host approval) ──
+window.requestSong = function(v) {
+  if (!window._currentRoomId || !v) return;
+  const byName = localStorage.getItem('aq_username') || 'Guest';
+  push(ref(db, `rooms/${window._currentRoomId}/requests`), {
+    videoId: v.id || v.videoId || null,
+    title: v.title || '', thumbnail: v.thumbnail || '',
+    channelTitle: v.channelTitle || '',
+    byName, byId: myUserId, ts: Date.now(),
+  });
+  if (window.toast) window.toast('🎵 Request sent to host');
+};
+window.approveRequest = function(reqId, video) {
+  if (!window._isRoomHost || !window._currentRoomId) return;
+  if (video && window.addToQueue) window.addToQueue(video);
+  remove(ref(db, `rooms/${window._currentRoomId}/requests/${reqId}`));
+};
+window.declineRequest = function(reqId) {
+  if (!window._isRoomHost || !window._currentRoomId) return;
+  remove(ref(db, `rooms/${window._currentRoomId}/requests/${reqId}`));
+};
+
+// ── Floating reaction emotes ──
+window.sendReaction = function(emoji) {
+  if (!window._currentRoomId || !emoji) return;
+  const byName = localStorage.getItem('aq_username') || 'Guest';
+  push(ref(db, `rooms/${window._currentRoomId}/reactions`), { emoji, byName, byId: myUserId, ts: Date.now() });
+  window.spawnReaction?.(emoji, byName); // show locally immediately
+};
+
+// ── Public room lobby ──
+window.listPublicRooms = function(callback) {
+  // Returns active rooms (fresh heartbeat, ≥1 member). Private rooms included but flagged locked.
+  return onValue(ref(db, 'rooms'), snap => {
+    const rooms = [];
+    const all = snap.exists() ? snap.val() : {};
+    const now = Date.now();
+    for (const [id, room] of Object.entries(all)) {
+      const m = room && room.meta;
+      if (!m) continue;
+      if ((m.memberCount || 0) < 1) continue;
+      if (m.updatedAt && now - m.updatedAt > 120000) continue; // stale (>2min)
+      rooms.push({ id, hostName: m.hostName || 'Guest', title: m.title || id,
+        nowPlaying: m.nowPlaying || '', memberCount: m.memberCount || 1,
+        isPrivate: !!m.isPrivate, hasPassword: !!m.hasPassword, updatedAt: m.updatedAt || 0 });
+    }
+    rooms.sort((a, b) => b.updatedAt - a.updatedAt);
+    callback(rooms);
+  });
+};
+window.checkRoomPassword = function(roomId, pw) {
+  return get(ref(db, `rooms/${roomId}/auth`)).then(snap => {
+    if (!snap.exists()) return true; // no password set
+    return snap.val() === djb2(pw || '');
+  }).catch(() => false);
 };
 
 window.sendRoomMessage = function(msg, imageData) {

@@ -3628,6 +3628,228 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=pixel] .vb { background: #44bb44 !important; border-radius: 0 !important; }
 [data-era=mono90s] .vb { background: #fff !important; border-radius: 0 !important; }
 
+/* ════════════════════════════════════════════════════════════════
+   THEME REDESIGNS (appended — later rules win on equal specificity)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── SNOW LEOPARD (macos): authentic brushed aluminum ── */
+[data-era=macos] #hdr {
+  background: linear-gradient(180deg,#fcfcfc 0%,#dcdcdc 50%,#c4c4c4 51%,#d2d2d2 100%) !important;
+  border-bottom:1px solid #909090 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95) !important;
+}
+[data-era=macos] #hdr::after { display:none !important; }
+[data-era=macos] #hdr-clock, [data-era=macos] #wx-temp, [data-era=macos] #hdr-credits,
+[data-era=macos] #room-badge-code, [data-era=macos] #room-badge-members {
+  color:#333 !important; text-shadow:0 1px 0 rgba(255,255,255,0.7) !important;
+}
+[data-era=macos] #board-btn, [data-era=macos] #gear-btn, [data-era=macos] #apps-btn,
+[data-era=macos] #th-theater-btn, [data-era=macos] #viz-toggle-btn { color:#444 !important; }
+[data-era=macos] .panel, [data-era=macos] #ctrl-bubble, [data-era=macos] #board-wrap, [data-era=macos] #theme-panel {
+  background: linear-gradient(180deg,#f2f2f2,#dadada) !important;
+  border:1px solid #9c9c9c !important; border-radius:8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.18) !important;
+}
+[data-era=macos] #search-btn, [data-era=macos] .mbtn.p, [data-era=macos] .sp-opt-btn.sp-opt-create, [data-era=macos] .sp-btn.primary {
+  background: linear-gradient(180deg,#a8d4ff 0%,#4a9af0 48%,#1f7ae0 52%,#5aa8f5 100%) !important;
+  border:1px solid #1a6ac8 !important; color:#fff !important; border-radius:6px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 3px rgba(0,60,140,0.35) !important;
+  animation: aquaPulse 2.4s ease-in-out infinite !important;
+}
+@keyframes aquaPulse { 0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),0 1px 3px rgba(0,60,140,0.35);} 50%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.8),0 0 10px rgba(60,150,240,0.7);} }
+[data-era=macos] ::-webkit-scrollbar-thumb { background: linear-gradient(90deg,#cfe6ff,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.5) !important; }
+
+/* ── MY SPACE (myspace): 2007 web 2.0 ── */
+[data-era=myspace] .panel, [data-era=myspace] #board-wrap, [data-era=myspace] #theme-panel, [data-era=myspace] #ctrl-bubble {
+  background:#fff !important; border:1px solid #b8c4d4 !important; border-radius:0 !important;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15) !important; backdrop-filter:none !important;
+}
+[data-era=myspace] #hdr {
+  background: linear-gradient(180deg,#3a6ea5 0%,#003399 100%) !important; border-radius:0 !important;
+  border-bottom:2px solid #ff8800 !important; box-shadow:0 2px 4px rgba(0,0,0,0.25) !important;
+}
+[data-era=myspace] #hdr::after { display:none !important; }
+[data-era=myspace] .pb, [data-era=myspace] .cb, [data-era=myspace] .mb, [data-era=myspace] .mbtn,
+[data-era=myspace] .ico-btn, [data-era=myspace] .q-btn, [data-era=myspace] .sm-tab, [data-era=myspace] .sp-opt-btn {
+  background: linear-gradient(180deg,#ffffff 0%,#e6eef7 48%,#d2deee 52%,#e8eff7 100%) !important;
+  border:1px solid #7088aa !important; border-radius:4px !important; color:#003399 !important; font-weight:700 !important;
+  box-shadow: inset 0 1px 0 #fff !important;
+}
+[data-era=myspace] .pb:hover, [data-era=myspace] .mbtn:hover, [data-era=myspace] .q-btn:hover { background: linear-gradient(180deg,#fff,#dfeaf6) !important; border-color:#ff8800 !important; }
+[data-era=myspace] #play-btn {
+  background: linear-gradient(180deg,#4a8fd4 0%,#003399 100%) !important; color:#fff !important; border:1px solid #002266 !important;
+  border-radius:6px !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 5px rgba(0,30,90,0.4) !important;
+}
+[data-era=myspace] .tab { background:linear-gradient(180deg,#eef3f9,#dbe5f0) !important; color:#003399 !important; border-radius:4px 4px 0 0 !important; }
+[data-era=myspace] .tab.on, [data-era=myspace] #search-btn { background: linear-gradient(180deg,#ff9f33,#ff8800) !important; color:#fff !important; border-color:#cc6d00 !important; }
+[data-era=myspace] a, [data-era=myspace] .r-title, [data-era=myspace] .v-title { color:#0033cc !important; }
+[data-era=myspace] #q, [data-era=myspace] input[type=text], [data-era=myspace] textarea, [data-era=myspace] select {
+  background:#fff !important; border:1px solid #7088aa !important; color:#1a1a1a !important; border-radius:0 !important;
+}
+[data-era=myspace] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#4a8fd4,#003399) !important; border-radius:0 !important; }
+[data-era=myspace] #prog::-webkit-slider-thumb, [data-era=myspace] #vol::-webkit-slider-thumb { background:#ff8800 !important; border:1px solid #cc6d00 !important; }
+[data-era=myspace] #prog-fill { background:#003399 !important; }
+[data-era=myspace] .vb { background: linear-gradient(0deg,#003399,#4a8fd4 55%,#ff8800) !important; }
+[data-era=myspace] #splash { background:#6699cc !important; }
+[data-era=myspace] #splash-room { background:#fff !important; border:1px solid #b8c4d4 !important; border-radius:0 !important; }
+[data-era=myspace] #sp-room-titlebar { background: linear-gradient(180deg,#3a6ea5,#003399) !important; color:#fff !important; border-radius:0 !important; }
+
+/* ── FROST (Windows Vista Aero) ── */
+[data-era=frost] .panel, [data-era=frost] #board-wrap, [data-era=frost] #theme-panel, [data-era=frost] #ctrl-bubble {
+  background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(214,232,247,0.6) 100%) !important;
+  backdrop-filter: blur(18px) saturate(1.3) !important;
+  border:1px solid rgba(255,255,255,0.85) !important; border-radius:10px !important;
+  box-shadow: 0 0 0 1px rgba(120,180,235,0.45), inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 34px rgba(80,140,210,0.28) !important;
+}
+[data-era=frost] #hdr {
+  background: linear-gradient(180deg, rgba(244,250,255,0.82) 0%, rgba(190,222,250,0.74) 48%, rgba(150,200,240,0.7) 100%) !important;
+  backdrop-filter: blur(20px) saturate(1.3) !important;
+  border-bottom:1px solid rgba(255,255,255,0.8) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 14px rgba(80,140,210,0.25) !important;
+}
+[data-era=frost] #hdr::after { background: linear-gradient(180deg, rgba(255,255,255,0.55), transparent 60%) !important; }
+[data-era=frost] .pb, [data-era=frost] .cb, [data-era=frost] .mb, [data-era=frost] .mbtn,
+[data-era=frost] .ico-btn, [data-era=frost] .q-btn, [data-era=frost] .sp-opt-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,250,255,0.9) 49%, rgba(206,228,248,0.92) 51%, rgba(224,240,252,0.95) 100%) !important;
+  border:1px solid rgba(120,175,225,0.7) !important; border-radius:8px !important; color:#16365c !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 3px rgba(40,90,160,0.2) !important;
+}
+[data-era=frost] .pb:hover, [data-era=frost] .cb:hover, [data-era=frost] .mbtn:hover, [data-era=frost] .q-btn:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 0 10px rgba(120,190,255,0.7), 0 1px 4px rgba(40,90,160,0.25) !important;
+}
+[data-era=frost] #play-btn {
+  background: radial-gradient(circle at 50% 30%, #cfeaff 0%, #5aa6ee 46%, #2170c8 100%) !important;
+  border:1px solid rgba(255,255,255,0.85) !important; border-radius:999px !important; color:#fff !important;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -3px 8px rgba(0,40,100,0.4), 0 4px 16px rgba(40,110,200,0.5), 0 0 0 1px rgba(80,150,220,0.5) !important;
+}
+[data-era=frost] .tab.on, [data-era=frost] #search-btn { background: linear-gradient(180deg,#7ab8f5,#2e8bdf) !important; color:#fff !important; }
+[data-era=frost] #q, [data-era=frost] input[type=text], [data-era=frost] textarea, [data-era=frost] select {
+  background: rgba(255,255,255,0.9) !important; border:1px solid rgba(140,185,230,0.7) !important; color:#13243a !important; border-radius:6px !important;
+}
+[data-era=frost] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#bcdcf6,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.6) !important; }
+[data-era=frost] #splash { background: linear-gradient(180deg,#dcecfb 0%,#b6d4ee 100%) !important; }
+
+/* ── GLASS → Y2K / Dreamcast / Jet Set Radio ── */
+[data-era=glass] .panel, [data-era=glass] #board-wrap, [data-era=glass] #theme-panel, [data-era=glass] #ctrl-bubble {
+  background:#fffdf7 !important; backdrop-filter:none !important;
+  border:3px solid #16140d !important; border-radius:4px !important; box-shadow:6px 6px 0 #16140d !important;
+}
+[data-era=glass] #hdr {
+  background: linear-gradient(110deg,#ff6a00 0%,#ff1f8e 55%,#00e5ff 100%) !important; backdrop-filter:none !important;
+  border-bottom:3px solid #16140d !important; box-shadow:0 4px 0 #16140d !important;
+}
+[data-era=glass] #hdr::after { display:none !important; }
+[data-era=glass] #logo img { filter: drop-shadow(2px 2px 0 #16140d) !important; }
+[data-era=glass] .pb, [data-era=glass] .cb, [data-era=glass] .mb, [data-era=glass] .mbtn, [data-era=glass] .ico-btn,
+[data-era=glass] .q-btn, [data-era=glass] .tab, [data-era=glass] .sm-tab, [data-era=glass] .sp-opt-btn {
+  background:#fff !important; color:#16140d !important; border:2.5px solid #16140d !important;
+  border-radius:3px !important; font-weight:900 !important; box-shadow:3px 3px 0 #16140d !important;
+  backdrop-filter:none !important; transition:transform .08s, box-shadow .08s !important;
+}
+[data-era=glass] .pb:hover, [data-era=glass] .cb:hover, [data-era=glass] .mbtn:hover, [data-era=glass] .q-btn:hover {
+  transform: skewX(-7deg) translate(-1px,-1px) !important; box-shadow:5px 5px 0 #ff1f8e !important; background:#ffe8a0 !important;
+}
+[data-era=glass] .pb:active, [data-era=glass] .mbtn:active { transform: translate(2px,2px) !important; box-shadow:1px 1px 0 #16140d !important; }
+[data-era=glass] #play-btn {
+  background:#ff6a00 !important; color:#16140d !important; border:3px solid #16140d !important; border-radius:4px !important; box-shadow:4px 4px 0 #16140d !important;
+}
+[data-era=glass] #play-btn:hover { background:#00e5ff !important; }
+[data-era=glass] .tab.on, [data-era=glass] .sm-tab.on, [data-era=glass] #search-btn { background:#ff6a00 !important; color:#16140d !important; }
+[data-era=glass] #q, [data-era=glass] input[type=text], [data-era=glass] textarea, [data-era=glass] select {
+  background:#fff !important; border:2.5px solid #16140d !important; color:#16140d !important; border-radius:3px !important; font-weight:700 !important;
+}
+[data-era=glass] ::-webkit-scrollbar-thumb { background:#ff1f8e !important; border:2px solid #16140d !important; border-radius:0 !important; }
+[data-era=glass] #prog::-webkit-slider-thumb, [data-era=glass] #vol::-webkit-slider-thumb { background:#ff6a00 !important; border:2px solid #16140d !important; border-radius:2px !important; box-shadow:none !important; }
+[data-era=glass] #prog-fill { background:#ff1f8e !important; }
+[data-era=glass] .vb { background: linear-gradient(0deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; border-radius:0 !important; }
+[data-era=glass] #splash { background: linear-gradient(135deg,#ff6a00,#ff1f8e 55%,#00e5ff) !important; }
+[data-era=glass] #splash-room { border:3px solid #16140d !important; box-shadow:8px 8px 0 #16140d !important; border-radius:4px !important; background:#fffdf7 !important; }
+
+/* ── NEON → tasteful cheesy casino (gold & velvet) ── */
+[data-era=neon] .panel, [data-era=neon] #board-wrap, [data-era=neon] #theme-panel, [data-era=neon] #ctrl-bubble {
+  background: linear-gradient(180deg, rgba(40,10,18,0.96), rgba(20,4,10,0.97)) !important;
+  border:1px solid rgba(255,215,0,0.45) !important; border-radius:10px !important;
+  box-shadow: inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 22px rgba(120,0,30,0.4), 0 10px 40px rgba(0,0,0,0.6) !important;
+}
+[data-era=neon] #hdr {
+  background: linear-gradient(180deg,#3a0712,#5a0a1a) !important;
+  border-bottom:1px solid rgba(255,215,0,0.5) !important;
+  box-shadow: inset 0 -1px 0 rgba(255,215,0,0.3), 0 2px 18px rgba(120,0,30,0.5) !important;
+}
+[data-era=neon] #hdr::after {
+  content:'' !important; position:absolute !important; left:0 !important; right:0 !important; bottom:0 !important; top:auto !important;
+  height:7px !important; width:100% !important;
+  background: radial-gradient(circle at 11px 50%, #ffe680 0 2.5px, rgba(255,215,0,0.3) 3px, transparent 4px) repeat-x left center/22px 7px !important;
+  animation: casinoMarquee 1.1s steps(2) infinite !important; pointer-events:none !important; opacity:0.95 !important;
+}
+@keyframes casinoMarquee { to { background-position-x: 22px; } }
+[data-era=neon] .pb, [data-era=neon] .cb, [data-era=neon] .mb, [data-era=neon] .mbtn, [data-era=neon] .ico-btn, [data-era=neon] .q-btn, [data-era=neon] .sp-opt-btn {
+  background: linear-gradient(180deg, #2a0a12, #160509) !important;
+  border:1px solid rgba(255,215,0,0.55) !important; color:#ffd700 !important; border-radius:8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 0 8px rgba(255,180,0,0.15) !important;
+}
+[data-era=neon] .pb:hover, [data-era=neon] .mbtn:hover, [data-era=neon] .q-btn:hover {
+  box-shadow: inset 0 1px 0 rgba(255,215,0,0.4), 0 0 14px rgba(255,200,0,0.55) !important; color:#fff4c0 !important;
+}
+[data-era=neon] #play-btn {
+  background: radial-gradient(circle at 50% 35%, #ffe680 0%, #d4a017 45%, #1a0508 100%) !important;
+  border:2px solid #ffd700 !important; color:#3a0712 !important;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.25), 0 0 22px rgba(255,200,0,0.6) !important;
+}
+[data-era=neon] .tab.on, [data-era=neon] #search-btn, [data-era=neon] .mbtn.p { background: linear-gradient(180deg,#d4a017,#8a6a0a) !important; color:#1a0508 !important; }
+[data-era=neon] #q, [data-era=neon] input[type=text], [data-era=neon] textarea, [data-era=neon] select {
+  background: rgba(20,5,10,0.85) !important; border:1px solid rgba(255,215,0,0.4) !important; color:#ffe8b0 !important; border-radius:6px !important;
+}
+[data-era=neon] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#ffd700,#a07800) !important; border-radius:6px !important; }
+[data-era=neon] #prog::-webkit-slider-thumb, [data-era=neon] #vol::-webkit-slider-thumb { background:#ffd700 !important; box-shadow:0 0 6px rgba(255,200,0,0.8) !important; }
+[data-era=neon] #prog-fill { background: linear-gradient(90deg,#ffd700,#ff3b6b) !important; }
+[data-era=neon] .vb { background: linear-gradient(0deg,#8a0a1a,#ffd700) !important; box-shadow:0 0 5px rgba(255,200,0,0.4) !important; }
+[data-era=neon] #splash { background: radial-gradient(circle at 50% 30%,#3a0a3a,#1a041f 60%,#0a0210) !important; }
+
+/* ── PIXEL → true pixel-art (NES palette, hard bevels) ── */
+[data-era=pixel] body, [data-era=pixel] #q, [data-era=pixel] input, [data-era=pixel] textarea, [data-era=pixel] select,
+[data-era=pixel] button, [data-era=pixel] .r-title, [data-era=pixel] .v-title {
+  font-family:'VT323','Courier New',monospace !important; letter-spacing:0.5px !important;
+}
+[data-era=pixel] #sp-room-titlebar, [data-era=pixel] #slots-titlebar span, [data-era=pixel] #rhythm-titlebar span, [data-era=pixel] .theme-hdr span {
+  font-family:'Press Start 2P','Courier New',monospace !important; font-size:10px !important; letter-spacing:0 !important;
+}
+[data-era=pixel] img:not(#logo img):not(.r-thumb):not(.v-thumb):not(#np-thumb) { image-rendering: pixelated !important; }
+[data-era=pixel] .panel, [data-era=pixel] #board-wrap, [data-era=pixel] #theme-panel, [data-era=pixel] #ctrl-bubble {
+  background:#1c1c3a !important; border-radius:0 !important; backdrop-filter:none !important; border:none !important;
+  box-shadow: 0 0 0 3px #0f0f23, 0 0 0 6px #4a4a7a !important;
+}
+[data-era=pixel] #hdr {
+  background:#16163a !important; border-radius:0 !important; border-bottom:none !important;
+  box-shadow: inset 0 -4px 0 #4a4a7a !important;
+}
+[data-era=pixel] #hdr::after { display:none !important; }
+[data-era=pixel] .pb, [data-era=pixel] .cb, [data-era=pixel] .mb, [data-era=pixel] .mbtn, [data-era=pixel] .ico-btn,
+[data-era=pixel] .q-btn, [data-era=pixel] .tab, [data-era=pixel] .sm-tab, [data-era=pixel] .sp-opt-btn, [data-era=pixel] #search-btn {
+  background:#3a3a6a !important; color:#e8e8f0 !important; border:none !important; border-radius:0 !important;
+  box-shadow: inset -3px -3px 0 #1a1a40, inset 3px 3px 0 #6a6aaa !important; font-size:15px !important;
+}
+[data-era=pixel] .pb:active, [data-era=pixel] .mbtn:active, [data-era=pixel] .q-btn:active {
+  box-shadow: inset 3px 3px 0 #1a1a40, inset -3px -3px 0 #6a6aaa !important;
+}
+[data-era=pixel] #play-btn {
+  background:#e63946 !important; color:#fff !important; border-radius:0 !important; border:none !important;
+  box-shadow: inset -4px -4px 0 #8a1e28, inset 4px 4px 0 #ff6b78 !important;
+}
+[data-era=pixel] .tab.on, [data-era=pixel] #search-btn { background:#e63946 !important; }
+[data-era=pixel] #q, [data-era=pixel] input[type=text], [data-era=pixel] textarea, [data-era=pixel] select {
+  background:#0f0f23 !important; color:#e8e8f0 !important; border-radius:0 !important; border:none !important;
+  box-shadow: inset 2px 2px 0 #000, inset -2px -2px 0 #3a3a6a !important; font-size:15px !important;
+}
+[data-era=pixel] ::-webkit-scrollbar { width:14px !important; height:14px !important; }
+[data-era=pixel] ::-webkit-scrollbar-thumb { background:#4a4a7a !important; border-radius:0 !important; box-shadow: inset -2px -2px 0 #2a2a5a, inset 2px 2px 0 #6a6aaa !important; }
+[data-era=pixel] ::-webkit-scrollbar-track { background:#0f0f23 !important; }
+[data-era=pixel] #prog::-webkit-slider-thumb, [data-era=pixel] #vol::-webkit-slider-thumb { background:#ffd166 !important; border-radius:0 !important; box-shadow:none !important; width:14px !important; height:14px !important; }
+[data-era=pixel] #prog-fill { background:#e63946 !important; }
+[data-era=pixel] .vb { background:#ffd166 !important; border-radius:0 !important; }
+[data-era=pixel] #splash { background:#0f0f23 !important; }
+[data-era=pixel] #splash-room { background:#1c1c3a !important; border-radius:0 !important; box-shadow:0 0 0 3px #0f0f23,0 0 0 6px #4a4a7a !important; }
+
   </style>
 </head>
 <body>

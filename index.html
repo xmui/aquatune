@@ -14,6 +14,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap"></noscript>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"></noscript>
   <style>
     :root {
       --font-ui: Tahoma, 'Segoe UI', Arial, sans-serif;
@@ -3979,7 +3981,8 @@ body.perf-mode #aqua-gun { display: none !important; }
   <div class="theme-label" style="margin-bottom:6px">Theme</div>
   <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
     <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Brushed</button>
+    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Snow Leopard</button>
+    <button class="theme-swatch"   data-theme="myspace"   onclick="selectTheme('myspace',this)">My Space</button>
     <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
     <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
     <button class="theme-swatch"   data-theme="mono90s"   onclick="selectTheme('mono90s',this)">Mono 90s</button>
@@ -4431,6 +4434,11 @@ const THEMES = {
              hdr:'linear-gradient(180deg,#7aa8dc 0%,#4878b8 38%,#3368a8 65%,#224e8a 100%)',
              panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
              font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light' },
+  myspace: { accent:'#003399', accent2:'#ff8800', text:'#1a1a1a', text2:'#33558c',
+             bg:'linear-gradient(180deg,#6699cc 0%,#dfe9f2 120px,#dfe9f2 100%)',
+             hdr:'linear-gradient(180deg,#3a6ea5 0%,#003399 100%)',
+             panel:'#ffffff', border:'#b8c4d4',
+             font:"Verdana,Tahoma,Arial,sans-serif", era:'myspace', scheme:'light' },
   nintendo:{ accent:'#e4000f', accent2:'#ff4444', text:'#1a1a2e', text2:'#555570',
              bg:'linear-gradient(180deg,#e8e8ec 0%,#d4d4da 100%)',
              hdr:'linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%)',
@@ -4451,31 +4459,31 @@ const THEMES = {
              hdr:'#000000',
              panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)',
              font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark' },
-  frost:   { accent:'#4a90d9', accent2:'#7ab8f5', text:'#1a1a1a', text2:'#555',
-             bg:'linear-gradient(160deg, #e8edf2 0%, #d8e4ee 50%, #c8d8e8 100%)',
-             hdr:'linear-gradient(180deg, rgba(240,245,252,0.95) 0%, rgba(210,228,248,0.92) 100%)',
-             panel:'rgba(248,251,255,0.96)', border:'rgba(160,195,235,0.45)',
-             font:"-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#60a8f8', accent2:'#90c8ff', text:'#ddeeff', text2:'#90b8e0',
-             bg:'linear-gradient(135deg, #0a1428 0%, #060e1e 40%, #0a1428 100%)',
-             hdr:'linear-gradient(180deg, rgba(80,140,240,0.72) 0%, rgba(40,100,210,0.65) 100%)',
-             panel:'rgba(20,50,110,0.65)', border:'rgba(120,180,255,0.35)',
-             font:"'Segoe UI',system-ui,Arial,sans-serif", era:'glass', scheme:'dark' },
-  neon:    { accent:'#cc44ff', accent2:'#44ddff',
-             text:'#f0e0ff', text2:'#b88ee0',
-             bg:'linear-gradient(135deg, #0d0022 0%, #180038 50%, #000d24 100%)',
-             hdr:'linear-gradient(180deg, rgba(160,30,220,0.85), rgba(20,120,220,0.75))',
-             panel:'rgba(22,5,55,0.93)',
-             border:'rgba(180,60,255,0.38)',
-             font:"'Segoe UI',system-ui,sans-serif",
+  frost:   { accent:'#2e8bdf', accent2:'#9fd2ff', text:'#13243a', text2:'#3f6080',
+             bg:'linear-gradient(160deg, #d6e8f7 0%, #b9d6ee 45%, #cfe6f5 100%)',
+             hdr:'linear-gradient(180deg, rgba(232,244,255,0.78) 0%, rgba(176,212,245,0.7) 100%)',
+             panel:'rgba(235,246,255,0.62)', border:'rgba(150,200,245,0.7)',
+             font:"'Segoe UI',Frutiger,'Helvetica Neue',Arial,sans-serif", era:'frost', scheme:'light' },
+  glass:   { accent:'#ff6a00', accent2:'#00e5ff', text:'#16140d', text2:'#5a5446',
+             bg:'linear-gradient(135deg, #f2efe6 0%, #e6e2d6 50%, #efe9da 100%)',
+             hdr:'linear-gradient(110deg, #ff6a00 0%, #ff1f8e 55%, #00e5ff 100%)',
+             panel:'rgba(255,253,247,0.92)', border:'#16140d',
+             font:"'Arial Black','Arial Narrow',Impact,system-ui,sans-serif", era:'glass', scheme:'light' },
+  neon:    { accent:'#ffd700', accent2:'#ff3b6b',
+             text:'#fff4d6', text2:'#d8b48a',
+             bg:'radial-gradient(circle at 50% 30%, #3a0a3a 0%, #1a041f 45%, #0a0210 100%)',
+             hdr:'linear-gradient(180deg, #2a0512 0%, #5a0a1a 100%)',
+             panel:'rgba(28,8,14,0.94)',
+             border:'rgba(255,215,0,0.4)',
+             font:"'Georgia','Times New Roman',serif",
              era:'neon', scheme:'dark' },
-  pixel:   { accent:'#44bb44', accent2:'#88ff88',
-             text:'#aaffaa', text2:'#66cc66',
-             bg:'#001100',
-             hdr:'linear-gradient(180deg, #006600, #004400)',
-             panel:'rgba(0,40,0,0.94)',
-             border:'rgba(0,200,0,0.35)',
-             font:"'Courier New',Courier,monospace",
+  pixel:   { accent:'#e63946', accent2:'#ffd166',
+             text:'#e8e8f0', text2:'#8a8ab0',
+             bg:'#0f0f23',
+             hdr:'linear-gradient(180deg, #2a2a5a, #16163a)',
+             panel:'#1c1c3a',
+             border:'#4a4a7a',
+             font:"'VT323','Courier New',monospace",
              era:'pixel', scheme:'dark' },
 };
 let currentTheme = 'default';

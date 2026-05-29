@@ -10266,6 +10266,7 @@ function closePaint() { document.getElementById('paint-wrap').classList.remove('
 function clearPaint() {
   const cv=document.getElementById('paint-canvas');
   const ctx=cv.getContext('2d');
+  paintSaveState();
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
 }
 function savePaint() {
@@ -10382,11 +10383,11 @@ function initPaint() {
     paintClearSelectionOverlay();
     _painting = true; _paintStart = p; lastPt = p;
     _paintSnapshot = ctx.getImageData(0, 0, cv.width, cv.height);
-    if (_paintTool === 'fill') { paintSaveState(); flood(p.x, p.y, pc.value); _painting = false; return; }
-    ctx.globalCompositeOperation = _paintTool === 'eraser' ? 'destination-out' : 'source-over';
+    // Save the pre-mutation state ONCE here for every canvas-modifying tool.
+    paintSaveState();
+    if (_paintTool === 'fill') { flood(p.x, p.y, pc.value); _painting = false; return; }
     const sz = parseInt(ps.value);
     if (_paintTool === 'spray') {
-      paintSaveState();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = pc.value;
       const radius = 12;
@@ -10474,7 +10475,7 @@ function initPaint() {
       }
       return;
     }
-    if (_painting) paintSaveState();
+    // State was already saved (pre-mutation) in pointerdown.
     _painting = false; lastPt = null;
     ctx.globalCompositeOperation = 'source-over';
   });

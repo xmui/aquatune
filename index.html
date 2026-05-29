@@ -1198,6 +1198,28 @@
       background:linear-gradient(160deg,#1a0035 0%,#0d0025 50%,#001a35 100%);
       border:1.5px solid rgba(180,80,255,0.4); box-shadow:0 0 60px rgba(140,0,255,0.25),0 20px 60px rgba(0,0,0,0.7); }
     #slots-wrap.open { display:flex; }
+    /* ── Beat Tap rhythm game ── */
+    #rhythm-wrap { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:392px; max-width:96vw; border-radius:14px; z-index:810; flex-direction:column;
+      background:linear-gradient(160deg,#05121f 0%,#0a0a25 50%,#1a0530 100%);
+      border:1.5px solid rgba(80,200,255,0.4); box-shadow:0 0 60px rgba(0,180,255,0.22),0 20px 60px rgba(0,0,0,0.7); }
+    #rhythm-wrap.open { display:flex; }
+    #rhythm-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
+      background:linear-gradient(180deg,rgba(0,140,220,0.5),rgba(40,10,120,0.4));
+      border-radius:12px 12px 0 0; border-bottom:1px solid rgba(80,200,255,0.25); }
+    #rhythm-titlebar span { font-size:14px; font-weight:800; color:#cdeeff; letter-spacing:0.5px; }
+    #rhythm-body { padding:12px 14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
+    #rhythm-canvas { width:100%; max-width:360px; border-radius:10px; background:rgba(0,0,0,0.35);
+      border:1px solid rgba(120,200,255,0.18); touch-action:manipulation; }
+    #rhythm-keys { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:100%; max-width:360px; }
+    .rhythm-key { padding:12px 0; border-radius:10px; font-size:16px; font-weight:800; cursor:pointer;
+      color:#fff; background:color-mix(in srgb, var(--lc) 28%, transparent); border:1.5px solid var(--lc);
+      transition:transform .05s, background .1s; user-select:none; }
+    .rhythm-key:active, .rhythm-key.hit { background:var(--lc); transform:scale(0.94); }
+    #rhythm-controls { display:flex; gap:8px; align-items:center; width:100%; max-width:360px; justify-content:center; }
+    #rhythm-start-btn { font-size:13px; font-weight:800; padding:6px 22px; border-radius:10px; cursor:pointer;
+      color:#04121f; background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
+    #rhythm-msg { font-size:11px; color:rgba(180,220,255,0.7); text-align:center; min-height:14px; }
     #slots-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
       background:linear-gradient(180deg,rgba(160,30,220,0.6),rgba(80,10,150,0.4));
       border-radius:12px 12px 0 0; border-bottom:1px solid rgba(180,80,255,0.25); }
@@ -3728,6 +3750,9 @@ body.perf-mode #aqua-gun { display: none !important; }
             </button>
             <button class="apps-game-btn" onclick="openBlackjack();toggleAppsMenu()">
               <span class="agb-icon">🃏</span><span class="agb-name">Blackjack</span>
+            </button>
+            <button class="apps-game-btn" onclick="openRhythm();toggleAppsMenu()">
+              <span class="agb-icon">🎶</span><span class="agb-name">Beat Tap</span>
             </button>
           </div>
           <div class="apps-menu-div"></div>
@@ -10733,6 +10758,146 @@ window.spawnReaction = function(emoji, name) {
   setTimeout(() => el.remove(), 3100);
 };
 
+// ── Beat Tap rhythm game (synth-generated track, real audio clock) ──
+let _rhythmInited=false, _rhythmRaf=null, _rhythmPlaying=false;
+let _rhythmChart=[], _rhythmStartT=0, _rhythmScore=0, _rhythmCombo=0, _rhythmBest=0, _rhythmJudge='', _rhythmJudgeT=0;
+let _rhythmHits=0, _rhythmTotal=0;
+const RHY_KEYS=['d','f','j','k'];
+const RHY_LANE_COLORS=['#ff5a87','#ffc24a','#4ad6ff','#8c6bff'];
+const RHY_APPROACH=1.9, RHY_LEADIN=2.2, RHY_HITWIN=0.22;
+const RHY_LANE_SOUNDS=[ t=>drumKick(t), t=>drumSnare(t), t=>drumHihat(t), t=>drumClap(t) ];
+function openRhythm(show=true){
+  const w=document.getElementById('rhythm-wrap'); if(!w) return;
+  const opening = show && !w.classList.contains('open');
+  w.classList.toggle('open', !!show);
+  if(!show){ rhythmStop(); return; }
+  if(opening){
+    aqRefreshCreditDisplays();
+    if(!_rhythmInited){ _rhythmInited=true; _rhythmBindKeys(); }
+    _rhythmDrawIdle();
+  }
+}
+function _rhythmGenChart(diff){
+  const bpm=[96,112,132][diff], beat=60/bpm, bars=12, sub=[2,2,4][diff], density=[0.4,0.55,0.7][diff];
+  const chart=[]; let lastLane=-1;
+  for(let b=0;b<bars*4;b++){
+    for(let s=0;s<sub;s++){
+      if(Math.random()<density){
+        let lane=Math.floor(Math.random()*4);
+        if(lane===lastLane && Math.random()<0.6) lane=(lane+1)%4;
+        lastLane=lane;
+        chart.push({time:(b*sub+s)*(beat/sub)+RHY_LEADIN, lane, hit:false, missed:false});
+      }
+    }
+  }
+  return chart;
+}
+function rhythmStart(){
+  if(_rhythmPlaying) return rhythmStop();
+  const cx=initActx();
+  const diff=parseInt(document.getElementById('rhythm-diff').value)||1;
+  _rhythmChart=_rhythmGenChart(diff);
+  _rhythmScore=0;_rhythmCombo=0;_rhythmBest=0;_rhythmHits=0;_rhythmTotal=_rhythmChart.length;
+  _rhythmStartT=cx.currentTime; _rhythmPlaying=true;
+  document.getElementById('rhythm-start-btn').textContent='■ Stop';
+  document.getElementById('rhythm-msg').textContent='Go!';
+  _rhythmChart.forEach(n=>{ try{ RHY_LANE_SOUNDS[n.lane](_rhythmStartT+n.time); }catch(_){} });
+  if(_rhythmRaf) cancelAnimationFrame(_rhythmRaf);
+  _rhythmLoop();
+}
+function rhythmStop(){
+  _rhythmPlaying=false;
+  if(_rhythmRaf){ cancelAnimationFrame(_rhythmRaf); _rhythmRaf=null; }
+  const b=document.getElementById('rhythm-start-btn'); if(b) b.textContent='▶ Start';
+}
+function rhythmEnd(){
+  rhythmStop();
+  const acc=_rhythmTotal?Math.round(_rhythmHits/_rhythmTotal*100):0;
+  const reward=Math.floor(_rhythmScore/200);
+  if(reward>0){ aqAddCredits(reward); if(window.toast) window.toast(`🎶 +${reward} credits!`); }
+  const msg=document.getElementById('rhythm-msg');
+  if(msg) msg.textContent=`Score ${_rhythmScore} · ${acc}% hit · max combo ${_rhythmBest} · +${reward} 💰`;
+  aqRefreshCreditDisplays();
+}
+function _rhythmJudgeHit(lane){
+  if(!_rhythmPlaying) return;
+  const now=initActx().currentTime-_rhythmStartT;
+  let best=null,bestDt=999;
+  for(const n of _rhythmChart){
+    if(n.lane!==lane||n.hit||n.missed) continue;
+    const dt=Math.abs(n.time-now);
+    if(dt<bestDt){bestDt=dt;best=n;}
+  }
+  if(best && bestDt<RHY_HITWIN){
+    best.hit=true; _rhythmHits++;
+    let pts;
+    if(bestDt<0.07){pts=100;_rhythmJudge='PERFECT';}
+    else if(bestDt<0.14){pts=60;_rhythmJudge='GREAT';}
+    else {pts=30;_rhythmJudge='GOOD';}
+    _rhythmCombo++; if(_rhythmCombo>_rhythmBest)_rhythmBest=_rhythmCombo;
+    _rhythmScore+=Math.round(pts*(1+Math.floor(_rhythmCombo/10)*0.5));
+    _rhythmJudgeT=now;
+  }
+}
+function _rhythmBindKeys(){
+  document.addEventListener('keydown', e=>{
+    const w=document.getElementById('rhythm-wrap');
+    if(!w||!w.classList.contains('open')||!_rhythmPlaying) return;
+    const lane=RHY_KEYS.indexOf(e.key.toLowerCase());
+    if(lane>=0){ e.preventDefault(); _rhythmJudgeHit(lane); _rhythmFlashKey(lane); }
+  });
+  document.querySelectorAll('.rhythm-key').forEach(btn=>{
+    const lane=parseInt(btn.dataset.lane);
+    btn.addEventListener('pointerdown', e=>{ e.preventDefault(); _rhythmJudgeHit(lane); _rhythmFlashKey(lane); });
+  });
+}
+function _rhythmFlashKey(lane){
+  const btn=document.querySelector(`.rhythm-key[data-lane="${lane}"]`);
+  if(btn){ btn.classList.add('hit'); setTimeout(()=>btn.classList.remove('hit'),90); }
+}
+function _rhythmDrawLanes(ctx,W,H){
+  const lw=W/4;
+  for(let i=0;i<4;i++){ ctx.fillStyle=i%2?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'; ctx.fillRect(i*lw,0,lw,H); }
+  const hy=H-60;
+  ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,hy); ctx.lineTo(W,hy); ctx.stroke();
+}
+function _rhythmDrawIdle(){
+  const cv=document.getElementById('rhythm-canvas'); if(!cv) return;
+  const ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+  _rhythmDrawLanes(ctx,cv.width,cv.height);
+}
+function _rhythmLoop(){
+  _rhythmRaf=requestAnimationFrame(_rhythmLoop);
+  const cv=document.getElementById('rhythm-canvas'); if(!cv) return;
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height, hy=H-60, lw=W/4;
+  ctx.clearRect(0,0,W,H); _rhythmDrawLanes(ctx,W,H);
+  const now=initActx().currentTime-_rhythmStartT;
+  let remaining=0, lastTime=0;
+  for(const n of _rhythmChart){
+    lastTime=Math.max(lastTime,n.time);
+    if(n.hit) continue;
+    if(!n.missed && now-n.time>RHY_HITWIN){ n.missed=true; _rhythmCombo=0; _rhythmJudge='MISS'; _rhythmJudgeT=now; }
+    if(n.missed) continue;
+    remaining++;
+    const p=(now-(n.time-RHY_APPROACH))/RHY_APPROACH;
+    if(p<-0.05||p>1.2) continue;
+    const y=p*hy, cx2=n.lane*lw+lw/2;
+    ctx.fillStyle=RHY_LANE_COLORS[n.lane];
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx2-lw*0.36,y-10,lw*0.72,20,6); ctx.fill(); }
+    else ctx.fillRect(cx2-lw*0.36,y-10,lw*0.72,20);
+    ctx.fillStyle='rgba(255,255,255,0.28)'; ctx.fillRect(cx2-lw*0.36,y-10,lw*0.72,5);
+  }
+  if(now-_rhythmJudgeT<0.5 && _rhythmJudge){
+    ctx.fillStyle=_rhythmJudge==='MISS'?'#ff5a87':(_rhythmJudge==='PERFECT'?'#7dffe0':'#fff');
+    ctx.font='bold 22px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(_rhythmJudge, W/2, hy-40);
+  }
+  ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif'; ctx.textAlign='left'; ctx.fillText('Score '+_rhythmScore,8,22);
+  ctx.textAlign='right'; ctx.fillText('Combo '+_rhythmCombo,W-8,22);
+  if(_rhythmPlaying && now>lastTime+1.2 && remaining===0) rhythmEnd();
+}
+
 /* ── LAYOUT OPTIONS ── */
 const _layoutOpts = JSON.parse(localStorage.getItem('aq_layout') || '{}');
 
@@ -13507,6 +13672,33 @@ function bjUpdateBalance(){
     <button onclick="closeRequestsPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
   </div>
   <div id="room-requests-list"><div class="room-member-row" style="opacity:.6">No pending requests</div></div>
+</div>
+<div id="rhythm-wrap">
+  <div id="rhythm-titlebar">
+    <span>🎶 Beat Tap</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="rhythm-credits" class="aq-credits-display" style="font-size:13px;font-weight:800;color:#7dffe0"></span>
+      <button onclick="openRhythm(false)" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
+    </div>
+  </div>
+  <div id="rhythm-body">
+    <canvas id="rhythm-canvas" width="360" height="420"></canvas>
+    <div id="rhythm-keys">
+      <button class="rhythm-key" data-lane="0" style="--lc:#ff5a87">D</button>
+      <button class="rhythm-key" data-lane="1" style="--lc:#ffc24a">F</button>
+      <button class="rhythm-key" data-lane="2" style="--lc:#4ad6ff">J</button>
+      <button class="rhythm-key" data-lane="3" style="--lc:#8c6bff">K</button>
+    </div>
+    <div id="rhythm-controls">
+      <select id="rhythm-diff" style="font-size:12px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2)">
+        <option value="0">Easy</option>
+        <option value="1" selected>Normal</option>
+        <option value="2">Hard</option>
+      </select>
+      <button id="rhythm-start-btn" onclick="rhythmStart()">▶ Start</button>
+    </div>
+    <div id="rhythm-msg">Tap D F J K (or the buttons) as notes hit the line</div>
+  </div>
 </div>
 <div id="lobby-overlay" onclick="if(event.target===this)closeLobbyOverlay()">
   <div id="lobby-overlay-card">

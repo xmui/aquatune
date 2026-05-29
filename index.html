@@ -3901,9 +3901,215 @@ body.immersive #immersive-bg.active {
   background-size:300% 300%;
 }
 
+/* ============================================================
+   AquaOS — desktop shell (wallpaper, menubar, dock, windows)
+   Everything is gated behind body.osmode. Chrome is driven by the
+   active theme's CSS vars (--accent / --hdr-bg / --panel / --border /
+   --font-ui) and reskinned per theme via html[data-era=...].
+   ============================================================ */
+body.osmode { overflow:hidden; }
+
+/* optional wallpaper override layer (sits above #bg, below windows) */
+#wallpaper { position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-size:cover; background-position:center center; display:none; }
+#wallpaper.on { display:block; }
+
+/* desktop root — drop the old flex/padded shell */
+body.osmode #app { display:block; padding:0; gap:0; height:100vh; overflow:hidden; }
+
+/* ---------- MENUBAR (the old #hdr) ---------- */
+body.osmode #hdr {
+  position:fixed; top:0; left:0; right:0; height:30px;
+  padding:0 10px; gap:10px; border-radius:0; z-index:4000; flex-shrink:0;
+  box-shadow:0 1px 0 rgba(0,0,0,0.20), 0 2px 12px rgba(0,0,0,0.22);
+  align-items:center;
+}
+body.osmode #hdr::after { display:none; }
+body.osmode #logo { order:0; }
+body.osmode #logo img { height:18px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+body.osmode #kbd-hint { display:none !important; }
+body.osmode #hdr > div[style*="flex:1"] { order:5; }
+body.osmode #hdr-center { order:6; gap:12px; }
+body.osmode #hdr-clock { font-size:12px; }
+body.osmode #room-badge { order:7; }
+body.osmode #auth-area { order:8; }
+body.osmode #apps-menu-wrap, body.osmode #gear-btn { display:none !important; }
+/* the little active-app title shown after the logo */
+#mb-appname { order:1; color:#fff; font-weight:800; font-size:12px;
+  letter-spacing:.2px; opacity:.95; white-space:nowrap; }
+/* shrink header widgets to fit the thin menubar */
+body.osmode #hdr-credits { padding:1px 8px; font-size:10px; }
+body.osmode #weather { padding:0 4px; }
+body.osmode #wx-icon { font-size:13px; }
+body.osmode #room-badge { transform:scale(.86); transform-origin:right center; }
+body.osmode #board-btn { width:26px; height:24px; }
+body.osmode #auth-area { gap:6px; }
+
+/* ---------- DOCK ---------- */
+#dock {
+  position:fixed; left:50%; bottom:8px; transform:translateX(-50%);
+  display:none; align-items:flex-end; gap:7px; padding:6px 10px; z-index:4000;
+  background:linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.10));
+  border:1px solid rgba(255,255,255,0.55); border-radius:18px;
+  box-shadow:0 10px 34px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.65);
+  backdrop-filter:blur(16px) saturate(1.4);
+}
+body.osmode #dock { display:flex; }
+.dock-item { position:relative; width:42px; height:42px; border:none; background:transparent;
+  cursor:pointer; font-size:25px; line-height:1; display:flex; align-items:center; justify-content:center;
+  border-radius:10px; transition:transform .14s cubic-bezier(.34,1.56,.64,1); padding:0; }
+.dock-item:hover { transform:translateY(-9px) scale(1.22); }
+.dock-item:active { transform:translateY(-3px) scale(1.05); }
+.dock-item .dock-dot { position:absolute; bottom:-3px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:rgba(255,255,255,0.9); opacity:0; box-shadow:0 0 4px rgba(0,0,0,.4); }
+.dock-item.running .dock-dot { opacity:1; }
+.dock-sep { width:1px; align-self:stretch; margin:4px 3px; background:rgba(255,255,255,0.42); }
+.dock-tip { position:absolute; bottom:52px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.82); color:#fff; font-size:11px; padding:3px 8px; border-radius:6px;
+  white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s; font-family:var(--font-ui); font-weight:600; }
+.dock-item:hover .dock-tip { opacity:1; }
+
+/* ---------- WINDOW CHROME (base = Aqua/macOS) ---------- */
+.os-window { --chrome-radius:12px; }
+.os-titlebar {
+  display:flex; align-items:center; gap:8px; height:28px; padding:0 9px;
+  cursor:move; user-select:none; flex-shrink:0; position:relative;
+  background:var(--hdr-bg); color:#fff; font-weight:700; font-size:12px;
+  font-family:var(--font-ui);
+  border-radius:var(--chrome-radius) var(--chrome-radius) 0 0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.os-titlebar .os-ico { font-size:13px; line-height:1; order:1; }
+.os-titlebar .os-title { flex:1; text-align:center; order:2; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 1px rgba(0,0,0,0.25); }
+.os-winbtns { display:flex; align-items:center; gap:7px; order:0; }
+.os-winbtn { width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,0.22);
+  cursor:pointer; padding:0; font-size:8px; color:transparent; display:flex;
+  align-items:center; justify-content:center; line-height:1; box-shadow:inset 0 1px 1px rgba(255,255,255,0.5); }
+.os-winbtn.close { background:#ff5f57; }
+.os-winbtn.min   { background:#febc2e; }
+.os-winbtn.max   { background:#28c840; }
+.os-winbtns:hover .os-winbtn { color:rgba(0,0,0,0.5); }
+.os-window.os-min { display:none !important; }
+body.osmode .os-window.os-max {
+  inset:32px 0 64px 0 !important; left:0 !important; top:32px !important;
+  width:auto !important; height:auto !important; transform:none !important;
+  border-radius:0 !important;
+}
+body.osmode .os-window.os-max .os-titlebar { border-radius:0; }
+
+/* ---------- PLAYER WINDOW (wraps #main) ---------- */
+body.osmode #win-player {
+  position:fixed; z-index:600; left:50%; top:40px; transform:translateX(-50%);
+  width:min(1120px,95vw); height:min(780px,82vh);
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--panel); border:1px solid var(--border);
+  box-shadow:0 28px 80px rgba(0,0,0,0.40), 0 2px 10px rgba(0,0,0,0.25);
+  border-radius:var(--chrome-radius);
+}
+body.osmode #win-player .win-body { flex:1; min-height:0; display:flex; padding:10px; }
+body.osmode #win-player #main { flex:1; min-height:0; }
+
+/* generic OS-native windows (settings, arcade) */
+body.osmode .os-window.win-std {
+  position:fixed; z-index:600; display:none; flex-direction:column; overflow:hidden;
+  background:var(--panel); border:1px solid var(--border);
+  box-shadow:0 28px 80px rgba(0,0,0,0.40), 0 2px 10px rgba(0,0,0,0.25);
+  border-radius:var(--chrome-radius);
+}
+body.osmode .os-window.win-std.open { display:flex; }
+.os-window .win-body-scroll { flex:1; min-height:0; overflow-y:auto; padding:14px; }
+
+/* registered legacy overlays keep their own look; just round the corners */
+body.osmode #synth-flyout.os-window, body.osmode #paint-wrap.os-window { border-radius:var(--chrome-radius); }
+
+/* =========================================================
+   PER-THEME OS PERSONALITIES (driven by html[data-era])
+   ========================================================= */
+
+/* ---- Windows 95 (retro) ---- */
+[data-era=retro] .os-window { --chrome-radius:0; }
+[data-era=retro] #win-player, [data-era=retro] .os-window.win-std,
+[data-era=retro] #synth-flyout.os-window, [data-era=retro] #paint-wrap.os-window {
+  background:#c0c0c0; border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040;
+  box-shadow:2px 2px 0 #000; border-radius:0;
+}
+[data-era=retro] .os-titlebar { background:linear-gradient(90deg,#000080,#1084d0); height:22px;
+  border-radius:0; box-shadow:none; padding:0 3px 0 5px; font-family:'MS Sans Serif',Tahoma,sans-serif; }
+[data-era=retro] .os-titlebar .os-title { text-align:left; order:1; font-weight:700; }
+[data-era=retro] .os-titlebar .os-ico { order:0; }
+[data-era=retro] .os-winbtns { order:2; gap:2px; }
+[data-era=retro] .os-winbtn { width:18px; height:16px; border-radius:0; background:#c0c0c0;
+  border:1px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040;
+  color:#000; font-size:10px; font-weight:800; box-shadow:none; }
+[data-era=retro] .os-winbtn.close::after { content:'\00D7'; }
+[data-era=retro] .os-winbtn.min::after   { content:'_'; transform:translateY(-3px); }
+[data-era=retro] .os-winbtn.max::after   { content:'\25A1'; }
+[data-era=retro] #dock { left:0; right:0; bottom:0; transform:none; width:100%;
+  justify-content:flex-start; border-radius:0; background:#c0c0c0;
+  border:none; border-top:2px solid #dfdfdf; box-shadow:none; backdrop-filter:none; padding:3px 4px; gap:3px; }
+[data-era=retro] .dock-item { border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; border-radius:0; background:#c0c0c0; }
+[data-era=retro] .dock-item:hover { transform:none; background:#d4d0c8; }
+[data-era=retro] #hdr { background:#c0c0c0; color:#000; box-shadow:0 2px 0 #808080;
+  border-bottom:1px solid #404040; }
+[data-era=retro] #hdr-clock, [data-era=retro] #wx-temp { color:#000; }
+[data-era=retro] #mb-appname { color:#000; }
+
+/* ---- retro handheld (pixel) ---- */
+[data-era=pixel] .os-window { --chrome-radius:0; }
+[data-era=pixel] #win-player, [data-era=pixel] .os-window.win-std,
+[data-era=pixel] #synth-flyout.os-window, [data-era=pixel] #paint-wrap.os-window {
+  border:3px solid var(--accent); box-shadow:6px 6px 0 rgba(0,0,0,0.5); border-radius:0; background:var(--panel); }
+[data-era=pixel] .os-titlebar { background:var(--accent); height:24px; border-radius:0;
+  font-family:'VT323','Courier New',monospace; font-size:16px; letter-spacing:1px; }
+[data-era=pixel] .os-winbtn { border-radius:0; border:2px solid #000; box-shadow:none; width:14px; height:14px; }
+[data-era=pixel] #dock { border:3px solid var(--accent); border-radius:0; background:var(--panel);
+  box-shadow:4px 4px 0 rgba(0,0,0,0.5); backdrop-filter:none; }
+[data-era=pixel] .dock-item:hover { transform:translateY(-6px); }
+[data-era=pixel] #hdr { background:var(--panel); border-bottom:3px solid var(--accent);
+  font-family:'VT323','Courier New',monospace; }
+[data-era=pixel] #hdr-clock, [data-era=pixel] #wx-temp, [data-era=pixel] #mb-appname { color:var(--text); }
+
+/* ---- neon ---- */
+[data-era=neon] #win-player, [data-era=neon] .os-window.win-std,
+[data-era=neon] #synth-flyout.os-window, [data-era=neon] #paint-wrap.os-window {
+  border:1px solid var(--accent); box-shadow:0 0 24px rgba(255,215,0,0.35), 0 18px 60px rgba(0,0,0,0.6); }
+[data-era=neon] .os-titlebar { box-shadow:inset 0 0 14px rgba(255,215,0,0.35); }
+[data-era=neon] #dock { border:1px solid var(--accent); box-shadow:0 0 22px rgba(255,215,0,0.3); }
+
+/* ---- dark / mono90s glass ---- */
+[data-era=dark] #dock, [data-era=mono90s] #dock { background:linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); }
+[data-era=mono90s] .os-titlebar { background:#000; border-bottom:1px solid #fff; }
+[data-era=mono90s] #win-player, [data-era=mono90s] .os-window.win-std { border:1px solid #fff; }
+
+/* ---- nintendo / myspace inherit base, tuned ---- */
+[data-era=nintendo] .os-titlebar { background:linear-gradient(180deg,#2e2e3e,#1a1a28); }
+[data-era=myspace]  .os-titlebar { background:linear-gradient(180deg,#3a6ea5,#003399); }
+
+/* ---------- desktop icons ---------- */
+#desktop-icons { position:fixed; top:42px; left:14px; z-index:1; display:none;
+  flex-direction:column; gap:14px; }
+body.osmode #desktop-icons { display:flex; }
+.desk-icon { width:74px; display:flex; flex-direction:column; align-items:center; gap:3px;
+  cursor:pointer; color:#fff; font-size:11px; font-weight:600; text-align:center;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7); background:none; border:none; font-family:var(--font-ui); }
+.desk-icon .di-ico { font-size:34px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.desk-icon:hover .di-label { background:var(--accent); border-radius:4px; padding:0 4px; }
+
+/* ---------- mobile fallback ---------- */
+@media (max-width:768px) {
+  body.osmode .os-window, body.osmode #win-player {
+    inset:30px 0 56px 0 !important; left:0 !important; top:30px !important;
+    width:auto !important; height:auto !important; transform:none !important; border-radius:0 !important; }
+  body.osmode .os-titlebar { cursor:default; }
+  body.osmode #dock { left:0; right:0; bottom:0; transform:none; width:100%;
+    border-radius:0; justify-content:space-around; padding:4px; }
+  body.osmode #desktop-icons { display:none; }
+}
+
   </style>
 </head>
-<body>
+<body class="osmode">
 <div id="splash">
   <div id="sp-logo-wrap">
     <img id="sp-logo-dark" src="/aquatune-logo-outline.png" alt="">
@@ -3965,11 +4171,13 @@ body.immersive #immersive-bg.active {
   </div>
 </div>
 <div id="bg"><div id="immersive-bg"></div><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div id="wallpaper"></div>
 <div id="app">
 
   <!-- HEADER -->
   <div id="hdr">
     <div id="logo"><img src="aquatune-logo-outline.png" alt="AQUATUNE"></div>
+    <span id="mb-appname">Aquatune Player</span>
     <div id="kbd-hint" style="display:none">
       <span class="k">Space</span>play/pause &nbsp;
       <span class="k">N</span>next &nbsp;
@@ -4061,7 +4269,10 @@ body.immersive #immersive-bg.active {
     </div>
   </div>
 
-  <!-- MAIN -->
+  <!-- MAIN (wrapped as the Music Player window) -->
+  <div id="win-player" class="os-window" data-app="player" data-title="Aquatune Player">
+   <div class="os-titlebar"><span class="os-ico">&#9835;</span><span class="os-title">Aquatune Player</span></div>
+   <div class="win-body">
   <div id="main">
 
     <!-- LEFT: search + playlists -->
@@ -4243,6 +4454,47 @@ body.immersive #immersive-bg.active {
       </div>
     </div>
   </div>
+   </div><!-- /win-body -->
+  </div><!-- /win-player -->
+</div>
+
+<!-- ===== AquaOS: desktop icons, dock, OS-native windows ===== -->
+<div id="desktop-icons">
+  <button class="desk-icon" ondblclick="OS.open('player')" onclick="OS._iconClick(event,'player')"><span class="di-ico">&#9835;</span><span class="di-label">Player</span></button>
+  <button class="desk-icon" ondblclick="OS.open('arcade')" onclick="OS._iconClick(event,'arcade')"><span class="di-ico">&#127918;</span><span class="di-label">Arcade</span></button>
+  <button class="desk-icon" ondblclick="OS.open('settings')" onclick="OS._iconClick(event,'settings')"><span class="di-ico">&#9881;</span><span class="di-label">Settings</span></button>
+</div>
+
+<div id="dock">
+  <button class="dock-item" data-dock="player"   onclick="OS.open('player')"><span class="dock-tip">Player</span>&#9835;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="arcade"   onclick="OS.open('arcade')"><span class="dock-tip">Arcade</span>&#127918;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="synth"    onclick="OS.open('synth')"><span class="dock-tip">AquaSynth</span>&#127929;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="paint"    onclick="OS.open('paint')"><span class="dock-tip">AquaPaint</span>&#127912;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="rooms"    onclick="OS.open('rooms')"><span class="dock-tip">Public Rooms</span>&#127760;<span class="dock-dot"></span></button>
+  <span class="dock-sep"></span>
+  <button class="dock-item" data-dock="settings" onclick="OS.open('settings')"><span class="dock-tip">Settings</span>&#9881;<span class="dock-dot"></span></button>
+</div>
+
+<!-- Arcade launcher window -->
+<div id="win-arcade" class="os-window win-std" data-app="arcade" data-title="Arcade" style="width:min(420px,94vw);height:min(360px,72vh);left:calc(50% - 210px);top:80px;">
+  <div class="os-titlebar"><span class="os-ico">&#127918;</span><span class="os-title">Arcade</span></div>
+  <div class="win-body-scroll">
+    <div class="apps-section-lbl" style="margin-bottom:8px">Games</div>
+    <div class="apps-games-grid" style="grid-template-columns:repeat(3,1fr)">
+      <button class="apps-game-btn" onclick="OS.open('slots')"><span class="agb-icon">&#127920;</span><span class="agb-name">Slots</span></button>
+      <button class="apps-game-btn" onclick="OS.open('solitaire')"><span class="agb-icon">&#9824;&#65039;</span><span class="agb-name">Solitaire</span></button>
+      <button class="apps-game-btn" onclick="OS.open('picross')"><span class="agb-icon">&#9724;</span><span class="agb-name">Picross</span></button>
+      <button class="apps-game-btn" onclick="OS.open('mines')"><span class="agb-icon">&#128163;</span><span class="agb-name">Minesweeper</span></button>
+      <button class="apps-game-btn" onclick="OS.open('blackjack')"><span class="agb-icon">&#127183;</span><span class="agb-name">Blackjack</span></button>
+      <button class="apps-game-btn" onclick="OS.open('rhythm')"><span class="agb-icon">&#127926;</span><span class="agb-name">Beat Tap</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings window (theme panel content is relocated here at boot) -->
+<div id="win-settings" class="os-window win-std" data-app="settings" data-title="Settings" style="width:min(340px,94vw);height:min(560px,80vh);left:calc(50% - 170px);top:60px;">
+  <div class="os-titlebar"><span class="os-ico">&#9881;</span><span class="os-title">Settings</span></div>
+  <div class="win-body-scroll" id="settings-body"></div>
 </div>
 
 <!-- THEME PANEL -->
@@ -6762,8 +7014,196 @@ function updateGrid() {
 //  THEME PANEL
 // ─────────────────────────────────────────────────────────
 function toggleThemePanel() {
+  // In AquaOS the theme controls live inside the Settings app window.
+  if (document.body.classList.contains('osmode') && window.OS) { OS.open('settings'); return; }
   document.getElementById('theme-panel').classList.toggle('open');
 }
+
+/* ============================================================
+   AquaOS — window manager
+   Wraps existing overlays as draggable/focusable windows. Reuses
+   each app's existing open/close functions; never re-parents the
+   YouTube iframe (the player window wraps #main statically).
+   ============================================================ */
+const APPS = {
+  player:    { el:'win-player',     name:'Aquatune Player', alwaysOpen:true },
+  arcade:    { el:'win-arcade',     name:'Arcade' },
+  settings:  { el:'win-settings',   name:'Settings' },
+  synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout(), nativeDrag:true },
+  paint:     { el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
+  slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots() },
+  solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire() },
+  picross:   { el:'picross-wrap',   name:'Picross',    tb:'#picross-titlebar',   openFn:()=>openPicross() },
+  mines:     { el:'mines-wrap',     name:'Minesweeper',tb:'#mines-titlebar',     openFn:()=>openMines() },
+  blackjack: { el:'blackjack-wrap', name:'Blackjack',  tb:'#blackjack-titlebar', openFn:()=>openBlackjack() },
+  rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm() },
+  rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
+};
+const OS = {
+  z: 600, _drag: null, _activeId: null,
+
+  makeDraggable(win, handle) {
+    if (!handle || handle._osDrag) return;
+    handle._osDrag = true;
+    handle.style.cursor = 'move';
+    handle.addEventListener('mousedown', e => {
+      if (e.target.closest('button')) return;
+      if (win.classList.contains('os-max')) return;
+      const r = win.getBoundingClientRect();
+      win.style.transform = 'none';
+      win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+      win.style.right = 'auto'; win.style.bottom = 'auto';
+      OS._drag = { win, dx: e.clientX - r.left, dy: e.clientY - r.top };
+      e.preventDefault();
+    });
+  },
+
+  register(id) {
+    const reg = APPS[id]; if (!reg || reg.modal) return;
+    const el = document.getElementById(reg.el);
+    if (!el || el._osReg) return;
+    el._osReg = true;
+    el.classList.add('os-window');
+    el.dataset.app = id;
+    if (reg.name && !el.dataset.title) el.dataset.title = reg.name;
+    let tb = el.querySelector('.os-titlebar') || (reg.tb && el.querySelector(reg.tb));
+    if (tb) {
+      // Only inject traffic-light controls into our own .os-titlebar rows;
+      // legacy game titlebars keep their bespoke look (drag only).
+      if (tb.classList.contains('os-titlebar') && !tb.querySelector('.os-winbtns')) {
+        const btns = document.createElement('div');
+        btns.className = 'os-winbtns';
+        btns.innerHTML = '<button class="os-winbtn close" title="Close"></button>'+
+                         '<button class="os-winbtn min" title="Minimize"></button>'+
+                         '<button class="os-winbtn max" title="Maximize"></button>';
+        btns.querySelector('.close').onclick = ev => { ev.stopPropagation(); OS.close(id); };
+        btns.querySelector('.min').onclick   = ev => { ev.stopPropagation(); OS.minimize(id); };
+        btns.querySelector('.max').onclick    = ev => { ev.stopPropagation(); OS.toggleMax(id); };
+        tb.insertBefore(btns, tb.firstChild);
+      }
+      if (!reg.nativeDrag) OS.makeDraggable(el, tb);
+      if (tb.classList.contains('os-titlebar')) {
+        tb.addEventListener('dblclick', ev => { if (!ev.target.closest('button')) OS.toggleMax(id); });
+      }
+    }
+    el.addEventListener('mousedown', () => OS.focus(id), true);
+  },
+
+  focus(id) {
+    const reg = APPS[id]; if (!reg || reg.modal) return;
+    const el = document.getElementById(reg.el); if (!el) return;
+    el.style.zIndex = (this.z = Math.min(this.z + 1, 2999));
+    const name = el.dataset.title || reg.name || '';
+    const mb = document.getElementById('mb-appname'); if (mb) mb.textContent = name;
+    this._activeId = id;
+    document.querySelectorAll('.dock-item.active').forEach(d => d.classList.remove('active'));
+    document.querySelector(`.dock-item[data-dock="${id}"]`)?.classList.add('active');
+  },
+
+  open(id) {
+    const reg = APPS[id]; if (!reg) return;
+    if (reg.modal) { reg.openFn?.(); return; }
+    const el = document.getElementById(reg.el);
+    if (!el) { reg.openFn?.(); return; }   // not yet in DOM — let opener create/show
+    this.register(id);
+    el.classList.remove('os-min');
+    if (!reg.alwaysOpen) {
+      if (reg.openFn) { if (!el.classList.contains('open')) reg.openFn(); }
+      else el.classList.add('open');
+    }
+    this.register(id);                     // re-run in case opener built the titlebar just now
+    this.focus(id);
+    this._setRunning(id, true);
+  },
+
+  close(id) {
+    const reg = APPS[id]; if (!reg) return;
+    const el = document.getElementById(reg.el); if (!el) return;
+    if (reg.alwaysOpen) { el.classList.add('os-min'); this._setRunning(id, true); return; }
+    if (reg.closeFn) reg.closeFn();
+    else if (reg.openFn && el.classList.contains('open')) reg.openFn();  // toggle off
+    else el.classList.remove('open');
+    el.classList.remove('os-min', 'os-max');
+    this._setRunning(id, false);
+    const mb = document.getElementById('mb-appname');
+    if (mb && this._activeId === id) mb.textContent = 'Aquatune Player';
+  },
+
+  minimize(id) {
+    const el = document.getElementById(APPS[id]?.el); if (!el) return;
+    el.classList.add('os-min');
+  },
+
+  toggleMax(id) {
+    const el = document.getElementById(APPS[id]?.el); if (!el) return;
+    el.classList.toggle('os-max');
+  },
+
+  _setRunning(id, on) {
+    document.querySelector(`.dock-item[data-dock="${id}"]`)?.classList.toggle('running', !!on);
+  },
+
+  _iconClick() { /* single-click selects; double-click opens (see markup) */ },
+};
+window.OS = OS;
+document.addEventListener('mousemove', e => {
+  const d = OS._drag; if (!d) return;
+  let x = e.clientX - d.dx, y = e.clientY - d.dy;
+  y = Math.max(30, y);
+  x = Math.max(-d.win.offsetWidth + 90, Math.min(x, window.innerWidth - 90));
+  d.win.style.left = x + 'px'; d.win.style.top = y + 'px';
+});
+document.addEventListener('mouseup', () => { OS._drag = null; });
+
+/* ---- Settings app: relocate theme-panel content + wallpaper picker ---- */
+const WALLPAPERS = {
+  none:   { label:'Theme',  css:'' },
+  aqua:   { label:'Aqua',   css:'radial-gradient(circle at 30% 18%, #7fd2ff, #0a4f8a 72%)' },
+  sunset: { label:'Sunset', css:'linear-gradient(180deg,#ff9a5a,#ff5f6d 55%,#5b247a)' },
+  mint:   { label:'Mint',   css:'linear-gradient(160deg,#a8ffce,#1fd1a5 60%,#0a7f6a)' },
+  grape:  { label:'Grape',  css:'linear-gradient(160deg,#6a3093,#a044ff)' },
+  carbon: { label:'Carbon', css:'linear-gradient(160deg,#232526,#414345)' },
+};
+function applyWallpaper(key, btn) {
+  const wp = WALLPAPERS[key] || WALLPAPERS.none;
+  const layer = document.getElementById('wallpaper');
+  if (!layer) return;
+  if (key === 'none' || !wp.css) { layer.classList.remove('on'); layer.style.background = ''; }
+  else { layer.style.background = wp.css; layer.classList.add('on'); }
+  localStorage.setItem('aq_wallpaper', key);
+  document.querySelectorAll('.wp-swatch').forEach(s => s.classList.remove('on'));
+  (btn || document.querySelector(`.wp-swatch[data-wp="${key}"]`))?.classList.add('on');
+}
+function loadWallpaper() {
+  applyWallpaper(localStorage.getItem('aq_wallpaper') || 'none');
+}
+function buildSettingsApp() {
+  const tp = document.getElementById('theme-panel');
+  const body = document.getElementById('settings-body');
+  if (!tp || !body || body._built) return;
+  body._built = true;
+  // Relocate every theme-panel section (skip its old header) into the Settings window.
+  [...tp.children].forEach(ch => { if (!ch.classList.contains('theme-hdr')) body.appendChild(ch); });
+  // Add a Desktop / wallpaper section.
+  const wrap = document.createElement('div');
+  const swatches = Object.entries(WALLPAPERS).map(([k, v]) =>
+    `<button class="theme-swatch wp-swatch" data-wp="${k}" onclick="applyWallpaper('${k}',this)"`+
+    `${v.css ? ` style="background:${v.css};color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)"` : ''}>${v.label}</button>`).join('');
+  wrap.innerHTML = '<div class="settings-section-hdr">Desktop wallpaper</div>'+
+    `<div class="theme-presets" style="grid-template-columns:1fr 1fr 1fr">${swatches}</div>`;
+  body.appendChild(wrap);
+}
+
+function osBoot() {
+  document.body.classList.add('osmode');
+  buildSettingsApp();
+  loadWallpaper();
+  OS.register('player');
+  OS.focus('player');
+  OS._setRunning('player', true);
+}
+document.addEventListener('DOMContentLoaded', osBoot);
+
 function toggleKbdHint() {
   const hint = document.getElementById('kbd-hint');
   const btn  = document.getElementById('kbd-btn');

@@ -3914,6 +3914,26 @@ body.osmode { overflow:hidden; }
   background-size:cover; background-position:center center; display:none; }
 #wallpaper.on { display:block; }
 
+/* Settings: light/dark toggle, theme family labels, swatch chips, wallpaper inputs */
+.scheme-toggle { display:flex; gap:6px; margin:0 0 12px; }
+.scheme-btn { flex:1; padding:6px 8px; font-size:11px; font-weight:700; cursor:pointer;
+  border:1px solid var(--border); border-radius:8px; background:rgba(127,127,127,0.12);
+  color:var(--text); transition:all .15s; font-family:var(--font-ui); }
+.scheme-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+.theme-fam-lbl { grid-column:1 / -1; font-size:9px; font-weight:800; letter-spacing:.6px;
+  text-transform:uppercase; color:var(--text2); opacity:.8; margin:6px 0 1px; }
+.theme-swatch { position:relative; }
+.theme-swatch[style*="--sw"]::before { content:''; display:inline-block; width:9px; height:9px;
+  border-radius:50%; background:var(--sw); margin-right:6px; vertical-align:middle;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.25); }
+.set-file-btn { font-size:11px; font-weight:700; text-align:center; padding:7px; cursor:pointer;
+  border:1px dashed var(--border); border-radius:8px; color:var(--text2); }
+.set-file-btn:hover { color:var(--text); border-color:var(--accent); }
+.set-url-inp { flex:1; min-width:0; font-size:11px; padding:6px 8px; border:1px solid var(--border);
+  border-radius:8px; background:rgba(127,127,127,0.1); color:var(--text); }
+.set-go-btn { font-size:11px; font-weight:700; padding:6px 12px; cursor:pointer; border:none;
+  border-radius:8px; background:var(--accent); color:#fff; }
+
 /* desktop root — drop the old flex/padded shell */
 body.osmode #app { display:block; padding:0; gap:0; height:100vh; overflow:hidden; }
 
@@ -4009,6 +4029,12 @@ body.osmode #win-player {
 }
 body.osmode #win-player .win-body { flex:1; min-height:0; display:flex; padding:10px; }
 body.osmode #win-player #main { flex:1; min-height:0; }
+/* Mobile / non-OS mode: dissolve the player window wrapper so the original
+   layout (header + #main) renders exactly as before, then the existing
+   @media(max-width:768px) rules + mob app bar take over. */
+body:not(.osmode) #win-player,
+body:not(.osmode) #win-player > .win-body { display:contents; }
+body:not(.osmode) #win-player > .os-titlebar { display:none; }
 
 /* generic OS-native windows (settings, arcade) */
 body.osmode .os-window.win-std {
@@ -4086,15 +4112,182 @@ body.osmode #synth-flyout.os-window, body.osmode #paint-wrap.os-window { border-
 [data-era=nintendo] .os-titlebar { background:linear-gradient(180deg,#2e2e3e,#1a1a28); }
 [data-era=myspace]  .os-titlebar { background:linear-gradient(180deg,#3a6ea5,#003399); }
 
-/* ---------- desktop icons ---------- */
-#desktop-icons { position:fixed; top:42px; left:14px; z-index:1; display:none;
-  flex-direction:column; gap:14px; }
-body.osmode #desktop-icons { display:flex; }
-.desk-icon { width:74px; display:flex; flex-direction:column; align-items:center; gap:3px;
-  cursor:pointer; color:#fff; font-size:11px; font-weight:600; text-align:center;
-  text-shadow:0 1px 3px rgba(0,0,0,0.7); background:none; border:none; font-family:var(--font-ui); }
-.desk-icon .di-ico { font-size:34px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-.desk-icon:hover .di-label { background:var(--accent); border-radius:4px; padding:0 4px; }
+/* ---------- desktop icons (free-positioned, draggable) ---------- */
+#desktop-icons { position:fixed; inset:30px 0 60px 0; z-index:1; display:none; }
+body.osmode #desktop-icons { display:block; }
+.desk-icon { position:absolute; width:76px; display:flex; flex-direction:column; align-items:center; gap:3px;
+  cursor:pointer; color:#fff; font-size:11px; font-weight:600; text-align:center; padding:4px 2px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7); background:none; border:1px solid transparent; border-radius:6px;
+  font-family:var(--font-ui); user-select:none; }
+.desk-icon:hover { background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.18); }
+.desk-icon .di-ico { font-size:34px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); pointer-events:none; }
+.desk-icon .di-label { pointer-events:none; max-width:74px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---------- active window focus ring + open animation ---------- */
+.os-window.os-active { box-shadow:0 30px 90px rgba(0,0,0,0.5), 0 0 0 1px var(--accent); }
+@keyframes osWinIn { from { opacity:0; transform:scale(0.96) translateY(6px); } to { opacity:1; } }
+body.osmode .os-window.win-std.open, body.osmode #win-player { animation:osWinIn .16s ease-out; }
+
+/* ---------- window toolbars / text editor / files ---------- */
+.win-toolbar { display:flex; align-items:center; gap:6px; padding:6px 8px; flex-shrink:0;
+  border-bottom:1px solid var(--border); background:rgba(127,127,127,0.08); }
+.win-tool-btn { font-size:11px; font-weight:700; padding:4px 10px; cursor:pointer; color:var(--text);
+  border:1px solid var(--border); border-radius:6px; background:rgba(127,127,127,0.12); font-family:var(--font-ui); }
+.win-tool-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+.te-name-inp { flex:1; min-width:0; font-size:12px; padding:4px 8px; border:1px solid var(--border);
+  border-radius:6px; background:rgba(127,127,127,0.1); color:var(--text); font-family:var(--font-ui); }
+.te-area { flex:1; min-height:0; width:100%; resize:none; border:none; outline:none; padding:12px 14px;
+  font-family:'Courier New',monospace; font-size:13px; line-height:1.5; color:var(--text);
+  background:var(--panel); }
+.files-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:10px; }
+.file-tile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; cursor:pointer;
+  border:1px solid transparent; border-radius:8px; background:none; color:var(--text); font-family:var(--font-ui); }
+.file-tile:hover { background:rgba(127,127,127,0.14); border-color:var(--border); }
+.file-ico { font-size:30px; }
+.file-nm { font-size:10px; max-width:78px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.files-empty { font-size:12px; color:var(--text2); padding:20px; text-align:center; }
+
+/* ---------- context menu ---------- */
+.os-ctx { position:fixed; z-index:9000; min-width:172px; padding:4px; font-family:var(--font-ui);
+  background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px;
+  box-shadow:0 12px 36px rgba(0,0,0,0.34); backdrop-filter:blur(12px) saturate(1.3); font-size:12px; }
+.os-ctx-item { display:flex; align-items:center; gap:8px; padding:5px 9px; border-radius:5px; cursor:pointer; white-space:nowrap; }
+.os-ctx-item:hover { background:var(--accent); color:#fff; }
+.os-ctx-item.disabled { opacity:0.4; pointer-events:none; }
+.os-ctx-ico { width:16px; text-align:center; flex-shrink:0; }
+.os-ctx-lbl { flex:1; }
+.os-ctx-arr { opacity:0.7; }
+.os-ctx-sep { height:1px; margin:4px 6px; background:var(--border); }
+
+/* ---------- Start button + Start menu (Windows families) ---------- */
+#os-start { display:none; align-items:center; gap:6px; height:34px; padding:0 12px 0 8px; cursor:pointer;
+  font-family:var(--font-ui); font-weight:800; font-size:13px; color:#fff; border:none; border-radius:6px;
+  background:linear-gradient(180deg,#3a8a3a,#2a6a2a); box-shadow:inset 0 1px 0 rgba(255,255,255,0.3); }
+#os-start .start-logo { color:#ffd700; letter-spacing:-2px; }
+[data-family=windows] #os-start { display:flex; }
+#start-menu { position:fixed; left:6px; bottom:46px; z-index:4100; width:280px; display:none;
+  border:1px solid var(--border); border-radius:8px 8px 6px 6px; overflow:hidden;
+  box-shadow:0 16px 44px rgba(0,0,0,0.4); font-family:var(--font-ui); }
+#start-menu.open { display:flex; }
+.start-side { width:34px; background:linear-gradient(180deg,var(--accent),#000a); display:flex; align-items:flex-end;
+  justify-content:center; padding:8px 0; }
+.start-side span { writing-mode:vertical-rl; transform:rotate(180deg); color:#fff; font-weight:800; font-size:13px; letter-spacing:1px; opacity:0.9; }
+.start-list { flex:1; background:var(--panel); padding:6px; display:flex; flex-direction:column; gap:1px; }
+.start-item { text-align:left; padding:7px 10px; font-size:12px; font-weight:600; color:var(--text); cursor:pointer;
+  border:none; background:none; border-radius:5px; font-family:var(--font-ui); }
+.start-item:hover { background:var(--accent); color:#fff; }
+[data-era=retro] #start-menu, [data-era=win31] #start-menu, [data-era=winxp] #start-menu {
+  border-radius:0; border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; }
+[data-era=retro] #os-start, [data-era=win31] #os-start { border-radius:0; background:#c0c0c0; color:#000;
+  border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; box-shadow:none; }
+[data-era=retro] #os-start .start-logo, [data-era=win31] #os-start .start-logo { color:#1084d0; }
+
+/* =========================================================
+   PER-FAMILY LAYOUT (windows taskbar vs mac dock vs console)
+   ========================================================= */
+[data-family=windows] #dock { left:0; right:0; bottom:0; transform:none; width:100%;
+  justify-content:flex-start; border-radius:0; backdrop-filter:none; padding:3px 5px; gap:4px;
+  background:linear-gradient(180deg,var(--accent),#0006); border:none; border-top:1px solid rgba(255,255,255,0.25); }
+[data-family=windows] .dock-item { width:38px; height:36px; border-radius:4px; }
+[data-family=windows] .dock-item:hover { transform:none; background:rgba(255,255,255,0.18); }
+[data-family=windows] .dock-item[data-dock="settings"] { margin-left:auto; }
+[data-family=windows] .dock-sep { display:none; }
+[data-family=windows] .os-titlebar .os-title { text-align:left; order:1; }
+[data-family=windows] .os-winbtns { order:2; }
+/* Mac family: traffic lights left, centered title (base already does this) */
+[data-family=mac] .os-titlebar .os-title { text-align:center; }
+/* Console: rounded tray dock */
+[data-family=console] #dock { border-radius:22px; }
+
+/* =========================================================
+   NEW ERA CHROME (classicmac, metal, winxp, win31, aero, wii, dreamcast)
+   colours come from the active light/dark set; these set shape+font
+   ========================================================= */
+/* Classic Mac — Platinum */
+[data-era=classicmac] .os-window { --chrome-radius:4px; }
+[data-era=classicmac] #win-player, [data-era=classicmac] .os-window.win-std {
+  border:1px solid #000; box-shadow:2px 2px 0 rgba(0,0,0,0.4); }
+[data-era=classicmac] .os-titlebar { background:repeating-linear-gradient(180deg,#e8e8e8 0 2px,#cfcfcf 2px 4px);
+  color:#000; height:20px; border-bottom:1px solid #000; box-shadow:none; text-shadow:none; }
+[data-era=classicmac] .os-titlebar .os-title { color:#000; text-shadow:none; }
+[data-era=classicmac] .os-winbtn { background:#dcdcdc; border:1px solid #000; border-radius:0; box-shadow:inset 1px 1px 0 #fff; }
+[data-era=classicmac] .os-winbtn.close, [data-era=classicmac] .os-winbtn.min, [data-era=classicmac] .os-winbtn.max { background:#dcdcdc; }
+/* Brushed metal */
+[data-era=metal] .os-titlebar { background:linear-gradient(180deg,#e6e6e6,#bcbcbc); color:#222;
+  text-shadow:0 1px 0 rgba(255,255,255,0.5); border-bottom:1px solid #888; }
+[data-era=metal] .os-titlebar .os-title { color:#222; text-shadow:0 1px 0 rgba(255,255,255,0.5); }
+[data-era=metal] .os-window { --chrome-radius:9px; }
+/* Windows XP Luna */
+[data-era=winxp] .os-window { --chrome-radius:8px 8px 0 0; }
+[data-era=winxp] .os-titlebar { background:linear-gradient(180deg,#3a8be0 0%,#1f5fd0 48%,#1a52c0 100%);
+  height:26px; border-radius:8px 8px 0 0; box-shadow:inset 0 1px 0 rgba(255,255,255,0.5); }
+[data-era=winxp] .os-titlebar .os-title { text-align:left; order:1; }
+[data-era=winxp] .os-winbtns { order:2; gap:3px; }
+[data-era=winxp] .os-winbtn { width:20px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,0.6); color:#fff; font-weight:800; }
+[data-era=winxp] .os-winbtn.close { background:#e24a3a; }
+[data-era=winxp] .os-winbtn.min { background:#2a6fd0; } [data-era=winxp] .os-winbtn.max { background:#2a6fd0; }
+[data-era=winxp] .os-winbtn.close::after{content:'\00D7';} [data-era=winxp] .os-winbtn.min::after{content:'_';transform:translateY(-3px);} [data-era=winxp] .os-winbtn.max::after{content:'\25A1';}
+[data-era=winxp] #dock { background:linear-gradient(180deg,#3a8be0,#1f5fd0); }
+/* Windows 3.1 */
+[data-era=win31] .os-window { --chrome-radius:0; }
+[data-era=win31] #win-player, [data-era=win31] .os-window.win-std { border:2px solid #fff;
+  border-right-color:#808080; border-bottom-color:#808080; box-shadow:1px 1px 0 #000; }
+[data-era=win31] .os-titlebar { background:#000080; color:#fff; height:20px; border-radius:0; box-shadow:none; }
+[data-era=win31] .os-titlebar .os-title { text-align:center; order:1; }
+[data-era=win31] .os-winbtns { order:2; }
+[data-era=win31] .os-winbtn { width:18px; height:16px; border-radius:0; background:#c0c0c0; border:1px solid #fff;
+  border-right-color:#808080; border-bottom-color:#808080; color:#000; box-shadow:none; }
+[data-era=win31] .os-winbtn.close::after{content:'\2014';} [data-era=win31] .os-winbtn.min::after{content:'\25BC';} [data-era=win31] .os-winbtn.max::after{content:'\25B2';}
+/* Windows Aero (Vista/7) glass */
+[data-era=aero] .os-window { --chrome-radius:8px; }
+[data-era=aero] #win-player, [data-era=aero] .os-window.win-std {
+  border:1px solid rgba(255,255,255,0.5); backdrop-filter:blur(16px) saturate(1.3);
+  box-shadow:0 22px 64px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.15); }
+[data-era=aero] .os-titlebar { background:linear-gradient(180deg,rgba(255,255,255,0.5),rgba(190,220,250,0.28));
+  color:var(--text); text-shadow:0 1px 2px rgba(255,255,255,0.5); border-radius:8px 8px 0 0;
+  border-bottom:1px solid rgba(255,255,255,0.4); height:30px; backdrop-filter:blur(8px); }
+[data-era=aero] .os-titlebar .os-title { text-align:left; order:1; color:var(--text); text-shadow:0 1px 2px rgba(255,255,255,0.5); }
+[data-era=aero] .os-winbtns { order:2; gap:3px; }
+[data-era=aero] .os-winbtn { width:22px; height:16px; border-radius:4px; border:1px solid rgba(255,255,255,0.6);
+  background:rgba(255,255,255,0.4); color:#0a2a4a; }
+[data-era=aero] .os-winbtn.close { background:rgba(230,80,60,0.85); color:#fff; }
+[data-era=aero] .os-winbtn.close::after{content:'\00D7';} [data-era=aero] .os-winbtn.min::after{content:'_';transform:translateY(-3px);} [data-era=aero] .os-winbtn.max::after{content:'\25A1';}
+[data-era=aero] #dock { background:linear-gradient(180deg,rgba(255,255,255,0.25),rgba(120,170,220,0.18));
+  border:1px solid rgba(255,255,255,0.5); }
+/* Wii channel OS */
+[data-era=wii] .os-window { --chrome-radius:16px; }
+[data-era=wii] #win-player, [data-era=wii] .os-window.win-std { border:2px solid #d2e6f0;
+  box-shadow:0 14px 44px rgba(20,80,120,0.2); }
+[data-era=wii] .os-titlebar { background:linear-gradient(180deg,#ffffff,#eef6fb); color:#2a2a2a;
+  border-bottom:2px solid #dceaf2; text-shadow:none; height:30px; border-radius:16px 16px 0 0; }
+[data-era=wii] .os-titlebar .os-title { color:#2a2a2a; text-shadow:none; }
+[data-era=wii] .os-winbtn { background:#eaf4fa; border:2px solid #bcd8e8; box-shadow:none; }
+[data-era=wii] .os-winbtn.close { background:#9fd2ec; } [data-era=wii] .os-winbtn.min { background:#bfe2f2; } [data-era=wii] .os-winbtn.max { background:#bfe2f2; }
+[data-era=wii] #dock { border-radius:26px; background:linear-gradient(180deg,#ffffff,#dcecf6); border:2px solid #cfe4f0; }
+/* Dreamcast OS */
+[data-era=dreamcast] .os-window { --chrome-radius:14px; }
+[data-era=dreamcast] .os-titlebar { background:linear-gradient(180deg,#ff8a3a,#f0631e); color:#fff;
+  border-radius:14px 14px 0 0; }
+[data-era=dreamcast] #dock { border-radius:20px; }
+[data-era=dreamcast] .os-winbtn.close { background:#fff; } [data-era=dreamcast] .os-winbtn.min { background:#ffd9b8; } [data-era=dreamcast] .os-winbtn.max { background:#ffd9b8; }
+
+/* dark-mode tweaks for the gray "bevel" eras (their chrome hardcodes light grays) */
+[data-scheme=dark][data-era=retro] #win-player, [data-scheme=dark][data-era=retro] .os-window.win-std,
+[data-scheme=dark][data-era=win31] #win-player, [data-scheme=dark][data-era=win31] .os-window.win-std,
+[data-scheme=dark][data-era=classicmac] #win-player, [data-scheme=dark][data-era=classicmac] .os-window.win-std,
+[data-scheme=dark][data-era=metal] #win-player, [data-scheme=dark][data-era=metal] .os-window.win-std {
+  background:var(--panel); color:var(--text); }
+[data-scheme=dark][data-era=retro] .os-winbtn, [data-scheme=dark][data-era=win31] .os-winbtn { background:#4a4a4a; color:#fff;
+  border-color:#6a6a6a; border-right-color:#222; border-bottom-color:#222; }
+[data-scheme=dark][data-era=classicmac] .os-titlebar { background:repeating-linear-gradient(180deg,#4a4a4a 0 2px,#363636 2px 4px); color:#f0f0f0; }
+[data-scheme=dark][data-era=classicmac] .os-titlebar .os-title { color:#f0f0f0; }
+[data-scheme=dark][data-era=metal] .os-titlebar { background:linear-gradient(180deg,#54545a,#3a3a40); color:#ececec; text-shadow:none; }
+[data-scheme=dark][data-era=metal] .os-titlebar .os-title { color:#ececec; text-shadow:none; }
+[data-scheme=dark][data-era=retro] #hdr, [data-scheme=dark][data-era=win31] #hdr { background:#2a2a2a; color:#e8e8e8; border-bottom-color:#000; }
+[data-scheme=dark][data-era=retro] #hdr-clock, [data-scheme=dark][data-era=win31] #hdr-clock,
+[data-scheme=dark][data-era=retro] #mb-appname, [data-scheme=dark][data-era=win31] #mb-appname { color:#e8e8e8; }
+[data-scheme=dark][data-era=wii] .os-titlebar { background:linear-gradient(180deg,#1a2228,#12181c); color:#eef6fb; border-bottom-color:#2a3942; }
+[data-scheme=dark][data-era=wii] .os-titlebar .os-title { color:#eef6fb; }
 
 /* ---------- mobile fallback ---------- */
 @media (max-width:768px) {
@@ -4459,20 +4652,41 @@ body.osmode #desktop-icons { display:flex; }
 </div>
 
 <!-- ===== AquaOS: desktop icons, dock, OS-native windows ===== -->
-<div id="desktop-icons">
-  <button class="desk-icon" ondblclick="OS.open('player')" onclick="OS._iconClick(event,'player')"><span class="di-ico">&#9835;</span><span class="di-label">Player</span></button>
-  <button class="desk-icon" ondblclick="OS.open('arcade')" onclick="OS._iconClick(event,'arcade')"><span class="di-ico">&#127918;</span><span class="di-label">Arcade</span></button>
-  <button class="desk-icon" ondblclick="OS.open('settings')" onclick="OS._iconClick(event,'settings')"><span class="di-ico">&#9881;</span><span class="di-label">Settings</span></button>
-</div>
+<div id="desktop-icons"></div>
 
 <div id="dock">
+  <button id="os-start" onclick="toggleStartMenu(event)"><span class="start-logo">&#9612;&#9612;</span><span class="start-label">Start</span></button>
   <button class="dock-item" data-dock="player"   onclick="OS.open('player')"><span class="dock-tip">Player</span>&#9835;<span class="dock-dot"></span></button>
   <button class="dock-item" data-dock="arcade"   onclick="OS.open('arcade')"><span class="dock-tip">Arcade</span>&#127918;<span class="dock-dot"></span></button>
   <button class="dock-item" data-dock="synth"    onclick="OS.open('synth')"><span class="dock-tip">AquaSynth</span>&#127929;<span class="dock-dot"></span></button>
   <button class="dock-item" data-dock="paint"    onclick="OS.open('paint')"><span class="dock-tip">AquaPaint</span>&#127912;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="files"    onclick="OS.open('files')"><span class="dock-tip">Files</span>&#128193;<span class="dock-dot"></span></button>
+  <button class="dock-item" data-dock="texteditor" onclick="OS.open('texteditor')"><span class="dock-tip">Text Editor</span>&#128221;<span class="dock-dot"></span></button>
   <button class="dock-item" data-dock="rooms"    onclick="OS.open('rooms')"><span class="dock-tip">Public Rooms</span>&#127760;<span class="dock-dot"></span></button>
   <span class="dock-sep"></span>
   <button class="dock-item" data-dock="settings" onclick="OS.open('settings')"><span class="dock-tip">Settings</span>&#9881;<span class="dock-dot"></span></button>
+</div>
+
+<!-- Start menu (Windows families) -->
+<div id="start-menu"></div>
+
+<!-- Files app -->
+<div id="win-files" class="os-window win-std" data-app="files" data-title="Files" style="width:min(460px,94vw);height:min(420px,74vh);left:calc(50% - 230px);top:70px;">
+  <div class="os-titlebar"><span class="os-ico">&#128193;</span><span class="os-title">Files</span></div>
+  <div class="win-toolbar"><button class="win-tool-btn" onclick="fsNewText()">New Text</button><button class="win-tool-btn" onclick="filesRefresh()">Refresh</button></div>
+  <div class="win-body-scroll" id="files-body"></div>
+</div>
+
+<!-- Text editor app -->
+<div id="win-texteditor" class="os-window win-std" data-app="texteditor" data-title="Text Editor" style="width:min(560px,94vw);height:min(520px,78vh);left:calc(50% - 280px);top:56px;">
+  <div class="os-titlebar"><span class="os-ico">&#128221;</span><span class="os-title">Text Editor</span></div>
+  <div class="win-toolbar">
+    <input id="te-name" class="te-name-inp" type="text" value="untitled.txt" title="File name">
+    <button class="win-tool-btn" onclick="teNew()">New</button>
+    <button class="win-tool-btn" onclick="teOpen()">Open</button>
+    <button class="win-tool-btn" onclick="teSave()">Save</button>
+  </div>
+  <textarea id="te-area" class="te-area" spellcheck="false" placeholder="Type here…"></textarea>
 </div>
 
 <!-- Arcade launcher window -->
@@ -4505,19 +4719,11 @@ body.osmode #desktop-icons { display:flex; }
   </div>
 
   <div class="settings-section-hdr">Appearance</div>
-  <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr">
-    <button class="theme-swatch on" data-theme="default"  onclick="selectTheme('default',this)">Aqua</button>
-    <button class="theme-swatch"   data-theme="macos"     onclick="selectTheme('macos',this)">Silver</button>
-    <button class="theme-swatch"   data-theme="myspace"   onclick="selectTheme('myspace',this)">My Space</button>
-    <button class="theme-swatch"   data-theme="nintendo"  onclick="selectTheme('nintendo',this)">Handheld</button>
-    <button class="theme-swatch"   data-theme="dark"      onclick="selectTheme('dark',this)">Midnight</button>
-    <button class="theme-swatch"   data-theme="mono90s"   onclick="selectTheme('mono90s',this)">Mono 90s</button>
-    <button class="theme-swatch"   data-theme="frost"     onclick="selectTheme('frost',this)">Frost</button>
-    <button class="theme-swatch"   data-theme="glass"     onclick="selectTheme('glass',this)">Glass</button>
-    <button class="theme-swatch"   data-theme="retro"     data-unlock-label="Classic" onclick="selectTheme('retro',this)">Classic</button>
-    <button class="theme-swatch"   data-theme="neon"      data-unlock-label="Neon"    onclick="selectTheme('neon',this)">Neon</button>
-    <button class="theme-swatch"   data-theme="pixel"     data-unlock-label="Pixel"   onclick="selectTheme('pixel',this)">Pixel</button>
+  <div class="scheme-toggle" id="scheme-toggle">
+    <button class="scheme-btn on" data-scheme="light" onclick="setScheme('light')">&#9728;&#65039; Light</button>
+    <button class="scheme-btn"    data-scheme="dark"  onclick="setScheme('dark')">&#9789; Dark</button>
   </div>
+  <div class="theme-presets" id="theme-presets" style="grid-template-columns:1fr 1fr"></div>
   <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
     <input type="color" id="custom-accent-inp" value="#0068b8" oninput="applyCustomAccent(this.value)" style="width:36px;height:28px;border:none;cursor:pointer;background:none;padding:0;border-radius:6px;">
     <span style="font-size:10px;color:var(--text2)">Custom accent color</span>
@@ -4965,70 +5171,147 @@ async function freeSearch(q) {
 // ─────────────────────────────────────────────────────────
 //  THEMES
 // ─────────────────────────────────────────────────────────
+/* ── AquaOS themes: each is an OS era with a family, era (data-era) and BOTH
+   a light + dark colour set. The global Light/Dark toggle picks the set. ── */
 const THEMES = {
-  default: { accent:'#00b4e0', accent2:'#00ddb8', text:'#062030', text2:'#2a6888',
-             bg:'linear-gradient(155deg,#7ec8f0 0%,#a8e0fb 28%,#c0eeff 52%,#9ad8f4 76%,#7ac8ec 100%)',
-             hdr:'linear-gradient(180deg,#48d8f8 0%,#18b8d8 46%,#0ea8cc 54%,#0898bc 100%)',
-             panel:'rgba(255,255,255,0.93)', border:'rgba(0,180,220,0.28)',
-             font:"Tahoma,'Segoe UI',Arial,sans-serif", era:'default', scheme:'light' },
-  macos:   { accent:'#0070c9', accent2:'#34aadc', text:'#1a1a1a', text2:'#6c6c6c',
-             bg:'linear-gradient(180deg,#e0e0e0 0%,#c8c8c8 100%)',
-             hdr:'linear-gradient(180deg,#3a94e0 0%,#0070c9 50%,#005ba8 100%)',
-             panel:'rgba(240,240,240,0.98)', border:'rgba(0,0,0,0.16)',
-             font:"'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif", era:'macos', scheme:'light' },
-  myspace: { accent:'#003399', accent2:'#ff8800', text:'#1a1a1a', text2:'#33558c',
-             bg:'linear-gradient(180deg,#6699cc 0%,#dfe9f2 120px,#dfe9f2 100%)',
-             hdr:'linear-gradient(180deg,#3a6ea5 0%,#003399 100%)',
-             panel:'#ffffff', border:'#b8c4d4',
-             font:"Verdana,Tahoma,Arial,sans-serif", era:'myspace', scheme:'light' },
-  nintendo:{ accent:'#e4000f', accent2:'#ff4444', text:'#1a1a2e', text2:'#555570',
-             bg:'linear-gradient(180deg,#e8e8ec 0%,#d4d4da 100%)',
-             hdr:'linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%)',
-             panel:'rgba(255,255,255,0.99)', border:'rgba(0,0,0,0.18)',
-             font:"'Arial Rounded MT Bold',Arial,Helvetica,sans-serif", era:'nintendo', scheme:'light' },
-  retro:   { accent:'#000080', accent2:'#0000cc', text:'#000000', text2:'#444444',
-             bg:'#008080',
-             hdr:'linear-gradient(180deg,#0a0ab0 0%,#000096 100%)',
-             panel:'#d4d0c8', border:'rgba(0,0,0,0.22)',
-             font:'Arial,Helvetica,sans-serif', era:'retro', scheme:'light' },
-  dark:    { accent:'#38bdf8', accent2:'#0ea5e9', text:'#e0f0f8', text2:'#90b8d0',
-             bg:'linear-gradient(160deg,#1e3a4a,#0f2030,#0a1828)',
-             hdr:'linear-gradient(180deg,#0a2040,#05101e)',
-             panel:'rgba(20,40,60,0.94)', border:'rgba(56,189,248,0.2)',
-             font:"'Segoe UI',system-ui,sans-serif", era:'dark', scheme:'dark' },
-  mono90s: { accent:'#ffffff', accent2:'#aaaaaa', text:'#ffffff', text2:'#aaaaaa',
-             bg:'#000000',
-             hdr:'#000000',
-             panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)',
-             font:"'Courier New', Courier, monospace", era:'mono90s', scheme:'dark' },
-  frost:   { accent:'#2e8bdf', accent2:'#9fd2ff', text:'#13243a', text2:'#3f6080',
-             bg:'linear-gradient(160deg, #d6e8f7 0%, #b9d6ee 45%, #cfe6f5 100%)',
-             hdr:'linear-gradient(180deg, rgba(232,244,255,0.78) 0%, rgba(176,212,245,0.7) 100%)',
-             panel:'rgba(235,246,255,0.62)', border:'rgba(150,200,245,0.7)',
-             font:"'Segoe UI',Frutiger,'Helvetica Neue',Arial,sans-serif", era:'frost', scheme:'light' },
-  glass:   { accent:'#0057ff', accent2:'#00c2ff', text:'#0a0a1a', text2:'#3a3a5a',
-             bg:'linear-gradient(135deg,#e8eeff 0%,#d8e4ff 50%,#eef0ff 100%)',
-             hdr:'#0a1a4a',
-             panel:'rgba(255,255,255,0.95)', border:'#0a1a4a',
-             font:"'Arial Black','Arial Narrow',Impact,system-ui,sans-serif", era:'glass', scheme:'light' },
-  neon:    { accent:'#ffd700', accent2:'#ff3b6b',
-             text:'#fff4d6', text2:'#d8b48a',
-             bg:'radial-gradient(circle at 50% 30%, #3a0a3a 0%, #1a041f 45%, #0a0210 100%)',
-             hdr:'linear-gradient(180deg, #2a0512 0%, #5a0a1a 100%)',
-             panel:'rgba(28,8,14,0.94)',
-             border:'rgba(255,215,0,0.4)',
-             font:"'Georgia','Times New Roman',serif",
-             era:'neon', scheme:'dark' },
-  pixel:   { accent:'#e63946', accent2:'#ffd166',
-             text:'#e8e8f0', text2:'#8a8ab0',
-             bg:'#0f0f23',
-             hdr:'linear-gradient(180deg, #2a2a5a, #16163a)',
-             panel:'#1c1c3a',
-             border:'#4a4a7a',
-             font:"'VT323','Courier New',monospace",
-             era:'pixel', scheme:'dark' },
+  /* ===== Mac family ===== */
+  default: { name:'Mac OS X Aqua', family:'mac', era:'default',
+    font:"'Lucida Grande','Lucida Sans Unicode',Tahoma,Helvetica,Arial,sans-serif",
+    light:{ accent:'#00a8e0', accent2:'#00ddb8', text:'#062030', text2:'#2a6888',
+            bg:'linear-gradient(155deg,#7ec8f0 0%,#a8e0fb 28%,#c0eeff 52%,#9ad8f4 76%,#7ac8ec 100%)',
+            hdr:'linear-gradient(180deg,#48d8f8 0%,#18b8d8 46%,#0ea8cc 54%,#0898bc 100%)',
+            panel:'rgba(255,255,255,0.93)', border:'rgba(0,180,220,0.28)' },
+    dark:{ accent:'#29b6f6', accent2:'#00e0c0', text:'#dff1fb', text2:'#8fb8cf',
+           bg:'linear-gradient(160deg,#0b2435,#0a1828,#06101c)',
+           hdr:'linear-gradient(180deg,#0e5e86 0%,#0a3a58 50%,#062b42 100%)',
+           panel:'rgba(16,30,44,0.92)', border:'rgba(40,160,200,0.32)' } },
+  classicmac: { name:'Classic Mac (Platinum)', family:'mac', era:'classicmac',
+    font:"'Geneva','Helvetica Neue',Helvetica,Arial,sans-serif",
+    light:{ accent:'#3a4a8c', accent2:'#6a7ab0', text:'#0a0a0a', text2:'#4a4a4a',
+            bg:'#9a9a9a', hdr:'linear-gradient(180deg,#e8e8e8,#cfcfcf)',
+            panel:'#dddddd', border:'#000000' },
+    dark:{ accent:'#9aa8e0', accent2:'#6a7ab0', text:'#f0f0f0', text2:'#b0b0b0',
+           bg:'#2a2a2a', hdr:'linear-gradient(180deg,#4a4a4a,#363636)',
+           panel:'#3a3a3a', border:'#000000' } },
+  metal: { name:'Mac OS X Brushed Metal', family:'mac', era:'metal',
+    font:"'Lucida Grande','Helvetica Neue',Helvetica,Arial,sans-serif",
+    light:{ accent:'#4a76c4', accent2:'#7aa0d8', text:'#1a1a1a', text2:'#5a5a5a',
+            bg:'linear-gradient(180deg,#c4c4c4,#a8a8a8)',
+            hdr:'linear-gradient(180deg,#e6e6e6 0%,#c2c2c2 50%,#a8a8a8 100%)',
+            panel:'rgba(214,214,214,0.97)', border:'rgba(0,0,0,0.28)' },
+    dark:{ accent:'#7aa0d8', accent2:'#9ab8e8', text:'#ececec', text2:'#a0a0a0',
+           bg:'linear-gradient(180deg,#3a3a3c,#2a2a2c)',
+           hdr:'linear-gradient(180deg,#54545a 0%,#3e3e44 50%,#303036 100%)',
+           panel:'rgba(54,54,58,0.97)', border:'rgba(0,0,0,0.5)' } },
+  yosemite: { name:'OS X Yosemite', family:'mac', era:'macos',
+    font:"'Helvetica Neue',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif",
+    light:{ accent:'#007aff', accent2:'#34aadc', text:'#1d1d1f', text2:'#6e6e73',
+            bg:'linear-gradient(160deg,#eef1f5,#dfe5ec)',
+            hdr:'linear-gradient(180deg,rgba(250,250,252,0.9),rgba(236,238,242,0.86))',
+            panel:'rgba(247,247,249,0.88)', border:'rgba(0,0,0,0.1)' },
+    dark:{ accent:'#0a84ff', accent2:'#5ac8fa', text:'#f5f5f7', text2:'#98989d',
+           bg:'linear-gradient(160deg,#2a2a2e,#1c1c1e)',
+           hdr:'linear-gradient(180deg,rgba(54,54,58,0.9),rgba(40,40,44,0.86))',
+           panel:'rgba(44,44,48,0.86)', border:'rgba(255,255,255,0.12)' } },
+  /* ===== Windows family ===== */
+  win31: { name:'Windows 3.1', family:'windows', era:'win31',
+    font:"'MS Sans Serif','Pixelated MS Sans Serif',Tahoma,Geneva,sans-serif",
+    light:{ accent:'#000080', accent2:'#0a0aa0', text:'#000000', text2:'#404040',
+            bg:'#008080', hdr:'linear-gradient(90deg,#000080,#000080)',
+            panel:'#c0c0c0', border:'#000000' },
+    dark:{ accent:'#5a5af0', accent2:'#8080ff', text:'#e8e8e8', text2:'#a8a8a8',
+           bg:'#103838', hdr:'linear-gradient(90deg,#202060,#202060)',
+           panel:'#3a3a3a', border:'#000000' } },
+  win95: { name:'Windows 95', family:'windows', era:'retro',
+    font:"'MS Sans Serif',Tahoma,Arial,sans-serif",
+    light:{ accent:'#000080', accent2:'#1084d0', text:'#000000', text2:'#404040',
+            bg:'#008080', hdr:'linear-gradient(90deg,#000080,#1084d0)',
+            panel:'#c0c0c0', border:'rgba(0,0,0,0.4)' },
+    dark:{ accent:'#3a6ea5', accent2:'#5a9ed0', text:'#e8e8e8', text2:'#a0a0a0',
+           bg:'#0d2b2b', hdr:'linear-gradient(90deg,#202060,#2a5a8a)',
+           panel:'#3a3a3a', border:'rgba(0,0,0,0.7)' } },
+  winxp: { name:'Windows XP (Luna)', family:'windows', era:'winxp',
+    font:"Tahoma,'Trebuchet MS',Verdana,sans-serif",
+    light:{ accent:'#2a5fd6', accent2:'#3a8be0', text:'#0a1a3a', text2:'#48577a',
+            bg:'linear-gradient(180deg,#5b9bd5 0%,#7fb4e0 38%,#9ed18e 60%,#6aa84f 100%)',
+            hdr:'linear-gradient(180deg,#3a8be0 0%,#1f5fd0 48%,#1a52c0 100%)',
+            panel:'#ece9d8', border:'#0a4ad0' },
+    dark:{ accent:'#3a8be0', accent2:'#5aa0f0', text:'#e6eefb', text2:'#9fb4d6',
+           bg:'linear-gradient(180deg,#16243f,#1a2d4a)',
+           hdr:'linear-gradient(180deg,#234a8e 0%,#16356e 100%)',
+           panel:'#2a2f3a', border:'#16356e' } },
+  aero: { name:'Windows Aero (Vista/7)', family:'windows', era:'aero',
+    font:"'Segoe UI','Frutiger',Tahoma,sans-serif",
+    light:{ accent:'#1a7fd6', accent2:'#4aa8ee', text:'#0a1a2a', text2:'#41617f',
+            bg:'linear-gradient(160deg,#bfe0ff,#7fb4e6 60%,#3a78c0)',
+            hdr:'linear-gradient(180deg,rgba(255,255,255,0.55),rgba(200,228,250,0.35))',
+            panel:'rgba(235,245,255,0.55)', border:'rgba(255,255,255,0.7)' },
+    dark:{ accent:'#4aa8ee', accent2:'#7ac8ff', text:'#e6f1fb', text2:'#9fbdd6',
+           bg:'linear-gradient(160deg,#0a2238,#0d3052 60%,#08406a)',
+           hdr:'linear-gradient(180deg,rgba(40,70,100,0.55),rgba(20,40,64,0.4))',
+           panel:'rgba(20,40,62,0.55)', border:'rgba(120,180,230,0.45)' } },
+  /* ===== Console family (theoretical OSes) ===== */
+  wii: { name:'Wii Channel OS', family:'console', era:'wii',
+    font:"'Arial Rounded MT Bold','Helvetica Neue',Helvetica,Arial,sans-serif",
+    light:{ accent:'#13a7d6', accent2:'#5ec8ec', text:'#2a2a2a', text2:'#6a6a6a',
+            bg:'linear-gradient(180deg,#fdfdfd,#e8f4fb)',
+            hdr:'linear-gradient(180deg,#ffffff,#eef6fb)',
+            panel:'#ffffff', border:'#cfe4f0' },
+    dark:{ accent:'#23c0ec', accent2:'#5ec8ec', text:'#eef6fb', text2:'#9fb4bf',
+           bg:'linear-gradient(180deg,#11161a,#0a0f12)',
+           hdr:'linear-gradient(180deg,#1a2228,#12181c)',
+           panel:'#1a2228', border:'#2a3942' } },
+  dreamcast: { name:'Dreamcast OS', family:'console', era:'dreamcast',
+    font:"'Folio','Helvetica Neue',Arial,sans-serif",
+    light:{ accent:'#f06a1e', accent2:'#ffa24a', text:'#26211c', text2:'#6a5f54',
+            bg:'linear-gradient(165deg,#f4f1ea,#e6dfd2)',
+            hdr:'linear-gradient(180deg,#ff8a3a,#f0631e)',
+            panel:'#fbf8f2', border:'#e0d4c2' },
+    dark:{ accent:'#ff7a2e', accent2:'#ffa24a', text:'#f4ede4', text2:'#b8a892',
+           bg:'linear-gradient(165deg,#1c1916,#14110e)',
+           hdr:'linear-gradient(180deg,#c8521a,#a83e10)',
+           panel:'#231f1a', border:'#3a3128' } },
+  /* ===== Fun bonus themes ===== */
+  neon: { name:'Neon Arcade', family:'fun', era:'neon',
+    font:"'Georgia','Times New Roman',serif",
+    light:{ accent:'#ff2d8e', accent2:'#ffd700', text:'#2a0a1f', text2:'#7a3a5a',
+            bg:'radial-gradient(circle at 50% 30%,#ffd9ec 0%,#ffb3d9 45%,#ff8ac0 100%)',
+            hdr:'linear-gradient(180deg,#ff5ea8,#ff2d8e)',
+            panel:'rgba(255,240,248,0.92)', border:'rgba(255,45,142,0.4)' },
+    dark:{ accent:'#ffd700', accent2:'#ff3b6b', text:'#fff4d6', text2:'#d8b48a',
+           bg:'radial-gradient(circle at 50% 30%, #3a0a3a 0%, #1a041f 45%, #0a0210 100%)',
+           hdr:'linear-gradient(180deg, #2a0512 0%, #5a0a1a 100%)',
+           panel:'rgba(28,8,14,0.94)', border:'rgba(255,215,0,0.4)' } },
+  pixel: { name:'Pixel Handheld', family:'fun', era:'pixel',
+    font:"'VT323','Courier New',monospace",
+    light:{ accent:'#c81e2e', accent2:'#e0a020', text:'#1a1a14', text2:'#5a5a44',
+            bg:'#cfd8b0', hdr:'linear-gradient(180deg,#9aa878,#7a8a5a)',
+            panel:'#e6ecd0', border:'#5a6a3a' },
+    dark:{ accent:'#e63946', accent2:'#ffd166', text:'#e8e8f0', text2:'#8a8ab0',
+           bg:'#0f0f23', hdr:'linear-gradient(180deg, #2a2a5a, #16163a)',
+           panel:'#1c1c3a', border:'#4a4a7a' } },
+  mono90s: { name:'Mono Terminal', family:'fun', era:'mono90s',
+    font:"'Courier New', Courier, monospace",
+    light:{ accent:'#0a0a0a', accent2:'#444444', text:'#0a0a0a', text2:'#444444',
+            bg:'#e8e8e0', hdr:'#d8d8d0', panel:'#f4f4ee', border:'rgba(0,0,0,0.5)' },
+    dark:{ accent:'#ffffff', accent2:'#aaaaaa', text:'#ffffff', text2:'#aaaaaa',
+           bg:'#000000', hdr:'#000000', panel:'rgba(0,0,0,0.92)', border:'rgba(255,255,255,0.35)' } },
+  myspace: { name:'MySpace 2005', family:'fun', era:'myspace',
+    font:"Verdana,Tahoma,Arial,sans-serif",
+    light:{ accent:'#003399', accent2:'#ff8800', text:'#1a1a1a', text2:'#33558c',
+            bg:'linear-gradient(180deg,#6699cc 0%,#dfe9f2 120px,#dfe9f2 100%)',
+            hdr:'linear-gradient(180deg,#3a6ea5 0%,#003399 100%)',
+            panel:'#ffffff', border:'#b8c4d4' },
+    dark:{ accent:'#5a8ad0', accent2:'#ffae4a', text:'#e6ecf5', text2:'#9fb4d0',
+           bg:'linear-gradient(180deg,#16203a,#0e1626)',
+           hdr:'linear-gradient(180deg,#1c356a 0%,#0a1f4a 100%)',
+           panel:'#1a2438', border:'#2a3a58' } },
 };
+/* migrate removed theme ids → current ones */
+const THEME_MIGRATE = { macos:'yosemite', retro:'win95', nintendo:'wii', dark:'default',
+                        frost:'aero', glass:'aero' };
 let currentTheme = 'default';
+function osScheme(){ return localStorage.getItem('aq_scheme') === 'dark' ? 'dark' : 'light'; }
 
 function hexDerived(hex, lightFactor, darkFactor) {
   // Returns { light, dark, rgb } from a hex accent color
@@ -5061,21 +5344,23 @@ function applyAccentToDOM(accent) {
 
 function applyTheme(name, customAccent) {
   const t = THEMES[name] || THEMES.default;
+  const scheme = (t.light && t.dark) ? osScheme() : (t.scheme || 'light');
+  const c = (t.light && t.dark) ? t[scheme] : t;   // active colour set
   const r = document.documentElement.style;
-  const accent = customAccent || t.accent;
-  r.setProperty('--text',  t.text);
-  r.setProperty('--text2', t.text2);
-  r.setProperty('--panel', t.panel);
-  r.setProperty('--border',t.border);
-  document.getElementById('bg').style.background = t.bg;
+  const accent = customAccent || c.accent;
+  r.setProperty('--text',  c.text);
+  r.setProperty('--text2', c.text2);
+  r.setProperty('--panel', c.panel);
+  r.setProperty('--border',c.border);
+  document.getElementById('bg').style.background = c.bg;
   if (customAccent) {
     applyAccentToDOM(customAccent);
   } else {
-    r.setProperty('--accent',  t.accent);
-    r.setProperty('--accent2', t.accent2);
-    r.setProperty('--hdr-bg',  t.hdr);
+    r.setProperty('--accent',  c.accent);
+    r.setProperty('--accent2', c.accent2);
+    r.setProperty('--hdr-bg',  c.hdr);
     {
-      const hex = (t.accent||'#00b4d8').replace('#','');
+      const hex = (c.accent||'#00b4d8').replace('#','');
       const rv = parseInt(hex.slice(0,2),16)||0, gv = parseInt(hex.slice(2,4),16)||0, bv = parseInt(hex.slice(4,6),16)||0;
       r.setProperty('--orb2-a', `rgba(${rv},${gv},${bv},0.55)`);
       r.setProperty('--orb2-b', `rgba(${rv},${gv},${bv},0.30)`);
@@ -5085,10 +5370,11 @@ function applyTheme(name, customAccent) {
     // Clear any inline tab styles left by a previous custom accent so CSS class rules take over
     document.querySelectorAll('.tab.on').forEach(el => el.style.background = '');
   }
-  document.documentElement.dataset.scheme = (t.scheme || 'light');
+  document.documentElement.dataset.scheme = scheme;
   document.documentElement.dataset.era = t.era || 'default';
+  document.documentElement.dataset.family = t.family || '';
   r.setProperty('--font-ui', t.font || "Tahoma,'Segoe UI',Arial,sans-serif");
-  if (t.scheme === 'dark') {
+  if (scheme === 'dark') {
     r.setProperty('--synth-bg', 'rgba(20,30,50,0.97)');
     r.setProperty('--synth-step-off', 'rgba(20,40,80,0.6)');
     r.setProperty('--synth-step-off-border', 'rgba(40,80,180,0.3)');
@@ -5130,15 +5416,30 @@ function focusSearch() {
     setTimeout(() => document.getElementById('q')?.focus(), 60);
   }
 }
+function _themeAccent(name) {
+  const t = THEMES[name] || THEMES.default;
+  return ((t.light && t.dark) ? t[osScheme()] : t).accent || '#00b4e0';
+}
 function selectTheme(name, btn) {
+  if (THEME_MIGRATE[name]) name = THEME_MIGRATE[name];
   applyTheme(name, null);
   document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('on'));
-  btn.classList.add('on');
+  document.querySelectorAll(`.theme-swatch[data-theme="${name}"]`).forEach(s => s.classList.add('on'));
   const saved = JSON.parse(localStorage.getItem('yt_theme') || '{}');
   saved.preset = name; saved.customAccent = null;
   localStorage.setItem('yt_theme', JSON.stringify(saved));
-  document.getElementById('custom-accent-inp').value = THEMES[name]?.accent || '#00b4e0';
-  toast('Theme: ' + btn.textContent);
+  const inp = document.getElementById('custom-accent-inp'); if (inp) inp.value = _themeAccent(name);
+  toast('Theme: ' + (THEMES[name]?.name || (btn && btn.textContent) || name));
+}
+/* global Light/Dark toggle — re-applies the current theme with the new scheme */
+function setScheme(mode) {
+  localStorage.setItem('aq_scheme', mode === 'dark' ? 'dark' : 'light');
+  const saved = JSON.parse(localStorage.getItem('yt_theme') || '{}');
+  applyTheme(saved.preset || currentTheme, saved.customAccent || null);
+  document.querySelectorAll('.scheme-btn').forEach(b => b.classList.toggle('on', b.dataset.scheme === osScheme()));
+  if (typeof renderThemeSwatches === 'function') renderThemeSwatches();
+  if (typeof renderDesktopIcons === 'function') renderDesktopIcons();
+  toast(mode === 'dark' ? 'Dark mode' : 'Light mode');
 }
 function applyCustomAccent(val) {
   applyAccentToDOM(val);
@@ -5149,12 +5450,15 @@ function applyCustomAccent(val) {
 function loadSavedTheme() {
   try {
     const s = JSON.parse(localStorage.getItem('yt_theme') || '{}');
-    if (s.preset) {
-      applyTheme(s.preset, s.customAccent || null);
-      const btn = document.querySelector(`.theme-swatch[data-theme="${s.preset}"]`);
-      if (btn) { document.querySelectorAll('.theme-swatch').forEach(x => x.classList.remove('on')); btn.classList.add('on'); }
-      if (s.customAccent) document.getElementById('custom-accent-inp').value = s.customAccent;
-    }
+    let preset = s.preset || 'default';
+    if (THEME_MIGRATE[preset]) preset = THEME_MIGRATE[preset];
+    if (!THEMES[preset]) preset = 'default';
+    applyTheme(preset, s.customAccent || null);
+    document.querySelectorAll('.theme-swatch').forEach(x => x.classList.remove('on'));
+    document.querySelectorAll(`.theme-swatch[data-theme="${preset}"]`).forEach(x => x.classList.add('on'));
+    const inp = document.getElementById('custom-accent-inp');
+    if (inp) inp.value = s.customAccent || _themeAccent(preset);
+    document.querySelectorAll('.scheme-btn').forEach(b => b.classList.toggle('on', b.dataset.scheme === osScheme()));
   } catch {}
 }
 
@@ -5177,18 +5481,25 @@ function showThemeUnlockToast(themeName) {
   document.body.appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 600); }, 3000);
 }
+const THEME_FAMILY_LABELS = { mac:'Mac OS', windows:'Windows', console:'Console', fun:'Bonus' };
 function renderThemeSwatches() {
-  const unlocked = getUnlockedThemes();
-  ['retro', 'neon', 'pixel'].forEach(name => {
-    const btn = document.querySelector('.theme-swatch[data-theme="' + name + '"]');
-    if (!btn) return;
-    const isUnlocked = unlocked.includes(name);
-    btn.disabled = !isUnlocked;
-    btn.style.opacity = isUnlocked ? '1' : '0.45';
-    btn.title = isUnlocked ? name : 'Win a game to unlock!';
-    btn.dataset.unlockLabel = btn.dataset.unlockLabel || btn.textContent;
-    btn.textContent = isUnlocked ? (btn.dataset.unlockLabel || name) : ('🔒 ' + (btn.dataset.unlockLabel || name));
+  const grid = document.getElementById('theme-presets');
+  if (!grid) return;
+  const cur = (JSON.parse(localStorage.getItem('yt_theme') || '{}').preset) || currentTheme;
+  const sc = osScheme();
+  const byFam = {};
+  Object.entries(THEMES).forEach(([id, t]) => { (byFam[t.family || 'fun'] ||= []).push([id, t]); });
+  let html = '';
+  ['mac', 'windows', 'console', 'fun'].forEach(fam => {
+    if (!byFam[fam]) return;
+    html += `<div class="theme-fam-lbl">${THEME_FAMILY_LABELS[fam] || fam}</div>`;
+    byFam[fam].forEach(([id, t]) => {
+      const c = (t.light && t.dark) ? t[sc] : t;
+      html += `<button class="theme-swatch${id === cur ? ' on' : ''}" data-theme="${id}" `+
+              `onclick="selectTheme('${id}',this)" style="--sw:${c.accent}" title="${t.name}">${t.name}</button>`;
+    });
   });
+  grid.innerHTML = html;
 }
 
 // ── REMOTE MODE ──────────────────────────────────────────
@@ -7029,7 +7340,7 @@ const APPS = {
   player:    { el:'win-player',     name:'Aquatune Player', alwaysOpen:true },
   arcade:    { el:'win-arcade',     name:'Arcade' },
   settings:  { el:'win-settings',   name:'Settings' },
-  synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout(), nativeDrag:true },
+  synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout() },
   paint:     { el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
   slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots(),     nativeDrag:true },
   solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire(),   nativeDrag:true },
@@ -7037,6 +7348,8 @@ const APPS = {
   mines:     { el:'mines-wrap',     name:'Minesweeper',tb:'#mines-titlebar',     openFn:()=>openMines(),       nativeDrag:true },
   blackjack: { el:'blackjack-wrap', name:'Blackjack',  tb:'#blackjack-titlebar', openFn:()=>openBlackjack(),   nativeDrag:true },
   rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
+  files:     { el:'win-files',      name:'Files' },
+  texteditor:{ el:'win-texteditor', name:'Text Editor' },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
 const OS = {
@@ -7096,6 +7409,8 @@ const OS = {
     const name = el.dataset.title || reg.name || '';
     const mb = document.getElementById('mb-appname'); if (mb) mb.textContent = name;
     this._activeId = id;
+    document.querySelectorAll('.os-window.os-active').forEach(w => w.classList.remove('os-active'));
+    el.classList.add('os-active');
     document.querySelectorAll('.dock-item.active').forEach(d => d.classList.remove('active'));
     document.querySelector(`.dock-item[data-dock="${id}"]`)?.classList.add('active');
   },
@@ -7114,6 +7429,11 @@ const OS = {
     this.register(id);                     // re-run in case opener built the titlebar just now
     this.focus(id);
     this._setRunning(id, true);
+    if (id === 'files' && typeof filesRefresh === 'function') filesRefresh();
+    if (id === 'texteditor') {
+      const t = document.querySelector('#win-texteditor .os-title');
+      if (t && typeof _teTitleForFamily === 'function') t.textContent = _teTitleForFamily();
+    }
   },
 
   close(id) {
@@ -7143,6 +7463,27 @@ const OS = {
     document.querySelector(`.dock-item[data-dock="${id}"]`)?.classList.toggle('running', !!on);
   },
 
+  sendBack(id) {
+    const el = document.getElementById(APPS[id]?.el); if (!el) return;
+    el.style.zIndex = 560;
+  },
+  tidy() {
+    let i = 0;
+    Object.keys(APPS).forEach(id => {
+      const reg = APPS[id]; if (!reg || reg.modal) return;
+      const el = document.getElementById(reg.el);
+      if (!el || el.classList.contains('os-min')) return;
+      const visible = (reg.alwaysOpen) || el.classList.contains('open');
+      if (!visible) return;
+      el.classList.remove('os-max');
+      el.style.transform = 'none';
+      el.style.left = (40 + i * 28) + 'px';
+      el.style.top  = (48 + i * 28) + 'px';
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+      el.style.zIndex = (this.z = Math.min(this.z + 1, 2999));
+      i++;
+    });
+  },
   _iconClick() { /* single-click selects; double-click opens (see markup) */ },
 };
 window.OS = OS;
@@ -7155,27 +7496,338 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mouseup', () => { OS._drag = null; });
 
+/* ============================================================
+   AquaOS — very simple virtual file system (localStorage)
+   ============================================================ */
+function _fsRead() { try { return JSON.parse(localStorage.getItem('aq_fs') || '{"files":[]}'); } catch { return { files: [] }; } }
+function _fsWrite(d) { try { localStorage.setItem('aq_fs', JSON.stringify(d)); } catch { toast('Disk full'); } }
+function fsList() { return _fsRead().files; }
+function fsGet(id) { return _fsRead().files.find(f => f.id === id) || null; }
+function fsSave(file) {
+  const d = _fsRead();
+  if (!file.id) file.id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const i = d.files.findIndex(f => f.id === file.id);
+  if (i >= 0) d.files[i] = { ...d.files[i], ...file }; else d.files.push(file);
+  _fsWrite(d);
+  if (typeof renderDesktopIcons === 'function') renderDesktopIcons();
+  if (document.getElementById('win-files')?.classList.contains('open')) filesRefresh();
+  return file.id;
+}
+function fsDelete(id) {
+  const d = _fsRead(); d.files = d.files.filter(f => f.id !== id); _fsWrite(d);
+  renderDesktopIcons(); filesRefresh();
+}
+const FS_ICON = { text: '📄', image: '🖼️', synth: '🎛️' };
+function fsOpen(id) {
+  const f = fsGet(id); if (!f) return;
+  if (f.type === 'text') { OS.open('texteditor'); teLoad(f); }
+  else if (f.type === 'synth') { OS.open('synth'); setTimeout(() => { try { synthLoad(JSON.parse(f.content)); toast('Loaded ' + f.name); } catch {} }, 120); }
+  else if (f.type === 'image') { OS.open('paint'); }
+}
+
+/* ---- Files app ---- */
+function filesRefresh() {
+  const body = document.getElementById('files-body'); if (!body) return;
+  const files = fsList();
+  if (!files.length) { body.innerHTML = '<div class="files-empty">No files yet. Create one, save a note, or a synth project.</div>'; return; }
+  body.innerHTML = '<div class="files-grid">' + files.map(f =>
+    `<button class="file-tile" ondblclick="fsOpen('${f.id}')" oncontextmenu="ctxFile(event,'${f.id}')" title="${(f.name||'').replace(/"/g,'')}">`+
+    `<span class="file-ico">${FS_ICON[f.type] || '📄'}</span><span class="file-nm">${(f.name||'untitled').replace(/</g,'&lt;')}</span></button>`).join('') + '</div>';
+}
+function fsNewText() {
+  const id = fsSave({ name: 'untitled-' + (fsList().length + 1) + '.txt', type: 'text', content: '', onDesktop: false });
+  OS.open('texteditor'); teLoad(fsGet(id));
+}
+function fsRename(id) {
+  const f = fsGet(id); if (!f) return;
+  const n = prompt('Rename file', f.name); if (n) fsSave({ id, name: n });
+}
+
+/* ---- Text editor ---- */
+let _teCurrent = null;
+function teLoad(f) {
+  _teCurrent = f ? f.id : null;
+  const area = document.getElementById('te-area'); const nm = document.getElementById('te-name');
+  if (area) area.value = f ? (f.content || '') : '';
+  if (nm) nm.value = f ? f.name : 'untitled.txt';
+}
+function teNew() { _teCurrent = null; const a = document.getElementById('te-area'); const n = document.getElementById('te-name'); if (a) a.value = ''; if (n) n.value = 'untitled.txt'; }
+function teSave() {
+  const area = document.getElementById('te-area'); const nm = document.getElementById('te-name');
+  const file = { id: _teCurrent || undefined, name: (nm?.value || 'untitled.txt'), type: 'text', content: area?.value || '' };
+  _teCurrent = fsSave(file);
+  toast('Saved ' + file.name);
+}
+function teOpen() {
+  const texts = fsList().filter(f => f.type === 'text');
+  if (!texts.length) { toast('No text files yet'); return; }
+  OS.ctx(texts.map(f => ({ label: f.name, icon: '📄', action: () => teLoad(fsGet(f.id)) })),
+         window.innerWidth / 2 - 90, 120);
+}
+// era-aware editor title
+function _teTitleForFamily() {
+  const fam = document.documentElement.dataset.family;
+  return fam === 'windows' ? 'Notepad' : fam === 'mac' ? 'TextEdit' : 'Text Editor';
+}
+
+/* ============================================================
+   AquaOS — movable desktop icons (apps + files)
+   ============================================================ */
+const DESKTOP_APPS = [
+  { id: 'player', icon: '♪', label: 'Player' },
+  { id: 'arcade', icon: '🎮', label: 'Arcade' },
+  { id: 'files', icon: '📁', label: 'Files' },
+  { id: 'texteditor', icon: '📝', label: 'Notes' },
+  { id: 'settings', icon: '⚙️', label: 'Settings' },
+];
+function _deskPos() { try { return JSON.parse(localStorage.getItem('aq_desktop') || '{}'); } catch { return {}; } }
+function _deskSave(p) { localStorage.setItem('aq_desktop', JSON.stringify(p)); }
+function renderDesktopIcons() {
+  const layer = document.getElementById('desktop-icons'); if (!layer) return;
+  const pos = _deskPos();
+  let col = 0, gx = 14, gy = 42, step = 88;
+  const place = (key) => { const p = pos[key]; if (p) return p; const r = { x: gx, y: gy + col * step }; col++; return r; };
+  let html = '';
+  DESKTOP_APPS.forEach(a => {
+    const p = place('app:' + a.id);
+    html += `<button class="desk-icon" style="left:${p.x}px;top:${p.y}px" data-icon="app:${a.id}" `+
+      `ondblclick="OS.open('${a.id}')" oncontextmenu="ctxIcon(event,'app','${a.id}')">`+
+      `<span class="di-ico">${a.icon}</span><span class="di-label">${a.label}</span></button>`;
+  });
+  fsList().filter(f => f.onDesktop).forEach(f => {
+    const p = place('file:' + f.id);
+    html += `<button class="desk-icon" style="left:${p.x}px;top:${p.y}px" data-icon="file:${f.id}" `+
+      `ondblclick="fsOpen('${f.id}')" oncontextmenu="ctxIcon(event,'file','${f.id}')">`+
+      `<span class="di-ico">${FS_ICON[f.type] || '📄'}</span><span class="di-label">${(f.name||'').replace(/</g,'&lt;')}</span></button>`;
+  });
+  layer.innerHTML = html;
+}
+// drag desktop icons
+(function () {
+  let drag = null;
+  document.addEventListener('mousedown', e => {
+    const ic = e.target.closest('.desk-icon'); if (!ic) return;
+    const layer = document.getElementById('desktop-icons'); if (!layer || !layer.contains(ic)) return;
+    const r = ic.getBoundingClientRect();
+    drag = { ic, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    drag.moved = true;
+    const x = Math.max(2, e.clientX - drag.dx), y = Math.max(32, e.clientY - drag.dy);
+    drag.ic.style.left = x + 'px'; drag.ic.style.top = y + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!drag) return;
+    if (drag.moved) {
+      const pos = _deskPos();
+      pos[drag.ic.dataset.icon] = { x: parseInt(drag.ic.style.left), y: parseInt(drag.ic.style.top) };
+      _deskSave(pos);
+    }
+    drag = null;
+  });
+})();
+
+/* ============================================================
+   AquaOS — right-click context menus (era-styled)
+   ============================================================ */
+function _closeCtx() { document.getElementById('os-ctx')?.remove(); document.getElementById('os-ctx-sub')?.remove(); }
+OS.ctx = function (items, x, y) {
+  _closeCtx();
+  const m = document.createElement('div');
+  m.id = 'os-ctx'; m.className = 'os-ctx';
+  items.forEach(it => {
+    if (it.sep) { const s = document.createElement('div'); s.className = 'os-ctx-sep'; m.appendChild(s); return; }
+    const b = document.createElement('div');
+    b.className = 'os-ctx-item' + (it.disabled ? ' disabled' : '') + (it.submenu ? ' has-sub' : '');
+    b.innerHTML = `<span class="os-ctx-ico">${it.checked ? '✓' : (it.icon || '')}</span><span class="os-ctx-lbl">${it.label}</span>${it.submenu ? '<span class="os-ctx-arr">▸</span>' : ''}`;
+    if (!it.disabled) {
+      if (it.submenu) {
+        b.addEventListener('mouseenter', () => {
+          document.getElementById('os-ctx-sub')?.remove();
+          const r = b.getBoundingClientRect();
+          const sub = _buildMenu(it.submenu, 'os-ctx-sub');
+          sub.style.left = Math.min(r.right - 2, window.innerWidth - 200) + 'px';
+          sub.style.top = r.top + 'px';
+          document.body.appendChild(sub);
+        });
+      } else {
+        b.addEventListener('mouseenter', () => document.getElementById('os-ctx-sub')?.remove());
+        b.addEventListener('click', () => { _closeCtx(); it.action && it.action(); });
+      }
+    }
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  m.style.left = Math.min(x, window.innerWidth - m.offsetWidth - 6) + 'px';
+  m.style.top = Math.min(y, window.innerHeight - m.offsetHeight - 6) + 'px';
+  return m;
+};
+function _buildMenu(items, id) {
+  const m = document.createElement('div'); m.id = id; m.className = 'os-ctx';
+  items.forEach(it => {
+    if (it.sep) { const s = document.createElement('div'); s.className = 'os-ctx-sep'; m.appendChild(s); return; }
+    const b = document.createElement('div');
+    b.className = 'os-ctx-item' + (it.disabled ? ' disabled' : '');
+    b.innerHTML = `<span class="os-ctx-ico">${it.checked ? '✓' : (it.icon || '')}</span><span class="os-ctx-lbl">${it.label}</span>`;
+    if (!it.disabled) b.addEventListener('click', () => { _closeCtx(); it.action && it.action(); });
+    m.appendChild(b);
+  });
+  return m;
+}
+document.addEventListener('click', e => { if (!e.target.closest('#os-ctx,#os-ctx-sub')) _closeCtx(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') _closeCtx(); });
+window.addEventListener('blur', _closeCtx);
+
+function _themeMenu() {
+  const fams = { mac: [], windows: [], console: [], fun: [] };
+  Object.entries(THEMES).forEach(([id, t]) => (fams[t.family || 'fun'] ||= []).push({ label: t.name, action: () => selectTheme(id) }));
+  const out = [];
+  ['mac', 'windows', 'console', 'fun'].forEach(f => {
+    if (!fams[f] || !fams[f].length) return;
+    out.push({ label: THEME_FAMILY_LABELS[f] || f, submenu: fams[f] });
+  });
+  return out;
+}
+function _desktopMenu() {
+  const sc = osScheme();
+  return [
+    { label: 'Change Wallpaper', icon: '🖼️', submenu: Object.entries(WALLPAPERS).map(([k, v]) => ({ label: v.label, action: () => applyWallpaper(k) })) },
+    { label: 'Theme', icon: '🎨', submenu: _themeMenu() },
+    { label: 'Appearance', icon: '🌓', submenu: [
+      { label: 'Light', checked: sc === 'light', action: () => setScheme('light') },
+      { label: 'Dark', checked: sc === 'dark', action: () => setScheme('dark') } ] },
+    { sep: true },
+    { label: 'Tidy Windows', icon: '🪟', action: () => OS.tidy() },
+    { label: 'New Text File', icon: '📄', action: () => fsNewText() },
+    { sep: true },
+    { label: 'About AquaOS', icon: 'ℹ️', action: () => toast('AquaOS — an Aquatune experiment') },
+  ];
+}
+function _winMenu(id) {
+  const el = document.getElementById(APPS[id]?.el);
+  const maxd = el?.classList.contains('os-max');
+  return [
+    { label: 'Minimize', icon: '—', action: () => OS.minimize(id) },
+    { label: maxd ? 'Restore' : 'Maximize', icon: '▢', action: () => OS.toggleMax(id) },
+    { label: 'Send to Back', icon: '⤵', action: () => OS.sendBack(id) },
+    { sep: true },
+    { label: 'Close', icon: '✕', action: () => OS.close(id) },
+  ];
+}
+function ctxIcon(e, kind, id) {
+  e.preventDefault(); e.stopPropagation();
+  const items = kind === 'app'
+    ? [{ label: 'Open', icon: '↗', action: () => OS.open(id) }]
+    : [{ label: 'Open', icon: '↗', action: () => fsOpen(id) },
+       { label: 'Rename', icon: '✏️', action: () => fsRename(id) },
+       { label: 'Remove from Desktop', icon: '🚫', action: () => { fsSave({ id, onDesktop: false }); } },
+       { sep: true },
+       { label: 'Delete', icon: '🗑', action: () => { if (confirm('Delete this file?')) fsDelete(id); } }];
+  OS.ctx(items, e.clientX, e.clientY);
+}
+function ctxFile(e, id) {
+  e.preventDefault(); e.stopPropagation();
+  const f = fsGet(id);
+  OS.ctx([
+    { label: 'Open', icon: '↗', action: () => fsOpen(id) },
+    { label: f && f.onDesktop ? 'Hide on Desktop' : 'Show on Desktop', icon: '🖥', action: () => fsSave({ id, onDesktop: !(f && f.onDesktop) }) },
+    { label: 'Rename', icon: '✏️', action: () => fsRename(id) },
+    { sep: true },
+    { label: 'Delete', icon: '🗑', action: () => { if (confirm('Delete this file?')) fsDelete(id); } },
+  ], e.clientX, e.clientY);
+}
+function bindContextMenus() {
+  // desktop empty space
+  ['app', 'wallpaper', 'desktop-icons'].forEach(idsel => {
+    const el = document.getElementById(idsel); if (!el) return;
+    el.addEventListener('contextmenu', e => {
+      if (e.target.closest('.os-window, .dock-item, #dock, #hdr, .desk-icon, #os-ctx')) return;
+      e.preventDefault(); OS.ctx(_desktopMenu(), e.clientX, e.clientY);
+    });
+  });
+  // window titlebars (delegated)
+  document.addEventListener('contextmenu', e => {
+    const tb = e.target.closest('.os-titlebar, #synth-titlebar, #paint-titlebar, #slots-titlebar, #solitaire-titlebar, #picross-titlebar, #mines-titlebar, #blackjack-titlebar, #rhythm-titlebar');
+    if (!tb) return;
+    const win = tb.closest('.os-window'); if (!win || !win.dataset.app) return;
+    e.preventDefault(); OS.ctx(_winMenu(win.dataset.app), e.clientX, e.clientY);
+  });
+  // dock items
+  document.getElementById('dock')?.addEventListener('contextmenu', e => {
+    const it = e.target.closest('.dock-item'); if (!it) return;
+    e.preventDefault();
+    const id = it.dataset.dock;
+    OS.ctx([{ label: 'Open', icon: '↗', action: () => OS.open(id) },
+            { label: 'Close', icon: '✕', disabled: !it.classList.contains('running'), action: () => OS.close(id) }],
+           e.clientX, e.clientY);
+  });
+}
+
+/* ============================================================
+   AquaOS — Start menu (Windows families)
+   ============================================================ */
+function toggleStartMenu(e) {
+  e?.stopPropagation();
+  const m = document.getElementById('start-menu'); if (!m) return;
+  if (m.classList.contains('open')) { m.classList.remove('open'); return; }
+  const apps = [['player', '♪ Player'], ['arcade', '🎮 Arcade'], ['synth', '🎹 AquaSynth'],
+    ['paint', '🎨 AquaPaint'], ['files', '📁 Files'], ['texteditor', '📝 Text Editor'],
+    ['rooms', '🌐 Public Rooms'], ['settings', '⚙️ Settings']];
+  m.innerHTML = '<div class="start-side"><span>AquaOS</span></div><div class="start-list">' +
+    apps.map(([id, lbl]) => `<button class="start-item" onclick="OS.open('${id}');toggleStartMenu()">${lbl}</button>`).join('') +
+    '</div>';
+  m.classList.add('open');
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('start-menu');
+  if (m && m.classList.contains('open') && !e.target.closest('#start-menu,#os-start')) m.classList.remove('open');
+});
+
 /* ---- Settings app: relocate theme-panel content + wallpaper picker ---- */
 const WALLPAPERS = {
   none:   { label:'Theme',  css:'' },
   aqua:   { label:'Aqua',   css:'radial-gradient(circle at 30% 18%, #7fd2ff, #0a4f8a 72%)' },
+  bliss:  { label:'Bliss',  css:'linear-gradient(180deg,#4a90e2 0%,#7fb4e6 42%,#9ed18e 56%,#5a9a3a 100%)' },
+  aero:   { label:'Aero',   css:'radial-gradient(circle at 50% 120%, #6fd0ff, #0a64b0 70%, #062f63)' },
   sunset: { label:'Sunset', css:'linear-gradient(180deg,#ff9a5a,#ff5f6d 55%,#5b247a)' },
   mint:   { label:'Mint',   css:'linear-gradient(160deg,#a8ffce,#1fd1a5 60%,#0a7f6a)' },
   grape:  { label:'Grape',  css:'linear-gradient(160deg,#6a3093,#a044ff)' },
   carbon: { label:'Carbon', css:'linear-gradient(160deg,#232526,#414345)' },
+  dusk:   { label:'Dusk',   css:'linear-gradient(180deg,#0f2027,#203a43,#2c5364)' },
 };
+function _wpImage() { return localStorage.getItem('aq_wallpaper_custom') || ''; }
 function applyWallpaper(key, btn) {
-  const wp = WALLPAPERS[key] || WALLPAPERS.none;
   const layer = document.getElementById('wallpaper');
   if (!layer) return;
-  if (key === 'none' || !wp.css) { layer.classList.remove('on'); layer.style.background = ''; }
-  else { layer.style.background = wp.css; layer.classList.add('on'); }
+  if (key === 'custom') {
+    const img = _wpImage();
+    if (img) { layer.style.background = `center/cover no-repeat url("${img}")`; layer.classList.add('on'); }
+    else { layer.classList.remove('on'); layer.style.background = ''; }
+  } else {
+    const wp = WALLPAPERS[key] || WALLPAPERS.none;
+    if (key === 'none' || !wp.css) { layer.classList.remove('on'); layer.style.background = ''; }
+    else { layer.style.background = wp.css; layer.classList.add('on'); }
+  }
   localStorage.setItem('aq_wallpaper', key);
   document.querySelectorAll('.wp-swatch').forEach(s => s.classList.remove('on'));
   (btn || document.querySelector(`.wp-swatch[data-wp="${key}"]`))?.classList.add('on');
 }
-function loadWallpaper() {
-  applyWallpaper(localStorage.getItem('aq_wallpaper') || 'none');
+function loadWallpaper() { applyWallpaper(localStorage.getItem('aq_wallpaper') || 'none'); }
+function setCustomWallpaper(dataUrl) {
+  if (!dataUrl) return;
+  try { localStorage.setItem('aq_wallpaper_custom', dataUrl); } catch { toast('Image too large to save'); return; }
+  applyWallpaper('custom');
+}
+function onWallpaperFile(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => setCustomWallpaper(rd.result);
+  rd.readAsDataURL(f);
+}
+function onWallpaperUrl() {
+  const v = document.getElementById('wp-url-inp')?.value.trim();
+  if (v) setCustomWallpaper(v);
 }
 function buildSettingsApp() {
   const tp = document.getElementById('theme-panel');
@@ -7184,23 +7836,80 @@ function buildSettingsApp() {
   body._built = true;
   // Relocate every theme-panel section (skip its old header) into the Settings window.
   [...tp.children].forEach(ch => { if (!ch.classList.contains('theme-hdr')) body.appendChild(ch); });
-  // Add a Desktop / wallpaper section.
+  renderThemeSwatches();
+  // Desktop / wallpaper section (presets + upload + URL).
   const wrap = document.createElement('div');
   const swatches = Object.entries(WALLPAPERS).map(([k, v]) =>
     `<button class="theme-swatch wp-swatch" data-wp="${k}" onclick="applyWallpaper('${k}',this)"`+
     `${v.css ? ` style="background:${v.css};color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)"` : ''}>${v.label}</button>`).join('');
   wrap.innerHTML = '<div class="settings-section-hdr">Desktop wallpaper</div>'+
-    `<div class="theme-presets" style="grid-template-columns:1fr 1fr 1fr">${swatches}</div>`;
+    `<div class="theme-presets" style="grid-template-columns:1fr 1fr 1fr">${swatches}`+
+    `<button class="theme-swatch wp-swatch" data-wp="custom" onclick="applyWallpaper('custom',this)">Custom</button></div>`+
+    `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">`+
+    `<label class="set-file-btn">📁 Upload image<input type="file" accept="image/*" onchange="onWallpaperFile(this)" hidden></label>`+
+    `<div style="display:flex;gap:6px"><input id="wp-url-inp" class="set-url-inp" type="text" placeholder="…or paste image URL">`+
+    `<button class="set-go-btn" onclick="onWallpaperUrl()">Set</button></div></div>`+
+    `<div class="settings-section-hdr">System</div>`+
+    `<label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;padding:2px 0">`+
+    `<input type="checkbox" id="bootchime-chk" onchange="localStorage.setItem('aq_bootchime', this.checked?'1':'0')"> 🔔 Boot chime</label>`;
   body.appendChild(wrap);
+  const cc = document.getElementById('bootchime-chk'); if (cc) cc.checked = localStorage.getItem('aq_bootchime') !== '0';
 }
 
+let _bootChimePlayed = false;
+function playBootChime() {
+  if (_bootChimePlayed) return;
+  if (localStorage.getItem('aq_bootchime') === '0') return;
+  _bootChimePlayed = true;
+  try {
+    const ac = (typeof initActx === 'function') ? initActx() : null;
+    if (!ac) return;
+    const now = ac.currentTime + 0.06;
+    const out = ac.createGain();
+    out.gain.value = 0.0001;
+    out.connect((typeof masterComp !== 'undefined' && masterComp) ? masterComp : ac.destination);
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(0.5, now + 0.12);
+    out.gain.exponentialRampToValueAtTime(0.0008, now + 2.8);
+    const chord = [261.63, 329.63, 392.0, 523.25, 659.25]; // C-major shimmer up to E
+    chord.forEach((f, i) => {
+      const t0 = now + i * 0.085;
+      const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.85, t0 + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0008, t0 + 2.3);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 2.5);
+      const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2;
+      const g2 = ac.createGain();
+      g2.gain.setValueAtTime(0.0001, t0);
+      g2.gain.exponentialRampToValueAtTime(0.22, t0 + 0.05);
+      g2.gain.exponentialRampToValueAtTime(0.0006, t0 + 1.7);
+      o2.connect(g2); g2.connect(out); o2.start(t0); o2.stop(t0 + 1.9);
+    });
+  } catch (e) {}
+}
+
+/* AquaOS only runs on desktop widths. On phones we fall back to the original
+   mobile layout (classic header + panels + app bar) — see #win-player
+   pass-through CSS under body:not(.osmode). */
+const OS_MIN_WIDTH = 768;
+function setOsMode() {
+  const want = window.innerWidth > OS_MIN_WIDTH;
+  document.body.classList.toggle('osmode', want);
+  if (want && document.getElementById('start-menu')) document.getElementById('start-menu').classList.remove('open');
+}
 function osBoot() {
-  document.body.classList.add('osmode');
+  setOsMode();
   buildSettingsApp();
   loadWallpaper();
+  if (typeof renderDesktopIcons === 'function') renderDesktopIcons();
   OS.register('player');
   OS.focus('player');
   OS._setRunning('player', true);
+  if (typeof bindContextMenus === 'function') bindContextMenus();
+  let _rt;
+  window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(setOsMode, 150); });
 }
 document.addEventListener('DOMContentLoaded', osBoot);
 
@@ -8294,17 +9003,20 @@ function toggleSynthFlyout() {
     document.getElementById('bpm-inp').addEventListener('input', e => {
       seqBpm = Math.max(40, Math.min(240, parseInt(e.target.value)||128));
     });
-    // Draggable — grab the dedicated titlebar row
-    const hdr = fl.querySelector('#synth-titlebar');
-    hdr.addEventListener('mousedown', e => {
-      if (e.target.tagName === 'BUTTON') return;
-      const r = fl.getBoundingClientRect();
-      fl.style.transform = 'none';
-      fl.style.left = r.left + 'px'; fl.style.top = r.top + 'px';
-      _sfDrag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
-    });
-    document.addEventListener('mousemove', _sfMouseMove);
-    document.addEventListener('mouseup',   _sfMouseUp);
+    // Draggable — in AquaOS the window manager (OS.makeDraggable) owns dragging;
+    // only bind this legacy handler outside osmode to avoid double-binding.
+    if (!document.body.classList.contains('osmode')) {
+      const hdr = fl.querySelector('#synth-titlebar');
+      hdr.addEventListener('mousedown', e => {
+        if (e.target.tagName === 'BUTTON') return;
+        const r = fl.getBoundingClientRect();
+        fl.style.transform = 'none';
+        fl.style.left = r.left + 'px'; fl.style.top = r.top + 'px';
+        _sfDrag = { sx: e.clientX - r.left, sy: e.clientY - r.top };
+      });
+      document.addEventListener('mousemove', _sfMouseMove);
+      document.addEventListener('mouseup',   _sfMouseUp);
+    }
   }
 }
 
@@ -8755,6 +9467,36 @@ function loadPatternFrom(idx) {
   if (!p) return;
   loadPatternSnapshot(p);
   refreshSequencerUI();
+}
+
+/* ---- AquaSynth project save/load to the AquaOS file system ---- */
+function synthSerialize() {
+  return {
+    bpm: seqBpm,
+    steps: (typeof seqStepCount !== 'undefined') ? seqStepCount : undefined,
+    drum: drumSeqData.map(r => [...r]),
+    synth: synthSeqData.map(r => [...r]),
+    keys: keysSeqData.map(r => [...r]),
+    bass: (typeof bassSeqData !== 'undefined') ? bassSeqData.map(r => [...r]) : [],
+  };
+}
+function synthLoad(p) {
+  if (!p) return;
+  if (p.bpm) { seqBpm = p.bpm; const bi = document.getElementById('bpm-inp'); if (bi) bi.value = seqBpm; }
+  loadPatternSnapshot(p);
+  if (typeof refreshSequencerUI === 'function') refreshSequencerUI();
+}
+function synthSaveProject() {
+  if (typeof fsSave !== 'function') return;
+  const name = prompt('Project name', 'beat-' + (fsList().filter(f => f.type === 'synth').length + 1)) || 'untitled';
+  fsSave({ name: name.replace(/\.aqs$/, '') + '.aqs', type: 'synth', content: JSON.stringify(synthSerialize()) });
+  toast('Saved project: ' + name);
+}
+function synthOpenProject() {
+  const projs = (typeof fsList === 'function') ? fsList().filter(f => f.type === 'synth') : [];
+  if (!projs.length) { toast('No saved synth projects yet'); return; }
+  OS.ctx(projs.map(f => ({ label: f.name, icon: '🎛️', action: () => { try { synthLoad(JSON.parse(f.content)); toast('Loaded ' + f.name); } catch {} } })),
+         window.innerWidth / 2 - 90, 140);
 }
 
 function refreshSequencerUI() {
@@ -11832,6 +12574,8 @@ function _clearRoomChatPlaceholder() {
 function closeSplash() {
   const sp = document.getElementById('splash');
   if (sp) { sp.classList.add('fade-out'); setTimeout(() => sp.remove(), 650); }
+  // Desktop is now visible and we have a user gesture → play the boot chime.
+  if (typeof playBootChime === 'function') setTimeout(playBootChime, 120);
 }
 function copyRoomLink() {
   const url = window.location.href;
@@ -13980,6 +14724,8 @@ function bjUpdateBalance(){
 
   <div id="synth-titlebar">
     <span style="flex:1;font-size:13px;font-weight:700;color:#fff;user-select:none;position:relative;z-index:1">🎹 AquaTune Studio</span>
+    <button class="sf-close" onclick="synthSaveProject()" title="Save project" style="width:auto;padding:0 8px">💾</button>
+    <button class="sf-close" onclick="synthOpenProject()" title="Open project" style="width:auto;padding:0 8px">📂</button>
     <button class="sf-close" onclick="toggleSynthFlyout()" title="Close">✕</button>
   </div>
 

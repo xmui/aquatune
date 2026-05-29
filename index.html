@@ -2115,6 +2115,23 @@
 .room-req-by { font-size: 9px; color: var(--text2); }
 #room-requests-badge { background: rgba(255,160,0,0.25); border: 1px solid rgba(255,180,0,0.4); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
 [data-scheme=dark] #room-requests-panel { background: rgba(8,20,50,0.98); }
+#lobby-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,20,50,0.55); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+#lobby-overlay.open { display: flex; }
+#lobby-overlay-card {
+  width: min(440px, 92vw); max-height: 80vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,30,90,0.4); overflow: hidden;
+}
+#lobby-overlay-hdr {
+  background: var(--hdr-bg); color: #fff; font-size: 13px; font-weight: 800;
+  padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+}
+#lobby-overlay-list { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+[data-scheme=dark] #lobby-overlay-card { background: rgba(8,20,50,0.98); }
 
 /* ── SPLASH ROOM SELECTION ─────────────────────── */
 #splash-room {
@@ -2172,6 +2189,25 @@
 #sp-join-row {
   display: none; width: 100%; flex-direction: column; gap: 8px; align-items: center;
 }
+#sp-create-pw {
+  width: 100%; padding: 7px 12px; border-radius: var(--r-btn);
+  border: 1.5px solid var(--border); background: #fff; color: var(--text);
+  font-size: 13px; text-align: center; outline: none; box-sizing: border-box; font-family: inherit;
+}
+#sp-lobby-row { display: none; width: 100%; flex-direction: column; gap: 6px; }
+#sp-lobby-list { width: 100%; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.sp-lobby-empty { font-size: 12px; color: var(--text2); text-align: center; padding: 14px; }
+.lobby-room {
+  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.7); cursor: pointer; text-align: left; transition: background .14s, border-color .14s;
+}
+.lobby-room:hover { border-color: var(--accent); background: #fff; }
+.lobby-room-info { flex: 1; min-width: 0; }
+.lobby-room-title { font-size: 12px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-room-sub { font-size: 10px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-room-meta { font-size: 11px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+[data-scheme=dark] .lobby-room { background: rgba(255,255,255,0.08); }
 #sp-code {
   width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
   border: 1.5px solid var(--border); background: #fff;
@@ -3598,6 +3634,13 @@ body.perf-mode #aqua-gun { display: none !important; }
             <div class="sp-opt-sub">Enter a room code to sync with others</div>
           </div>
         </button>
+        <button class="sp-opt-btn" onclick="splashShowLobby()">
+          <span class="sp-opt-icon">&#127760;</span>
+          <div class="sp-opt-content">
+            <div class="sp-opt-label">Browse Rooms</div>
+            <div class="sp-opt-sub">See public rooms and hop in</div>
+          </div>
+        </button>
         <button class="sp-opt-btn" onclick="splashSolo()">
           <span class="sp-opt-icon">&#9834;</span>
           <div class="sp-opt-content">
@@ -3608,11 +3651,18 @@ body.perf-mode #aqua-gun { display: none !important; }
       </div>
       <div id="sp-create-row">
         <input id="sp-create-code" type="text" placeholder="Custom code (optional)" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashCreate()">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;color:var(--text2)">
+          <input type="checkbox" id="sp-private-chk" onchange="document.getElementById('sp-create-pw').style.display=this.checked?'block':'none'"> 🔒 Private (locked, still listed)
+        </label>
+        <input id="sp-create-pw" type="password" placeholder="Room password" maxlength="24" autocomplete="off" style="display:none">
         <button class="sp-btn primary" onclick="splashCreate()">Create Room</button>
       </div>
       <div id="sp-join-row">
         <input id="sp-code" type="text" placeholder="Room code" maxlength="10" autocomplete="off" onkeydown="if(event.key==='Enter')splashJoinConfirm()">
         <button class="sp-btn primary" onclick="splashJoinConfirm()">Join Room</button>
+      </div>
+      <div id="sp-lobby-row">
+        <div id="sp-lobby-list"><div class="sp-lobby-empty">Loading rooms…</div></div>
       </div>
     </div>
   </div>
@@ -3690,6 +3740,10 @@ body.perf-mode #aqua-gun { display: none !important; }
             <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
               <div class="apps-item-info"><div class="apps-item-name">AquaPaint</div><div class="apps-item-desc">Pixel art canvas</div></div>
+            </button>
+            <button class="apps-item" onclick="openLobbyOverlay();toggleAppsMenu()">
+              <span class="apps-item-icon">🌐</span>
+              <div class="apps-item-info"><div class="apps-item-name">Public Rooms</div><div class="apps-item-desc">Browse &amp; join live rooms</div></div>
             </button>
             <button class="apps-item" onclick="toggleKbdHint();toggleAppsMenu()">
               <span class="apps-item-icon">⌨️</span>
@@ -10731,6 +10785,7 @@ function _requireName() {
 function splashShowCreate() {
   document.getElementById('sp-create-row').style.display = 'flex';
   document.getElementById('sp-join-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'none';
   document.getElementById('sp-create-code').focus();
 }
 function splashCreate() {
@@ -10741,10 +10796,12 @@ function splashCreate() {
   })();
   const custom = document.getElementById('sp-create-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   const roomId = custom || Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*31)]).join('');
+  const isPrivate = !!document.getElementById('sp-private-chk')?.checked;
+  const password = isPrivate ? (document.getElementById('sp-create-pw')?.value || '') : '';
   window.location.hash = roomId;
   localStorage.setItem('aq_session_room', JSON.stringify({roomId, wasHost:true}));
   closeSplash();
-  window.initRoom?.(roomId, true);
+  window.initRoom?.(roomId, true, {isPrivate, password});
   updateRoomChatLabel(roomId);
   _clearRoomChatPlaceholder();
   updateRoomMgmtPanel();
@@ -10752,7 +10809,71 @@ function splashCreate() {
 function splashJoinToggle() {
   document.getElementById('sp-join-row').style.display = 'flex';
   document.getElementById('sp-create-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'none';
   document.getElementById('sp-code').focus();
+}
+let _lobbyUnsub = null;
+function splashShowLobby() {
+  if (!_requireName()) return;
+  document.getElementById('sp-create-row').style.display = 'none';
+  document.getElementById('sp-join-row').style.display = 'none';
+  document.getElementById('sp-lobby-row').style.display = 'flex';
+  startLobby(renderSplashLobby);
+}
+function startLobby(renderFn) {
+  if (typeof window.listPublicRooms !== 'function') { renderFn([]); return; }
+  if (_lobbyUnsub) { try { _lobbyUnsub(); } catch(_){} }
+  _lobbyUnsub = window.listPublicRooms(renderFn);
+}
+function stopLobby() { if (_lobbyUnsub) { try { _lobbyUnsub(); } catch(_){} _lobbyUnsub = null; } }
+function _lobbyRoomsHTML(rooms) {
+  if (!rooms || !rooms.length) return '<div class="sp-lobby-empty">No active public rooms right now. Create one!</div>';
+  return rooms.map(r => {
+    const lock = r.isPrivate ? '🔒 ' : '';
+    const np = r.nowPlaying ? `▶ ${esc(r.nowPlaying.slice(0,40))}` : 'Idle';
+    return `<button class="lobby-room" onclick="joinFromLobby('${r.id}',${r.isPrivate?1:0},${r.hasPassword?1:0})">
+      <div class="lobby-room-info">
+        <div class="lobby-room-title">${lock}#${esc(r.id)} · ${esc(r.hostName)}</div>
+        <div class="lobby-room-sub">${np}</div>
+      </div>
+      <span class="lobby-room-meta">👤 ${r.memberCount}</span>
+    </button>`;
+  }).join('');
+}
+function renderSplashLobby(rooms) {
+  const el = document.getElementById('sp-lobby-list');
+  if (el) el.innerHTML = _lobbyRoomsHTML(rooms);
+}
+function renderOverlayLobby(rooms) {
+  const el = document.getElementById('lobby-overlay-list');
+  if (el) el.innerHTML = _lobbyRoomsHTML(rooms);
+}
+function openLobbyOverlay() {
+  const ov = document.getElementById('lobby-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  startLobby(renderOverlayLobby);
+}
+function closeLobbyOverlay() {
+  const ov = document.getElementById('lobby-overlay');
+  if (ov && ov.classList.contains('open')) { ov.classList.remove('open'); stopLobby(); }
+}
+async function joinFromLobby(roomId, isPrivate, hasPassword) {
+  let pw = '';
+  if (hasPassword) {
+    pw = prompt('This room is locked. Enter the password:') || '';
+    const ok = await window.checkRoomPassword?.(roomId, pw);
+    if (!ok) { toast('Wrong password'); return; }
+  }
+  stopLobby();
+  window.location.hash = roomId;
+  localStorage.setItem('aq_session_room', JSON.stringify({roomId, wasHost:false}));
+  if (document.getElementById('splash')) closeSplash();
+  closeLobbyOverlay();
+  window.initRoom?.(roomId, false);
+  updateRoomChatLabel(roomId);
+  _clearRoomChatPlaceholder();
+  updateRoomMgmtPanel();
 }
 function splashJoinConfirm() {
   if (!_requireName()) return;
@@ -13386,6 +13507,15 @@ function bjUpdateBalance(){
     <button onclick="closeRequestsPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1">✕</button>
   </div>
   <div id="room-requests-list"><div class="room-member-row" style="opacity:.6">No pending requests</div></div>
+</div>
+<div id="lobby-overlay" onclick="if(event.target===this)closeLobbyOverlay()">
+  <div id="lobby-overlay-card">
+    <div id="lobby-overlay-hdr">
+      <span>🌐 Public Rooms</span>
+      <button onclick="closeLobbyOverlay()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div id="lobby-overlay-list"><div class="sp-lobby-empty">Loading rooms…</div></div>
+  </div>
 </div>
 </body>
 </html>

@@ -4197,6 +4197,21 @@ body.osmode .os-window.win-std.open, body.osmode #win-player { animation:osWinIn
 .file-ico { font-size:30px; }
 .file-nm { font-size:10px; max-width:78px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .files-empty { font-size:12px; color:var(--text2); padding:20px; text-align:center; }
+/* leaderboard */
+.lb-game { margin-bottom:14px; }
+.lb-game-hdr { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:800;
+  color:var(--text); padding:4px 2px; border-bottom:2px solid var(--accent); margin-bottom:4px; }
+.lb-clear { font-size:10px; font-weight:700; padding:2px 8px; cursor:pointer; color:var(--text2);
+  background:rgba(127,127,127,0.12); border:1px solid var(--border); border-radius:6px; }
+.lb-clear:hover { color:#fff; background:var(--accent); border-color:var(--accent); }
+.lb-row { display:grid; grid-template-columns:22px 1fr auto; gap:6px; align-items:center; font-size:11px;
+  padding:3px 4px; border-radius:4px; color:var(--text); }
+.lb-row:nth-child(even) { background:rgba(127,127,127,0.08); }
+.lb-rank { font-weight:800; color:var(--accent); text-align:center; }
+.lb-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-score { font-weight:700; font-variant-numeric:tabular-nums; }
+.lb-detail { grid-column:2 / 4; font-size:9px; color:var(--text2); }
+.lb-empty { font-size:11px; color:var(--text2); padding:8px 4px; }
 
 /* ---------- context menu ---------- */
 .os-ctx { position:fixed; z-index:9000; min-width:172px; padding:4px; font-family:var(--font-ui);
@@ -4807,6 +4822,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     <button class="win-tool-btn" onclick="teNew()">New</button>
     <button class="win-tool-btn" onclick="teOpen()">Open</button>
     <button class="win-tool-btn" onclick="teSave()">Save</button>
+    <button class="win-tool-btn" onclick="teSave(true)" title="Save and show on desktop">🖥️</button>
   </div>
   <textarea id="te-area" class="te-area" spellcheck="false" placeholder="Type here…"></textarea>
 </div>
@@ -4834,6 +4850,18 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
 <div id="win-settings" class="os-window win-std" data-app="settings" data-title="Settings" style="width:min(340px,94vw);height:min(560px,80vh);left:calc(50% - 170px);top:60px;">
   <div class="os-titlebar"><span class="os-ico">&#9881;</span><span class="os-title">Settings</span></div>
   <div class="win-body-scroll" id="settings-body"></div>
+</div>
+
+<!-- Leaderboard window -->
+<div id="win-leaderboard" class="os-window win-std" data-app="leaderboard" data-title="Leaderboard" style="width:min(420px,94vw);height:min(520px,78vh);left:calc(50% - 210px);top:60px;">
+  <div class="os-titlebar"><span class="os-ico">&#127942;</span><span class="os-title">Leaderboard</span></div>
+  <div class="win-body-scroll" id="leaderboard-body"></div>
+</div>
+
+<!-- Image viewer window -->
+<div id="win-imgview" class="os-window win-std" data-app="imgview" data-title="Image" style="width:min(520px,92vw);height:min(480px,76vh);left:calc(50% - 260px);top:64px;">
+  <div class="os-titlebar"><span class="os-ico">&#128444;&#65039;</span><span class="os-title">Image</span></div>
+  <div class="win-body-scroll" id="imgview-body" style="display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#80808022 0% 25%,transparent 0% 50%) 0/20px 20px"><img id="imgview-img" style="max-width:100%;max-height:100%;image-rendering:pixelated"></div>
 </div>
 
 <!-- THEME PANEL -->
@@ -7475,6 +7503,10 @@ const APPS = {
   rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
   files:     { el:'win-files',      name:'Files' },
   texteditor:{ el:'win-texteditor', name:'Text Editor' },
+  leaderboard:{ el:'win-leaderboard', name:'Leaderboard' },
+  imgview:   { el:'win-imgview',    name:'Image' },
+  holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
+  pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -7556,6 +7588,7 @@ const OS = {
     this.focus(id);
     this._setRunning(id, true);
     if (id === 'files' && typeof filesRefresh === 'function') filesRefresh();
+    if (id === 'leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
     if (id === 'texteditor') {
       const t = document.querySelector('#win-texteditor .os-title');
       if (t && typeof _teTitleForFamily === 'function') t.textContent = _teTitleForFamily();
@@ -7648,7 +7681,11 @@ function fsOpen(id) {
   const f = fsGet(id); if (!f) return;
   if (f.type === 'text') { OS.open('texteditor'); teLoad(f); }
   else if (f.type === 'synth') { OS.open('synth'); setTimeout(() => { try { synthLoad(JSON.parse(f.content)); toast('Loaded ' + f.name); } catch {} }, 120); }
-  else if (f.type === 'image') { OS.open('paint'); }
+  else if (f.type === 'image') {
+    OS.open('imgview');
+    const img = document.getElementById('imgview-img'); if (img) img.src = f.content;
+    const t = document.querySelector('#win-imgview .os-title'); if (t) t.textContent = f.name || 'Image';
+  }
 }
 
 /* ---- Files app ---- */
@@ -7678,11 +7715,12 @@ function teLoad(f) {
   if (nm) nm.value = f ? f.name : 'untitled.txt';
 }
 function teNew() { _teCurrent = null; const a = document.getElementById('te-area'); const n = document.getElementById('te-name'); if (a) a.value = ''; if (n) n.value = 'untitled.txt'; }
-function teSave() {
+function teSave(toDesktop) {
   const area = document.getElementById('te-area'); const nm = document.getElementById('te-name');
   const file = { id: _teCurrent || undefined, name: (nm?.value || 'untitled.txt'), type: 'text', content: area?.value || '' };
+  if (toDesktop) file.onDesktop = true;
   _teCurrent = fsSave(file);
-  toast('Saved ' + file.name);
+  toast(toDesktop ? 'Saved to desktop: ' + file.name : 'Saved ' + file.name);
 }
 function teOpen() {
   const texts = fsList().filter(f => f.type === 'text');
@@ -7751,6 +7789,49 @@ OS.unpin = function(id) {
   _saveDockPins(p); renderDock();
 };
 OS.isPinned = function(id) { return getDockPins().includes(id); };
+
+/* ---------- Leaderboard (local best scores/times) ---------- */
+const LB_GAMES = {
+  slots:    { label:'Slots',        icon:'🎰', unit:'credits', lower:false },
+  solitaire:{ label:'Solitaire',    icon:'♠️', unit:'pts',     lower:false },
+  picross:  { label:'Picross',      icon:'◼',  unit:'sec',     lower:true  },
+  mines:    { label:'Minesweeper',  icon:'💣', unit:'sec',     lower:true  },
+  blackjack:{ label:'Blackjack',    icon:'🃏', unit:'credits', lower:false },
+  rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
+  holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
+  pinball:  { label:'Space Pinball',icon:'🕹️', unit:'pts',     lower:false },
+};
+function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
+function _lbWrite(d) { localStorage.setItem('aq_scores', JSON.stringify(d)); }
+function recordScore(game, score, detail) {
+  if (!LB_GAMES[game] || !isFinite(score)) return;
+  const d = _lbRead();
+  const list = d[game] || [];
+  list.push({ name: (localStorage.getItem('aq_username') || 'You'), score: Math.round(score), detail: detail || '', ts: Date.now() });
+  list.sort((a, b) => LB_GAMES[game].lower ? a.score - b.score : b.score - a.score);
+  d[game] = list.slice(0, 10);
+  _lbWrite(d);
+  if (document.getElementById('win-leaderboard')?.classList.contains('open')) renderLeaderboard();
+}
+function renderLeaderboard(only) {
+  const body = document.getElementById('leaderboard-body'); if (!body) return;
+  const d = _lbRead();
+  const games = only ? [only] : Object.keys(LB_GAMES);
+  body.innerHTML = games.map(g => {
+    const meta = LB_GAMES[g], rows = d[g] || [];
+    const list = rows.length
+      ? rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${i+1}</span>`+
+          `<span class="lb-name">${(r.name||'You').replace(/</g,'&lt;')}</span>`+
+          `<span class="lb-score">${r.score} ${meta.unit}</span>`+
+          `<span class="lb-detail">${(r.detail||'').replace(/</g,'&lt;')}</span></div>`).join('')
+      : '<div class="lb-empty">No scores yet — go play!</div>';
+    return `<div class="lb-game"><div class="lb-game-hdr"><span>${meta.icon} ${meta.label}</span>`+
+      `<button class="lb-clear" onclick="lbClear('${g}')">Clear</button></div>${list}</div>`;
+  }).join('');
+}
+function lbClear(game) {
+  const d = _lbRead(); delete d[game]; _lbWrite(d); renderLeaderboard();
+}
 
 function _deskPos() { try { return JSON.parse(localStorage.getItem('aq_desktop') || '{}'); } catch { return {}; } }
 function _deskSave(p) { localStorage.setItem('aq_desktop', JSON.stringify(p)); }
@@ -9677,7 +9758,8 @@ function synthLoad(p) {
 function synthSaveProject() {
   if (typeof fsSave !== 'function') return;
   const name = prompt('Project name', 'beat-' + (fsList().filter(f => f.type === 'synth').length + 1)) || 'untitled';
-  fsSave({ name: name.replace(/\.aqs$/, '') + '.aqs', type: 'synth', content: JSON.stringify(synthSerialize()) });
+  const desktop = confirm('Show this project on the desktop?');
+  fsSave({ name: name.replace(/\.aqs$/, '') + '.aqs', type: 'synth', content: JSON.stringify(synthSerialize()), onDesktop: desktop });
   toast('Saved project: ' + name);
 }
 function synthOpenProject() {
@@ -11133,6 +11215,7 @@ function _slotsEvaluate(){
   }
   if(totalWin>0){
     aqAddCredits(totalWin);
+    if(typeof recordScore==='function') recordScore('slots', totalWin, winDescs[0]||'');
     for(let r=0;r<3;r++){document.getElementById(`slot-reel-${r}`)?.classList.add('winning');_slotsRenderReel(r,[...(winCells[r]||new Set())]);}
     const wl=document.getElementById('slots-win-line');if(wl)wl.textContent=winDescs.join(', ');
     const isJackpot=winDescs.some(d=>/💎|👑/.test(d));
@@ -12526,6 +12609,7 @@ function rhythmEnd(){
   if(reward>0){ aqAddCredits(reward); if(window.toast) window.toast(`🎶 +${reward} credits!`); }
   const msg=document.getElementById('rhythm-msg');
   if(msg) msg.textContent=`Score ${_rhythmScore} · ${acc}% hit · max combo ${_rhythmBest} · +${reward} 💰`;
+  if(typeof recordScore==='function' && _rhythmScore>0) recordScore('rhythm', _rhythmScore, acc+'% · combo '+_rhythmBest);
   aqRefreshCreditDisplays();
 }
 function _rhythmJudgeHit(lane){
@@ -13243,6 +13327,14 @@ function togglePaintSendMenu() {
   }
   menu.classList.add('open');
 }
+function paintSaveToDesktop() {
+  document.getElementById('paint-send-menu')?.classList.remove('open');
+  const cv = document.getElementById('paint-canvas');
+  if (!cv || typeof fsSave !== 'function') return;
+  const name = (prompt('Save painting as', 'painting-' + (fsList().filter(f=>f.type==='image').length+1)) || 'painting').replace(/\.png$/,'') + '.png';
+  fsSave({ name, type: 'image', content: cv.toDataURL('image/png'), onDesktop: true });
+  toast('Saved to desktop: ' + name);
+}
 function sendPaintTo(target) {
   document.getElementById('paint-send-menu').classList.remove('open');
   const cv = document.getElementById('paint-canvas');
@@ -13396,6 +13488,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── PICROSS ──────────────────────────────────────────
 let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
+let _pcSeconds = 0, _pcTimerInt = null;
+function pcFmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function pcStartTimer(){ pcStopTimer(); _pcSeconds=0; const el=document.getElementById('picross-timer'); if(el) el.textContent='0:00';
+  _pcTimerInt=setInterval(()=>{ _pcSeconds++; const e=document.getElementById('picross-timer'); if(e) e.textContent=pcFmt(_pcSeconds); },1000); }
+function pcStopTimer(){ if(_pcTimerInt){ clearInterval(_pcTimerInt); _pcTimerInt=null; } }
 let _picrossInited = false;
 
 function generatePicross(size) {
@@ -13444,12 +13541,15 @@ function loadPicrossPuzzle(puzzle) {
 function picrossNewPuzzle() {
   const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
   loadPicrossPuzzle(generatePicross(size));
+  pcStartTimer();
 }
 function picrossOnWin() {
+  pcStopTimer();
   unlockTheme('pixel');
   playFanfare('win');
   aqAddCredits(25);
   if (window.toast) window.toast('◼ +25 credits for solving the puzzle!');
+  if (typeof recordScore === 'function') recordScore('picross', _pcSeconds, _pcSize+'×'+_pcSize+' · '+pcFmt(_pcSeconds));
   setTimeout(() => window.abSayPicross?.('solved', _pcPuzzle?.name || null), 700);
 }
 function pcGetClues(arr, size, isRow) {
@@ -14011,6 +14111,7 @@ function solOnWin(){
   }
   // Push to Firebase leaderboard
   const solScore=Math.floor(5000/Math.max(1,solMoves*solSeconds));
+  if(typeof recordScore==='function') recordScore('solitaire', solScore, solMoves+' moves · '+solTimerFmt(solSeconds));
   const solUser=localStorage.getItem('aq_username')||'Anonymous';
   (function(){
     try {
@@ -14416,6 +14517,7 @@ function minesCheckWin(){
     const minesRewards = [15, 40, 100]; // easy, medium, expert
     const minesDiff = minesCt<=10?0:minesCt<=40?1:2;
     aqAddCredits(minesRewards[minesDiff]);
+    if (typeof recordScore==='function') recordScore('mines', minesSeconds, ['Easy','Medium','Expert'][minesDiff]+' · '+minesSeconds+'s');
     if (window.toast) window.toast(`💣 +${minesRewards[minesDiff]} credits for clearing the field!`);
     setTimeout(function(){ if(window.toast) window.toast('💣 You win! Time: '+minesSeconds+'s'); }, 100);
   }
@@ -14665,6 +14767,7 @@ function bjStand(){
     aqAddCredits(bjBet*2); // return stake + profit
     bjUpdateBalance();
     playFanfare('small');
+    if(typeof recordScore==='function') recordScore('blackjack', aqGetCredits(), 'won '+bjBet);
     setTimeout(() => window.abSayBJ?.('win', '+'+bjBet+' credits'), 500);
     bjSetStatus('You win '+bjBet+' credits! (Player: '+pt+', Dealer: '+dt+')');
   } else if(pt===dt){
@@ -14920,6 +15023,7 @@ function bjUpdateBalance(){
 <div id="paint-send-menu">
   <button class="paint-send-opt" onclick="sendPaintTo('global')">🌐 Global Chat</button>
   <button class="paint-send-opt" id="paint-send-room-btn" onclick="sendPaintTo('room')">🏠 Room Chat</button>
+  <button class="paint-send-opt" onclick="paintSaveToDesktop()">🖥️ Save to Desktop</button>
 </div>
 
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->
@@ -15236,6 +15340,7 @@ function bjUpdateBalance(){
 <div id="picross-wrap">
   <div id="picross-titlebar">
     <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
+    <span id="picross-timer" style="font-size:11px;font-weight:700;color:#fff;opacity:.8;margin-right:6px;font-variant-numeric:tabular-nums;position:relative;z-index:1">0:00</span>
     <select id="pc-size-sel" onchange="picrossNewPuzzle()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1;border-radius:6px;padding:2px 4px;font-size:11px">
       <option value="10">10×10</option>
       <option value="12">12×12</option>

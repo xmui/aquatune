@@ -4214,7 +4214,8 @@ body.osmode .os-window.win-std.open, body.osmode #win-player { animation:osWinIn
 #os-start { display:none; align-items:center; gap:6px; height:34px; padding:0 12px 0 8px; cursor:pointer;
   font-family:var(--font-ui); font-weight:800; font-size:13px; color:#fff; border:none; border-radius:6px;
   background:linear-gradient(180deg,#3a8a3a,#2a6a2a); box-shadow:inset 0 1px 0 rgba(255,255,255,0.3); }
-#os-start .start-logo { color:#ffd700; letter-spacing:-2px; }
+#os-start .start-logo { display:inline-flex; align-items:center; }
+#os-start .start-logo img { height:16px; width:auto; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.5)); }
 [data-family=windows] #os-start { display:flex; }
 #start-menu { position:fixed; left:6px; bottom:46px; z-index:4100; width:280px; display:none;
   border:1px solid var(--border); border-radius:8px 8px 6px 6px; overflow:hidden;
@@ -4784,16 +4785,8 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
 <div id="desktop-icons"></div>
 
 <div id="dock">
-  <button id="os-start" onclick="toggleStartMenu(event)"><span class="start-logo">&#9612;&#9612;</span><span class="start-label">Start</span></button>
-  <button class="dock-item" data-dock="player"   onclick="OS.open('player')"><span class="dock-tip">Player</span>&#9835;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="arcade"   onclick="OS.open('arcade')"><span class="dock-tip">Arcade</span>&#127918;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="synth"    onclick="OS.open('synth')"><span class="dock-tip">AquaSynth</span>&#127929;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="paint"    onclick="OS.open('paint')"><span class="dock-tip">AquaPaint</span>&#127912;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="files"    onclick="OS.open('files')"><span class="dock-tip">Files</span>&#128193;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="texteditor" onclick="OS.open('texteditor')"><span class="dock-tip">Text Editor</span>&#128221;<span class="dock-dot"></span></button>
-  <button class="dock-item" data-dock="rooms"    onclick="OS.open('rooms')"><span class="dock-tip">Public Rooms</span>&#127760;<span class="dock-dot"></span></button>
-  <span class="dock-sep"></span>
-  <button class="dock-item" data-dock="settings" onclick="OS.open('settings')"><span class="dock-tip">Settings</span>&#9881;<span class="dock-dot"></span></button>
+  <button id="os-start" onclick="toggleStartMenu(event)"><span class="start-logo"><img src="aquatune-logo-outline.png" alt=""></span><span class="start-label">Start</span></button>
+  <!-- dock items rendered by renderDock() from the pin list -->
 </div>
 
 <!-- Start menu (Windows families) -->
@@ -4824,12 +4817,15 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
   <div class="win-body-scroll">
     <div class="apps-section-lbl" style="margin-bottom:8px">Games</div>
     <div class="apps-games-grid" style="grid-template-columns:repeat(3,1fr)">
-      <button class="apps-game-btn" onclick="OS.open('slots')"><span class="agb-icon">&#127920;</span><span class="agb-name">Slots</span></button>
-      <button class="apps-game-btn" onclick="OS.open('solitaire')"><span class="agb-icon">&#9824;&#65039;</span><span class="agb-name">Solitaire</span></button>
-      <button class="apps-game-btn" onclick="OS.open('picross')"><span class="agb-icon">&#9724;</span><span class="agb-name">Picross</span></button>
-      <button class="apps-game-btn" onclick="OS.open('mines')"><span class="agb-icon">&#128163;</span><span class="agb-name">Minesweeper</span></button>
-      <button class="apps-game-btn" onclick="OS.open('blackjack')"><span class="agb-icon">&#127183;</span><span class="agb-name">Blackjack</span></button>
-      <button class="apps-game-btn" onclick="OS.open('rhythm')"><span class="agb-icon">&#127926;</span><span class="agb-name">Beat Tap</span></button>
+      <button class="apps-game-btn" data-app="slots" onclick="OS.open('slots')"><span class="agb-icon">&#127920;</span><span class="agb-name">Slots</span></button>
+      <button class="apps-game-btn" data-app="solitaire" onclick="OS.open('solitaire')"><span class="agb-icon">&#9824;&#65039;</span><span class="agb-name">Solitaire</span></button>
+      <button class="apps-game-btn" data-app="picross" onclick="OS.open('picross')"><span class="agb-icon">&#9724;</span><span class="agb-name">Picross</span></button>
+      <button class="apps-game-btn" data-app="mines" onclick="OS.open('mines')"><span class="agb-icon">&#128163;</span><span class="agb-name">Minesweeper</span></button>
+      <button class="apps-game-btn" data-app="blackjack" onclick="OS.open('blackjack')"><span class="agb-icon">&#127183;</span><span class="agb-name">Blackjack</span></button>
+      <button class="apps-game-btn" data-app="rhythm" onclick="OS.open('rhythm')"><span class="agb-icon">&#127926;</span><span class="agb-name">Beat Tap</span></button>
+      <button class="apps-game-btn" data-app="holdem" onclick="OS.open('holdem')"><span class="agb-icon">&#127183;</span><span class="agb-name">Hold'em</span></button>
+      <button class="apps-game-btn" data-app="pinball" onclick="OS.open('pinball')"><span class="agb-icon">&#128377;&#65039;</span><span class="agb-name">Pinball</span></button>
+      <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
   </div>
 </div>
@@ -7479,6 +7475,7 @@ const APPS = {
   rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
   files:     { el:'win-files',      name:'Files' },
   texteditor:{ el:'win-texteditor', name:'Text Editor' },
+  chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
 const OS = {
@@ -7709,6 +7706,52 @@ const DESKTOP_APPS = [
   { id: 'texteditor', icon: '📝', label: 'Notes' },
   { id: 'settings', icon: '⚙️', label: 'Settings' },
 ];
+/* ---------- Dock (rendered from a persisted pin list) ---------- */
+const DOCK_META = {
+  chat:{icon:'💬',label:'Chat'}, player:{icon:'♪',label:'Player'}, arcade:{icon:'🎮',label:'Arcade'},
+  synth:{icon:'🎹',label:'AquaSynth'}, paint:{icon:'🎨',label:'AquaPaint'},
+  files:{icon:'📁',label:'Files'}, texteditor:{icon:'📝',label:'Text Editor'},
+  leaderboard:{icon:'🏆',label:'Leaderboard'}, rooms:{icon:'🌐',label:'Public Rooms'},
+  settings:{icon:'⚙️',label:'Settings'},
+  slots:{icon:'🎰',label:'Slots'}, solitaire:{icon:'♠️',label:'Solitaire'}, picross:{icon:'◼',label:'Picross'},
+  mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
+  holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
+};
+const DOCK_DEFAULT = ['chat','player','arcade','synth','paint','files','texteditor','leaderboard','settings'];
+function getDockPins() {
+  try { const p = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(p)) return p; } catch {}
+  return DOCK_DEFAULT.slice();
+}
+function _saveDockPins(p) { localStorage.setItem('aq_dock_pins', JSON.stringify(p)); }
+function renderDock() {
+  const dock = document.getElementById('dock'); if (!dock) return;
+  const start = document.getElementById('os-start');
+  [...dock.querySelectorAll('.dock-item,.dock-sep')].forEach(n => n.remove());
+  const pins = getDockPins();
+  pins.forEach((id, i) => {
+    const m = DOCK_META[id] || { icon:'▢', label: (APPS[id]?.name || id) };
+    if (id === 'settings' && i > 0) { const s = document.createElement('span'); s.className='dock-sep'; dock.appendChild(s); }
+    const b = document.createElement('button');
+    b.className = 'dock-item'; b.dataset.dock = id;
+    b.onclick = () => OS.open(id);
+    b.innerHTML = `<span class="dock-tip">${m.label}</span>${m.icon}<span class="dock-dot"></span>`;
+    dock.appendChild(b);
+  });
+  if (start) dock.insertBefore(start, dock.firstChild);
+}
+OS.pin = function(id) {
+  const p = getDockPins(); if (p.includes(id)) return;
+  const si = p.indexOf('settings');
+  if (si >= 0) p.splice(si, 0, id); else p.push(id);
+  _saveDockPins(p); renderDock();
+  toast('Pinned ' + (DOCK_META[id]?.label || id) + ' to dock');
+};
+OS.unpin = function(id) {
+  let p = getDockPins().filter(x => x !== id);
+  _saveDockPins(p); renderDock();
+};
+OS.isPinned = function(id) { return getDockPins().includes(id); };
+
 function _deskPos() { try { return JSON.parse(localStorage.getItem('aq_desktop') || '{}'); } catch { return {}; } }
 function _deskSave(p) { localStorage.setItem('aq_desktop', JSON.stringify(p)); }
 function renderDesktopIcons() {
@@ -7847,7 +7890,9 @@ function _winMenu(id) {
 function ctxIcon(e, kind, id) {
   e.preventDefault(); e.stopPropagation();
   const items = kind === 'app'
-    ? [{ label: 'Open', icon: '↗', action: () => OS.open(id) }]
+    ? [{ label: 'Open', icon: '↗', action: () => OS.open(id) },
+       OS.isPinned(id) ? { label: 'Unpin from Dock', icon: '📌', action: () => OS.unpin(id) }
+                       : { label: 'Pin to Dock', icon: '📌', action: () => OS.pin(id) }]
     : [{ label: 'Open', icon: '↗', action: () => fsOpen(id) },
        { label: 'Rename', icon: '✏️', action: () => fsRename(id) },
        { label: 'Remove from Desktop', icon: '🚫', action: () => { fsSave({ id, onDesktop: false }); } },
@@ -7888,7 +7933,19 @@ function bindContextMenus() {
     e.preventDefault();
     const id = it.dataset.dock;
     OS.ctx([{ label: 'Open', icon: '↗', action: () => OS.open(id) },
-            { label: 'Close', icon: '✕', disabled: !it.classList.contains('running'), action: () => OS.close(id) }],
+            { label: 'Close', icon: '✕', disabled: !it.classList.contains('running'), action: () => OS.close(id) },
+            { sep: true },
+            { label: 'Unpin from Dock', icon: '📌', disabled: id === 'settings' || id === 'player', action: () => OS.unpin(id) }],
+           e.clientX, e.clientY);
+  });
+  // Arcade game tiles → right-click to Pin to Dock
+  document.getElementById('win-arcade')?.addEventListener('contextmenu', e => {
+    const tile = e.target.closest('.apps-game-btn[data-app]'); if (!tile) return;
+    e.preventDefault();
+    const id = tile.dataset.app;
+    OS.ctx([{ label: 'Open', icon: '↗', action: () => OS.open(id) },
+            OS.isPinned(id) ? { label: 'Unpin from Dock', icon: '📌', action: () => OS.unpin(id) }
+                            : { label: 'Pin to Dock', icon: '📌', action: () => OS.pin(id) }],
            e.clientX, e.clientY);
   });
 }
@@ -8030,6 +8087,7 @@ function osBoot() {
   setOsMode();
   buildSettingsApp();
   loadWallpaper();
+  if (typeof renderDock === 'function') renderDock();
   if (typeof renderDesktopIcons === 'function') renderDesktopIcons();
   OS.register('player');
   OS.focus('player');
@@ -9042,6 +9100,9 @@ function initActx() {
 }
 function drumDest() {
   initActx();
+  // Beat Tap routes its pre-scheduled notes through a stoppable bus so closing
+  // the game mid-song can silence everything still queued in WebAudio.
+  if (window._rhythmRouteActive && window._rhythmBus) return window._rhythmBus;
   if (!drumMasterGain) {
     drumMasterGain = actx.createGain();
     drumMasterGain.gain.value = +(localStorage.getItem('aq_vol_drum') || 1);
@@ -11514,7 +11575,8 @@ function openBoard() {
   localStorage.setItem('aq_board_seen_ts', _lastSeenPostTs);
   const badge = document.getElementById('chat-badge');
   if (badge) badge.style.display = 'none';
-  document.getElementById('board-btn').classList.add('active');
+  document.getElementById('board-btn')?.classList.add('active');
+  document.querySelector('.dock-item[data-dock="chat"]')?.classList.add('running','active');
   boardLoadAndRender();
   boardStartSse();
   // Scroll room chat to bottom when panel opens
@@ -11525,7 +11587,8 @@ function openBoard() {
 }
 function closeBoard() {
   document.getElementById('board-overlay').classList.remove('show');
-  document.getElementById('board-btn').classList.remove('active');
+  document.getElementById('board-btn')?.classList.remove('active');
+  document.querySelector('.dock-item[data-dock="chat"]')?.classList.remove('running','active');
   boardStopSse();
 }
 function toggleBoard() {
@@ -12434,13 +12497,26 @@ function rhythmStart(){
   _rhythmStartT=cx.currentTime; _rhythmPlaying=true;
   document.getElementById('rhythm-start-btn').textContent='■ Stop';
   document.getElementById('rhythm-msg').textContent='Go!';
+  // fresh stoppable bus for this run, then schedule all notes through it
+  if(window._rhythmBus){ try{ window._rhythmBus.disconnect(); }catch(_){} }
+  window._rhythmBus = cx.createGain();
+  window._rhythmBus.connect(masterComp || cx.destination);
+  window._rhythmRouteActive = true;
   _rhythmChart.forEach(n=>{ try{ RHY_LANE_SOUNDS[n.lane](_rhythmStartT+n.time); }catch(_){} });
+  window._rhythmRouteActive = false;
   if(_rhythmRaf) cancelAnimationFrame(_rhythmRaf);
   _rhythmLoop();
 }
 function rhythmStop(){
   _rhythmPlaying=false;
   if(_rhythmRaf){ cancelAnimationFrame(_rhythmRaf); _rhythmRaf=null; }
+  // silence + disconnect any notes still scheduled ahead in WebAudio
+  if(window._rhythmBus){
+    try{ const cx=initActx(); window._rhythmBus.gain.cancelScheduledValues(cx.currentTime);
+      window._rhythmBus.gain.setValueAtTime(0, cx.currentTime); }catch(_){}
+    try{ window._rhythmBus.disconnect(); }catch(_){}
+    window._rhythmBus=null;
+  }
   const b=document.getElementById('rhythm-start-btn'); if(b) b.textContent='▶ Start';
 }
 function rhythmEnd(){

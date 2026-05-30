@@ -4519,6 +4519,12 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
   body.osmode #dock { left:0; right:0; bottom:0; transform:none; width:100%;
     border-radius:0; justify-content:space-around; padding:4px; }
   body.osmode #desktop-icons { display:none; }
+  /* let OS-only (win-std) apps (Photos/Files/Scores/image viewer) open full-screen on phones */
+  body:not(.osmode) .os-window.win-std.open {
+    display:flex !important; position:fixed !important; inset:0 !important; left:0 !important; top:0 !important;
+    width:auto !important; height:auto !important; transform:none !important; z-index:9000 !important;
+    border-radius:0 !important; }
+  body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; }
 }
 
   </style>
@@ -8314,6 +8320,8 @@ function buildSettingsApp() {
     `<label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;padding:2px 0">`+
     `<input type="checkbox" id="bootchime-chk" onchange="localStorage.setItem('aq_bootchime', this.checked?'1':'0')"> 🔔 Boot chime</label>`;
   content.appendChild(wrap);
+  // Attach to the DOM first (so placeSettings can find it), then position by mode.
+  document.getElementById('settings-body').appendChild(content);
   placeSettings();
   renderThemeSwatches();
   const cc = document.getElementById('bootchime-chk'); if (cc) cc.checked = localStorage.getItem('aq_bootchime') !== '0';
@@ -11199,6 +11207,12 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="openMines()" title="Minesweeper">💣<span>Mines</span></button>
   <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
   <button class="mob-tool-btn" onclick="openBlackjack()" title="Blackjack">🃏<span>Blackjack</span></button>
+  <button class="mob-tool-btn" onclick="openHoldem()" title="Texas Hold'em">🂡<span>Hold'em</span></button>
+  <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
+  <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('photos')" title="Photos">📷<span>Photos</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('files')" title="Files">📁<span>Files</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('leaderboard')" title="Scores">🏆<span>Scores</span></button>
   <button class="mob-tool-btn" onclick="toggleTheater()" title="Theater">🎬<span>Theater</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>

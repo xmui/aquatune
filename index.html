@@ -3261,17 +3261,19 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     /* ── SPACE PINBALL ─── */
     #pinball-wrap {
-      position:fixed; top:56px; left:50%; transform:translateX(-50%);
+      position:fixed; top:48px; left:50%; transform:translateX(-50%);
+      width:min(680px,96vw); height:min(560px,86vh);
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:506; flex-direction:column; overflow:hidden;
     }
     #pinball-wrap.open { display:flex; }
-    #pinball-area { padding:8px; display:flex; flex-direction:column; gap:6px; align-items:center; }
-    #pinball-canvas { background:radial-gradient(circle at 50% 18%,#10204a,#05081c); border:1px solid var(--border); border-radius:6px; touch-action:none; }
-    #pinball-hud { display:flex; gap:14px; align-items:center; font-size:12px; color:var(--text); font-weight:700; }
-    #pinball-help { font-size:10px; color:var(--text2); text-align:center; }
-    @media (max-width:768px) { #pinball-wrap { top:0; transform:translateX(-50%) scale(0.92); } }
+    #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
+    #pinball-frame { flex:1; width:100%; height:100%; border:0; background:#000; }
+    #pinball-fallback { position:absolute; left:0; right:0; bottom:0; padding:6px 10px; font-size:11px;
+      color:var(--text2); background:var(--panel); border-top:1px solid var(--border); text-align:center; }
+    #pinball-fallback a { color:var(--accent); }
+    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100vh; transform:translateX(-50%); border-radius:0; } }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
@@ -4230,6 +4232,12 @@ body.osmode .os-window.win-std.open, body.osmode #win-player { animation:osWinIn
 .file-ico { font-size:30px; }
 .file-nm { font-size:10px; max-width:78px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .files-empty { font-size:12px; color:var(--text2); padding:20px; text-align:center; }
+.photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; }
+.photo-tile { display:flex; flex-direction:column; gap:3px; padding:4px; cursor:pointer; background:none;
+  border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font-ui); overflow:hidden; }
+.photo-tile:hover { border-color:var(--accent); background:rgba(127,127,127,0.12); }
+.photo-tile img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:5px; image-rendering:pixelated; background:#0001; }
+.photo-nm { font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
 /* leaderboard */
 .lb-game { margin-bottom:14px; }
 .lb-game-hdr { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:800;
@@ -4894,7 +4902,20 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
 <!-- Image viewer window -->
 <div id="win-imgview" class="os-window win-std" data-app="imgview" data-title="Image" style="width:min(520px,92vw);height:min(480px,76vh);left:calc(50% - 260px);top:64px;">
   <div class="os-titlebar"><span class="os-ico">&#128444;&#65039;</span><span class="os-title">Image</span></div>
+  <div class="win-toolbar">
+    <button class="win-tool-btn" onclick="imgviewStep(-1)">‹ Prev</button>
+    <button class="win-tool-btn" onclick="imgviewStep(1)">Next ›</button>
+    <span style="flex:1"></span>
+    <button class="win-tool-btn" onclick="imgviewSaveDesktop()" title="Show on desktop">🖥️</button>
+    <button class="win-tool-btn" onclick="imgviewDelete()" title="Delete">🗑</button>
+  </div>
   <div class="win-body-scroll" id="imgview-body" style="display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#80808022 0% 25%,transparent 0% 50%) 0/20px 20px"><img id="imgview-img" style="max-width:100%;max-height:100%;image-rendering:pixelated"></div>
+</div>
+
+<!-- Photos gallery -->
+<div id="win-photos" class="os-window win-std" data-app="photos" data-title="Photos" style="width:min(480px,94vw);height:min(460px,76vh);left:calc(50% - 240px);top:62px;">
+  <div class="os-titlebar"><span class="os-ico">&#128247;</span><span class="os-title">Photos</span></div>
+  <div class="win-body-scroll" id="photos-body"></div>
 </div>
 
 <!-- THEME PANEL -->
@@ -7538,6 +7559,7 @@ const APPS = {
   texteditor:{ el:'win-texteditor', name:'Text Editor' },
   leaderboard:{ el:'win-leaderboard', name:'Leaderboard' },
   imgview:   { el:'win-imgview',    name:'Image' },
+  photos:    { el:'win-photos',     name:'Photos' },
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
   pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
@@ -7622,6 +7644,7 @@ const OS = {
     this._setRunning(id, true);
     if (id === 'files' && typeof filesRefresh === 'function') filesRefresh();
     if (id === 'leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
+    if (id === 'photos' && typeof renderPhotos === 'function') renderPhotos();
     if (id === 'texteditor') {
       const t = document.querySelector('#win-texteditor .os-title');
       if (t && typeof _teTitleForFamily === 'function') t.textContent = _teTitleForFamily();
@@ -7714,11 +7737,44 @@ function fsOpen(id) {
   const f = fsGet(id); if (!f) return;
   if (f.type === 'text') { OS.open('texteditor'); teLoad(f); }
   else if (f.type === 'synth') { OS.open('synth'); setTimeout(() => { try { synthLoad(JSON.parse(f.content)); toast('Loaded ' + f.name); } catch {} }, 120); }
-  else if (f.type === 'image') {
-    OS.open('imgview');
-    const img = document.getElementById('imgview-img'); if (img) img.src = f.content;
-    const t = document.querySelector('#win-imgview .os-title'); if (t) t.textContent = f.name || 'Image';
-  }
+  else if (f.type === 'image') { imgviewShow(id); }
+}
+
+/* ---- Photos gallery + image viewer ---- */
+let _imgviewId = null;
+function _imgList() { return fsList().filter(f => f.type === 'image'); }
+function imgviewShow(id) {
+  const f = fsGet(id); if (!f || f.type !== 'image') return;
+  _imgviewId = id;
+  OS.open('imgview');
+  const img = document.getElementById('imgview-img'); if (img) img.src = f.content;
+  const t = document.querySelector('#win-imgview .os-title'); if (t) t.textContent = f.name || 'Image';
+}
+function imgviewStep(dir) {
+  const list = _imgList(); if (!list.length) return;
+  let i = list.findIndex(f => f.id === _imgviewId);
+  i = (i < 0 ? 0 : i + dir + list.length) % list.length;
+  imgviewShow(list[i].id);
+}
+function imgviewDelete() {
+  if (!_imgviewId) return;
+  if (!confirm('Delete this image?')) return;
+  const list = _imgList(); const i = list.findIndex(f => f.id === _imgviewId);
+  fsDelete(_imgviewId);
+  const rest = _imgList();
+  if (rest.length) imgviewShow(rest[Math.min(i, rest.length - 1)].id);
+  else { OS.close('imgview'); }
+  if (document.getElementById('win-photos')?.classList.contains('open')) renderPhotos();
+}
+function imgviewSaveDesktop() { if (_imgviewId) { fsSave({ id: _imgviewId, onDesktop: true }); toast('Shown on desktop'); } }
+function renderPhotos() {
+  const body = document.getElementById('photos-body'); if (!body) return;
+  const imgs = _imgList();
+  body.innerHTML = imgs.length
+    ? '<div class="photo-grid">' + imgs.map(f =>
+        `<button class="photo-tile" ondblclick="imgviewShow('${f.id}')" onclick="imgviewShow('${f.id}')" title="${(f.name||'').replace(/"/g,'')}">`+
+        `<img src="${f.content}" alt=""><span class="photo-nm">${(f.name||'').replace(/</g,'&lt;')}</span></button>`).join('') + '</div>'
+    : '<div class="files-empty">No photos yet — save a drawing from AquaPaint (📤 → Save to Desktop).</div>';
 }
 
 /* ---- Files app ---- */
@@ -7774,6 +7830,7 @@ const DESKTOP_APPS = [
   { id: 'player', icon: '♪', label: 'Player' },
   { id: 'arcade', icon: '🎮', label: 'Arcade' },
   { id: 'files', icon: '📁', label: 'Files' },
+  { id: 'photos', icon: '📷', label: 'Photos' },
   { id: 'texteditor', icon: '📝', label: 'Notes' },
   { id: 'settings', icon: '⚙️', label: 'Settings' },
 ];
@@ -7782,13 +7839,13 @@ const DOCK_META = {
   chat:{icon:'💬',label:'Chat'}, player:{icon:'♪',label:'Player'}, arcade:{icon:'🎮',label:'Arcade'},
   synth:{icon:'🎹',label:'AquaSynth'}, paint:{icon:'🎨',label:'AquaPaint'},
   files:{icon:'📁',label:'Files'}, texteditor:{icon:'📝',label:'Text Editor'},
-  leaderboard:{icon:'🏆',label:'Leaderboard'}, rooms:{icon:'🌐',label:'Public Rooms'},
+  leaderboard:{icon:'🏆',label:'Leaderboard'}, photos:{icon:'📷',label:'Photos'}, rooms:{icon:'🌐',label:'Public Rooms'},
   settings:{icon:'⚙️',label:'Settings'},
   slots:{icon:'🎰',label:'Slots'}, solitaire:{icon:'♠️',label:'Solitaire'}, picross:{icon:'◼',label:'Picross'},
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','synth','paint','files','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','synth','paint','files','photos','texteditor','leaderboard','settings'];
 function getDockPins() {
   try { const p = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(p)) return p; } catch {}
   return DOCK_DEFAULT.slice();
@@ -7832,7 +7889,6 @@ const LB_GAMES = {
   blackjack:{ label:'Blackjack',    icon:'🃏', unit:'credits', lower:false },
   rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
   holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
-  pinball:  { label:'Space Pinball',icon:'🕹️', unit:'pts',     lower:false },
 };
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
 function _lbWrite(d) { localStorage.setItem('aq_scores', JSON.stringify(d)); }
@@ -8134,10 +8190,12 @@ function buildSettingsApp() {
   const body = document.getElementById('settings-body');
   if (!tp || !body || body._built) return;
   body._built = true;
-  // Relocate every theme-panel section (skip its old header) into the Settings window.
-  [...tp.children].forEach(ch => { if (!ch.classList.contains('theme-hdr')) body.appendChild(ch); });
-  renderThemeSwatches();
-  // Desktop / wallpaper section (presets + upload + URL).
+  // Move the settings sections into a single container so we can relocate it
+  // between the desktop Settings window and the mobile theme-panel sheet.
+  const content = document.createElement('div');
+  content.id = 'settings-content';
+  [...tp.children].forEach(ch => { if (!ch.classList.contains('theme-hdr')) content.appendChild(ch); });
+  // Desktop / wallpaper section (presets + URL) + System.
   const wrap = document.createElement('div');
   const swatches = Object.entries(WALLPAPERS).map(([k, v]) =>
     `<button class="theme-swatch wp-swatch" data-wp="${k}" onclick="applyWallpaper('${k}',this)"`+
@@ -8150,8 +8208,20 @@ function buildSettingsApp() {
     `<div class="settings-section-hdr">System</div>`+
     `<label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;padding:2px 0">`+
     `<input type="checkbox" id="bootchime-chk" onchange="localStorage.setItem('aq_bootchime', this.checked?'1':'0')"> 🔔 Boot chime</label>`;
-  body.appendChild(wrap);
+  content.appendChild(wrap);
+  placeSettings();
+  renderThemeSwatches();
   const cc = document.getElementById('bootchime-chk'); if (cc) cc.checked = localStorage.getItem('aq_bootchime') !== '0';
+}
+/* Put the settings content where it can be seen: the Settings window on desktop,
+   or back inside #theme-panel (slide-up sheet) on mobile. Runs on resize too. */
+function placeSettings() {
+  const content = document.getElementById('settings-content');
+  if (!content) return;
+  const dest = document.body.classList.contains('osmode')
+    ? document.getElementById('settings-body')
+    : document.getElementById('theme-panel');
+  if (dest && content.parentElement !== dest) dest.appendChild(content);
 }
 
 let _bootChimePlayed = false;
@@ -8196,6 +8266,7 @@ function setOsMode() {
   const want = window.innerWidth > OS_MIN_WIDTH;
   document.body.classList.toggle('osmode', want);
   if (want && document.getElementById('start-menu')) document.getElementById('start-menu').classList.remove('open');
+  if (typeof placeSettings === 'function') placeSettings();
 }
 function osBoot() {
   setOsMode();
@@ -12675,91 +12746,19 @@ function heEval5(cs){
 }
 
 /* ============================================================
-   SPACE PINBALL — simple canvas physics
+   SPACE CADET PINBALL — embeds the externally-hosted web build in
+   an iframe (lazy-loaded on open, unloaded on close to stop it).
    ============================================================ */
-let pbCtx=null, pbRaf=null, pbBall=null, pbScore=0, pbBallNum=1, pbLFlip=0, pbRFlip=0, pbBumpers=[], pbInited=false, pbState='idle';
-const PB_W=300, PB_H=440;
+const PINBALL_URL = 'https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm';
 function openPinball(show=true){
   const w=document.getElementById('pinball-wrap'); if(!w) return;
-  if(show===false){ w.classList.remove('open'); w.style.display='none'; pinballStop(); return; }
+  const fr=document.getElementById('pinball-frame');
+  if(show===false){ w.classList.remove('open'); w.style.display='none'; if(fr) fr.src='about:blank'; return; }
   w.classList.toggle('open');
-  if(w.classList.contains('open')){ w.style.display='flex';
-    if(!pbInited){ pbInited=true; pbCtx=document.getElementById('pinball-canvas').getContext('2d'); pbBindKeys(); }
-    pinballReset();
-  } else { w.style.display='none'; pinballStop(); }
-}
-function pinballStop(){ if(pbRaf){ cancelAnimationFrame(pbRaf); pbRaf=null; } pbState='idle'; }
-function pinballReset(){
-  pbScore=0; pbBallNum=1; pbState='ready';
-  pbBumpers=[{x:80,y:120,r:20},{x:220,y:120,r:20},{x:150,y:90,r:22},{x:70,y:220,r:16},{x:230,y:220,r:16}];
-  document.getElementById('pb-score').textContent='0'; document.getElementById('pb-ball').textContent='1';
-  document.getElementById('pb-launch-btn').style.display='';
-  _pbPlaceBall(); pbDraw();
-}
-function _pbPlaceBall(){ pbBall={x:PB_W-16,y:PB_H-60,vx:0,vy:0,r:8,launched:false}; }
-function pinballLaunch(){
-  if(!pbBall||pbBall.launched) return;
-  pbBall.launched=true; pbBall.vx=-2.2-Math.random(); pbBall.vy=-12; pbState='play';
-  document.getElementById('pb-launch-btn').style.display='none';
-  if(!pbRaf) pbLoop();
-}
-function pbBindKeys(){
-  document.addEventListener('keydown',e=>{
-    const w=document.getElementById('pinball-wrap'); if(!w||!w.classList.contains('open')) return;
-    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z'){ pbLFlip=1; e.preventDefault(); }
-    if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'){ pbRFlip=1; e.preventDefault(); }
-    if(e.key==='ArrowUp'||e.key===' '){ pinballLaunch(); e.preventDefault(); }
-  });
-  document.addEventListener('keyup',e=>{
-    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z') pbLFlip=0;
-    if(e.key==='ArrowRight'||e.key==='m'||e.key==='M') pbRFlip=0;
-  });
-}
-function pbLoop(){ pbStep(); pbDraw(); pbRaf=requestAnimationFrame(pbLoop); }
-function pbStep(){
-  if(!pbBall||!pbBall.launched) return;
-  pbBall.vy+=0.28; // gravity
-  pbBall.x+=pbBall.vx; pbBall.y+=pbBall.vy;
-  // walls
-  if(pbBall.x<pbBall.r){ pbBall.x=pbBall.r; pbBall.vx*=-0.7; }
-  if(pbBall.x>PB_W-pbBall.r){ pbBall.x=PB_W-pbBall.r; pbBall.vx*=-0.7; }
-  if(pbBall.y<pbBall.r){ pbBall.y=pbBall.r; pbBall.vy*=-0.7; }
-  // bumpers
-  for(const b of pbBumpers){ const dx=pbBall.x-b.x, dy=pbBall.y-b.y, d=Math.hypot(dx,dy);
-    if(d<b.r+pbBall.r){ const nx=dx/d, ny=dy/d; pbBall.x=b.x+nx*(b.r+pbBall.r); pbBall.y=b.y+ny*(b.r+pbBall.r);
-      const dot=pbBall.vx*nx+pbBall.vy*ny; pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=1.05; pbBall.vy*=1.05;
-      pbScore+=100; document.getElementById('pb-score').textContent=pbScore; try{playTone&&playTone(660,0.05,'square',0.15);}catch(_){} } }
-  // flippers (two angled bars near the bottom)
-  _pbFlipperHit(46,PB_H-44,'L',pbLFlip);
-  _pbFlipperHit(PB_W-46,PB_H-44,'R',pbRFlip);
-  // drain
-  if(pbBall.y>PB_H+20){ pbBallNum++; if(pbBallNum>3){ pbGameOver(); } else { document.getElementById('pb-ball').textContent=pbBallNum; _pbPlaceBall(); document.getElementById('pb-launch-btn').style.display=''; pbState='ready'; } }
-}
-function _pbFlipperHit(fx,fy,side,active){
-  // simple paddle zone: if ball near flipper Y and on the right side, bounce up (stronger if active)
-  if(pbBall.y>fy-10 && pbBall.y<fy+18){
-    const inX = side==='L' ? (pbBall.x>14 && pbBall.x<PB_W/2) : (pbBall.x>PB_W/2 && pbBall.x<PB_W-14);
-    if(inX){ pbBall.vy=active? -10 : -6; pbBall.vx += side==='L'? 2 : -2; if(active){ pbScore+=10; document.getElementById('pb-score').textContent=pbScore; } }
-  }
-}
-function pbGameOver(){
-  pinballStop(); pbState='over';
-  document.getElementById('pb-launch-btn').style.display='';
-  document.getElementById('pb-launch-btn').textContent='Play Again';
-  document.getElementById('pb-launch-btn').onclick=()=>{ document.getElementById('pb-launch-btn').textContent='Launch'; document.getElementById('pb-launch-btn').onclick=pinballLaunch; pinballReset(); };
-  if(typeof recordScore==='function' && pbScore>0) recordScore('pinball', pbScore, '3 balls');
-  if(typeof aqAddCredits==='function'){ const r=Math.floor(pbScore/500); if(r>0){ aqAddCredits(r); toast('🕹️ +'+r+' credits!'); } }
-}
-function pbDraw(){
-  if(!pbCtx) return; const c=pbCtx; c.clearRect(0,0,PB_W,PB_H);
-  // bumpers
-  pbBumpers.forEach(b=>{ c.beginPath(); c.arc(b.x,b.y,b.r,0,7); c.fillStyle='#3aa0ff'; c.fill(); c.lineWidth=2; c.strokeStyle='#bfe6ff'; c.stroke(); });
-  // flippers
-  c.strokeStyle='#ffd166'; c.lineWidth=6; c.lineCap='round';
-  c.beginPath(); c.moveTo(14,PB_H-30); c.lineTo(PB_W/2-6, PB_H-(pbLFlip?52:38)); c.stroke();
-  c.beginPath(); c.moveTo(PB_W-14,PB_H-30); c.lineTo(PB_W/2+6, PB_H-(pbRFlip?52:38)); c.stroke();
-  // ball
-  if(pbBall){ c.beginPath(); c.arc(pbBall.x,pbBall.y,pbBall.r,0,7); c.fillStyle='#fff'; c.fill(); }
+  if(w.classList.contains('open')){
+    w.style.display='flex';
+    if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
+  } else { w.style.display='none'; if(fr) fr.src='about:blank'; }
 }
 
 function openRhythm(show=true){
@@ -15691,13 +15690,13 @@ function bjUpdateBalance(){
 <!-- SPACE PINBALL -->
 <div id="pinball-wrap" style="display:none">
   <div class="sol-titlebar" id="pinball-titlebar">
-    <span>🕹️ Space Pinball</span>
+    <span>🕹️ Space Cadet Pinball</span>
+    <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener" class="sol-titlebtn" style="text-decoration:none;width:auto;padding:0 6px" title="Open in new tab">↗</a>
     <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
   </div>
   <div id="pinball-area">
-    <canvas id="pinball-canvas" width="300" height="440"></canvas>
-    <div id="pinball-hud"><span>Score <b id="pb-score">0</b></span><span>Ball <b id="pb-ball">1</b>/3</span><button class="win95-btn" id="pb-launch-btn" onclick="pinballLaunch()">Launch</button></div>
-    <div id="pinball-help">← / → or Z / M = flippers · ↑ or Space = launch</div>
+    <iframe id="pinball-frame" title="Space Cadet Pinball" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
+    <div id="pinball-fallback">If the game doesn't load, <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open it in a new tab ↗</a>.</div>
   </div>
 </div>
 

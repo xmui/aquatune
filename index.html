@@ -7590,9 +7590,14 @@ function updateGrid() {
 //  THEME PANEL
 // ─────────────────────────────────────────────────────────
 function toggleThemePanel() {
+  // Self-heal: make sure the settings UI is built and placed for the current
+  // mode every time it's opened (guards against any boot/resize timing race).
+  if (typeof buildSettingsApp === 'function') buildSettingsApp();
+  if (typeof placeSettings === 'function') placeSettings();
   // In AquaOS the theme controls live inside the Settings app window.
   if (document.body.classList.contains('osmode') && window.OS) { OS.open('settings'); return; }
-  document.getElementById('theme-panel').classList.toggle('open');
+  const tp = document.getElementById('theme-panel');
+  if (tp) tp.classList.toggle('open');
 }
 
 /* ============================================================

@@ -3240,6 +3240,39 @@ body.perf-mode #aqua-gun { display: none !important; }
       #blackjack-wrap { width:100vw; top:0; left:0; transform:none; }
     }
 
+    /* ── TEXAS HOLD'EM ─── */
+    #holdem-wrap {
+      position:fixed; top:64px; left:50%; transform:translateX(-50%);
+      background:var(--panel); border:1px solid var(--border);
+      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      z-index:506; flex-direction:column; width:380px; overflow:hidden;
+    }
+    #holdem-wrap.open { display:flex; }
+    #holdem-area { background:linear-gradient(160deg,#0a5c3a,#073f28); padding:12px; color:#fff; display:flex; flex-direction:column; gap:10px; }
+    .he-seat, #he-board-row { display:flex; flex-direction:column; gap:4px; }
+    .he-label { font-size:11px; font-weight:bold; color:#bfe9cf; }
+    .he-cards { display:flex; gap:5px; min-height:64px; flex-wrap:wrap; }
+    .he-card { width:42px; height:60px; border-radius:5px; background:#fff; color:#111; border:1px solid #0006;
+      display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800; box-shadow:0 2px 4px rgba(0,0,0,0.3); }
+    .he-card.red { color:#c00; } .he-card.back { background:repeating-linear-gradient(45deg,#234,#234 4px,#2a4 4px,#2a4 8px); color:transparent; }
+    #he-msg { font-size:12px; text-align:center; min-height:18px; color:#ffd700; font-weight:700; }
+    #he-controls { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+    @media (max-width:768px) { #holdem-wrap { width:100vw; top:0; left:0; transform:none; } }
+
+    /* ── SPACE PINBALL ─── */
+    #pinball-wrap {
+      position:fixed; top:56px; left:50%; transform:translateX(-50%);
+      background:var(--panel); border:1px solid var(--border);
+      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      z-index:506; flex-direction:column; overflow:hidden;
+    }
+    #pinball-wrap.open { display:flex; }
+    #pinball-area { padding:8px; display:flex; flex-direction:column; gap:6px; align-items:center; }
+    #pinball-canvas { background:radial-gradient(circle at 50% 18%,#10204a,#05081c); border:1px solid var(--border); border-radius:6px; touch-action:none; }
+    #pinball-hud { display:flex; gap:14px; align-items:center; font-size:12px; color:var(--text); font-weight:700; }
+    #pinball-help { font-size:10px; color:var(--text2); text-align:center; }
+    @media (max-width:768px) { #pinball-wrap { top:0; transform:translateX(-50%) scale(0.92); } }
+
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
     body.theater-mode #board-wrap,
@@ -11127,14 +11160,15 @@ function spinSlots(){
   if(slotsSpinning)return;
   const isFree=_slotsFreeSpins>0;
   if(!isFree){
-    const bi=document.getElementById('slots-bet-inp');if(bi)slotsBet=Math.max(1,parseInt(bi.value)||10);
-    slotsBet=Math.max(1,Math.min(aqGetCredits(),slotsBet));
-    if(aqGetCredits()<slotsBet){
-      const msg=document.getElementById('slots-msg');if(msg)msg.textContent='Not enough credits!';
-      if(aqGetCredits()<=0&&window.toast)window.toast('Out of credits — claim your daily bonus 🎁');
-      return;
+    const bi=document.getElementById('slots-bet-inp');if(bi)slotsBet=Math.max(0,parseInt(bi.value)||10);
+    // allow a free 0-credit spin when broke so you can keep playing
+    slotsBet=Math.max(0,Math.min(aqGetCredits(),slotsBet));
+    if(bi)bi.value=slotsBet;
+    if(slotsBet<=0){
+      const msg=document.getElementById('slots-msg');if(msg)msg.textContent='Free spin (no credits) — win nothing, but play on!';
+    } else {
+      aqSetCredits(aqGetCredits()-slotsBet);
     }
-    aqSetCredits(aqGetCredits()-slotsBet);
   } else { _slotsFreeSpins--; }
   slotsSpinning=true; _slotsCascadeMult=1;
   document.getElementById('slots-spin-btn').disabled=true;
@@ -12545,6 +12579,189 @@ const RHY_KEYS=['d','f','j','k'];
 const RHY_LANE_COLORS=['#ff5a87','#ffc24a','#4ad6ff','#8c6bff'];
 const RHY_APPROACH=1.9, RHY_LEADIN=2.2, RHY_HITWIN=0.22;
 const RHY_LANE_SOUNDS=[ t=>drumKick(t), t=>drumSnare(t), t=>drumHihat(t), t=>drumClap(t) ];
+/* ============================================================
+   TEXAS HOLD'EM — heads-up vs one CPU
+   ============================================================ */
+const HE_SUITS=['♠','♥','♦','♣'], HE_RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+let heYou=500, heCpu=500, heDeck=[], heYouCards=[], heCpuCards=[], heBoard=[], hePot=0, heStage=0, heToCall=0, heInited=false;
+function openHoldem(show=true){
+  const w=document.getElementById('holdem-wrap'); if(!w) return;
+  if(show===false){ w.classList.remove('open'); w.style.display='none'; return; }
+  w.classList.toggle('open');
+  if(w.classList.contains('open')){ w.style.display='flex'; if(!heInited){ heInited=true; heRender(); } }
+  else { w.style.display='none'; }
+}
+function heMakeDeck(){ const d=[]; HE_SUITS.forEach(s=>HE_RANKS.forEach((r,i)=>d.push({s,r,v:i+2,red:(s==='♥'||s==='♦')}))); for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];} return d; }
+function heCardHTML(c,hidden){ if(hidden) return '<div class="he-card back">?</div>'; return `<div class="he-card${c.red?' red':''}">${c.r}${c.s}</div>`; }
+function heRender(reveal){
+  document.getElementById('he-you-chips').textContent=heYou;
+  document.getElementById('he-cpu-chips').textContent=heCpu;
+  document.getElementById('he-pot').textContent=hePot;
+  document.getElementById('he-you-cards').innerHTML=heYouCards.map(c=>heCardHTML(c,false)).join('');
+  document.getElementById('he-cpu-cards').innerHTML=heCpuCards.map(c=>heCardHTML(c,!reveal&&heStage<5)).join('');
+  document.getElementById('he-board').innerHTML=heBoard.map(c=>heCardHTML(c,false)).join('');
+}
+function heDeal(){
+  if(heYou<=0){ heYou=500; toast('Rebought for 500 🪙'); }
+  if(heCpu<=0) heCpu=500;
+  heDeck=heMakeDeck(); heYouCards=[heDeck.pop(),heDeck.pop()]; heCpuCards=[heDeck.pop(),heDeck.pop()];
+  heBoard=[]; hePot=0; heStage=1;
+  // blinds
+  const sb=10; heYou-=sb; heCpu-=sb; hePot=sb*2; heToCall=0;
+  document.getElementById('he-deal-btn').style.display='none';
+  ['he-check-btn','he-bet-btn','he-fold-btn'].forEach(id=>document.getElementById(id).style.display='');
+  document.getElementById('he-msg').textContent='Your move — check, bet, or fold.';
+  heRender();
+}
+function _heDealBoard(n){ for(let i=0;i<n;i++) heBoard.push(heDeck.pop()); }
+function heAction(act){
+  if(heStage<1) return;
+  if(act==='fold'){ heCpu+=hePot; document.getElementById('he-msg').textContent='You folded. CPU takes '+hePot+' 🪙.'; return heEndHand(); }
+  if(act==='bet'){ const bet=20; if(heYou>=bet){ heYou-=bet; hePot+=bet; }
+    // CPU calls based on a rough hand strength
+    const cpuStr=heHandStrength(heCpuCards.concat(heBoard));
+    if(cpuStr>=1 || Math.random()<0.7){ heCpu-=bet; hePot+=bet; document.getElementById('he-msg').textContent='CPU calls.'; }
+    else { heYou+=hePot; document.getElementById('he-msg').textContent='CPU folds! You take '+hePot+' 🪙.'; return heEndHand(); }
+  } else { document.getElementById('he-msg').textContent='Checked.'; }
+  // advance street
+  if(heStage===1){ _heDealBoard(3); heStage=2; }
+  else if(heStage===2){ _heDealBoard(1); heStage=3; }
+  else if(heStage===3){ _heDealBoard(1); heStage=4; }
+  else { return heShowdown(); }
+  heRender();
+}
+function heShowdown(){
+  heStage=5; heRender(true);
+  const yv=heBest(heYouCards.concat(heBoard)), cv=heBest(heCpuCards.concat(heBoard));
+  let msg;
+  if(yv.rank>cv.rank || (yv.rank===cv.rank && yv.tie>cv.tie)){ heYou+=hePot; msg='You win '+hePot+' 🪙 with '+yv.name+'!'; if(typeof recordScore==='function') recordScore('holdem', heYou, 'won w/ '+yv.name); }
+  else if(cv.rank>yv.rank || (cv.rank===yv.rank && cv.tie>yv.tie)){ heCpu+=hePot; msg='CPU wins with '+cv.name+'.'; }
+  else { heYou+=hePot/2; heCpu+=hePot/2; msg='Split pot ('+yv.name+').'; }
+  document.getElementById('he-msg').textContent=msg;
+  heEndHand();
+}
+function heEndHand(){
+  heStage=0;
+  ['he-check-btn','he-bet-btn','he-fold-btn'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('he-deal-btn').style.display='';
+  heRender(true);
+  aqRefreshCreditDisplays?.();
+}
+function heHandStrength(cards){ return heBest(cards).rank; }
+// 5-from-7 evaluator → {rank,tie,name}
+function heBest(cards){
+  let best={rank:-1,tie:-1,name:''};
+  const idx=[...Array(cards.length).keys()];
+  const combos=(arr,k)=>{ const res=[]; const rec=(start,combo)=>{ if(combo.length===k){res.push(combo.slice());return;} for(let i=start;i<arr.length;i++){combo.push(arr[i]);rec(i+1,combo);combo.pop();} }; rec(0,[]); return res; };
+  for(const c of combos(idx,5)){ const e=heEval5(c.map(i=>cards[i])); if(e.rank>best.rank||(e.rank===best.rank&&e.tie>best.tie)) best=e; }
+  return best;
+}
+function heEval5(cs){
+  const vs=cs.map(c=>c.v).sort((a,b)=>b-a);
+  const counts={}; vs.forEach(v=>counts[v]=(counts[v]||0)+1);
+  const suits={}; cs.forEach(c=>suits[c.s]=(suits[c.s]||0)+1);
+  const flush=Object.values(suits).some(n=>n>=5);
+  const uniq=[...new Set(vs)];
+  let straight=false, shi=0;
+  if(uniq.length===5){ if(uniq[0]-uniq[4]===4){straight=true;shi=uniq[0];} else if(JSON.stringify(uniq)===JSON.stringify([14,5,4,3,2])){straight=true;shi=5;} }
+  const groups=Object.entries(counts).map(([v,n])=>({v:+v,n})).sort((a,b)=>b.n-a.n||b.v-a.v);
+  const tie=groups.reduce((acc,g)=>acc*100+g.v,0);
+  const NAMES=['High Card','Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
+  let rank;
+  if(straight&&flush) rank=8; else if(groups[0].n===4) rank=7; else if(groups[0].n===3&&groups[1]&&groups[1].n===2) rank=6;
+  else if(flush) rank=5; else if(straight) rank=4; else if(groups[0].n===3) rank=3;
+  else if(groups[0].n===2&&groups[1]&&groups[1].n===2) rank=2; else if(groups[0].n===2) rank=1; else rank=0;
+  return {rank,tie:(rank===4||rank===8)?shi:tie,name:NAMES[rank]};
+}
+
+/* ============================================================
+   SPACE PINBALL — simple canvas physics
+   ============================================================ */
+let pbCtx=null, pbRaf=null, pbBall=null, pbScore=0, pbBallNum=1, pbLFlip=0, pbRFlip=0, pbBumpers=[], pbInited=false, pbState='idle';
+const PB_W=300, PB_H=440;
+function openPinball(show=true){
+  const w=document.getElementById('pinball-wrap'); if(!w) return;
+  if(show===false){ w.classList.remove('open'); w.style.display='none'; pinballStop(); return; }
+  w.classList.toggle('open');
+  if(w.classList.contains('open')){ w.style.display='flex';
+    if(!pbInited){ pbInited=true; pbCtx=document.getElementById('pinball-canvas').getContext('2d'); pbBindKeys(); }
+    pinballReset();
+  } else { w.style.display='none'; pinballStop(); }
+}
+function pinballStop(){ if(pbRaf){ cancelAnimationFrame(pbRaf); pbRaf=null; } pbState='idle'; }
+function pinballReset(){
+  pbScore=0; pbBallNum=1; pbState='ready';
+  pbBumpers=[{x:80,y:120,r:20},{x:220,y:120,r:20},{x:150,y:90,r:22},{x:70,y:220,r:16},{x:230,y:220,r:16}];
+  document.getElementById('pb-score').textContent='0'; document.getElementById('pb-ball').textContent='1';
+  document.getElementById('pb-launch-btn').style.display='';
+  _pbPlaceBall(); pbDraw();
+}
+function _pbPlaceBall(){ pbBall={x:PB_W-16,y:PB_H-60,vx:0,vy:0,r:8,launched:false}; }
+function pinballLaunch(){
+  if(!pbBall||pbBall.launched) return;
+  pbBall.launched=true; pbBall.vx=-2.2-Math.random(); pbBall.vy=-12; pbState='play';
+  document.getElementById('pb-launch-btn').style.display='none';
+  if(!pbRaf) pbLoop();
+}
+function pbBindKeys(){
+  document.addEventListener('keydown',e=>{
+    const w=document.getElementById('pinball-wrap'); if(!w||!w.classList.contains('open')) return;
+    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z'){ pbLFlip=1; e.preventDefault(); }
+    if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'){ pbRFlip=1; e.preventDefault(); }
+    if(e.key==='ArrowUp'||e.key===' '){ pinballLaunch(); e.preventDefault(); }
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z') pbLFlip=0;
+    if(e.key==='ArrowRight'||e.key==='m'||e.key==='M') pbRFlip=0;
+  });
+}
+function pbLoop(){ pbStep(); pbDraw(); pbRaf=requestAnimationFrame(pbLoop); }
+function pbStep(){
+  if(!pbBall||!pbBall.launched) return;
+  pbBall.vy+=0.28; // gravity
+  pbBall.x+=pbBall.vx; pbBall.y+=pbBall.vy;
+  // walls
+  if(pbBall.x<pbBall.r){ pbBall.x=pbBall.r; pbBall.vx*=-0.7; }
+  if(pbBall.x>PB_W-pbBall.r){ pbBall.x=PB_W-pbBall.r; pbBall.vx*=-0.7; }
+  if(pbBall.y<pbBall.r){ pbBall.y=pbBall.r; pbBall.vy*=-0.7; }
+  // bumpers
+  for(const b of pbBumpers){ const dx=pbBall.x-b.x, dy=pbBall.y-b.y, d=Math.hypot(dx,dy);
+    if(d<b.r+pbBall.r){ const nx=dx/d, ny=dy/d; pbBall.x=b.x+nx*(b.r+pbBall.r); pbBall.y=b.y+ny*(b.r+pbBall.r);
+      const dot=pbBall.vx*nx+pbBall.vy*ny; pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=1.05; pbBall.vy*=1.05;
+      pbScore+=100; document.getElementById('pb-score').textContent=pbScore; try{playTone&&playTone(660,0.05,'square',0.15);}catch(_){} } }
+  // flippers (two angled bars near the bottom)
+  _pbFlipperHit(46,PB_H-44,'L',pbLFlip);
+  _pbFlipperHit(PB_W-46,PB_H-44,'R',pbRFlip);
+  // drain
+  if(pbBall.y>PB_H+20){ pbBallNum++; if(pbBallNum>3){ pbGameOver(); } else { document.getElementById('pb-ball').textContent=pbBallNum; _pbPlaceBall(); document.getElementById('pb-launch-btn').style.display=''; pbState='ready'; } }
+}
+function _pbFlipperHit(fx,fy,side,active){
+  // simple paddle zone: if ball near flipper Y and on the right side, bounce up (stronger if active)
+  if(pbBall.y>fy-10 && pbBall.y<fy+18){
+    const inX = side==='L' ? (pbBall.x>14 && pbBall.x<PB_W/2) : (pbBall.x>PB_W/2 && pbBall.x<PB_W-14);
+    if(inX){ pbBall.vy=active? -10 : -6; pbBall.vx += side==='L'? 2 : -2; if(active){ pbScore+=10; document.getElementById('pb-score').textContent=pbScore; } }
+  }
+}
+function pbGameOver(){
+  pinballStop(); pbState='over';
+  document.getElementById('pb-launch-btn').style.display='';
+  document.getElementById('pb-launch-btn').textContent='Play Again';
+  document.getElementById('pb-launch-btn').onclick=()=>{ document.getElementById('pb-launch-btn').textContent='Launch'; document.getElementById('pb-launch-btn').onclick=pinballLaunch; pinballReset(); };
+  if(typeof recordScore==='function' && pbScore>0) recordScore('pinball', pbScore, '3 balls');
+  if(typeof aqAddCredits==='function'){ const r=Math.floor(pbScore/500); if(r>0){ aqAddCredits(r); toast('🕹️ +'+r+' credits!'); } }
+}
+function pbDraw(){
+  if(!pbCtx) return; const c=pbCtx; c.clearRect(0,0,PB_W,PB_H);
+  // bumpers
+  pbBumpers.forEach(b=>{ c.beginPath(); c.arc(b.x,b.y,b.r,0,7); c.fillStyle='#3aa0ff'; c.fill(); c.lineWidth=2; c.strokeStyle='#bfe6ff'; c.stroke(); });
+  // flippers
+  c.strokeStyle='#ffd166'; c.lineWidth=6; c.lineCap='round';
+  c.beginPath(); c.moveTo(14,PB_H-30); c.lineTo(PB_W/2-6, PB_H-(pbLFlip?52:38)); c.stroke();
+  c.beginPath(); c.moveTo(PB_W-14,PB_H-30); c.lineTo(PB_W/2+6, PB_H-(pbRFlip?52:38)); c.stroke();
+  // ball
+  if(pbBall){ c.beginPath(); c.arc(pbBall.x,pbBall.y,pbBall.r,0,7); c.fillStyle='#fff'; c.fill(); }
+}
+
 function openRhythm(show=true){
   const w=document.getElementById('rhythm-wrap'); if(!w) return;
   const opening = show && !w.classList.contains('open');
@@ -13695,7 +13912,7 @@ const SOL_VALS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SOL_RED   = new Set(['♥','♦']);
 let solStock=[], solWaste=[], solFoundations=[[],[],[],[]], solTableau=[[],[],[],[],[],[],[]];
 let solSelected=null, solMoves=0;
-let solBet = 10;
+let solBet = 10, solWager = 0;
 let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
 let solDragState=null, solUndoStack=[], solFlipSet=new Set();
 let _solitaireInited=false;
@@ -13758,12 +13975,11 @@ function solMakeDeck(){
 }
 
 function newSolitaireGame(){
-  const cost = Math.max(5, Math.min(aqGetCredits(), solBet));
-  if (aqGetCredits() < 5) {
-    if (window.toast) window.toast('Need at least 5 credits to play!');
-    return;
-  }
-  aqSetCredits(aqGetCredits() - cost);
+  // wager what you can; if you're broke it's a free (0-stake) game
+  const cost = Math.max(0, Math.min(aqGetCredits(), solBet));
+  solWager = cost;
+  if (cost > 0) aqSetCredits(aqGetCredits() - cost);
+  else if (window.toast) window.toast('No credits — playing for free!');
   const deck=solMakeDeck();
   solTableau=[];
   for(let c=0;c<7;c++){
@@ -14092,7 +14308,9 @@ function solRunAutoComplete(){
 function solOnWin(){
   solStopTimer();
   const solMultiplier = Math.max(1.5, Math.min(5, 5000 / Math.max(1, solMoves * solSeconds)));
-  const solPayout = Math.floor(solBet * solMultiplier);
+  // pay out on the actual wager; a free (0-stake) win still grants a small consolation
+  const wager = (typeof solWager === 'number') ? solWager : solBet;
+  const solPayout = wager > 0 ? Math.floor(wager * solMultiplier) : 10;
   aqAddCredits(solPayout);
   const timeStr = solTimerFmt(solSeconds);
   unlockTheme('retro');
@@ -14663,8 +14881,8 @@ function bjHandTotal(hand){
 function bjDeal(){
   if(!bjGameOver) return; // block re-dealing mid-hand
   const betInp=document.getElementById('bj-bet');
-  bjBet=Math.max(1,Math.min(aqGetCredits(),parseInt(betInp?betInp.value:10)||10));
-  if(bjBet>aqGetCredits()){bjSetStatus('Not enough credits!');return;}
+  // allow a 0 bet so you can keep playing for fun with no credits
+  bjBet=Math.max(0,Math.min(aqGetCredits(),parseInt(betInp?betInp.value:10)||10));
   // Deduct bet upfront — wins/pushes return it back
   aqSetCredits(aqGetCredits()-bjBet);
   bjUpdateBalance();
@@ -15322,7 +15540,7 @@ function bjUpdateBalance(){
           <div id="slots-bet-row">
             <span id="slots-bet-label">Bet:</span>
             <button class="slots-btn" onclick="slotsAdjustBet(-5)">−</button>
-            <input id="slots-bet-inp" type="number" min="1" value="10">
+            <input id="slots-bet-inp" type="number" min="0" value="10">
             <button class="slots-btn" onclick="slotsAdjustBet(5)">+</button>
           </div>
           <div id="slots-controls">
@@ -15439,7 +15657,7 @@ function bjUpdateBalance(){
     <div id="bj-status"></div>
     <div id="bj-balance">Credits: <span id="bj-bal">100</span></div>
     <div id="bj-bet-area">
-      Bet: <input id="bj-bet" type="number" value="10" min="1" max="100" style="width:60px">
+      Bet: <input id="bj-bet" type="number" value="10" min="0" max="100" style="width:60px">
       <button class="win95-btn" onclick="bjDeal()">Deal</button>
     </div>
     <div id="bj-actions" style="display:none">
@@ -15447,6 +15665,39 @@ function bjUpdateBalance(){
       <button class="win95-btn" onclick="bjStand()">Stand</button>
       <button class="win95-btn" id="bj-double-btn" onclick="bjDouble()">Double</button>
     </div>
+  </div>
+</div>
+
+<!-- TEXAS HOLD'EM -->
+<div id="holdem-wrap" style="display:none">
+  <div class="sol-titlebar" id="holdem-titlebar">
+    <span>🂡 Texas Hold'em</span>
+    <button class="sol-titlebtn sol-close" onclick="openHoldem(false)">×</button>
+  </div>
+  <div id="holdem-area">
+    <div class="he-seat"><div class="he-label">Dealer (CPU) — <span id="he-cpu-chips">500</span> 🪙</div><div id="he-cpu-cards" class="he-cards"></div></div>
+    <div id="he-board-row"><div class="he-label">Board · Pot <span id="he-pot">0</span></div><div id="he-board" class="he-cards"></div></div>
+    <div id="he-msg">Press Deal to start a hand.</div>
+    <div class="he-seat"><div class="he-label">You — <span id="he-you-chips">500</span> 🪙</div><div id="he-you-cards" class="he-cards"></div></div>
+    <div id="he-controls">
+      <button class="win95-btn" id="he-deal-btn" onclick="heDeal()">Deal</button>
+      <button class="win95-btn" id="he-check-btn" onclick="heAction('check')" style="display:none">Check/Call</button>
+      <button class="win95-btn" id="he-bet-btn" onclick="heAction('bet')" style="display:none">Bet 20</button>
+      <button class="win95-btn" id="he-fold-btn" onclick="heAction('fold')" style="display:none">Fold</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPACE PINBALL -->
+<div id="pinball-wrap" style="display:none">
+  <div class="sol-titlebar" id="pinball-titlebar">
+    <span>🕹️ Space Pinball</span>
+    <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
+  </div>
+  <div id="pinball-area">
+    <canvas id="pinball-canvas" width="300" height="440"></canvas>
+    <div id="pinball-hud"><span>Score <b id="pb-score">0</b></span><span>Ball <b id="pb-ball">1</b>/3</span><button class="win95-btn" id="pb-launch-btn" onclick="pinballLaunch()">Launch</button></div>
+    <div id="pinball-help">← / → or Z / M = flippers · ↑ or Space = launch</div>
   </div>
 </div>
 

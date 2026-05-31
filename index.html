@@ -144,20 +144,20 @@
     #logo.logo-jello img { animation: logoJello .85s cubic-bezier(.34,1.56,.64,1) forwards; }
     /* Beat thump — purely CSS, GPU composited, zero JS overhead while playing */
     #logo.logo-beat  img { animation: logoBeat .5s ease-in-out infinite; }
-    #kbd-hint { font-size:10px;color:rgba(255,255,255,0.75);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
-    .k { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.38);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:#fff; }
-    #hdr-clock { font-size:13px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
-    #hdr-credits { font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
+    #kbd-hint { font-size:10px;color:var(--hdr-text-soft,rgba(255,255,255,0.75));display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1; }
+    .k { background:rgba(127,127,127,0.22);border:1px solid var(--hdr-text-soft,rgba(255,255,255,0.38));border-radius:5px;padding:1px 5px;font-family:monospace;font-size:9px;color:var(--hdr-text,#fff); }
+    #hdr-clock { font-size:13px;font-weight:700;color:var(--hdr-text,#fff);font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
+    #hdr-credits { font-size:11px;font-weight:700;color:var(--hdr-text,#fff);background:rgba(127,127,127,0.22);border:1px solid var(--hdr-text-soft,rgba(255,255,255,0.18));border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
     #hdr-credits:hover { background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.4); }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
-#wx-temp { font-size:12px; font-weight:700; color:#fff; }
+#wx-temp { font-size:12px; font-weight:700; color:var(--hdr-text,#fff); }
     #auth-area { display:flex;align-items:center;gap:8px;flex-shrink:0; }
     #gear-btn, #kbd-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;
-      width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;
+      width:30px;height:30px;cursor:pointer;color:var(--hdr-text,#fff);font-size:15px;
       display:flex;align-items:center;justify-content:center;transition:all .18s;
       box-shadow: 0 2px 8px rgba(0,80,160,0.2), inset 0 1px 0 rgba(255,255,255,0.45);
     }
@@ -366,14 +366,15 @@
     #viz-canvas-wrap:hover #viz-preset-bar { display:flex !important; }
     /* Floating reaction emotes (rooms only) */
     #reaction-layer { position:absolute; inset:0; z-index:14; pointer-events:none; overflow:hidden; }
-    #reaction-bar { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); z-index:15;
-      display:none; gap:4px; padding:5px 8px; border-radius:999px;
+    #reaction-bar { position:absolute; bottom:8px; right:8px; left:auto; top:auto; transform:none; z-index:15;
+      width:auto; height:auto; box-sizing:border-box;
+      display:none; gap:2px; padding:3px 6px; border-radius:999px;
       background:rgba(0,0,0,0.42); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.18);
       opacity:0; transition:opacity .2s; }
     #player-bubble:hover #reaction-bar { opacity:1; }
-    body.in-room #reaction-bar { display:flex; }
-    #reaction-bar button { background:transparent; border:none; font-size:18px; line-height:1; cursor:pointer;
-      padding:2px 4px; border-radius:8px; transition:transform .1s, background .15s; }
+    body.in-room #reaction-bar { display:inline-flex; }
+    #reaction-bar button { background:transparent; border:none; font-size:14px; line-height:1; cursor:pointer;
+      padding:2px 3px; border-radius:8px; transition:transform .1s, background .15s; }
     #reaction-bar button:hover { transform:scale(1.3); background:rgba(255,255,255,0.12); }
     .reaction-float { position:absolute; bottom:48px; font-size:30px; pointer-events:none;
       animation:reactFloat 3s ease-out forwards; will-change:transform,opacity;
@@ -589,7 +590,7 @@
     #synth-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42);border-radius:50%;
-      width:30px;height:30px;cursor:pointer;color:#fff;font-size:15px;
+      width:30px;height:30px;cursor:pointer;color:var(--hdr-text,#fff);font-size:15px;
       display:flex;align-items:center;justify-content:center;transition:all .18s;
       box-shadow: 0 2px 8px rgba(0,80,160,0.2), inset 0 1px 0 rgba(255,255,255,0.45);
     }
@@ -1790,9 +1791,8 @@
       }
       #search-wrap { background: rgba(215,238,255,0.45); }
 
-      /* Buddy + restore above tools bar */
-      #aqua-buddy  { bottom: calc(50px + 44px + 16px) !important; right: 14px; }
-      #buddy-restore-btn { bottom: calc(50px + 44px + 8px) !important; right: 8px; }
+      /* Aqua Buddy is hidden on mobile — too cramped, and it overlaps content */
+      #aqua-buddy, #buddy-restore-btn { display: none !important; }
 
       /* Gun not usable on touch — hide */
       #aqua-gun { display: none !important; }
@@ -2106,15 +2106,15 @@
 /* ── ROOM BADGE ─────────────────────────────────── */
 #room-badge {
   display: none; align-items: center; gap: 6px;
-  background: rgba(0,0,0,0.18); border-radius: var(--r-btn);
-  border: 1px solid rgba(255,255,255,0.3); padding: 3px 10px 3px 8px;
-  color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0;
+  background: rgba(127,127,127,0.2); border-radius: var(--r-btn);
+  border: 1px solid var(--hdr-text-soft,rgba(255,255,255,0.3)); padding: 3px 10px 3px 8px;
+  color: var(--hdr-text,#fff); font-size: 11px; font-weight: 700; flex-shrink: 0;
 }
 #room-badge-code { font-size: 12px; letter-spacing: 1px; }
 #room-badge-members { opacity: 0.85; font-size: 10px; }
 #room-badge button {
-  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35);
-  color: #fff; border-radius: var(--r-btn); padding: 2px 7px; cursor: pointer;
+  background: rgba(127,127,127,0.22); border: 1px solid var(--hdr-text-soft,rgba(255,255,255,0.35));
+  color: var(--hdr-text,#fff); border-radius: var(--r-btn); padding: 2px 7px; cursor: pointer;
   font-size: 10px; transition: background .14s;
 }
 #room-badge button:hover { background: rgba(255,255,255,0.35); }
@@ -2944,7 +2944,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #apps-btn {
       background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 50%, rgba(0,0,0,0.05) 100%);
       border:1.5px solid rgba(255,255,255,0.42); border-radius:50%;
-      width:30px; height:30px; cursor:pointer; color:#fff; font-size:13px;
+      width:30px; height:30px; cursor:pointer; color:var(--hdr-text,#fff); font-size:13px;
       display:flex; align-items:center; justify-content:center; transition:all .18s;
       box-shadow: 0 2px 8px rgba(0,80,160,0.2), inset 0 1px 0 rgba(255,255,255,0.45);
       position:relative;
@@ -4044,7 +4044,7 @@ body.osmode #room-badge { order:7; }
 body.osmode #auth-area { order:8; }
 body.osmode #apps-menu-wrap, body.osmode #gear-btn { display:none !important; }
 /* the little active-app title shown after the logo */
-#mb-appname { order:1; color:#fff; font-weight:800; font-size:12px;
+#mb-appname { order:1; color:var(--hdr-text,#fff); font-weight:800; font-size:12px;
   letter-spacing:.2px; opacity:.95; white-space:nowrap; }
 /* shrink header widgets to fit the thin menubar */
 body.osmode #hdr-credits { padding:1px 8px; font-size:10px; }
@@ -5627,6 +5627,53 @@ function hexDerived(hex, lightFactor, darkFactor) {
   };
 }
 
+// Pick a readable text colour for the top bar based on its (possibly gradient) background.
+// Parses every colour stop in the background string, averages their luminance, and sets
+// --hdr-text / --hdr-text-soft so header text stays legible on both light and dark themes.
+function _relLum(r, g, b) {
+  const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function _parseColors(str) {
+  const out = [];
+  if (!str) return out;
+  // #rgb / #rrggbb
+  const hexRe = /#([0-9a-f]{3}|[0-9a-f]{6})\b/gi;
+  let m;
+  while ((m = hexRe.exec(str))) {
+    let h = m[1];
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    out.push([parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]);
+  }
+  // rgb()/rgba()
+  const rgbRe = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/gi;
+  while ((m = rgbRe.exec(str))) out.push([+m[1], +m[2], +m[3]]);
+  return out;
+}
+// Reads the ACTUAL rendered top-bar background (covers per-era CSS overrides, not just the
+// theme's --hdr-bg value) and sets readable text vars. Call after era/scheme are applied.
+function applyHdrTextContrast() {
+  const r = document.documentElement.style;
+  const hdr = document.getElementById('hdr');
+  let cols = [];
+  if (hdr) {
+    const cs = getComputedStyle(hdr);
+    cols = _parseColors(cs.backgroundImage);          // gradients (resolved to rgb stops)
+    if (!cols.length) cols = _parseColors(cs.backgroundColor); // solid fills
+  }
+  if (!cols.length) { r.setProperty('--hdr-text', '#fff'); r.setProperty('--hdr-text-soft', 'rgba(255,255,255,0.78)'); return; }
+  const avg = cols.reduce((s, c) => s + _relLum(c[0], c[1], c[2]), 0) / cols.length;
+  if (avg > 0.5) {
+    // Light header → dark text
+    r.setProperty('--hdr-text', '#15202b');
+    r.setProperty('--hdr-text-soft', 'rgba(20,32,43,0.66)');
+  } else {
+    // Dark/colourful header → white text
+    r.setProperty('--hdr-text', '#ffffff');
+    r.setProperty('--hdr-text-soft', 'rgba(255,255,255,0.78)');
+  }
+}
+
 function applyAccentToDOM(accent) {
   const r = document.documentElement.style;
   r.setProperty('--accent', accent);
@@ -5694,6 +5741,8 @@ function applyTheme(name, customAccent) {
   }
   currentTheme = name;
   window._vizColor = accent;
+  // Update top-bar text colour to contrast with the now-rendered header background
+  applyHdrTextContrast();
 }
 function toggleAppsMenu() {
   const menu = document.getElementById('apps-menu');
@@ -8491,6 +8540,8 @@ function setOsMode() {
   document.body.classList.toggle('osmode', want);
   if (want && document.getElementById('start-menu')) document.getElementById('start-menu').classList.remove('open');
   if (typeof placeSettings === 'function') placeSettings();
+  // osmode changes the top-bar background — recompute readable text colour
+  if (typeof applyHdrTextContrast === 'function') applyHdrTextContrast();
 }
 function osBoot() {
   setOsMode();

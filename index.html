@@ -48,11 +48,18 @@
       position:fixed; inset:0; z-index:0; overflow:hidden; border-radius:0;
       background: #111;
     }
-    #immersive-bg { position:absolute; inset:-40px; background-size:300% 300%; background-position:0% 50%;
-      filter:blur(60px) brightness(0.5) saturate(1.4); opacity:0; transition:opacity .8s ease;
-      transform:scale(1.1); pointer-events:none; }
+    #immersive-bg { position:absolute; inset:-40px; background-size:200% 200%; background-position:50% 50%;
+      filter:blur(48px) brightness(0.8) saturate(1.7); opacity:0; transition:opacity .8s ease;
+      transform:scale(1.15); pointer-events:none; animation:immersiveDrift 26s ease-in-out infinite; }
     body.immersive #immersive-bg.active { opacity:1; }
-    body.immersive .orb { opacity:0.15; transition:opacity .8s ease; }
+    body.immersive .orb { opacity:0.55; transition:opacity .8s ease; }
+    @keyframes immersiveDrift {
+      0%   { background-position:50% 50%; }
+      25%  { background-position:62% 40%; }
+      50%  { background-position:42% 60%; }
+      75%  { background-position:58% 56%; }
+      100% { background-position:50% 50%; }
+    }
     .orb { position:absolute; border-radius:50%; }
     /* Large glow orb — top-left (tinted by theme) */
     .o1 { width:700px;height:700px;
@@ -1361,6 +1368,9 @@
     }
     .theme-swatch:hover { border-color:var(--accent);color:var(--accent); }
     .theme-swatch.on { background:var(--accent);color:#fff;border-color:var(--accent); }
+    .theme-swatch.locked { opacity:.55;border-style:dashed;cursor:help;font-weight:600; }
+    .theme-swatch.locked::before { opacity:.4;filter:grayscale(1); }
+    .theme-swatch.locked:hover { opacity:.8;border-color:var(--border);color:#333; }
     .theme-section { border-top:1px solid var(--border);padding-top:10px;margin-top:10px; }
     .theme-label { font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700; }
 
@@ -5547,14 +5557,6 @@ const THEMES = {
            bg:'linear-gradient(165deg,#06243a 0%,#0a3550 45%,#063b46 100%)',
            hdr:'linear-gradient(180deg,rgba(40,90,130,0.7),rgba(16,50,76,0.6))',
            panel:'rgba(12,38,58,0.72)', border:'rgba(80,200,255,0.45)' } },
-  pixel: { name:'Pixel Handheld', family:'fun', era:'pixel',
-    font:"'VT323','Courier New',monospace",
-    light:{ accent:'#c81e2e', accent2:'#e0a020', text:'#1a1a14', text2:'#5a5a44',
-            bg:'#cfd8b0', hdr:'linear-gradient(180deg,#9aa878,#7a8a5a)',
-            panel:'#e6ecd0', border:'#5a6a3a' },
-    dark:{ accent:'#e63946', accent2:'#ffd166', text:'#e8e8f0', text2:'#8a8ab0',
-           bg:'#0f0f23', hdr:'linear-gradient(180deg, #2a2a5a, #16163a)',
-           panel:'#1c1c3a', border:'#4a4a7a' } },
   mono90s: { name:'Mono Terminal', family:'fun', era:'mono90s',
     font:"'Courier New', Courier, monospace",
     light:{ accent:'#0a0a0a', accent2:'#444444', text:'#0a0a0a', text2:'#444444',
@@ -5571,10 +5573,44 @@ const THEMES = {
            bg:'linear-gradient(180deg,#16203a,#0e1626)',
            hdr:'linear-gradient(180deg,#1c356a 0%,#0a1f4a 100%)',
            panel:'#1a2438', border:'#2a3a58' } },
+  /* ===== Unlockable reward themes (earned by playing games) ===== */
+  neon: { name:'Neon Arcade', family:'fun', era:'neon', reward:true,
+    font:"'Press Start 2P','VT323',monospace",
+    light:{ accent:'#ff2e9a', accent2:'#16f0ff', text:'#1a0420', text2:'#7a1a6a',
+            bg:'linear-gradient(160deg,#ffd1f0 0%,#d6c4ff 50%,#bff6ff 100%)',
+            hdr:'linear-gradient(180deg,#ff2e9a,#7b2ff7)',
+            panel:'rgba(255,255,255,0.9)', border:'rgba(255,46,154,0.5)' },
+    dark:{ accent:'#ff2e9a', accent2:'#16f0ff', text:'#f6e8ff', text2:'#c08adf',
+           bg:'radial-gradient(circle at 50% 18%,#2a0a4a 0%,#150726 55%,#08020f 100%)',
+           hdr:'linear-gradient(90deg,#ff2e9a,#7b2ff7 60%,#16f0ff)',
+           panel:'rgba(28,8,46,0.86)', border:'rgba(123,47,247,0.6)' } },
+  retro: { name:'Retro Hi-Score', family:'fun', era:'retro', reward:true,
+    font:"'MS Sans Serif',Tahoma,Arial,sans-serif",
+    light:{ accent:'#e23b2e', accent2:'#f2b705', text:'#231a12', text2:'#6a4a2a',
+            bg:'#0a8a6a', hdr:'linear-gradient(90deg,#e23b2e,#f2b705)',
+            panel:'#f4ead2', border:'rgba(40,20,0,0.45)' },
+    dark:{ accent:'#ff5a3c', accent2:'#ffcf2e', text:'#fbeed2', text2:'#caa46a',
+           bg:'#0c2a24', hdr:'linear-gradient(90deg,#8a1f14,#b87a06)',
+           panel:'#241a10', border:'rgba(255,150,40,0.4)' } },
+  pixel: { name:'Pixel Handheld', family:'fun', era:'pixel', reward:true,
+    font:"'VT323','Courier New',monospace",
+    light:{ accent:'#2ec27e', accent2:'#e0a020', text:'#0e2a16', text2:'#3a6a44',
+            bg:'linear-gradient(165deg,#bfe6b0,#9fd89a)', hdr:'linear-gradient(180deg,#6a9a5a,#4a7a3a)',
+            panel:'#e6f2d8', border:'#3a5a2a' },
+    dark:{ accent:'#39e6a0', accent2:'#ffd166', text:'#e8ffe8', text2:'#7ad0a0',
+           bg:'radial-gradient(circle at 50% 20%,#0f2a23,#0a1a16 60%,#06100c)',
+           hdr:'linear-gradient(180deg,#1c4a3a,#103024)',
+           panel:'#0f2a20', border:'#2a6a4a' } },
+};
+/* Reward themes are gated until earned by playing games. Keyed by real theme id. */
+const THEME_UNLOCKS = {
+  pixel: { game:'picross',   req:'Solve a Picross puzzle' },
+  neon:  { game:'slots',     req:'Hit a Slots jackpot' },
+  retro: { game:'solitaire', req:'Win a game of Solitaire' },
 };
 /* migrate removed theme ids → current ones */
-const THEME_MIGRATE = { macos:'beos', yosemite:'beos', retro:'win95', nintendo:'wii', dark:'default',
-                        frost:'aero', glass:'aero', neon:'y2k' };
+const THEME_MIGRATE = { macos:'beos', yosemite:'beos', nintendo:'wii', dark:'default',
+                        frost:'aero', glass:'aero' };
 let currentTheme = 'default';
 function osScheme(){ return localStorage.getItem('aq_scheme') === 'dark' ? 'dark' : 'light'; }
 
@@ -5687,6 +5723,11 @@ function _themeAccent(name) {
 }
 function selectTheme(name, btn) {
   if (THEME_MIGRATE[name]) name = THEME_MIGRATE[name];
+  // Reward themes stay locked until earned by playing the matching game
+  if (THEME_UNLOCKS[name] && !getUnlockedThemes().includes(name)) {
+    toast('🔒 Locked — ' + THEME_UNLOCKS[name].req + ' to unlock this theme');
+    return;
+  }
   applyTheme(name, null);
   document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('on'));
   document.querySelectorAll(`.theme-swatch[data-theme="${name}"]`).forEach(s => s.classList.add('on'));
@@ -5742,7 +5783,7 @@ function unlockTheme(name) {
 function showThemeUnlockToast(themeName) {
   const t = document.createElement('div');
   t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 20px;border-radius:20px;z-index:9999;font-size:13px;pointer-events:none;transition:opacity .5s';
-  t.textContent = '🔓 Theme unlocked: ' + themeName + '!';
+  t.textContent = '🔓 Theme unlocked: ' + (THEMES[themeName]?.name || themeName) + '!';
   document.body.appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 600); }, 3000);
 }
@@ -5754,14 +5795,23 @@ function renderThemeSwatches() {
   const sc = osScheme();
   const byFam = {};
   Object.entries(THEMES).forEach(([id, t]) => { (byFam[t.family || 'fun'] ||= []).push([id, t]); });
+  const unlocked = getUnlockedThemes();
   let html = '';
   ['mac', 'windows', 'console', 'fun'].forEach(fam => {
     if (!byFam[fam]) return;
     html += `<div class="theme-fam-lbl">${THEME_FAMILY_LABELS[fam] || fam}</div>`;
     byFam[fam].forEach(([id, t]) => {
       const c = (t.light && t.dark) ? t[sc] : t;
-      html += `<button class="theme-swatch${id === cur ? ' on' : ''}" data-theme="${id}" `+
-              `onclick="selectTheme('${id}',this)" style="--sw:${c.accent}" title="${t.name}">${t.name}</button>`;
+      const lockInfo = THEME_UNLOCKS[id];
+      const locked = lockInfo && !unlocked.includes(id);
+      if (locked) {
+        html += `<button class="theme-swatch locked" data-theme="${id}" `+
+                `onclick="selectTheme('${id}',this)" style="--sw:${c.accent}" `+
+                `title="🔒 ${lockInfo.req} to unlock">🔒 ${t.name}</button>`;
+      } else {
+        html += `<button class="theme-swatch${id === cur ? ' on' : ''}" data-theme="${id}" `+
+                `onclick="selectTheme('${id}',this)" style="--sw:${c.accent}" title="${t.name}">${t.name}</button>`;
+      }
     });
   });
   grid.innerHTML = html;
@@ -6068,15 +6118,18 @@ function restoreSession() {
       document.getElementById('ph').style.display = 'none';
     }
   } catch {}
-  // Auto-rejoin room on refresh if session room matches URL hash
+  // Auto-rejoin room on refresh. We no longer require the URL hash to match — host status is
+  // verified against Firebase inside initRoom, so a refresh that strips the hash keeps you host.
   try {
     const saved = JSON.parse(localStorage.getItem('aq_session_room') || 'null');
-    const hashRoom = window.location.hash.slice(1);
-    if (saved?.roomId && hashRoom && saved.roomId === hashRoom) {
+    if (saved?.roomId) {
+      // Keep the deep-link hash consistent with the rejoined room
+      if (window.location.hash.slice(1) !== saved.roomId) window.location.hash = saved.roomId;
       // Defer until initRoom is available (room-sync.js loads as module)
       setTimeout(() => {
         if (typeof window.initRoom === 'function') {
           closeSplash();
+          // saved.wasHost is only a *request* — initRoom validates it against rooms/{id}/hostUserId
           window.initRoom(saved.roomId, saved.wasHost);
           if (typeof updateRoomChatLabel === 'function') updateRoomChatLabel(saved.roomId);
           _clearRoomChatPlaceholder();
@@ -6179,6 +6232,9 @@ function onState(e) {
   }
 }
 function onEnded() {
+  // In a room, only the controller advances the queue — guests wait for the host's broadcast,
+  // otherwise both sides advance independently and tracks jump/repeat.
+  if (window._currentRoomId && !window._canControl) return;
   if (repeat && current) { playVideo(current); return; }
   if (queue.length) { popQueue(); return; }
   if (automix && current) fetchAutomix(current.id);
@@ -6587,7 +6643,10 @@ function playNext(v) {
 }
 function popQueue() {
   if (!queue.length) return;
-  const v = queue.shift();
+  let v = queue.shift();
+  // Guard against immediately replaying the song that's already current (stale duplicate at the front)
+  while (v && current && v.id === current.id && queue.length) v = queue.shift();
+  if (!v) { renderQueue(); return; }
   if (origQueue.length) {
     const idx = origQueue.findIndex(x => x.id === v.id);
     if (idx >= 0) origQueue.splice(idx, 1);
@@ -7343,7 +7402,18 @@ function viewPl(id) {
   });
 }
 async function viewYtPl(pl) { activePlId=pl.id; renderPls(); document.getElementById('q').value=pl.ytId; await loadYtPlaylist(pl.ytId); }
-function playPl(id) { if (_guestBlocked()) return; const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return; playVideo(pl.videos[0]); queue=pl.videos.slice(1); renderQueue(); toast(`Playing: ${pl.name}`); }
+function playPl(id) {
+  if (_guestBlocked()) return;
+  const pl=playlists.find(p=>p.id===id); if(!pl?.videos.length) return;
+  const rest = pl.videos.slice(1);
+  playVideo(pl.videos[0]);
+  // Play All drops the whole playlist at the TOP of the queue, keeping anything already queued after it
+  queue = [...rest, ...queue];
+  if (shuffle) origQueue = [...rest, ...origQueue];
+  renderQueue(); saveSession();
+  if (window._canControl) window.broadcastRoomState?.();
+  toast(`Playing: ${pl.name}`);
+}
 function backToSearch() { activePlId=null; renderPls(); document.getElementById('results').innerHTML='<div class="empty">Search for music, paste a YouTube link, video ID, or playlist URL</div>'; }
 function newPlaylistPrompt() { document.getElementById('pl-name-inp').value=''; openModal('pl-modal'); setTimeout(()=>document.getElementById('pl-name-inp').focus(),80); }
 function confirmNewPl() { const name=document.getElementById('pl-name-inp').value.trim(); if(!name) return; playlists.push({id:Date.now(),name,videos:[]}); savePls(); closeModal('pl-modal'); toast(`Playlist "${name}" created`); }
@@ -7534,7 +7604,8 @@ function toggleShuffle() {
     origQueue = [...queue];
     for (let i=queue.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [queue[i],queue[j]]=[queue[j],queue[i]]; }
   } else {
-    if (origQueue.length) queue = [...origQueue];
+    // Restore original order, but never re-insert the track that's already playing
+    if (origQueue.length) queue = origQueue.filter(v => !current || v.id !== current.id);
     origQueue = [];
   }
   renderQueue();
@@ -7953,34 +8024,69 @@ const LB_GAMES = {
   rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
   holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
 };
+const LB_PATH = 'leaderboard';
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
 function _lbWrite(d) { localStorage.setItem('aq_scores', JSON.stringify(d)); }
+// Username, defaulting to "Anonymous" when the player hasn't set one
+function _lbName() { return (localStorage.getItem('aq_username') || '').trim() || 'Anonymous'; }
+function _lbSort(game, rows) { rows.sort((a, b) => LB_GAMES[game].lower ? a.score - b.score : b.score - a.score); return rows; }
+
+// Live global scores pulled from Firebase, keyed by game
+const _lbGlobalCache = {};
+const _lbListeners = {};
+
 function recordScore(game, score, detail) {
   if (!LB_GAMES[game] || !isFinite(score)) return;
+  const entry = { name: _lbName(), score: Math.round(score), detail: detail || '', ts: Date.now() };
+  // Local cache (offline fallback / personal record)
   const d = _lbRead();
-  const list = d[game] || [];
-  list.push({ name: (localStorage.getItem('aq_username') || 'You'), score: Math.round(score), detail: detail || '', ts: Date.now() });
-  list.sort((a, b) => LB_GAMES[game].lower ? a.score - b.score : b.score - a.score);
-  d[game] = list.slice(0, 10);
+  d[game] = _lbSort(game, [...(d[game] || []), entry]).slice(0, 10);
   _lbWrite(d);
+  // Global leaderboard on Firebase
+  try {
+    const { push: fbPush, ref: fbRef } = window._fbFns || {};
+    if (window._aqDb && fbPush && fbRef) fbPush(fbRef(window._aqDb, `${LB_PATH}/${game}`), entry);
+  } catch {}
   if (document.getElementById('win-leaderboard')?.classList.contains('open')) renderLeaderboard();
 }
-function renderLeaderboard(only) {
+
+// Subscribe (once per game) to the global board so the panel live-updates
+function _lbSubscribe(game) {
+  if (_lbListeners[game]) return;
+  const { ref: fbRef, onValue: fbOnValue } = window._fbFns || {};
+  if (!window._aqDb || !fbRef || !fbOnValue) return;
+  _lbListeners[game] = true;
+  fbOnValue(fbRef(window._aqDb, `${LB_PATH}/${game}`), snap => {
+    const obj = snap.exists() ? snap.val() : {};
+    _lbGlobalCache[game] = _lbSort(game, Object.values(obj)).slice(0, 10);
+    if (document.getElementById('win-leaderboard')?.classList.contains('open')) _lbRenderRows();
+  });
+}
+
+function _lbRenderRows(only) {
   const body = document.getElementById('leaderboard-body'); if (!body) return;
-  const d = _lbRead();
+  const local = _lbRead();
   const games = only ? [only] : Object.keys(LB_GAMES);
   body.innerHTML = games.map(g => {
-    const meta = LB_GAMES[g], rows = d[g] || [];
+    const meta = LB_GAMES[g];
+    // Prefer the live global board; fall back to the local cache when offline
+    const rows = (_lbGlobalCache[g] && _lbGlobalCache[g].length) ? _lbGlobalCache[g] : (local[g] || []);
     const list = rows.length
       ? rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${i+1}</span>`+
-          `<span class="lb-name">${(r.name||'You').replace(/</g,'&lt;')}</span>`+
+          `<span class="lb-name">${(r.name||'Anonymous').replace(/</g,'&lt;')}</span>`+
           `<span class="lb-score">${r.score} ${meta.unit}</span>`+
           `<span class="lb-detail">${(r.detail||'').replace(/</g,'&lt;')}</span></div>`).join('')
       : '<div class="lb-empty">No scores yet — go play!</div>';
-    return `<div class="lb-game"><div class="lb-game-hdr"><span>${meta.icon} ${meta.label}</span>`+
-      `<button class="lb-clear" onclick="lbClear('${g}')">Clear</button></div>${list}</div>`;
+    return `<div class="lb-game"><div class="lb-game-hdr"><span>${meta.icon} ${meta.label} <em style="opacity:.5;font-style:normal;font-weight:400">· global</em></span></div>${list}</div>`;
   }).join('');
 }
+
+function renderLeaderboard(only) {
+  const games = only ? [only] : Object.keys(LB_GAMES);
+  games.forEach(_lbSubscribe);
+  _lbRenderRows(only);
+}
+// Kept for backward-compat; the global board can't be cleared by clients
 function lbClear(game) {
   const d = _lbRead(); delete d[game]; _lbWrite(d); renderLeaderboard();
 }
@@ -8488,10 +8594,12 @@ function toast(msg) { const el=document.getElementById('toast'); el.textContent=
   function tick(){
     requestAnimationFrame(tick);
     let tgtArr;
-    if(window.analyserNode&&window.actx&&window.actx.state==='running'){
-      const binCount=window.analyserNode.frequencyBinCount;
+    const _an=(typeof _vizAnalyser==='function')?_vizAnalyser():window.analyserNode;
+    const _live=(typeof _vizActxRunning==='function')?_vizActxRunning():(window.actx&&window.actx.state==='running');
+    if(_an&&_live){
+      const binCount=_an.frequencyBinCount;
       if(!_vizBuf||_vizBuf.length!==binCount) _vizBuf=new Uint8Array(binCount);
-      window.analyserNode.getByteFrequencyData(_vizBuf);
+      _an.getByteFrequencyData(_vizBuf);
       tgtArr=Array.from({length:N},(_,i)=>(_vizBuf[Math.floor(i*binCount/N)]/255)*44);
     } else {
       const t=Date.now()/1000, amp=window.playing?1:0.06;
@@ -11009,12 +11117,24 @@ function updateTheaterControls() {
 let _vizActive = false, _vizPreset = localStorage.getItem('aq_viz_preset') || 'spectrum';
 let _vizRafId = null, _vizParticles = [];
 
+// Visualizer audio source resolver. The AquaTune browser extension (capturing YouTube audio)
+// installs window.__aqExtAnalyser + sets window.__aqExtActive when it has a live FFT feed.
+// When present we read from it; otherwise we fall back to the page's own Web Audio analyser.
+function _vizAnalyser() {
+  return (window.__aqExtActive && window.__aqExtAnalyser) ? window.__aqExtAnalyser : window.analyserNode;
+}
+function _vizActxRunning() {
+  if (window.__aqExtActive && window.__aqExtAnalyser) return true; // extension feed is live
+  return !!(window.actx && window.actx.state === 'running');
+}
+
 function _getVizData() {
-  if (window.analyserNode && window.actx && window.actx.state === 'running') {
-    const N = window.analyserNode.frequencyBinCount;
+  const an = _vizAnalyser();
+  if (an && _vizActxRunning()) {
+    const N = an.frequencyBinCount;
     const freq = new Uint8Array(N), time = new Uint8Array(N);
-    window.analyserNode.getByteFrequencyData(freq);
-    window.analyserNode.getByteTimeDomainData(time);
+    an.getByteFrequencyData(freq);
+    an.getByteTimeDomainData(time);
     return { freq, time, live: true };
   }
   const t = Date.now() / 1000, amp = window.playing ? 1 : 0.04, N = 128;
@@ -12702,24 +12822,73 @@ if (_perfMode) document.body.classList.add('perf-mode');
 // ── Immersive mode: Apple Music-style animated color background ──
 window._immersive = localStorage.getItem('aq_immersive') === '1';
 
+const _IMMERSIVE_FALLBACK = ['#3a1c71','#d76d77','#ffaf7b','#1f4287','#21e6c1','#5e2bff'];
+
+function _rgbToHsl(r, g, b) {
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), l=(max+min)/2;
+  let h=0, s=0;
+  if (max!==min) {
+    const d=max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    if (max===r) h=(g-b)/d+(g<b?6:0);
+    else if (max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h/=6;
+  }
+  return [h*360, s, l];
+}
+function _hslToCss(h, s, l) { return `hsl(${Math.round(h)},${Math.round(s*100)}%,${Math.round(l*100)}%)`; }
+
+// Extract a vibrant, distinct palette from album art via a coarse hue/value histogram.
+// Buckets pixels by quantized RGB, scores by frequency × saturation (so vivid colors win over
+// the dominant grey), then picks colors that are far apart in hue and boosts their saturation.
 function _extractImmersiveColors(url, cb) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     try {
+      const N = 32;
       const cv = document.createElement('canvas');
-      cv.width = cv.height = 12;
+      cv.width = cv.height = N;
       const ctx = cv.getContext('2d');
-      ctx.drawImage(img, 0, 0, 12, 12);
-      const d = ctx.getImageData(0, 0, 12, 12).data;
-      const pick = (i) => `rgb(${d[i]},${d[i+1]},${d[i+2]})`;
-      // corners + center + off-center for variety
-      cb([pick(0), pick(4*4*4), pick(8*4*4), pick(44*4), pick(80*4), pick(120*4)]);
+      ctx.drawImage(img, 0, 0, N, N);
+      const d = ctx.getImageData(0, 0, N, N).data;
+      const buckets = new Map();
+      for (let i = 0; i < d.length; i += 4) {
+        const r=d[i], g=d[i+1], b=d[i+2];
+        // quantize to 5 bits per channel for grouping
+        const key = (r>>4)<<8 | (g>>4)<<4 | (b>>4);
+        let e = buckets.get(key);
+        if (!e) { e = {r:0,g:0,b:0,n:0}; buckets.set(key, e); }
+        e.r+=r; e.g+=g; e.b+=b; e.n++;
+      }
+      const cand = [];
+      for (const e of buckets.values()) {
+        const r=e.r/e.n, g=e.g/e.n, b=e.b/e.n;
+        const [h,s,l] = _rgbToHsl(r,g,b);
+        if (l < 0.08 || l > 0.96) continue;            // skip near-black / near-white
+        cand.push({ h, s, l, score: e.n * (0.25 + s) });
+      }
+      cand.sort((a,b) => b.score - a.score);
+      // Pick colors that are spread out in hue for genuine variety
+      const picked = [];
+      for (const c of cand) {
+        if (picked.every(p => Math.min(Math.abs(p.h-c.h), 360-Math.abs(p.h-c.h)) > 25 || Math.abs(p.l-c.l) > 0.22)) {
+          picked.push(c);
+        }
+        if (picked.length >= 6) break;
+      }
+      while (picked.length && picked.length < 5) picked.push(picked[picked.length-1]); // pad
+      if (!picked.length) { cb(_IMMERSIVE_FALLBACK.slice()); return; }
+      // Boost saturation & nudge lightness into a vivid band
+      const colors = picked.map(c => _hslToCss(c.h, Math.min(1, c.s*1.45 + 0.2), Math.max(0.42, Math.min(0.62, c.l*0.9 + 0.18))));
+      cb(colors);
     } catch(e) {
-      cb(['#1a1a2e','#16213e','#0f3460','#533483','#2a0045','#003060']);
+      cb(_IMMERSIVE_FALLBACK.slice());
     }
   };
-  img.onerror = () => cb(['#1a1a2e','#16213e','#0f3460','#533483','#2a0045','#003060']);
+  img.onerror = () => cb(_IMMERSIVE_FALLBACK.slice());
   img.src = url;
 }
 
@@ -12728,8 +12897,22 @@ function updateImmersiveBg(url) {
   if (!el) return;
   if (window._immersive && url) {
     _extractImmersiveColors(url, (colors) => {
-      const grad = `conic-gradient(from 0deg at 40% 40%, ${colors.join(',')}, ${colors[0]})`;
-      el.style.backgroundImage = grad;
+      const c = colors.slice();
+      while (c.length < 6) c.push(c[c.length % colors.length]);
+      // Layered, drifting radial gradients give depth + multi-color vibrancy (not one flat tint)
+      el.style.backgroundImage = [
+        `radial-gradient(60% 55% at 18% 22%, ${c[0]} 0%, transparent 62%)`,
+        `radial-gradient(55% 60% at 82% 28%, ${c[1]} 0%, transparent 60%)`,
+        `radial-gradient(60% 55% at 25% 82%, ${c[2]} 0%, transparent 62%)`,
+        `radial-gradient(55% 55% at 78% 80%, ${c[3]} 0%, transparent 60%)`,
+        `radial-gradient(70% 65% at 50% 50%, ${c[4]} 0%, transparent 70%)`,
+        `linear-gradient(135deg, ${c[5]} 0%, ${c[0]} 100%)`,
+      ].join(',');
+      // Color the animated orbs from the same palette so the whole scene moves and shimmers
+      const root = document.documentElement.style;
+      root.setProperty('--orb1-a', c[0]); root.setProperty('--orb1-b', c[1]);
+      root.setProperty('--orb2-a', c[2]); root.setProperty('--orb2-b', c[3]);
+      root.setProperty('--orb3-a', c[4]); root.setProperty('--orb3-b', c[5]);
       el.classList.add('active');
     });
   } else {
@@ -13829,6 +14012,36 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── PICROSS ──────────────────────────────────────────
 let _pcPuzzle = null, _pcUserGrid = [], _pcSize = 10, _pcSolution = [];
 let _pcSeconds = 0, _pcTimerInt = null;
+let _pcMistakes = 0;                                  // cumulative wrong placements (auto-check)
+let _pcWrongCells = new Set();                        // indices currently flagged wrong
+let _pcAutoCheck = localStorage.getItem('aq_pc_autocheck') !== '0'; // default ON
+function pcUpdateMistakeDisplay(){
+  const el = document.getElementById('picross-mistakes');
+  if (el) el.textContent = _pcAutoCheck ? ('✗ ' + _pcMistakes) : '';
+}
+function pcResetMistakes(){ _pcMistakes = 0; _pcWrongCells.clear(); pcUpdateMistakeDisplay(); }
+// Auto-check: detect a solved board (all required cells filled, none wrong)
+function pcCheckSolved(){
+  const need = _pcSolution.filter(v => v===1).length;
+  const have = _pcUserGrid.filter((v,i) => v===1 && _pcSolution[i]===1).length;
+  const anyWrong = _pcUserGrid.some((v,i) => v===1 && _pcSolution[i]!==1);
+  if (have===need && !anyWrong) {
+    const st = document.getElementById('picross-status');
+    if (st) st.textContent = '🎉 Puzzle solved!';
+    picrossOnWin();
+  }
+}
+function pcToggleAutoCheck(){
+  _pcAutoCheck = !_pcAutoCheck;
+  localStorage.setItem('aq_pc_autocheck', _pcAutoCheck ? '1' : '0');
+  if (!_pcAutoCheck) _pcWrongCells.clear();
+  const btn = document.getElementById('pc-autocheck-btn');
+  if (btn) { btn.classList.toggle('p', _pcAutoCheck); btn.classList.toggle('s', !_pcAutoCheck); btn.textContent = 'Auto-check: ' + (_pcAutoCheck ? 'On' : 'Off'); }
+  const chk = document.getElementById('picross-status');
+  if (chk) chk.textContent = _pcAutoCheck ? 'Auto-check on — mistakes flagged live' : 'Auto-check off — use Check button';
+  pcUpdateMistakeDisplay();
+  renderPicrossGrid();
+}
 function pcFmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function pcStartTimer(){ pcStopTimer(); _pcSeconds=0; const el=document.getElementById('picross-timer'); if(el) el.textContent='0:00';
   _pcTimerInt=setInterval(()=>{ _pcSeconds++; const e=document.getElementById('picross-timer'); if(e) e.textContent=pcFmt(_pcSeconds); },1000); }
@@ -13868,6 +14081,9 @@ function openPicross(show = true) {
   if (w.classList.contains('open')) {
     window.abSayPicross?.('open');
     if (!_picrossInited) { _picrossInited = true; picrossNewPuzzle(); }
+    const ab = document.getElementById('pc-autocheck-btn');
+    if (ab) { ab.classList.toggle('p', _pcAutoCheck); ab.classList.toggle('s', !_pcAutoCheck); ab.textContent = 'Auto-check: ' + (_pcAutoCheck ? 'On' : 'Off'); }
+    pcUpdateMistakeDisplay();
   }
 }
 function loadPicrossPuzzle(puzzle) {
@@ -13875,6 +14091,7 @@ function loadPicrossPuzzle(puzzle) {
   _pcSize = puzzle.size;
   _pcSolution = puzzle.grid.slice();
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
+  pcResetMistakes();
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
 }
@@ -13889,7 +14106,7 @@ function picrossOnWin() {
   playFanfare('win');
   aqAddCredits(25);
   if (window.toast) window.toast('◼ +25 credits for solving the puzzle!');
-  if (typeof recordScore === 'function') recordScore('picross', _pcSeconds, _pcSize+'×'+_pcSize+' · '+pcFmt(_pcSeconds));
+  if (typeof recordScore === 'function') recordScore('picross', _pcSeconds, _pcSize+'×'+_pcSize+' · '+pcFmt(_pcSeconds)+' · '+_pcMistakes+' mistakes');
   setTimeout(() => window.abSayPicross?.('solved', _pcPuzzle?.name || null), 700);
 }
 function pcGetClues(arr, size, isRow) {
@@ -13972,13 +14189,27 @@ function renderPicrossGrid() {
     c.dataset.idx = i;
     if (_pcUserGrid[i]===1) c.classList.add('filled');
     if (_pcUserGrid[i]===2) c.classList.add('marked');
+    if (_pcAutoCheck && _pcWrongCells.has(i)) c.classList.add('wrong');
     c.addEventListener('click', () => {
-      _pcUserGrid[i] = _pcUserGrid[i]===1 ? 0 : 1;
+      const nowFilled = _pcUserGrid[i] !== 1;
+      _pcUserGrid[i] = nowFilled ? 1 : 0;
+      if (_pcAutoCheck) {
+        if (nowFilled && _pcSolution[i] !== 1) {
+          // Placed a wrong cell — flag it and count the mistake
+          if (!_pcWrongCells.has(i)) _pcMistakes++;
+          _pcWrongCells.add(i);
+        } else {
+          _pcWrongCells.delete(i);
+        }
+        pcUpdateMistakeDisplay();
+      }
       renderPicrossGrid();
+      if (_pcAutoCheck) pcCheckSolved();
     });
     c.addEventListener('contextmenu', e => {
       e.preventDefault();
       _pcUserGrid[i] = _pcUserGrid[i]===2 ? 0 : 2;
+      _pcWrongCells.delete(i);
       renderPicrossGrid();
     });
     cellsEl.appendChild(c);
@@ -13986,12 +14217,13 @@ function renderPicrossGrid() {
 }
 function checkPicross() {
   let allCorrect = true;
+  _pcWrongCells.clear();
   const cells = document.querySelectorAll('.pc-cell');
   cells.forEach((c, i) => {
     c.classList.remove('wrong');
     const userFilled = _pcUserGrid[i]===1;
     const solFilled = _pcSolution[i]===1;
-    if (userFilled && !solFilled) { c.classList.add('wrong'); allCorrect=false; }
+    if (userFilled && !solFilled) { c.classList.add('wrong'); _pcWrongCells.add(i); allCorrect=false; }
     else if (!userFilled && solFilled) allCorrect=false;
   });
   const status = document.getElementById('picross-status');
@@ -14008,6 +14240,7 @@ function checkPicross() {
 }
 function resetPicross() {
   _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
+  pcResetMistakes();
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
 }
@@ -14450,26 +14683,23 @@ function solOnWin(){
     solCascadeCards(wrap);
     setTimeout(function(){banner.remove();},4000);
   }
-  // Push to Firebase leaderboard
+  // Record to the global leaderboard (recordScore handles the Firebase write + local cache)
   const solScore=Math.floor(5000/Math.max(1,solMoves*solSeconds));
   if(typeof recordScore==='function') recordScore('solitaire', solScore, solMoves+' moves · '+solTimerFmt(solSeconds));
-  const solUser=localStorage.getItem('aq_username')||'Anonymous';
+  // Refresh the in-game top-scores panel from the same global board
   (function(){
     try {
-      if(window._aqDb){
-        const {push:fbPush,ref:fbRef,query:fbQuery,orderByChild:fbOBC,limitToLast:fbLTL,get:fbGet}=window._fbFns||{};
-        if(fbPush&&fbRef){
-          fbPush(fbRef(window._aqDb,'leaderboard/solitaire'),{username:solUser,moves:solMoves,seconds:solSeconds,score:solScore,timestamp:Date.now()});
-          const q=fbQuery(fbRef(window._aqDb,'leaderboard/solitaire'),fbOBC('score'),fbLTL(10));
-          fbGet(q).then(function(snap){
-            if(!snap.exists()) return;
-            const entries=Object.values(snap.val()).sort((a,b)=>b.score-a.score);
-            const lbDiv=document.getElementById('sol-leaderboard');
-            if(!lbDiv) return;
-            lbDiv.innerHTML='<b>🏆 Top Scores</b><br>'+entries.map((e,i)=>`${i+1}. ${esc(e.username)} — ${e.score} pts (${e.moves} moves, ${solTimerFmt(e.seconds)})`).join('<br>');
-            lbDiv.style.display='';
-          });
-        }
+      const {ref:fbRef,query:fbQuery,orderByChild:fbOBC,limitToLast:fbLTL,get:fbGet}=window._fbFns||{};
+      if(window._aqDb && fbRef && fbGet){
+        const q=fbQuery(fbRef(window._aqDb,`${LB_PATH}/solitaire`),fbOBC('score'),fbLTL(10));
+        setTimeout(()=>fbGet(q).then(function(snap){
+          if(!snap.exists()) return;
+          const entries=Object.values(snap.val()).sort((a,b)=>b.score-a.score);
+          const lbDiv=document.getElementById('sol-leaderboard');
+          if(!lbDiv) return;
+          lbDiv.innerHTML='<b>🏆 Top Scores</b><br>'+entries.map((e,i)=>`${i+1}. ${esc(e.name||'Anonymous')} — ${e.score} pts ${e.detail?('('+esc(e.detail)+')'):''}`).join('<br>');
+          lbDiv.style.display='';
+        }).catch(()=>{}), 400);
       }
     } catch(e) {}
   })();
@@ -15682,6 +15912,7 @@ function bjUpdateBalance(){
   <div id="picross-titlebar">
     <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
     <span id="picross-timer" style="font-size:11px;font-weight:700;color:#fff;opacity:.8;margin-right:6px;font-variant-numeric:tabular-nums;position:relative;z-index:1">0:00</span>
+    <span id="picross-mistakes" style="font-size:11px;font-weight:700;color:#ffd0d0;margin-right:6px;font-variant-numeric:tabular-nums;position:relative;z-index:1">✗ 0</span>
     <select id="pc-size-sel" onchange="picrossNewPuzzle()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff;font-weight:700;position:relative;z-index:1;border-radius:6px;padding:2px 4px;font-size:11px">
       <option value="10">10×10</option>
       <option value="12">12×12</option>
@@ -15703,6 +15934,7 @@ function bjUpdateBalance(){
     </div>
     <div id="picross-status">Left-click: fill &nbsp;|&nbsp; Right-click: mark</div>
     <div id="picross-controls">
+      <button id="pc-autocheck-btn" class="mbtn p" onclick="pcToggleAutoCheck()">Auto-check: On</button>
       <button class="mbtn p" onclick="checkPicross()">Check</button>
       <button class="mbtn s" onclick="resetPicross()">Reset</button>
       <button class="mbtn s" onclick="picrossNewPuzzle()">New</button>

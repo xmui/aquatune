@@ -3270,9 +3270,10 @@ body.perf-mode #aqua-gun { display: none !important; }
     #pinball-wrap.open { display:flex; }
     #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
     #pinball-frame { flex:1; width:100%; height:100%; border:0; background:#000; }
-    #pinball-fallback { position:absolute; left:0; right:0; top:0; padding:3px 10px; font-size:10px;
-      color:var(--text2); background:rgba(0,0,0,0.45); text-align:center; pointer-events:none; }
-    #pinball-fallback a { color:#7fd2ff; pointer-events:auto; }
+    #pinball-controls { position:absolute; left:0; right:0; top:0; padding:4px 10px; font-size:11px;
+      color:#dfeeff; background:rgba(0,0,0,0.55); text-align:center; pointer-events:none; line-height:1.4; }
+    #pinball-controls b { color:#ffd166; }
+    #pinball-controls a { color:#7fd2ff; pointer-events:auto; }
     @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; } }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
@@ -12892,8 +12893,17 @@ function openPinball(show=true){
   if(w.classList.contains('open')){
     w.style.display='flex';
     if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
-    // give the game keyboard focus so Space/arrows reach it
-    if(fr){ fr.onload=()=>{ try{ fr.focus(); }catch(_){} }; setTimeout(()=>{ try{ fr.focus(); }catch(_){} }, 300); }
+    // give the game keyboard focus so F2/Space/arrows reach it
+    if(fr){
+      fr.onload=()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} };
+      [120,400,900].forEach(t=>setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} }, t));
+      if(!fr._focusBound){
+        fr._focusBound=true;
+        const area=document.getElementById('pinball-area');
+        // clicking anywhere on the table re-grabs keyboard focus for the iframe
+        area?.addEventListener('pointerdown',()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} });
+      }
+    }
   } else { w.style.display='none'; if(fr) fr.src='about:blank'; }
 }
 
@@ -15832,7 +15842,7 @@ function bjUpdateBalance(){
   </div>
   <div id="pinball-area">
     <iframe id="pinball-frame" title="Space Cadet Pinball" tabindex="0" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
-    <div id="pinball-fallback">Click the table, then use the keyboard. Trouble starting? <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open in a new tab ↗</a></div>
+    <div id="pinball-controls">Controls: <b>F2</b> new game · hold/release <b>Space</b> to launch the ball · <b>Z</b> &amp; <b>?</b> (or <b>arrows</b>) flippers. &nbsp;Trouble? <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open in a new tab ↗</a></div>
   </div>
 </div>
 

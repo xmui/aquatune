@@ -3273,7 +3273,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #pinball-fallback { position:absolute; left:0; right:0; top:0; padding:3px 10px; font-size:10px;
       color:var(--text2); background:rgba(0,0,0,0.45); text-align:center; pointer-events:none; }
     #pinball-fallback a { color:#7fd2ff; pointer-events:auto; }
-    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100vh; transform:translateX(-50%); border-radius:0; } }
+    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; } }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
@@ -4158,6 +4158,9 @@ body:not(.osmode) #win-player > .win-body { display:contents; }
 body:not(.osmode) #win-player > .os-titlebar { display:none; }
 
 /* generic OS-native windows (settings, arcade) */
+/* win-std windows are hidden everywhere unless opened — without this base rule
+   they leak into the normal page flow on mobile (no body.osmode). */
+.os-window.win-std { display:none; }
 body.osmode .os-window.win-std {
   position:fixed; z-index:600; display:none; flex-direction:column; overflow:hidden;
   background:var(--panel); border:1px solid var(--border);

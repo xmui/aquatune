@@ -3265,7 +3265,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       width:min(680px,96vw); height:min(560px,86vh);
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
-      z-index:506; flex-direction:column; overflow:hidden;
+      z-index:4300; flex-direction:column; overflow:hidden;
     }
     #pinball-wrap.open { display:flex; }
     #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
@@ -4528,7 +4528,16 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     display:flex !important; position:fixed !important; inset:0 !important; left:0 !important; top:0 !important;
     width:auto !important; height:auto !important; transform:none !important; z-index:9000 !important;
     border-radius:0 !important; }
-  body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; }
+  body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; height:40px; padding:0 10px; }
+  /* on phones the tiny desktop "traffic light" is hard to tap — make the close a real button,
+     hide minimize/maximize (no windowing on mobile) */
+  body:not(.osmode) .os-window.win-std .os-winbtn.min,
+  body:not(.osmode) .os-window.win-std .os-winbtn.max { display:none; }
+  body:not(.osmode) .os-window.win-std .os-winbtn.close {
+    width:30px; height:30px; border-radius:8px; background:rgba(0,0,0,0.18); color:var(--text);
+    font-size:18px; order:9; margin-left:auto; }
+  body:not(.osmode) .os-window.win-std .os-winbtn.close::after { content:'\00D7'; }
+  body:not(.osmode) .os-window.win-std .os-title { order:1; text-align:left; }
 }
 
   </style>

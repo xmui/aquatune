@@ -2154,7 +2154,7 @@
 #room-requests-badge { background: rgba(255,160,0,0.25); border: 1px solid rgba(255,180,0,0.4); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
 [data-scheme=dark] #room-requests-panel { background: rgba(8,20,50,0.98); }
 #lobby-overlay {
-  display: none; position: fixed; inset: 0; z-index: 1000;
+  display: none; position: fixed; inset: 0; z-index: 4500;
   background: rgba(0,20,50,0.55); backdrop-filter: blur(4px);
   align-items: center; justify-content: center;
 }
@@ -3265,15 +3265,16 @@ body.perf-mode #aqua-gun { display: none !important; }
       width:min(680px,96vw); height:min(560px,86vh);
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
-      z-index:506; flex-direction:column; overflow:hidden;
+      z-index:4300; flex-direction:column; overflow:hidden;
     }
     #pinball-wrap.open { display:flex; }
     #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
     #pinball-frame { flex:1; width:100%; height:100%; border:0; background:#000; }
-    #pinball-fallback { position:absolute; left:0; right:0; bottom:0; padding:6px 10px; font-size:11px;
-      color:var(--text2); background:var(--panel); border-top:1px solid var(--border); text-align:center; }
-    #pinball-fallback a { color:var(--accent); }
-    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100vh; transform:translateX(-50%); border-radius:0; } }
+    #pinball-controls { position:absolute; left:0; right:0; top:0; padding:4px 10px; font-size:11px;
+      color:#dfeeff; background:rgba(0,0,0,0.55); text-align:center; pointer-events:none; line-height:1.4; }
+    #pinball-controls b { color:#ffd166; }
+    #pinball-controls a { color:#7fd2ff; pointer-events:auto; }
+    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; } }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
@@ -4158,6 +4159,9 @@ body:not(.osmode) #win-player > .win-body { display:contents; }
 body:not(.osmode) #win-player > .os-titlebar { display:none; }
 
 /* generic OS-native windows (settings, arcade) */
+/* win-std windows are hidden everywhere unless opened — without this base rule
+   they leak into the normal page flow on mobile (no body.osmode). */
+.os-window.win-std { display:none; }
 body.osmode .os-window.win-std {
   position:fixed; z-index:600; display:none; flex-direction:column; overflow:hidden;
   background:var(--panel); border:1px solid var(--border);
@@ -4524,7 +4528,16 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     display:flex !important; position:fixed !important; inset:0 !important; left:0 !important; top:0 !important;
     width:auto !important; height:auto !important; transform:none !important; z-index:9000 !important;
     border-radius:0 !important; }
-  body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; }
+  body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; height:40px; padding:0 10px; }
+  /* on phones the tiny desktop "traffic light" is hard to tap — make the close a real button,
+     hide minimize/maximize (no windowing on mobile) */
+  body:not(.osmode) .os-window.win-std .os-winbtn.min,
+  body:not(.osmode) .os-window.win-std .os-winbtn.max { display:none; }
+  body:not(.osmode) .os-window.win-std .os-winbtn.close {
+    width:30px; height:30px; border-radius:8px; background:rgba(0,0,0,0.18); color:var(--text);
+    font-size:18px; order:9; margin-left:auto; }
+  body:not(.osmode) .os-window.win-std .os-winbtn.close::after { content:'\00D7'; }
+  body:not(.osmode) .os-window.win-std .os-title { order:1; text-align:left; }
 }
 
   </style>
@@ -10292,6 +10305,7 @@ function buildDrumSeq() {
         }
         btn.classList.toggle('on', on);
         btn.style.opacity = on ? (0.4 + (drumSeqVel[di][s]||80) / 100 * 0.6) : '';
+        if (on && DRUM_PADS[di]) { const cx = initActx(); DRUM_PADS[di].fn(cx.currentTime); }
       });
       rowFrag.appendChild(btn);
     }
@@ -10335,6 +10349,7 @@ function buildSynthSeq() {
           synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
         }
         refreshSynthRow(ni);
+        if (synthSeqData[ni][s] > 0) { const cx = initActx(); scheduleSynthNote(SEQ_NOTES[ni], cx.currentTime, 0.25); }
       });
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
@@ -10577,6 +10592,7 @@ function buildBassSeq() {
         e.preventDefault();
         bassSeqData[ni][s]=!bassSeqData[ni][s];
         btn.classList.toggle('on',bassSeqData[ni][s]);
+        if (bassSeqData[ni][s]) { const cx = initActx(); scheduleBassNote(BASS_SEQ_NOTES[ni].replace(/\d$/,''), cx.currentTime); }
       });
       bassFrag.appendChild(btn);
     }
@@ -10781,6 +10797,7 @@ function buildKeysSeq() {
           keysSeqData[ni][s] = keysSeqData[ni][s] ? 0 : 1;
         }
         refreshKeysRow(ni);
+        if (keysSeqData[ni][s] > 0) { const cx = initActx(); scheduleKeysNote(SEQ_NOTES[ni], cx.currentTime, 0.3); }
       });
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
@@ -11218,6 +11235,9 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('photos')" title="Photos">📷<span>Photos</span></button>
   <button class="mob-tool-btn" onclick="OS.open('files')" title="Files">📁<span>Files</span></button>
   <button class="mob-tool-btn" onclick="OS.open('leaderboard')" title="Scores">🏆<span>Scores</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('texteditor')" title="Notes">📝<span>Notes</span></button>
+  <button class="mob-tool-btn" onclick="openLobbyOverlay()" title="Public Rooms">🌐<span>Rooms</span></button>
+  <button class="mob-tool-btn" onclick="toggleBoard()" title="Chat">💬<span>Chat</span></button>
   <button class="mob-tool-btn" onclick="toggleTheater()" title="Theater">🎬<span>Theater</span></button>
   <button class="mob-tool-btn" onclick="toggleThemePanel()" title="Settings">⚙️<span>Settings</span></button>
 </div>
@@ -12882,6 +12902,17 @@ function openPinball(show=true){
   if(w.classList.contains('open')){
     w.style.display='flex';
     if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
+    // give the game keyboard focus so F2/Space/arrows reach it
+    if(fr){
+      fr.onload=()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} };
+      [120,400,900].forEach(t=>setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} }, t));
+      if(!fr._focusBound){
+        fr._focusBound=true;
+        const area=document.getElementById('pinball-area');
+        // clicking anywhere on the table re-grabs keyboard focus for the iframe
+        area?.addEventListener('pointerdown',()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} });
+      }
+    }
   } else { w.style.display='none'; if(fr) fr.src='about:blank'; }
 }
 
@@ -15819,8 +15850,8 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
   </div>
   <div id="pinball-area">
-    <iframe id="pinball-frame" title="Space Cadet Pinball" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
-    <div id="pinball-fallback">If the game doesn't load, <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open it in a new tab ↗</a>.</div>
+    <iframe id="pinball-frame" title="Space Cadet Pinball" tabindex="0" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
+    <div id="pinball-controls">Controls: <b>F2</b> new game · hold/release <b>Space</b> to launch the ball · <b>Z</b> &amp; <b>?</b> (or <b>arrows</b>) flippers. &nbsp;Trouble? <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open in a new tab ↗</a></div>
   </div>
 </div>
 

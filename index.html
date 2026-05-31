@@ -3270,9 +3270,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     #pinball-wrap.open { display:flex; }
     #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
     #pinball-frame { flex:1; width:100%; height:100%; border:0; background:#000; }
-    #pinball-fallback { position:absolute; left:0; right:0; bottom:0; padding:6px 10px; font-size:11px;
-      color:var(--text2); background:var(--panel); border-top:1px solid var(--border); text-align:center; }
-    #pinball-fallback a { color:var(--accent); }
+    #pinball-fallback { position:absolute; left:0; right:0; top:0; padding:3px 10px; font-size:10px;
+      color:var(--text2); background:rgba(0,0,0,0.45); text-align:center; pointer-events:none; }
+    #pinball-fallback a { color:#7fd2ff; pointer-events:auto; }
     @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100vh; transform:translateX(-50%); border-radius:0; } }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
@@ -10292,6 +10292,7 @@ function buildDrumSeq() {
         }
         btn.classList.toggle('on', on);
         btn.style.opacity = on ? (0.4 + (drumSeqVel[di][s]||80) / 100 * 0.6) : '';
+        if (on && DRUM_PADS[di]) { const cx = initActx(); DRUM_PADS[di].fn(cx.currentTime); }
       });
       rowFrag.appendChild(btn);
     }
@@ -10335,6 +10336,7 @@ function buildSynthSeq() {
           synthSeqData[ni][s] = synthSeqData[ni][s] ? 0 : 1;
         }
         refreshSynthRow(ni);
+        if (synthSeqData[ni][s] > 0) { const cx = initActx(); scheduleSynthNote(SEQ_NOTES[ni], cx.currentTime, 0.25); }
       });
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
@@ -10577,6 +10579,7 @@ function buildBassSeq() {
         e.preventDefault();
         bassSeqData[ni][s]=!bassSeqData[ni][s];
         btn.classList.toggle('on',bassSeqData[ni][s]);
+        if (bassSeqData[ni][s]) { const cx = initActx(); scheduleBassNote(BASS_SEQ_NOTES[ni].replace(/\d$/,''), cx.currentTime); }
       });
       bassFrag.appendChild(btn);
     }
@@ -10781,6 +10784,7 @@ function buildKeysSeq() {
           keysSeqData[ni][s] = keysSeqData[ni][s] ? 0 : 1;
         }
         refreshKeysRow(ni);
+        if (keysSeqData[ni][s] > 0) { const cx = initActx(); scheduleKeysNote(SEQ_NOTES[ni], cx.currentTime, 0.3); }
       });
       btn.addEventListener('contextmenu', e => {
         e.preventDefault();
@@ -12882,6 +12886,8 @@ function openPinball(show=true){
   if(w.classList.contains('open')){
     w.style.display='flex';
     if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
+    // give the game keyboard focus so Space/arrows reach it
+    if(fr){ fr.onload=()=>{ try{ fr.focus(); }catch(_){} }; setTimeout(()=>{ try{ fr.focus(); }catch(_){} }, 300); }
   } else { w.style.display='none'; if(fr) fr.src='about:blank'; }
 }
 
@@ -15819,8 +15825,8 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
   </div>
   <div id="pinball-area">
-    <iframe id="pinball-frame" title="Space Cadet Pinball" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
-    <div id="pinball-fallback">If the game doesn't load, <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open it in a new tab ↗</a>.</div>
+    <iframe id="pinball-frame" title="Space Cadet Pinball" tabindex="0" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
+    <div id="pinball-fallback">Click the table, then use the keyboard. Trouble starting? <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open in a new tab ↗</a></div>
   </div>
 </div>
 

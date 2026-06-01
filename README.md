@@ -6,7 +6,7 @@
   <p><strong>A nostalgic desktop-OS in your browser — synced music rooms, a YouTube-powered player, mini-games, and a wall of switchable retro themes.</strong></p>
 
   <p>
-    <a href="https://j13.us">Live app → j13.us</a>
+    <a href="https://aquatune.netlify.app">Live app → aquatune.netlify.app</a>
   </p>
 
   <img src="docs/screenshot.png" alt="AquaTune desktop with the music player, dock, and chat" width="100%" />
@@ -110,8 +110,8 @@ Vanilla JS · Vite · Firebase Realtime Database · YouTube IFrame API · Web Au
 
 ## Deployment
 
-Static build (`dist/`) deployable anywhere — the live site runs at **[j13.us](https://j13.us)** (see `CNAME`),
-with a `netlify.toml` for Netlify hosting.
+Static build (`dist/`) deployable anywhere — the live site runs at
+**[aquatune.netlify.app](https://aquatune.netlify.app)** via Netlify (see `netlify.toml`).
 
 ---
 

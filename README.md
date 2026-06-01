@@ -113,10 +113,8 @@ Vanilla JS · Vite · Firebase Realtime Database · YouTube IFrame API · Web Au
 Static build (`dist/`) deployable anywhere — the live site runs at **[j13.us](https://j13.us)** (see `CNAME`),
 with a `netlify.toml` for Netlify hosting.
 
-## Disclaimer
-
-> This app is **100% vibe-coded** because real coding is for nerds. — *Jake*
-
 ---
 
-<div align="center"><sub>Built with 💧 (and vibes) — AquaTune</sub></div>
+<div align="center"><sub>Built with 💧 — AquaTune</sub></div>
+
+<sub><sub>100% vibe-coded because real coding is for nerds. —Jake</sub></sub>

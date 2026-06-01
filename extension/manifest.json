@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "AquaTune Audio Visualizer Bridge",
+  "version": "0.1.0",
+  "description": "Captures YouTube audio and streams its frequency data to AquaTune so the visualizer reacts to what's actually playing.",
+  "permissions": ["scripting"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://music.youtube.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*.aquatune.app/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://music.youtube.com/*"],
+      "all_frames": true,
+      "js": ["yt-capture.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*"],
+      "all_frames": false,
+      "js": ["aq-bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["aq-page-shim.js"],
+      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*"]
+    }
+  ],
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "aquatune-visualizer@aquatune.app",
+      "strict_min_version": "115.0"
+    }
+  }
+}

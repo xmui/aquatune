@@ -1407,6 +1407,19 @@
     body.osmode #toast { bottom:78px; }
     html[data-family=windows] body.osmode #toast { bottom:52px; }
     #toast.show { transform:translateX(-50%) translateY(0);opacity:1;visibility:visible; }
+    /* Themed new-chat notifications (top-right stack) */
+    #aq-notif-stack { position:fixed; top:16px; right:16px; z-index:4250; display:flex; flex-direction:column; gap:8px; pointer-events:none; max-width:300px; }
+    .aq-notif { pointer-events:auto; display:flex; gap:9px; align-items:flex-start; position:relative; overflow:hidden;
+      background:var(--panel); border:1.5px solid var(--border); border-radius:var(--r-btn); padding:9px 12px 9px 14px;
+      box-shadow:0 8px 24px rgba(0,40,120,0.18); color:var(--text); cursor:pointer; max-width:300px;
+      transform:translateX(120%); opacity:0; transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s ease; }
+    .aq-notif.show { transform:translateX(0); opacity:1; }
+    .aq-notif::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent); }
+    .aq-notif-av { flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; }
+    .aq-notif-body { min-width:0; }
+    .aq-notif-name { font-size:12px; font-weight:800; color:var(--text); line-height:1.2; }
+    .aq-notif-text { font-size:11px; color:var(--text2); margin-top:1px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    @media (max-width:768px){ #aq-notif-stack { left:8px; right:8px; top:8px; max-width:none; align-items:stretch; } .aq-notif { max-width:none; } }
 
     /* ── MISC ───────────────────────────────────────────── */
     .empty { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 16px;color:var(--text2);font-size:11px;text-align:center;height:100%;min-height:80px;line-height:1.6; }
@@ -3045,10 +3058,11 @@ body.perf-mode #aqua-gun { display: none !important; }
     #picross-main-row { display:flex; }
     #picross-row-clues { display:flex; flex-direction:column; justify-content:flex-start; }
     .pc-row-clue { display:flex; align-items:center; justify-content:flex-end; gap:3px; font-size:9px; font-weight:700; color:var(--text2); padding-right:4px; white-space:nowrap; }
-    #picross-cells { display:grid; }
+    #picross-cells { display:grid; touch-action:none; }
+    .pc-num.crossed { opacity:.35; text-decoration:line-through; }
     .pc-cell {
       border:1px solid var(--border); background:rgba(255,255,255,0.6);
-      cursor:pointer; box-sizing:border-box; transition:background .08s;
+      cursor:pointer; box-sizing:border-box; transition:background .08s; touch-action:none;
     }
     .pc-cell.filled { background:var(--accent); border-color:var(--accent2); }
     .pc-cell.marked { background:rgba(220,50,50,0.12); position:relative; }
@@ -5339,6 +5353,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
 </div>
 
 <div id="toast"></div>
+<div id="aq-notif-stack"></div>
 <div id="page-footer" style="position:fixed;bottom:0;left:0;right:0;z-index:50;text-align:center;padding:4px;font-size:10px;color:rgba(58,88,128,0.6);pointer-events:none;">
   <a href="/privacy.html" style="color:rgba(0,104,184,0.55);text-decoration:none;pointer-events:all;" target="_blank">Privacy Policy</a>
   &nbsp;&middot;&nbsp;
@@ -8669,6 +8684,28 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 document.querySelectorAll('.ov').forEach(el=>el.addEventListener('click',e=>{ if(e.target===el) closeModal(el.id); }));
 function toast(msg) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastTmr); toastTmr=setTimeout(()=>el.classList.remove('show'),2600); }
 
+// Themed stacked chat notification (top-right). Auto-themes via CSS vars; click opens the chat.
+function aqNotify({ name, text, image } = {}) {
+  const stack = document.getElementById('aq-notif-stack');
+  if (!stack) return;
+  name = name || 'Anonymous';
+  const preview = (text || '').replace(/<[^>]+>/g, '').replace(/data:[^\s"'<>)]+/gi, '').trim();
+  const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
+  const el = document.createElement('div');
+  el.className = 'aq-notif';
+  el.innerHTML =
+    `<div class="aq-notif-av" style="background:${color}">${esc(name[0] ? name[0].toUpperCase() : '?')}</div>` +
+    `<div class="aq-notif-body"><div class="aq-notif-name">${esc(name)}</div>` +
+    `<div class="aq-notif-text">${preview ? esc(preview) : (image ? '📷 Photo' : '')}</div></div>`;
+  let killed = false;
+  const dismiss = () => { if (killed) return; killed = true; el.classList.remove('show'); setTimeout(() => el.remove(), 320); };
+  el.addEventListener('click', () => { try { openBoard(); } catch (_) {} dismiss(); });
+  stack.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  while (stack.children.length > 4) stack.firstElementChild.remove();
+  setTimeout(dismiss, 5000);
+}
+
 // ─────────────────────────────────────────────────────────
 //  VISUALIZER
 // ─────────────────────────────────────────────────────────
@@ -11842,7 +11879,13 @@ function updateChatBadge(posts) {
   }
   // Ding on genuinely new posts (not first load)
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);
-  if (newArrivals.length && _boardKnownMaxTs > 0) playBoardDing();
+  if (newArrivals.length && _boardKnownMaxTs > 0) {
+    playBoardDing();
+    // Themed pop-ups for others' new messages (board is closed here — function returned early if open)
+    const myName = localStorage.getItem('aq_username') || '';
+    newArrivals.filter(p => (p.username || p.name) !== myName).slice(-3)
+      .forEach(p => aqNotify({ name: (p.username || p.name), text: (p.message || p.com || ''), image: p.imageData }));
+  }
   _boardKnownMaxTs = posts.reduce((m, p) => Math.max(m, p.ts), _boardKnownMaxTs);
 }
 
@@ -14099,9 +14142,12 @@ window.appendRoomChatMsg = function(p) {
     const myName = localStorage.getItem('aq_username');
     if (p.username !== myName) {
       playChatTone();
-      // Also play notification if AquaChat panel is closed
+      // Also play notification + show a themed pop-up if AquaChat panel is closed
       const boardOpen = document.getElementById('board-overlay')?.classList.contains('show');
-      if (!boardOpen) playMsgNotification();
+      if (!boardOpen) {
+        playMsgNotification();
+        aqNotify({ name: p.username, text: (p.message || p.com || ''), image: p.imageData });
+      }
     }
   }
   renderTheaterChatMsg(p, true);
@@ -14308,6 +14354,113 @@ let _pcSeconds = 0, _pcTimerInt = null;
 let _pcMistakes = 0;                                  // cumulative wrong placements (auto-check)
 let _pcWrongCells = new Set();                        // indices currently flagged wrong
 let _pcAutoCheck = localStorage.getItem('aq_pc_autocheck') !== '0'; // default ON
+let _pcDrag = null;            // { val, axis:null|'row'|'col', row0, col0 } during a drag-stroke
+let _pcCellsBound = false;     // delegated pointer handlers bound once
+let _pcRowClues = [], _pcColClues = []; // cached solution clues for cross-off matching
+
+// Apply a value (0 empty / 1 filled / 2 X-mark) to one cell with incremental DOM update
+function pcApplyCell(i, val){
+  if (_pcUserGrid[i] === val) return;
+  _pcUserGrid[i] = val;
+  if (val === 1) {
+    if (_pcAutoCheck) {
+      if (_pcSolution[i] !== 1) { if (!_pcWrongCells.has(i)) _pcMistakes++; _pcWrongCells.add(i); }
+      else _pcWrongCells.delete(i);
+      pcUpdateMistakeDisplay();
+    }
+  } else {
+    _pcWrongCells.delete(i);
+  }
+  pcSetCellDom(i);
+  pcUpdateClues();
+}
+// Update a single cell's classes in place (avoids a full grid re-render during drags)
+function pcSetCellDom(i){
+  const el = document.querySelector(`.pc-cell[data-idx="${i}"]`);
+  if (!el) return;
+  el.classList.toggle('filled', _pcUserGrid[i] === 1);
+  el.classList.toggle('marked', _pcUserGrid[i] === 2);
+  el.classList.toggle('wrong', _pcAutoCheck && _pcWrongCells.has(i));
+}
+// Conservative edge-anchored matcher: which clue numbers are unambiguously satisfied.
+// lineVals: 0 empty / 1 filled / 2 X-mark.  Returns boolean[] aligned to `clue`.
+function pcLineCrossed(lineVals, clue){
+  const n = lineVals.length;
+  const out = clue.map(() => false);
+  if (clue.length === 1 && clue[0] === 0) return out;   // empty line: nothing to cross
+  // Left pass
+  let li = 0, p = 0;
+  while (li < clue.length) {
+    while (p < n && lineVals[p] !== 1) p++;
+    if (p >= n) break;
+    const s = p; while (p < n && lineVals[p] === 1) p++;
+    const len = p - s;
+    const rightBounded = (p >= n) || (lineVals[p] === 2); // a plain empty could still grow
+    if (len === clue[li] && rightBounded) { out[li] = true; li++; }
+    else break;
+  }
+  // Right pass (mirror), never crossing past the left-matched index
+  let ri = clue.length - 1, q = n - 1;
+  while (ri > li - 1) {
+    while (q >= 0 && lineVals[q] !== 1) q--;
+    if (q < 0) break;
+    const e = q; while (q >= 0 && lineVals[q] === 1) q--;
+    const len = e - q;
+    const leftBounded = (q < 0) || (lineVals[q] === 2);
+    if (len === clue[ri] && leftBounded) { out[ri] = true; ri--; }
+    else break;
+  }
+  return out;
+}
+// Toggle `.crossed` on individual clue-number spans based on current fills
+function pcUpdateClues(){
+  const rowEl = document.getElementById('picross-row-clues');
+  const colEl = document.getElementById('picross-col-clues');
+  if (!rowEl || !colEl) return;
+  for (let i = 0; i < _pcSize; i++) {
+    const rowVals = []; for (let j = 0; j < _pcSize; j++) rowVals.push(_pcUserGrid[i*_pcSize+j]);
+    const colVals = []; for (let j = 0; j < _pcSize; j++) colVals.push(_pcUserGrid[j*_pcSize+i]);
+    _pcApplyCrossed(rowEl.children[i], pcLineCrossed(rowVals, _pcRowClues[i] || [0]));
+    _pcApplyCrossed(colEl.children[i], pcLineCrossed(colVals, _pcColClues[i] || [0]));
+  }
+}
+function _pcApplyCrossed(clueDiv, crossed){
+  if (!clueDiv) return;
+  const nums = clueDiv.querySelectorAll('.pc-num');
+  nums.forEach((span, k) => span.classList.toggle('crossed', !!crossed[k]));
+}
+// Bind drag-fill pointer handlers once (the #picross-cells container persists across re-renders)
+function pcBindCells(){
+  if (_pcCellsBound) return;
+  const cells = document.getElementById('picross-cells');
+  if (!cells) return;
+  _pcCellsBound = true;
+  const idxAt = (x, y) => { const el = document.elementFromPoint(x, y); return (el && el.classList.contains('pc-cell')) ? +el.dataset.idx : -1; };
+  cells.addEventListener('contextmenu', e => e.preventDefault());
+  cells.addEventListener('pointerdown', e => {
+    const t = e.target.closest('.pc-cell'); if (!t) return;
+    e.preventDefault();
+    const i = +t.dataset.idx;
+    const mark = (e.button === 2);
+    const val = mark ? (_pcUserGrid[i] === 2 ? 0 : 2) : (_pcUserGrid[i] === 1 ? 0 : 1);
+    _pcDrag = { val, axis: null, row0: Math.floor(i/_pcSize), col0: i % _pcSize };
+    pcApplyCell(i, val);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!_pcDrag) return;
+    const i = idxAt(e.clientX, e.clientY); if (i < 0) return;
+    const r = Math.floor(i/_pcSize), c = i % _pcSize;
+    if (_pcDrag.axis === null && (r !== _pcDrag.row0 || c !== _pcDrag.col0)) {
+      _pcDrag.axis = (r === _pcDrag.row0) ? 'row' : (c === _pcDrag.col0) ? 'col' : (Math.abs(r-_pcDrag.row0) >= Math.abs(c-_pcDrag.col0) ? 'col' : 'row');
+    }
+    if (_pcDrag.axis === 'row' && r !== _pcDrag.row0) return;
+    if (_pcDrag.axis === 'col' && c !== _pcDrag.col0) return;
+    pcApplyCell(i, _pcDrag.val);
+  });
+  const endDrag = () => { if (!_pcDrag) return; _pcDrag = null; if (_pcAutoCheck) pcCheckSolved(); };
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+}
 function pcUpdateMistakeDisplay(){
   const el = document.getElementById('picross-mistakes');
   if (el) el.textContent = _pcAutoCheck ? ('✗ ' + _pcMistakes) : '';
@@ -14421,6 +14574,7 @@ function renderPicrossGrid() {
   // Compute actual clue dimensions first so cell sizing uses real numbers
   const rowClues = pcGetClues(_pcSolution, _pcSize, true);
   const colClues = pcGetClues(_pcSolution, _pcSize, false);
+  _pcRowClues = rowClues; _pcColClues = colClues;   // cache for per-number cross-off matching
   const maxRowClueLen = Math.max(...rowClues.map(r=>r.length));
   const maxColClueLen = Math.max(...colClues.map(c=>c.length));
   const rowClueW = maxRowClueLen * 18 + 4;
@@ -14452,7 +14606,7 @@ function renderPicrossGrid() {
     // pad top with empty spans
     const pad = maxColClueLen - cc.length;
     for (let p=0;p<pad;p++) { const s=document.createElement('span');s.innerHTML='&nbsp;';d.appendChild(s); }
-    cc.forEach(n => { const s=document.createElement('span');s.textContent=n;d.appendChild(s); });
+    cc.forEach(n => { const s=document.createElement('span');s.className='pc-num';s.textContent=n;d.appendChild(s); });
     colCluesEl.appendChild(d);
   });
 
@@ -14466,7 +14620,7 @@ function renderPicrossGrid() {
     d.style.width = rowClueW + 'px';
     const pad = maxRowClueLen - rc.length;
     for (let p=0;p<pad;p++) { const s=document.createElement('span');s.style.minWidth='14px';s.innerHTML='';d.appendChild(s); }
-    rc.forEach(n => { const s=document.createElement('span');s.style.minWidth='14px';s.style.textAlign='right';s.textContent=n;d.appendChild(s); });
+    rc.forEach(n => { const s=document.createElement('span');s.className='pc-num';s.style.minWidth='14px';s.style.textAlign='right';s.textContent=n;d.appendChild(s); });
     rowCluesEl.appendChild(d);
   });
 
@@ -14483,30 +14637,11 @@ function renderPicrossGrid() {
     if (_pcUserGrid[i]===1) c.classList.add('filled');
     if (_pcUserGrid[i]===2) c.classList.add('marked');
     if (_pcAutoCheck && _pcWrongCells.has(i)) c.classList.add('wrong');
-    c.addEventListener('click', () => {
-      const nowFilled = _pcUserGrid[i] !== 1;
-      _pcUserGrid[i] = nowFilled ? 1 : 0;
-      if (_pcAutoCheck) {
-        if (nowFilled && _pcSolution[i] !== 1) {
-          // Placed a wrong cell — flag it and count the mistake
-          if (!_pcWrongCells.has(i)) _pcMistakes++;
-          _pcWrongCells.add(i);
-        } else {
-          _pcWrongCells.delete(i);
-        }
-        pcUpdateMistakeDisplay();
-      }
-      renderPicrossGrid();
-      if (_pcAutoCheck) pcCheckSolved();
-    });
-    c.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      _pcUserGrid[i] = _pcUserGrid[i]===2 ? 0 : 2;
-      _pcWrongCells.delete(i);
-      renderPicrossGrid();
-    });
     cellsEl.appendChild(c);
   }
+  // Drag-fill: delegated pointer handlers bound once (cell interactions are incremental, not full re-renders)
+  pcBindCells();
+  pcUpdateClues();
 }
 function checkPicross() {
   let allCorrect = true;

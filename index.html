@@ -7776,6 +7776,7 @@ const OS = {
       win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
       win.style.right = 'auto'; win.style.bottom = 'auto';
       OS._drag = { win, dx: e.clientX - r.left, dy: e.clientY - r.top };
+      _aqShieldIframes(true);
       e.preventDefault();
     });
   },
@@ -7905,7 +7906,14 @@ document.addEventListener('mousemove', e => {
   x = Math.max(-d.win.offsetWidth + 90, Math.min(x, window.innerWidth - 90));
   d.win.style.left = x + 'px'; d.win.style.top = y + 'px';
 });
-document.addEventListener('mouseup', () => { OS._drag = null; });
+// Shield iframes during any drag so mousemove/mouseup reliably reach the parent document
+function _aqShieldIframes(on) {
+  document.querySelectorAll('iframe').forEach(f => { f.style.pointerEvents = on ? 'none' : ''; });
+}
+document.addEventListener('mouseup', () => {
+  if (OS._drag) _aqShieldIframes(false);
+  OS._drag = null;
+});
 
 /* ============================================================
    AquaOS — very simple virtual file system (localStorage)
@@ -12852,9 +12860,10 @@ function initPaint() {
     const r=w.getBoundingClientRect();
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
     w.style.transform='none'; w.style.left=r.left+'px'; w.style.top=r.top+'px';
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove',e=>{ if(!drag) return; const w=document.getElementById('paint-wrap'); w.style.left=(e.clientX-drag.sx)+'px'; w.style.top=(e.clientY-drag.sy)+'px'; });
-  document.addEventListener('mouseup',()=>{ drag=null; });
+  document.addEventListener('mouseup',()=>{ if(drag) _aqShieldIframes(false); drag=null; });
 }
 
 /* ── PERFORMANCE MODE ── */
@@ -14335,13 +14344,14 @@ function resetPicross() {
     const r = w.getBoundingClientRect();
     w.style.transform='none'; w.style.left=r.left+'px'; w.style.top=r.top+'px';
     drag = {sx:e.clientX-r.left,sy:e.clientY-r.top};
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove', e => {
     if (!drag) return;
     const w = document.getElementById('picross-wrap');
     w.style.left=(e.clientX-drag.sx)+'px'; w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup', ()=>{ drag=null; });
+  document.addEventListener('mouseup', ()=>{ if(drag) _aqShieldIframes(false); drag=null; });
 })();
 
 // ── SOLITAIRE ────────────────────────────────────────
@@ -14913,13 +14923,14 @@ document.addEventListener('pointerup',function(e){
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('solitaire-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',function(){drag=null;});
+  document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
 })();
 
 // ── MINESWEEPER ────────────────────────────────────────
@@ -15204,13 +15215,14 @@ function minesUpdateCounter(){
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('mines-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',function(){drag=null;});
+  document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
 })();
 
 // ─────────────────────────────────────────────────────────
@@ -15526,13 +15538,14 @@ function bjUpdateBalance(){
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('blackjack-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',function(){drag=null;});
+  document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
 })();
 
 // Draggable Beat Tap (rhythm) window
@@ -15545,13 +15558,38 @@ function bjUpdateBalance(){
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+    _aqShieldIframes(true);
   });
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('rhythm-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',function(){drag=null;});
+  document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
+})();
+
+// Draggable Space Pinball window + iframe-shield so drag doesn't get stuck
+(function(){
+  let drag=null;
+  document.addEventListener('mousedown',function(e){
+    if(!e.target.closest('#pinball-titlebar')) return;
+    if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
+    const w=document.getElementById('pinball-wrap');
+    const r=w.getBoundingClientRect();
+    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
+    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
+    const fr=document.getElementById('pinball-frame');
+    if(fr) fr.style.pointerEvents='none';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag) return;
+    const w=document.getElementById('pinball-wrap');
+    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
+  });
+  document.addEventListener('mouseup',function(){
+    if(drag){ const fr=document.getElementById('pinball-frame'); if(fr) fr.style.pointerEvents=''; }
+    drag=null;
+  });
 })();
 </script>
 

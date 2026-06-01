@@ -3269,22 +3269,28 @@ body.perf-mode #aqua-gun { display: none !important; }
     #he-controls { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
     @media (max-width:768px) { #holdem-wrap { width:100vw; top:0; left:0; transform:none; } }
 
-    /* ── SPACE PINBALL ─── */
+    /* ── SPACE PINBALL (native canvas) ─── */
     #pinball-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
-      width:min(680px,96vw); height:min(560px,86vh);
+      width:340px; max-width:96vw;
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:4300; flex-direction:column; overflow:hidden;
     }
     #pinball-wrap.open { display:flex; }
-    #pinball-area { flex:1; min-height:0; position:relative; display:flex; background:#000; }
-    #pinball-frame { flex:1; width:100%; height:100%; border:0; background:#000; }
-    #pinball-controls { position:absolute; left:0; right:0; top:0; padding:4px 10px; font-size:11px;
-      color:#dfeeff; background:rgba(0,0,0,0.55); text-align:center; pointer-events:none; line-height:1.4; }
-    #pinball-controls b { color:#ffd166; }
-    #pinball-controls a { color:#7fd2ff; pointer-events:auto; }
-    @media (max-width:768px) { #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; } }
+    #pinball-hud { display:flex; gap:14px; align-items:center; justify-content:center; padding:6px 10px;
+      font-size:12px; color:var(--text); font-weight:700; background:var(--panel); border-bottom:1px solid var(--border); }
+    #pinball-hud button { font-size:12px; padding:2px 12px; cursor:pointer; }
+    #pinball-area { position:relative; display:flex; justify-content:center; align-items:center;
+      background:radial-gradient(circle at 50% 15%,#10204a,#04060f); }
+    #pinball-canvas { display:block; touch-action:none; max-width:100%; height:auto; }
+    #pinball-help { font-size:10px; color:var(--text2); text-align:center; padding:4px 8px;
+      background:var(--panel); border-top:1px solid var(--border); }
+    @media (max-width:768px) {
+      #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; }
+      #pinball-area { flex:1; min-height:0; }
+      #pinball-canvas { max-height:100%; width:auto; }
+    }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
@@ -7900,20 +7906,29 @@ const OS = {
 };
 window.OS = OS;
 document.addEventListener('mousemove', e => {
+  // Self-heal: if a drag ended off-window (no mouseup fired) lift the iframe shield
+  // the moment the cursor returns with no button held, so iframes never stay click-through.
+  if (_aqDragActive && e.buttons === 0) { _aqShieldIframes(false); OS._drag = null; }
   const d = OS._drag; if (!d) return;
   let x = e.clientX - d.dx, y = e.clientY - d.dy;
   y = Math.max(30, y);
   x = Math.max(-d.win.offsetWidth + 90, Math.min(x, window.innerWidth - 90));
   d.win.style.left = x + 'px'; d.win.style.top = y + 'px';
 });
-// Shield iframes during any drag so mousemove/mouseup reliably reach the parent document
+// Shield iframes during any drag so mousemove/mouseup reliably reach the parent
+// document. _aqDragActive tracks whether ANY drag (OS window or game window) is in
+// progress; the shield is cleared unconditionally on every mouseup so an iframe can
+// never get stuck click-through (which would make its contents appear unclickable).
+let _aqDragActive = false;
 function _aqShieldIframes(on) {
-  document.querySelectorAll('iframe').forEach(f => { f.style.pointerEvents = on ? 'none' : ''; });
+  _aqDragActive = !!on;
+  document.querySelectorAll('iframe').forEach(f => { f.style.pointerEvents = on ? 'none' : 'auto'; });
 }
+// Capture-phase, runs before any per-window handler; always lifts the shield.
 document.addEventListener('mouseup', () => {
-  if (OS._drag) _aqShieldIframes(false);
+  if (_aqDragActive) _aqShieldIframes(false);
   OS._drag = null;
-});
+}, true);
 
 /* ============================================================
    AquaOS — very simple virtual file system (localStorage)
@@ -8093,6 +8108,7 @@ const LB_GAMES = {
   blackjack:{ label:'Blackjack',    icon:'🃏', unit:'credits', lower:false },
   rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
   holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
+  pinball:  { label:'Space Pinball', icon:'🕹️', unit:'pts',     lower:false },
 };
 const LB_PATH = 'leaderboard';
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
@@ -13133,31 +13149,217 @@ function heEval5(cs){
 }
 
 /* ============================================================
-   SPACE CADET PINBALL — embeds the externally-hosted web build in
-   an iframe (lazy-loaded on open, unloaded on close to stop it).
+   SPACE PINBALL — self-contained canvas physics game.
+   Fully native (no external iframe): rotating flippers with proper
+   segment-circle collision + angular-velocity kick, bumpers, 3 balls,
+   keyboard (Z/← left, M/?/→ right, Space launch) and mobile touch
+   (tap left/right half of the table). Feeds credits + leaderboard.
    ============================================================ */
-const PINBALL_URL = 'https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm';
+const PB_W = 320, PB_H = 460;
+const PB_LP = { x: 92, y: PB_H - 60 };          // left flipper pivot (left of center)
+const PB_RP = { x: PB_W - 92, y: PB_H - 60 };   // right flipper pivot (right of center)
+const PB_FLEN = 62, PB_FTHICK = 9;              // tips leave a ~22px center drain gap
+const PB_L_REST = 0.42, PB_L_UP = -0.42;        // left flipper angles (rad)
+const PB_R_REST = Math.PI - 0.42, PB_R_UP = Math.PI + 0.42;
+let pbCtx = null, pbRaf = null, pbInited = false;
+let pbBall = null, pbScore = 0, pbBallNum = 1, pbState = 'idle';
+let pbLAng = PB_L_REST, pbRAng = PB_R_REST, pbLPrev = PB_L_REST, pbRPrev = PB_R_REST;
+let pbLHold = false, pbRHold = false;
+let pbBumpers = [], pbWalls = [];
+
 function openPinball(show=true){
   const w=document.getElementById('pinball-wrap'); if(!w) return;
-  const fr=document.getElementById('pinball-frame');
-  if(show===false){ w.classList.remove('open'); w.style.display='none'; if(fr) fr.src='about:blank'; return; }
+  if(show===false){ w.classList.remove('open'); w.style.display='none'; pinballStop(); return; }
   w.classList.toggle('open');
   if(w.classList.contains('open')){
     w.style.display='flex';
-    if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
-    // give the game keyboard focus so F2/Space/arrows reach it
-    if(fr){
-      fr.onload=()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} };
-      [120,400,900].forEach(t=>setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} }, t));
-      if(!fr._focusBound){
-        fr._focusBound=true;
-        const area=document.getElementById('pinball-area');
-        // clicking anywhere on the table re-grabs keyboard focus for the iframe
-        area?.addEventListener('pointerdown',()=>{ try{ fr.contentWindow.focus(); fr.focus(); }catch(_){} });
+    if(!pbInited){
+      pbInited=true;
+      pbCtx=document.getElementById('pinball-canvas').getContext('2d');
+      pbBindInput();
+    }
+    pinballReset();
+  } else { w.style.display='none'; pinballStop(); }
+}
+function pinballStop(){ if(pbRaf){ cancelAnimationFrame(pbRaf); pbRaf=null; } pbState='idle'; }
+
+function pinballReset(){
+  pbScore=0; pbBallNum=1; pbState='ready';
+  pbBumpers=[
+    {x:90,  y:120, r:22}, {x:230, y:120, r:22}, {x:160, y:78, r:24},
+    {x:62,  y:210, r:15}, {x:258, y:210, r:15},
+  ];
+  // angled funnel walls: outer boundaries that deliver the ball onto each flipper
+  // (the only drain is the center gap between the flipper tips) + plunger-lane divider
+  pbWalls=[
+    {ax:0,        ay:PB_H-160, bx:PB_LP.x,  by:PB_H-40},    // left funnel → left pivot
+    {ax:PB_W,     ay:PB_H-160, bx:PB_RP.x,  by:PB_H-40},    // right funnel → right pivot
+    {ax:PB_W-30,  ay:PB_H-30,  bx:PB_W-30,  by:PB_H-150},   // plunger lane wall
+  ];
+  pbLAng=pbLPrev=PB_L_REST; pbRAng=pbRPrev=PB_R_REST;
+  const sc=document.getElementById('pb-score'); if(sc) sc.textContent='0';
+  const bn=document.getElementById('pb-ball'); if(bn) bn.textContent='1';
+  const lb=document.getElementById('pb-launch-btn'); if(lb){ lb.style.display=''; lb.textContent='Launch'; lb.onclick=pinballLaunch; }
+  _pbPlaceBall(); pbDraw();
+  if(!pbRaf) pbLoop();   // run the loop so flippers animate even before launch
+}
+function _pbPlaceBall(){ pbBall={x:PB_W-15, y:PB_H-60, vx:0, vy:0, r:8, launched:false}; }
+
+function pinballLaunch(){
+  if(!pbBall || pbBall.launched || pbState==='over') return;
+  pbBall.launched=true; pbBall.vx=-1.5-Math.random()*1.2; pbBall.vy=-15.5; pbState='play';
+  const lb=document.getElementById('pb-launch-btn'); if(lb) lb.style.display='none';
+  try{ playTone && playTone(180,0.08,'sawtooth',0.18); }catch(_){}
+  if(!pbRaf) pbLoop();
+}
+
+function pbBindInput(){
+  document.addEventListener('keydown',e=>{
+    const w=document.getElementById('pinball-wrap'); if(!w||!w.classList.contains('open')) return;
+    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z'){ pbLHold=true; e.preventDefault(); }
+    else if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'||e.key==='/'){ pbRHold=true; e.preventDefault(); }
+    else if(e.key===' '||e.key==='ArrowUp'){ pinballLaunch(); e.preventDefault(); }
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z') pbLHold=false;
+    else if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'||e.key==='/') pbRHold=false;
+  });
+  // Touch / pointer: tap left or right half of the table to fire that flipper
+  const cv=document.getElementById('pinball-canvas');
+  const side=(clientX)=>{ const r=cv.getBoundingClientRect(); return (clientX-r.left) < r.width/2 ? 'L' : 'R'; };
+  const press=(s,on)=>{ if(s==='L') pbLHold=on; else pbRHold=on; };
+  cv.addEventListener('pointerdown',e=>{ e.preventDefault(); press(side(e.clientX),true); if(pbBall&&!pbBall.launched) pinballLaunch(); });
+  cv.addEventListener('pointerup',  e=>{ e.preventDefault(); press(side(e.clientX),false); });
+  cv.addEventListener('pointercancel',()=>{ pbLHold=false; pbRHold=false; });
+  cv.addEventListener('pointerleave',()=>{ pbLHold=false; pbRHold=false; });
+}
+
+function pbLoop(){ pbStep(); pbDraw(); pbRaf=requestAnimationFrame(pbLoop); }
+
+function _pbStepFlipper(ang, target){
+  const SPD=0.5; // rad/frame
+  if(ang < target) ang=Math.min(target, ang+SPD);
+  else if(ang > target) ang=Math.max(target, ang-SPD);
+  return ang;
+}
+function _pbSegHit(piv, ang, len, thick, omega){
+  if(!pbBall) return;
+  const bx=piv.x+len*Math.cos(ang), by=piv.y+len*Math.sin(ang);
+  const abx=bx-piv.x, aby=by-piv.y, abLen2=abx*abx+aby*aby;
+  const t=Math.max(0,Math.min(1, ((pbBall.x-piv.x)*abx+(pbBall.y-piv.y)*aby)/abLen2));
+  const cx=piv.x+t*abx, cy=piv.y+t*aby;
+  let dx=pbBall.x-cx, dy=pbBall.y-cy, d=Math.hypot(dx,dy)||0.0001;
+  const minD=pbBall.r+thick;
+  if(d<minD){
+    const nx=dx/d, ny=dy/d;
+    pbBall.x=cx+nx*minD; pbBall.y=cy+ny*minD;
+    const dot=pbBall.vx*nx+pbBall.vy*ny;
+    if(dot<0){ pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=0.92; pbBall.vy*=0.92; }
+    // angular-velocity kick: ball sitting on a swinging flipper gets flung along the normal
+    if(omega){ const kick=Math.abs(omega)*(t*len)*0.5; pbBall.vx+=nx*kick; pbBall.vy+=ny*kick; }
+  }
+}
+function _pbWallHit(seg){
+  if(!pbBall) return;
+  const abx=seg.bx-seg.ax, aby=seg.by-seg.ay, abLen2=abx*abx+aby*aby;
+  const t=Math.max(0,Math.min(1, ((pbBall.x-seg.ax)*abx+(pbBall.y-seg.ay)*aby)/abLen2));
+  const cx=seg.ax+t*abx, cy=seg.ay+t*aby;
+  let dx=pbBall.x-cx, dy=pbBall.y-cy, d=Math.hypot(dx,dy)||0.0001;
+  const minD=pbBall.r+3;
+  if(d<minD){
+    const nx=dx/d, ny=dy/d;
+    pbBall.x=cx+nx*minD; pbBall.y=cy+ny*minD;
+    const dot=pbBall.vx*nx+pbBall.vy*ny;
+    if(dot<0){ pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=0.85; pbBall.vy*=0.85; }
+  }
+}
+function pbStep(){
+  // animate flippers regardless of ball state
+  pbLPrev=pbLAng; pbRPrev=pbRAng;
+  pbLAng=_pbStepFlipper(pbLAng, pbLHold?PB_L_UP:PB_L_REST);
+  pbRAng=_pbStepFlipper(pbRAng, pbRHold?PB_R_UP:PB_R_REST);
+  if(!pbBall||!pbBall.launched) return;
+
+  // integrate in substeps to avoid tunneling at high speed
+  const SUB=3;
+  for(let s=0;s<SUB;s++){
+    pbBall.vy+=0.16/SUB;             // gravity (per substep)
+    pbBall.x+=pbBall.vx/SUB; pbBall.y+=pbBall.vy/SUB;
+    // outer walls
+    if(pbBall.x<pbBall.r){ pbBall.x=pbBall.r; pbBall.vx*=-0.7; }
+    if(pbBall.x>PB_W-pbBall.r){ pbBall.x=PB_W-pbBall.r; pbBall.vx*=-0.7; }
+    if(pbBall.y<pbBall.r){ pbBall.y=pbBall.r; pbBall.vy*=-0.7; }
+    // static walls (funnels + plunger lane)
+    for(const seg of pbWalls) _pbWallHit(seg);
+    // bumpers
+    for(const b of pbBumpers){
+      const dx=pbBall.x-b.x, dy=pbBall.y-b.y, d=Math.hypot(dx,dy)||0.0001;
+      if(d<b.r+pbBall.r){
+        const nx=dx/d, ny=dy/d;
+        pbBall.x=b.x+nx*(b.r+pbBall.r); pbBall.y=b.y+ny*(b.r+pbBall.r);
+        const dot=pbBall.vx*nx+pbBall.vy*ny;
+        pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=1.04; pbBall.vy*=1.04;
+        pbScore+=100; const sc=document.getElementById('pb-score'); if(sc) sc.textContent=pbScore;
+        try{ playTone && playTone(660,0.05,'square',0.15); }catch(_){}
       }
     }
-  } else { w.style.display='none'; if(fr) fr.src='about:blank'; }
+    // flippers
+    _pbSegHit(PB_LP, pbLAng, PB_FLEN, PB_FTHICK, (pbLAng-pbLPrev)/SUB);
+    _pbSegHit(PB_RP, pbRAng, PB_FLEN, PB_FTHICK, (pbRAng-pbRPrev)/SUB);
+  }
+  // clamp speed
+  const sp=Math.hypot(pbBall.vx,pbBall.vy), MAX=22;
+  if(sp>MAX){ pbBall.vx=pbBall.vx/sp*MAX; pbBall.vy=pbBall.vy/sp*MAX; }
+  // drain
+  if(pbBall.y>PB_H+24){
+    pbBallNum++;
+    if(pbBallNum>3){ pbGameOver(); }
+    else {
+      const bn=document.getElementById('pb-ball'); if(bn) bn.textContent=pbBallNum;
+      _pbPlaceBall();
+      const lb=document.getElementById('pb-launch-btn'); if(lb) lb.style.display='';
+      pbState='ready';
+    }
+  }
 }
+function pbGameOver(){
+  pinballStop(); pbState='over';
+  const lb=document.getElementById('pb-launch-btn');
+  if(lb){ lb.style.display=''; lb.textContent='Play Again'; lb.onclick=()=>pinballReset(); }
+  if(typeof recordScore==='function' && pbScore>0) recordScore('pinball', pbScore, '3 balls');
+  if(typeof aqAddCredits==='function'){ const r=Math.floor(pbScore/500); if(r>0){ aqAddCredits(r); toast('🕹️ +'+r+' credits!'); } }
+}
+function _pbFlipperPath(c, piv, ang, len, thick){
+  const bx=piv.x+len*Math.cos(ang), by=piv.y+len*Math.sin(ang);
+  c.beginPath(); c.moveTo(piv.x,piv.y); c.lineTo(bx,by);
+  c.lineWidth=thick*2; c.lineCap='round'; c.strokeStyle='#ffd166'; c.stroke();
+  c.beginPath(); c.arc(piv.x,piv.y,4,0,7); c.fillStyle='#c79a2e'; c.fill();
+}
+function pbDraw(){
+  if(!pbCtx) return; const c=pbCtx; c.clearRect(0,0,PB_W,PB_H);
+  // playfield glow
+  const g=c.createRadialGradient(PB_W/2,90,20,PB_W/2,90,PB_H);
+  g.addColorStop(0,'#16306a'); g.addColorStop(1,'#060912'); c.fillStyle=g; c.fillRect(0,0,PB_W,PB_H);
+  // walls
+  c.strokeStyle='rgba(150,190,255,0.5)'; c.lineWidth=3; c.lineCap='round';
+  pbWalls.forEach(s=>{ c.beginPath(); c.moveTo(s.ax,s.ay); c.lineTo(s.bx,s.by); c.stroke(); });
+  // bumpers
+  pbBumpers.forEach(b=>{ c.beginPath(); c.arc(b.x,b.y,b.r,0,7); c.fillStyle='#3aa0ff'; c.fill(); c.lineWidth=3; c.strokeStyle='#bfe6ff'; c.stroke();
+    c.beginPath(); c.arc(b.x,b.y,b.r*0.4,0,7); c.fillStyle='#dff1ff'; c.fill(); });
+  // flippers
+  _pbFlipperPath(c, PB_LP, pbLAng, PB_FLEN, PB_FTHICK);
+  _pbFlipperPath(c, PB_RP, pbRAng, PB_FLEN, PB_FTHICK);
+  // ball
+  if(pbBall){ c.beginPath(); c.arc(pbBall.x,pbBall.y,pbBall.r,0,7);
+    const bg=c.createRadialGradient(pbBall.x-3,pbBall.y-3,1,pbBall.x,pbBall.y,pbBall.r);
+    bg.addColorStop(0,'#fff'); bg.addColorStop(1,'#9fb3c8'); c.fillStyle=bg; c.fill(); }
+  if(pbState==='over'){
+    c.fillStyle='rgba(0,0,0,0.55)'; c.fillRect(0,PB_H/2-30,PB_W,60);
+    c.fillStyle='#ffd166'; c.font='bold 22px sans-serif'; c.textAlign='center';
+    c.fillText('GAME OVER', PB_W/2, PB_H/2+8); c.textAlign='left';
+  }
+}
+
 
 function openRhythm(show=true){
   const w=document.getElementById('rhythm-wrap'); if(!w) return;
@@ -15568,7 +15770,7 @@ function bjUpdateBalance(){
   document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
 })();
 
-// Draggable Space Pinball window + iframe-shield so drag doesn't get stuck
+// Draggable Space Pinball window
 (function(){
   let drag=null;
   document.addEventListener('mousedown',function(e){
@@ -15578,18 +15780,13 @@ function bjUpdateBalance(){
     const r=w.getBoundingClientRect();
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
     drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
-    const fr=document.getElementById('pinball-frame');
-    if(fr) fr.style.pointerEvents='none';
   });
   document.addEventListener('mousemove',function(e){
     if(!drag) return;
     const w=document.getElementById('pinball-wrap');
     w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
   });
-  document.addEventListener('mouseup',function(){
-    if(drag){ const fr=document.getElementById('pinball-frame'); if(fr) fr.style.pointerEvents=''; }
-    drag=null;
-  });
+  document.addEventListener('mouseup',function(){ drag=null; });
 })();
 </script>
 
@@ -16163,17 +16360,21 @@ function bjUpdateBalance(){
   </div>
 </div>
 
-<!-- SPACE PINBALL -->
+<!-- SPACE PINBALL (native canvas) -->
 <div id="pinball-wrap" style="display:none">
   <div class="sol-titlebar" id="pinball-titlebar">
-    <span>🕹️ Space Cadet Pinball</span>
-    <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener" class="sol-titlebtn" style="text-decoration:none;width:auto;padding:0 6px" title="Open in new tab">↗</a>
+    <span>🕹️ Space Pinball</span>
     <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
   </div>
-  <div id="pinball-area">
-    <iframe id="pinball-frame" title="Space Cadet Pinball" tabindex="0" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe>
-    <div id="pinball-controls">Controls: <b>F2</b> new game · hold/release <b>Space</b> to launch the ball · <b>Z</b> &amp; <b>?</b> (or <b>arrows</b>) flippers. &nbsp;Trouble? <a href="https://lrusso.github.io/3DPinballSpaceCadet/3DPinballSpaceCadet.htm" target="_blank" rel="noopener">open in a new tab ↗</a></div>
+  <div id="pinball-hud">
+    <span>Score: <span id="pb-score">0</span></span>
+    <span>Ball: <span id="pb-ball">1</span>/3</span>
+    <button class="win95-btn" id="pb-launch-btn" onclick="pinballLaunch()">Launch</button>
   </div>
+  <div id="pinball-area">
+    <canvas id="pinball-canvas" width="320" height="460"></canvas>
+  </div>
+  <div id="pinball-help">Z / ← &amp; M / → (or /) flippers · Space launches · tap left/right on mobile</div>
 </div>
 
 <!-- ADMIN PANEL -->

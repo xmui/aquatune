@@ -1407,19 +1407,23 @@
     body.osmode #toast { bottom:78px; }
     html[data-family=windows] body.osmode #toast { bottom:52px; }
     #toast.show { transform:translateX(-50%) translateY(0);opacity:1;visibility:visible; }
-    /* Themed new-chat notifications (top-right stack) */
-    #aq-notif-stack { position:fixed; top:16px; right:16px; z-index:4250; display:flex; flex-direction:column; gap:8px; pointer-events:none; max-width:300px; }
-    .aq-notif { pointer-events:auto; display:flex; gap:9px; align-items:flex-start; position:relative; overflow:hidden;
-      background:var(--panel); border:1.5px solid var(--border); border-radius:var(--r-btn); padding:9px 12px 9px 14px;
-      box-shadow:0 8px 24px rgba(0,40,120,0.18); color:var(--text); cursor:pointer; max-width:300px;
-      transform:translateX(120%); opacity:0; transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s ease; }
+    /* Themed new-chat notifications (top-right stack) — styled as tiny OS windows so they
+       inherit each theme's chrome (titlebar gradient, window radius, font, border). */
+    #aq-notif-stack { position:fixed; top:16px; right:16px; z-index:4250; display:flex; flex-direction:column; gap:9px; pointer-events:none; width:300px; max-width:calc(100vw - 32px); }
+    .aq-notif { pointer-events:auto; overflow:hidden; cursor:pointer; color:var(--text);
+      background:var(--panel); border:1px solid var(--border); border-radius:var(--chrome-radius,8px);
+      box-shadow:0 14px 40px rgba(0,0,0,0.32); font-family:var(--font-ui);
+      transform:translateX(120%); opacity:0; transition:transform .32s cubic-bezier(.34,1.56,.64,1), opacity .32s ease; }
     .aq-notif.show { transform:translateX(0); opacity:1; }
-    .aq-notif::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent); }
-    .aq-notif-av { flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; }
+    .aq-notif-hd { display:flex; align-items:center; gap:6px; padding:5px 10px; font-size:11px; font-weight:700;
+      background:var(--hdr-bg); color:var(--hdr-text,#fff); }
+    .aq-notif-hd .x { margin-left:auto; opacity:.8; font-weight:800; }
+    .aq-notif-main { display:flex; gap:9px; align-items:flex-start; padding:9px 11px; }
+    .aq-notif-av { flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.25); }
     .aq-notif-body { min-width:0; }
-    .aq-notif-name { font-size:12px; font-weight:800; color:var(--text); line-height:1.2; }
-    .aq-notif-text { font-size:11px; color:var(--text2); margin-top:1px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-    @media (max-width:768px){ #aq-notif-stack { left:8px; right:8px; top:8px; max-width:none; align-items:stretch; } .aq-notif { max-width:none; } }
+    .aq-notif-name { font-size:12px; font-weight:800; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .aq-notif-text { font-size:11px; color:var(--text2); margin-top:1px; line-height:1.35; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    @media (max-width:768px){ #aq-notif-stack { left:8px; right:8px; top:8px; width:auto; max-width:none; } }
 
     /* ── MISC ───────────────────────────────────────────── */
     .empty { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 16px;color:var(--text2);font-size:11px;text-align:center;height:100%;min-height:80px;line-height:1.6; }
@@ -8694,12 +8698,19 @@ function aqNotify({ name, text, image } = {}) {
   const el = document.createElement('div');
   el.className = 'aq-notif';
   el.innerHTML =
-    `<div class="aq-notif-av" style="background:${color}">${esc(name[0] ? name[0].toUpperCase() : '?')}</div>` +
-    `<div class="aq-notif-body"><div class="aq-notif-name">${esc(name)}</div>` +
-    `<div class="aq-notif-text">${preview ? esc(preview) : (image ? '📷 Photo' : '')}</div></div>`;
+    `<div class="aq-notif-hd">💬 New message<span class="x">×</span></div>` +
+    `<div class="aq-notif-main">` +
+      `<div class="aq-notif-av" style="background:${color}">${esc(name[0] ? name[0].toUpperCase() : '?')}</div>` +
+      `<div class="aq-notif-body"><div class="aq-notif-name">${esc(name)}</div>` +
+      `<div class="aq-notif-text">${preview ? esc(preview) : (image ? '📷 Photo' : '')}</div></div>` +
+    `</div>`;
   let killed = false;
   const dismiss = () => { if (killed) return; killed = true; el.classList.remove('show'); setTimeout(() => el.remove(), 320); };
-  el.addEventListener('click', () => { try { openBoard(); } catch (_) {} dismiss(); });
+  el.addEventListener('click', (e) => {
+    if (e.target.classList.contains('x')) { dismiss(); return; }   // close button: just dismiss
+    try { openBoard(); } catch (_) {}
+    dismiss();
+  });
   stack.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   while (stack.children.length > 4) stack.firstElementChild.remove();
@@ -11881,9 +11892,10 @@ function updateChatBadge(posts) {
   const newArrivals = posts.filter(p => p.ts > _boardKnownMaxTs);
   if (newArrivals.length && _boardKnownMaxTs > 0) {
     playBoardDing();
-    // Themed pop-ups for others' new messages (board is closed here — function returned early if open)
+    // Themed pop-ups for others' fresh messages (board is closed here — function returned early if open)
     const myName = localStorage.getItem('aq_username') || '';
-    newArrivals.filter(p => (p.username || p.name) !== myName).slice(-3)
+    const now = Date.now();
+    newArrivals.filter(p => (p.username || p.name) !== myName && p.ts && (now - p.ts < 12000)).slice(-3)
       .forEach(p => aqNotify({ name: (p.username || p.name), text: (p.message || p.com || ''), image: p.imageData }));
   }
   _boardKnownMaxTs = posts.reduce((m, p) => Math.max(m, p.ts), _boardKnownMaxTs);
@@ -14140,7 +14152,11 @@ window.appendRoomChatMsg = function(p) {
     if (placeholder) placeholder.remove();
     renderChatMsg(log, p);
     const myName = localStorage.getItem('aq_username');
-    if (p.username !== myName) {
+    // Firebase replays the room's whole message history on join/refresh, so only
+    // alert for genuinely fresh messages — not the backlog (mirrors the reactions guard).
+    const mts = p.timestamp || p.ts || 0;
+    const fresh = mts && (Date.now() - mts < 12000);
+    if (p.username !== myName && fresh && !p.system) {
       playChatTone();
       // Also play notification + show a themed pop-up if AquaChat panel is closed
       const boardOpen = document.getElementById('board-overlay')?.classList.contains('show');

@@ -7900,20 +7900,29 @@ const OS = {
 };
 window.OS = OS;
 document.addEventListener('mousemove', e => {
+  // Self-heal: if a drag ended off-window (no mouseup fired) lift the iframe shield
+  // the moment the cursor returns with no button held, so iframes never stay click-through.
+  if (_aqDragActive && e.buttons === 0) { _aqShieldIframes(false); OS._drag = null; }
   const d = OS._drag; if (!d) return;
   let x = e.clientX - d.dx, y = e.clientY - d.dy;
   y = Math.max(30, y);
   x = Math.max(-d.win.offsetWidth + 90, Math.min(x, window.innerWidth - 90));
   d.win.style.left = x + 'px'; d.win.style.top = y + 'px';
 });
-// Shield iframes during any drag so mousemove/mouseup reliably reach the parent document
+// Shield iframes during any drag so mousemove/mouseup reliably reach the parent
+// document. _aqDragActive tracks whether ANY drag (OS window or game window) is in
+// progress; the shield is cleared unconditionally on every mouseup so an iframe can
+// never get stuck click-through (which would make its contents appear unclickable).
+let _aqDragActive = false;
 function _aqShieldIframes(on) {
-  document.querySelectorAll('iframe').forEach(f => { f.style.pointerEvents = on ? 'none' : ''; });
+  _aqDragActive = !!on;
+  document.querySelectorAll('iframe').forEach(f => { f.style.pointerEvents = on ? 'none' : 'auto'; });
 }
+// Capture-phase, runs before any per-window handler; always lifts the shield.
 document.addEventListener('mouseup', () => {
-  if (OS._drag) _aqShieldIframes(false);
+  if (_aqDragActive) _aqShieldIframes(false);
   OS._drag = null;
-});
+}, true);
 
 /* ============================================================
    AquaOS — very simple virtual file system (localStorage)
@@ -13144,6 +13153,8 @@ function openPinball(show=true){
   w.classList.toggle('open');
   if(w.classList.contains('open')){
     w.style.display='flex';
+    // ensure the game surface is interactive (never left click-through by a drag shield)
+    if(fr) fr.style.pointerEvents='auto';
     if(fr && (!fr.src || fr.src==='about:blank' || !fr.src.includes('lrusso'))) fr.src=PINBALL_URL;
     // give the game keyboard focus so F2/Space/arrows reach it
     if(fr){

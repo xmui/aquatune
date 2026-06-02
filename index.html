@@ -6338,11 +6338,15 @@ function restoreSession() {
       document.getElementById('ph').style.display = 'none';
     }
   } catch {}
-  // Auto-rejoin room on refresh. We no longer require the URL hash to match — host status is
-  // verified against Firebase inside initRoom, so a refresh that strips the hash keeps you host.
+  // Auto-rejoin a room only on a genuine refresh or when deep-linked to the room
+  // (so a fresh visit still shows the splash instead of silently rejoining a stale room).
   try {
     const saved = JSON.parse(localStorage.getItem('aq_session_room') || 'null');
-    if (saved?.roomId) {
+    const navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+    const isReload = navEntry ? (navEntry.type === 'reload' || navEntry.type === 'back_forward')
+                              : (performance.navigation && performance.navigation.type === 1);
+    const deepLink = saved && saved.roomId && window.location.hash.slice(1) === saved.roomId;
+    if (saved?.roomId && (isReload || deepLink)) {
       // Keep the deep-link hash consistent with the rejoined room
       if (window.location.hash.slice(1) !== saved.roomId) window.location.hash = saved.roomId;
       // Defer until initRoom is available (room-sync.js loads as module)

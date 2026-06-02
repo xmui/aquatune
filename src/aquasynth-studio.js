@@ -337,13 +337,63 @@ function renderTracks() {
     solo.title = 'Solo'; solo.onclick = e => { e.stopPropagation(); inst._solo = !inst._solo; renderTracks(); };
     const mute = el('button', 'st-mini' + (inst._mute ? ' on' : ''), 'M');
     mute.title = 'Mute'; mute.onclick = e => { e.stopPropagation(); inst._mute = !inst._mute; renderTracks(); };
-    ctrls.appendChild(solo); ctrls.appendChild(mute);
+    const more = el('button', 'st-mini more', '⋯');
+    more.title = 'Track options'; more.onclick = e => { e.stopPropagation(); showTrackMenu(inst, more); };
+    ctrls.appendChild(solo); ctrls.appendChild(mute); ctrls.appendChild(more);
     row.appendChild(ctrls);
     host.appendChild(row);
   });
   const add = el('button', 'st-addtrack', '＋ Add Track');
   add.onclick = showAddTrackMenu;
   host.appendChild(add);
+}
+
+/* ---- track duplicate / delete ------------------------------------------ */
+function showTrackMenu(inst, anchor) {
+  document.getElementById('st-trackmenu')?.remove();
+  const m = el('div', 'st-addmenu'); m.id = 'st-trackmenu';
+  const r = anchor.getBoundingClientRect();
+  m.style.position = 'fixed'; m.style.left = Math.min(r.left, window.innerWidth - 150) + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
+  [['⎘ Duplicate', () => duplicateTrack(inst)], ['🗑 Delete', () => deleteTrack(inst)]].forEach(([lbl, fn]) => {
+    const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-trackmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+}
+function duplicateTrack(inst) {
+  const ni = E.makeInstrument(inst.type, inst.name + ' copy', JSON.parse(JSON.stringify(inst.params)));
+  ni.fx = JSON.parse(JSON.stringify(inst.fx || E.defaultFx()));
+  if (inst.sampleRef && project.samples[inst.sampleRef]) { project.samples[ni.id] = project.samples[inst.sampleRef]; ni.sampleRef = ni.id; }
+  const at = project.instruments.indexOf(inst);
+  project.instruments.splice(at + 1, 0, ni);
+  const track = E.getTrack(project, inst.id);
+  const map = {};
+  const nt = E.ensureTrack(project, ni.id);
+  (track ? track.clips : []).forEach(clip => {
+    if (!map[clip.patternId]) {
+      const op = E.getPattern(project, clip.patternId);
+      const np = E.makePattern(op.name, op.bars); np.steps = op.steps.slice(); np.notes = op.notes.map(n => ({ ...n }));
+      project.patterns.push(np); map[clip.patternId] = np.id;
+    }
+    nt.clips.push(E.makeClip(map[clip.patternId], clip.startBar, clip.lenBars));
+  });
+  _selInstId = ni.id;
+  decodeAllSamples(); renderAll();
+  if (_playing) _events = E.expandArrangement(project);
+}
+function deleteTrack(inst) {
+  if (project.instruments.length <= 1) { toastSafe('Keep at least one track'); return; }
+  if (inst._chain) { try { inst._chain.input.disconnect(); inst._chain.gain.disconnect(); } catch (_) {} inst._chain = null; }
+  const track = E.getTrack(project, inst.id);
+  const usedHere = new Set((track ? track.clips : []).map(c => c.patternId));
+  project.instruments = project.instruments.filter(i => i.id !== inst.id);
+  project.arrangement = project.arrangement.filter(t => t.instId !== inst.id);
+  const stillUsed = new Set(); project.arrangement.forEach(t => t.clips.forEach(c => stillUsed.add(c.patternId)));
+  project.patterns = project.patterns.filter(p => !(usedHere.has(p.id) && !stillUsed.has(p.id))); // drop orphaned patterns
+  if (inst.sampleRef && project.samples[inst.sampleRef]) delete project.samples[inst.sampleRef];
+  if (_selInstId === inst.id) _selInstId = project.instruments[0] ? project.instruments[0].id : null;
+  renderAll();
+  if (_playing) _events = E.expandArrangement(project);
 }
 
 function renderTimeline() {

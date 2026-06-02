@@ -3443,6 +3443,56 @@ body.perf-mode #aqua-gun { display: none !important; }
     .pk-slider { width:120px; }
     .pk-raise-amt { font-size:12px; font-weight:800; color:#ffd700; min-width:34px; text-align:center; }
 
+    /* ── AQUATUNE EXCHANGE (stock market) ─── */
+    #stocks-wrap {
+      position:fixed; top:54px; left:50%; transform:translateX(-50%);
+      background:var(--panel); border:1px solid var(--border);
+      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      z-index:506; flex-direction:column; width:720px; max-width:96vw; overflow:hidden;
+    }
+    #stocks-wrap.open { display:flex; }
+    #stocks-area { background:#0a1422; color:#dfe8f5; padding:10px; display:flex; flex-direction:column; gap:8px; font-size:13px; }
+    #stk-root { display:flex; gap:10px; }
+    #stk-left { width:210px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
+    #stk-regime { font-size:11px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(255,255,255,0.04); border-radius:6px; }
+    .stk-rg-dot { width:9px; height:9px; border-radius:50%; display:inline-block; box-shadow:0 0 6px currentColor; }
+    #stk-list { display:flex; flex-direction:column; gap:2px; max-height:320px; overflow-y:auto; }
+    .stk-row { display:grid; grid-template-columns:auto 1fr auto; gap:6px; align-items:center; padding:5px 7px; border-radius:5px; cursor:pointer; background:rgba(255,255,255,0.02); }
+    .stk-row:hover { background:rgba(54,201,255,0.10); }
+    .stk-row.sel { background:rgba(54,201,255,0.18); outline:1px solid rgba(54,201,255,0.4); }
+    .stk-tk { font-weight:800; font-size:12px; }
+    .stk-px { font-family:monospace; text-align:right; }
+    .stk-ch { font-size:11px; font-weight:700; text-align:right; }
+    #stk-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    #stk-chart-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    #stk-chart-title { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #stk-chart { width:100%; height:240px; border-radius:6px; background:#08101c; }
+    #stk-compare-legend { display:flex; flex-wrap:wrap; gap:8px; min-height:14px; }
+    .stk-leg { font-size:10px; display:flex; align-items:center; gap:4px; }
+    .stk-leg i { width:10px; height:3px; border-radius:2px; display:inline-block; }
+    .stk-btn { background:#1b3550; color:#dfe8f5; border:1px solid #2c4d70; border-radius:5px; padding:4px 10px; font-size:12px; cursor:pointer; font-weight:700; }
+    .stk-btn:hover { background:#244568; }
+    .stk-btn.on { background:#36c9ff; color:#04121f; border-color:#36c9ff; }
+    .stk-btn.buy { background:#1d6b3a; border-color:#2c8a4d; } .stk-btn.buy:hover { background:#258048; }
+    .stk-btn.sell { background:#8a2c2c; border-color:#a83b3b; } .stk-btn.sell:hover { background:#a83535; }
+    #stk-trade { display:flex; flex-direction:column; gap:5px; }
+    .stk-trade-row { display:flex; gap:6px; align-items:center; }
+    #stk-qty { width:70px; background:#08101c; color:#dfe8f5; border:1px solid #2c4d70; border-radius:5px; padding:4px 6px; font-size:13px; }
+    .stk-pos { font-size:11px; color:#aebfd4; }
+    .stk-hint { font-size:11px; color:#7d8fa8; min-height:14px; }
+    #stk-portfolio { border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; }
+    .stk-pf-head { display:flex; flex-wrap:wrap; gap:14px; font-size:12px; margin-bottom:6px; }
+    .stk-pf-tbl { width:100%; border-collapse:collapse; font-size:11px; }
+    .stk-pf-tbl th { text-align:right; color:#7d8fa8; font-weight:600; padding:2px 6px; }
+    .stk-pf-tbl th:first-child, .stk-pf-tbl td:first-child { text-align:left; }
+    .stk-pf-tbl td { text-align:right; padding:2px 6px; font-family:monospace; }
+    @media (max-width:768px) {
+      #stocks-wrap { width:100vw; top:0; left:0; transform:none; height:100%; border-radius:0; }
+      #stocks-area { height:100%; overflow-y:auto; }
+      #stk-root { flex-direction:column; }
+      #stk-left { width:100%; } #stk-list { max-height:160px; }
+    }
+
     /* ── SPACE PINBALL (native canvas) ─── */
     #pinball-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
@@ -5146,6 +5196,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="rhythm" onclick="OS.open('rhythm')"><span class="agb-icon">&#127926;</span><span class="agb-name">Beat Tap</span></button>
       <button class="apps-game-btn" data-app="holdem" onclick="OS.open('holdem')"><span class="agb-icon">&#127183;</span><span class="agb-name">Hold'em</span></button>
       <button class="apps-game-btn" data-app="pinball" onclick="OS.open('pinball')"><span class="agb-icon">&#128377;&#65039;</span><span class="agb-name">Pinball</span></button>
+      <button class="apps-game-btn" data-app="stocks" onclick="OS.open('stocks')"><span class="agb-icon">&#128200;</span><span class="agb-name">Exchange</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
   </div>
@@ -7947,6 +7998,7 @@ const APPS = {
   photos:    { el:'win-photos',     name:'Photos' },
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
   pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
+  stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false), nativeDrag:true },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8271,6 +8323,7 @@ const DOCK_META = {
   slots:{icon:'🎰',label:'Slots'}, solitaire:{icon:'♠️',label:'Solitaire'}, picross:{icon:'◼',label:'Picross'},
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
+  stocks:{icon:'📈',label:'Aquatune Exchange'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','leaderboard','settings'];
 function getDockPins() {
@@ -11675,6 +11728,7 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="openHoldem()" title="Texas Hold'em">🂡<span>Hold'em</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
   <button class="mob-tool-btn" onclick="OS.open('photos')" title="Photos">📷<span>Photos</span></button>
   <button class="mob-tool-btn" onclick="OS.open('files')" title="Files">📁<span>Files</span></button>
   <button class="mob-tool-btn" onclick="OS.open('leaderboard')" title="Scores">🏆<span>Scores</span></button>
@@ -16592,6 +16646,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/aquasynth-studio.js"></script>
 <script type="module" src="/src/chat-firebase.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
+<script type="module" src="/src/stocks.js"></script>
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">
@@ -16801,6 +16856,15 @@ function bjUpdateBalance(){
       <button class="win95-btn" id="he-fold-btn" onclick="heAction('fold')" style="display:none">Fold</button>
     </div>
   </div>
+</div>
+
+<!-- AQUATUNE EXCHANGE (stock market) -->
+<div id="stocks-wrap" style="display:none">
+  <div class="sol-titlebar" id="stocks-titlebar">
+    <span>📈 Aquatune Exchange</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openStocks(false)">×</button>
+  </div>
+  <div id="stocks-area"></div>
 </div>
 
 <!-- SPACE PINBALL (native canvas) -->

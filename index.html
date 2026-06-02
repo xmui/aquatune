@@ -15131,8 +15131,9 @@ function solRender(){
   const st=document.getElementById('sol-status');
   if(st) st.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
 
-  // Start timer on first move
-  if(solMoves===1) solStartTimer();
+  // Start timer once play begins (guarded against duplicate intervals);
+  // >=1 rather than ===1 so it still starts if a move bumps the count past 1.
+  if(solMoves>=1) solStartTimer();
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){

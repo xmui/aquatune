@@ -580,6 +580,10 @@ window.sendRoomMessage = function(msg, imageData) {
 };
 
 window.leaveRoom = function() {
+  // Clear the saved room so the post-reload auto-rejoin (which keys off
+  // aq_session_room) doesn't fire — the fresh load then shows the splash.
+  try { localStorage.removeItem('aq_session_room'); } catch {}
+  window._currentRoomId = null; window._isRoomHost = false; window._canControl = false;
   window.location.hash = '';
   window.location.reload();
 };

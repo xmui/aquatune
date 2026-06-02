@@ -15,6 +15,30 @@ const TRACK_COLORS = ['#ff5d73', '#ffb020', '#ffd23f', '#4cd07d', '#36c5f0', '#7
 const DRUM_FNS = { kick: 'drumKick', snare: 'drumSnare', hihat: 'drumHihat', openhh: 'drumOpenHH', clap: 'drumClap', tom: 'drumTom', crash: 'drumCrash', cowbell: 'drumCowbell' };
 const DRUM_VOICES = ['kick', 'snare', 'hihat', 'openhh', 'clap', 'tom', 'crash', 'cowbell'];
 const CHIP_WAVES = ['pulse', 'triangle', 'sawtooth', 'noise'];
+// Sound presets (mirror the legacy AquaSynth variety). Each sets synth params + fx.
+const PRESETS = [
+  { name: 'Square Lead',  type: 'chip', params: { wave: 'pulse',    a: 0.005, d: 0.05, s: 0.7, r: 0.12, cut: 12000, res: 1, fenv: 0, vibrato: true } },
+  { name: 'Saw Lead',     type: 'chip', params: { wave: 'sawtooth', a: 0.004, d: 0.08, s: 0.6, r: 0.12, cut: 4500, res: 3, fenv: 0.45 } },
+  { name: 'Chip Arp',     type: 'chip', params: { wave: 'pulse',    a: 0.002, d: 0.04, s: 0.3, r: 0.05, cut: 8000, res: 2, fenv: 0.3 } },
+  { name: 'Pluck',        type: 'chip', params: { wave: 'pulse',    a: 0.002, d: 0.12, s: 0.0, r: 0.08, cut: 5000, res: 4, fenv: 0.6 } },
+  { name: 'Sub Bass',     type: 'chip', params: { wave: 'triangle', a: 0.004, d: 0.1,  s: 0.85, r: 0.1, cut: 1200, res: 2, fenv: 0.2 } },
+  { name: 'Reese Bass',   type: 'chip', params: { wave: 'sawtooth', a: 0.005, d: 0.1,  s: 0.85, r: 0.12, cut: 900, res: 6, fenv: 0.3 }, fx: { drive: 0.4 } },
+  { name: 'Soft Pad',     type: 'chip', params: { wave: 'triangle', a: 0.3,  d: 0.25, s: 0.85, r: 0.6, cut: 3000, res: 1, fenv: 0.2 }, fx: { reverb: 0.35, chorus: 0.4 } },
+  { name: 'Noise Hit',    type: 'chip', params: { wave: 'noise',    a: 0.002, d: 0.1,  s: 0.2, r: 0.1, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Toy Piano',    type: 'keys', params: { preset: 'toypiano', a: 0.005, d: 0.2, s: 0.4, r: 0.3, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Glass Bells',  type: 'keys', params: { preset: 'toypiano', a: 0.002, d: 0.5, s: 0.0, r: 0.5, cut: 12000, res: 1, fenv: 0 }, fx: { reverb: 0.45 } },
+  { name: 'Organ',        type: 'keys', params: { preset: 'organ', a: 0.02, d: 0.05, s: 0.9, r: 0.1, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Warm Strings', type: 'keys', params: { preset: 'organ', a: 0.25, d: 0.2, s: 0.85, r: 0.5, cut: 4000, res: 1, fenv: 0.3 }, fx: { reverb: 0.4, chorus: 0.5 } },
+  { name: 'Casio Tone',   type: 'keys', params: { preset: 'casio', a: 0.005, d: 0.1, s: 0.6, r: 0.15, cut: 9000, res: 1, fenv: 0 } },
+];
+function applyPreset(inst, preset) {
+  Object.assign(inst.params, JSON.parse(JSON.stringify(preset.params)));
+  if (preset.fx) Object.assign(inst.fx, preset.fx);
+  inst.name = preset.name;
+  inst._chain = null;              // rebuild so drive/sends pick up new values
+  renderAll();
+  if (_playing) _events = E.expandArrangement(project);
+}
 const LOOKAHEAD = 0.12, TICK_MS = 25;
 const EDITOR_LO = 48; // C3 — piano-roll bottom note
 
@@ -217,6 +241,50 @@ function normalizeInstruments() {
   }
 }
 
+/* ---- SF2 soundfont instrument ------------------------------------------ */
+function buildSF2Zones(parsed, presetIndex, c) {
+  const preset = parsed.presets[presetIndex] || parsed.presets[0];
+  const smpl = parsed.smpl;
+  return preset.zones.map(z => {
+    const len = Math.max(1, z.end - z.start), rate = z.rate || 44100;
+    const buf = c.createBuffer(1, len, rate); const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = smpl[z.start + i] / 32768;
+    return Object.assign({}, z, { _buf: buf, loopStartSec: (z.loopStart - z.start) / rate, loopEndSec: (z.loopEnd - z.start) / rate });
+  });
+}
+// (re)build the selected preset's zones for the given context, caching on the instrument
+function ensureSF2(inst, c) {
+  const pi = inst.params.presetIndex || 0;
+  if (inst._sf2 && inst._sf2.ctx === c && inst._sf2.presetIndex === pi) return inst._sf2;
+  if (!inst._sf2 || !inst._sf2.parsed) {
+    if (!inst.sampleRef || !project.samples[inst.sampleRef]) return null;
+    try { inst._sf2 = { parsed: E.parseSF2(b64ToBuf(project.samples[inst.sampleRef])) }; } catch (_) { return null; }
+  }
+  inst._sf2.ctx = c; inst._sf2.presetIndex = pi; inst._sf2.zones = buildSF2Zones(inst._sf2.parsed, pi, c);
+  inst.params.presetNames = inst._sf2.parsed.presets.map(p => p.name);
+  return inst._sf2;
+}
+function pickZone(zones, midi) {
+  let best = null;
+  for (const z of zones) { if (midi >= z.lo && midi <= z.hi) return z; }
+  for (const z of zones) { if (!best || Math.abs(z.root - midi) < Math.abs(best.root - midi)) best = z; }
+  return best;
+}
+function sf2Voice(c, dest, midi, t, dur, vel, inst, zonesOverride) {
+  const zones = zonesOverride || (ensureSF2(inst, c) || {}).zones; if (!zones || !zones.length) return;
+  const z = pickZone(zones, midi); if (!z || !z._buf) return;
+  const src = c.createBufferSource(); src.buffer = z._buf;
+  const tune = Math.pow(2, ((z.coarse || 0) * 100 + (z.fine || 0)) / 1200);
+  src.playbackRate.value = (E.midiToFreq(midi) / E.midiToFreq(z.root || 60)) * tune;
+  if (z.loop && z.loopEndSec > z.loopStartSec) { src.loop = true; src.loopStart = z.loopStartSec; src.loopEnd = z.loopEndSec; }
+  const p = inst.params, a = p.a ?? 0.004, r = p.r ?? 0.25, peak = 0.9 * (vel ?? 0.9), end = t + Math.max(0.05, dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.setValueAtTime(peak, Math.max(t + a, end)); g.gain.exponentialRampToValueAtTime(0.0001, end + r);
+  src.connect(g); applyFilter(c, g, dest, t, p);
+  src.start(t); src.stop(end + r + 0.05);
+}
+
 function triggerEvent(ev, when) {
   const inst = project.instruments.find(i => i.id === ev.instId);
   if (!inst || inst._mute) return;
@@ -231,6 +299,8 @@ function triggerEvent(ev, when) {
     keysVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   } else if (inst.type === 'sampler') {
     samplerVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst);
+  } else if (inst.type === 'sf2') {
+    sf2Voice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst);
   } else {
     chipVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   }
@@ -333,6 +403,7 @@ function renderTracks() {
     const row = el('div', 'st-track' + (inst.id === _selInstId ? ' sel' : ''));
     row.style.borderLeftColor = instColor(inst.id);
     row.onclick = () => { _selInstId = inst.id; renderAll(); };
+    row.oncontextmenu = e => { e.preventDefault(); _selInstId = inst.id; renderAll(); showTrackMenu(inst, row, e); };
     const icon = inst.type === 'drum' ? '🥁' : (inst.params && inst.params.wave === 'noise' ? '📻' : '🎹');
     row.appendChild(el('div', 'st-tname', `<span>${icon}</span><b>${esc(inst.name)}</b>`));
     const ctrls = el('div', 'st-tctrls');
@@ -351,17 +422,38 @@ function renderTracks() {
   host.appendChild(add);
 }
 
-/* ---- track duplicate / delete ------------------------------------------ */
-function showTrackMenu(inst, anchor) {
-  document.getElementById('st-trackmenu')?.remove();
-  const m = el('div', 'st-addmenu'); m.id = 'st-trackmenu';
-  const r = anchor.getBoundingClientRect();
-  m.style.position = 'fixed'; m.style.left = Math.min(r.left, window.innerWidth - 150) + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
-  [['⎘ Duplicate', () => duplicateTrack(inst)], ['🗑 Delete', () => deleteTrack(inst)]].forEach(([lbl, fn]) => {
-    const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b);
-  });
+/* ---- right-click / context menus --------------------------------------- */
+function showCtxMenu(items, x, y) {
+  document.getElementById('st-ctxmenu')?.remove();
+  const m = el('div', 'st-addmenu'); m.id = 'st-ctxmenu';
+  m.style.position = 'fixed'; m.style.left = Math.min(x, window.innerWidth - 170) + 'px'; m.style.top = Math.min(y, window.innerHeight - 30 - items.length * 30) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
+  items.forEach(([lbl, fn]) => { const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b); });
   document.body.appendChild(m);
-  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-trackmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-ctxmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+}
+function showTrackMenu(inst, anchor, ev) {
+  const r = anchor.getBoundingClientRect();
+  const x = ev ? ev.clientX : r.left, y = ev ? ev.clientY : r.bottom + 4;
+  showCtxMenu([
+    ['＋ Add clip', () => addClipAt(inst, Math.ceil(E.songLengthBars(project)))],
+    ['⎘ Duplicate track', () => duplicateTrack(inst)],
+    ['🗑 Delete track', () => deleteTrack(inst)],
+  ], x, y);
+}
+function showClipMenu(inst, clip, ev) {
+  showCtxMenu([
+    ['⎘ Duplicate clip', () => duplicateClip(inst, clip)],
+    ['🗑 Delete clip', () => deleteClip(inst, clip)],
+  ], ev.clientX, ev.clientY);
+}
+function duplicateClip(inst, clip) {
+  const t = E.getTrack(project, inst.id); const len = clip.lenBars || 1;
+  t.clips.push(E.makeClip(clip.patternId, clip.startBar + len, len)); // shares the pattern
+  renderTimeline(); if (_playing) _events = E.expandArrangement(project);
+}
+function deleteClip(inst, clip) {
+  const t = E.getTrack(project, inst.id); t.clips = t.clips.filter(c => c.id !== clip.id);
+  renderTimeline(); if (_playing) _events = E.expandArrangement(project);
 }
 function duplicateTrack(inst) {
   const ni = E.makeInstrument(inst.type, inst.name + ' copy', JSON.parse(JSON.stringify(inst.params)));
@@ -425,6 +517,12 @@ function renderTimeline() {
       const bar = Math.floor((e.offsetX) / _pxPerBar);
       addClipAt(inst, bar);
     });
+    lane.addEventListener('contextmenu', e => {
+      if (e.target !== lane && !e.target.classList.contains('st-lane-grid')) return; // clip has its own menu
+      e.preventDefault();
+      const bar = Math.floor(e.offsetX / _pxPerBar);
+      showCtxMenu([['＋ Add clip here', () => addClipAt(inst, bar)]], e.clientX, e.clientY);
+    });
     lanes.appendChild(lane);
   });
   const ph = el('div', '', ''); ph.id = 'st-playhead'; ph.className = 'st-playhead'; lanes.appendChild(ph);
@@ -439,6 +537,7 @@ function buildClip(inst, clip) {
   c.style.background = instColor(inst.id);
   c.innerHTML = `<span class="st-clip-name">${esc(pat ? pat.name : '?')}</span><i class="st-clip-resize"></i>`;
   c.onclick = e => { e.stopPropagation(); _selInstId = inst.id; renderAll(); };
+  c.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); showClipMenu(inst, clip, e); };
   // drag to move / resize
   c.addEventListener('pointerdown', e => startClipDrag(e, inst, clip, c));
   return c;
@@ -542,6 +641,13 @@ function deviceStrip(inst) {
   const live = () => applyChainParams(inst);
   // sound selector
   const top = el('div', 'st-device-top');
+  if (inst.type === 'chip' || inst.type === 'keys') {
+    const ps = el('select', 'st-rnd-sel');
+    const ph = document.createElement('option'); ph.textContent = '✦ Preset…'; ph.value = ''; ps.appendChild(ph);
+    PRESETS.filter(pr => pr.type === inst.type).forEach(pr => { const o = document.createElement('option'); o.value = pr.name; o.textContent = pr.name; ps.appendChild(o); });
+    ps.onchange = () => { const pr = PRESETS.find(x => x.name === ps.value); if (pr) applyPreset(inst, pr); };
+    top.appendChild(ps);
+  }
   if (inst.type === 'chip') {
     const sel = el('select', 'st-wave');
     CHIP_WAVES.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((P.wave || 'pulse') === w) o.selected = true; sel.appendChild(o); });
@@ -553,6 +659,13 @@ function deviceStrip(inst) {
   } else if (inst.type === 'sampler') {
     const b = el('button', 'st-wave', '🎙️ ' + (P.sampleName ? esc(P.sampleName).slice(0, 16) : 'Load sample'));
     b.onclick = () => loadSampleFor(inst); top.appendChild(b);
+  } else if (inst.type === 'sf2') {
+    const names = P.presetNames || [];
+    const sel = el('select', 'st-rnd-sel');
+    names.forEach((n, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = (n || ('Preset ' + i)).slice(0, 22); if ((P.presetIndex || 0) === i) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { P.presetIndex = parseInt(sel.value) || 0; ensureSF2(inst, actx()); renderAll(); if (_playing) _events = E.expandArrangement(project); };
+    top.appendChild(el('span', 'st-dim', '🎵 SF2'));
+    if (names.length) top.appendChild(sel);
   }
   wrap.appendChild(top);
   // knob bank
@@ -594,6 +707,7 @@ function audition(inst, midi, dur = 0.3) {
   const c = actx(), dest = getLiveChain(inst).input;
   if (inst.type === 'keys') keysVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
   else if (inst.type === 'sampler') samplerVoice(c, dest, midi, c.currentTime, dur, 0.9, inst);
+  else if (inst.type === 'sf2') sf2Voice(c, dest, midi, c.currentTime, dur, 0.9, inst);
   else chipVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
 }
 /* ---- live recording (on-screen keys + computer keys + Web MIDI) -------- */
@@ -637,8 +751,25 @@ function setupInput() {
     if (!open() || e.repeat) return;
     if (e.target && e.target.closest && e.target.closest('input,select,textarea')) return;
     const key = (e.key || '').toLowerCase();
-    if (key === 'z') { _recOct = Math.max(0, _recOct - 1); return; }
-    if (key === 'x') { _recOct = Math.min(7, _recOct + 1); return; }
+    // command shortcuts with modifiers (don't trigger notes)
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      const inst = project.instruments.find(i => i.id === _selInstId);
+      if (key === 'd' && inst) { e.preventDefault(); duplicateTrack(inst); }
+      return;
+    }
+    // single-key commands (these letters are not in the note map)
+    switch (key) {
+      case ' ': e.preventDefault(); togglePlay(); return;
+      case 'r': e.preventDefault(); document.getElementById('st-rec')?.click(); return;
+      case 'q': e.preventDefault(); cycleQuant(); return;
+      case '[': e.preventDefault(); zoomBy(-1); return;
+      case ']': e.preventDefault(); zoomBy(1); return;
+      case ',': e.preventDefault(); setBpm(project.bpm - 1); return;
+      case '.': e.preventDefault(); setBpm(project.bpm + 1); return;
+      case '/': e.preventDefault(); toastSafe('Keys: Space play · R rec · Q quantize · [ ] zoom · , . tempo · Z/X octave · ⌘D dup track · A–L/W–O notes'); return;
+      case 'z': _recOct = Math.max(0, _recOct - 1); return;
+      case 'x': _recOct = Math.min(7, _recOct + 1); return;
+    }
     const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
     if (semi == null || _heldKeys[key]) return;
     _heldKeys[key] = true; e.preventDefault();
@@ -725,22 +856,20 @@ function showAddTrackMenu() {
   const existing = document.getElementById('st-addmenu'); if (existing) { existing.remove(); return; }
   const menu = el('div', '', '');
   menu.id = 'st-addmenu'; menu.className = 'st-addmenu';
+  const ico = pr => pr.type === 'keys' ? '🎹' : (pr.params.wave === 'noise' ? '📻' : '🎛️');
   const opts = [
-    ['🎹 Chip Lead', () => addInstrument('chip', 'Chip Lead', { wave: 'pulse', vibrato: true })],
-    ['🔊 Chip Bass', () => addInstrument('chip', 'Chip Bass', { wave: 'triangle' })],
-    ['📻 Noise', () => addInstrument('chip', 'Noise', { wave: 'noise' })],
-    ['🎀 Toy Piano', () => addInstrument('keys', 'Toy Piano', { preset: 'toypiano' })],
-    ['🎚️ Organ', () => addInstrument('keys', 'Organ', { preset: 'organ' })],
-    ['📺 Casio', () => addInstrument('keys', 'Casio', { preset: 'casio' })],
+    ...PRESETS.map(pr => [`${ico(pr)} ${pr.name}`, () => addInstrument(pr.type, pr.name, pr.params, pr.fx)]),
     ['🎙️ Sampler', () => addInstrument('sampler', 'Sampler', { baseNote: 60, oneShot: true })],
+    ['🎵 SF2 SoundFont', () => importSF2()],
     ...DRUM_VOICES.map(v => [`🥁 ${v}`, () => addInstrument('drum', v[0].toUpperCase() + v.slice(1), { voice: v, drumMidi: 36 })]),
   ];
   opts.forEach(([label, fn]) => { const b = el('button', 'st-addmenu-opt', label); b.onclick = () => { fn(); menu.remove(); }; menu.appendChild(b); });
   document.getElementById('studio-win').appendChild(menu);
   setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-addmenu') && !ev.target.closest('.st-addtrack')) { menu.remove(); document.removeEventListener('pointerdown', h); } }), 0);
 }
-function addInstrument(type, name, params) {
+function addInstrument(type, name, params, fx) {
   const inst = E.makeInstrument(type, name, params);
+  if (fx) Object.assign(inst.fx, fx);
   project.instruments.push(inst);
   const pat = E.makePattern(name, 1);
   if (type === 'drum') [0, 4, 8, 12].forEach(s => { if (params.voice === 'kick' || params.voice === 'snare') pat.steps[s] = params.voice === 'snare' ? (s % 8 === 4 ? 1 : 0) : 1; });
@@ -758,6 +887,12 @@ function syncTransportUI() {
   const rec = document.getElementById('st-rec'); if (rec) rec.classList.toggle('on', _recording);
 }
 function setBpm(v) { project.bpm = Math.max(40, Math.min(240, Math.round(v))); syncTransportUI(); if (_playing) _events = E.expandArrangement(project); }
+function zoomBy(dir) { _pxPerBar = Math.max(40, Math.min(220, _pxPerBar + dir * 24)); renderTimeline(); }
+function cycleQuant() {
+  const order = [4, 2, 1]; _quantize = order[(order.indexOf(_quantize) + 1) % order.length];
+  const sel = document.getElementById('st-quant'); if (sel) sel.value = String(_quantize);
+  toastSafe('Quantize: 1/' + (16 / _quantize));
+}
 
 function bindKnob(node, get, set, opts = {}) {
   const min = opts.min ?? 0, max = opts.max ?? 1, step = opts.step ?? (max - min) / 100;
@@ -806,9 +941,7 @@ function build() {
   bind('st-export-midi', exportMIDIFile); bind('st-import-midi', importMIDIFile);
   bind('st-render-wav', renderWAV);
 
-  // keyboard: space = play/stop while window focused
-  root.addEventListener('keydown', e => { if (e.key === ' ' && !e.target.closest('input,select,textarea')) { e.preventDefault(); togglePlay(); } });
-
+  // (keyboard shortcuts incl. Space are handled in setupInput, document-level)
   _selInstId = project.instruments[0] ? project.instruments[0].id : null;
   renderAll();
   decodeAllSamples();
@@ -827,6 +960,8 @@ async function decodeAllSamples() {
   for (const inst of project.instruments) {
     if (inst.type === 'sampler' && inst.sampleRef && project.samples[inst.sampleRef] && !sampleBuffer(inst, c)) {
       try { inst._buf = await c.decodeAudioData(b64ToBuf(project.samples[inst.sampleRef]).slice(0)); } catch (_) {}
+    } else if (inst.type === 'sf2' && inst.sampleRef && project.samples[inst.sampleRef]) {
+      try { ensureSF2(inst, c); } catch (_) {}
     }
   }
   renderEditor();
@@ -858,6 +993,27 @@ function pickFile(accept, asArrayBuffer, cb) {
   inp.click();
 }
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
+function importSF2() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.sf2';
+  input.onchange = async () => {
+    const f = input.files[0]; if (!f) return;
+    toastSafe('Loading ' + f.name + '…');
+    try {
+      const ab = await f.arrayBuffer();
+      const parsed = E.parseSF2(ab);                          // validate before committing
+      const inst = E.makeInstrument('sf2', f.name.replace(/\.sf2$/i, '').slice(0, 18), { presetIndex: 0, a: 0.004, d: 0, s: 1, r: 0.25, cut: 12000, res: 1, fenv: 0 });
+      const url = await fileToDataURL(f); project.samples[inst.id] = url; inst.sampleRef = inst.id;
+      inst._sf2 = { parsed, ctx: actx(), presetIndex: 0, zones: buildSF2Zones(parsed, 0, actx()) };
+      inst.params.presetNames = parsed.presets.map(p => p.name);
+      project.instruments.push(inst);
+      const pat = E.makePattern(inst.name, 1); project.patterns.push(pat);
+      E.ensureTrack(project, inst.id).clips.push(E.makeClip(pat.id, 0, Math.max(1, Math.ceil(E.songLengthBars(project)) || 1)));
+      _selInstId = inst.id; renderAll();
+      toastSafe('🎵 ' + inst.name + ' · ' + parsed.presets.length + ' presets');
+    } catch (e) { toastSafe('SF2 load failed: ' + (e && e.message || e)); }
+  };
+  input.click();
+}
 
 function saveProject() {
   const clean = JSON.parse(JSON.stringify(project, (k, v) => (k && k[0] === '_') ? undefined : v));
@@ -904,11 +1060,13 @@ async function renderWAV() {
   toastSafe('🌊 Rendering WAV…');
   const oc = new OAC(2, Math.ceil(sr * dur), sr);
   const m = oc.createGain(); m.gain.value = project.master ?? 0.9; m.connect(oc.destination);
-  // pre-decode sampler audio into the offline context
-  const offBuf = {};
+  // pre-decode sampler audio + build SF2 zones into the offline context
+  const offBuf = {}, offSF2 = {};
   for (const inst of project.instruments) {
     if (inst.type === 'sampler' && inst.sampleRef && project.samples[inst.sampleRef]) {
       try { offBuf[inst.id] = await oc.decodeAudioData(b64ToBuf(project.samples[inst.sampleRef]).slice(0)); } catch (_) {}
+    } else if (inst.type === 'sf2' && inst.sampleRef && project.samples[inst.sampleRef]) {
+      try { offSF2[inst.id] = buildSF2Zones(E.parseSF2(b64ToBuf(project.samples[inst.sampleRef])), inst.params.presetIndex || 0, oc); } catch (_) {}
     }
   }
   const buses = makeBuses(oc, m);              // P3 FX buses on the offline ctx
@@ -922,6 +1080,7 @@ async function renderWAV() {
     if (inst.type === 'drum') offlineDrum(oc, dest, (inst.params && inst.params.voice) || 'kick', ev.timeSec);
     else if (inst.type === 'keys') keysVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
     else if (inst.type === 'sampler') { if (offBuf[inst.id]) samplerVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offBuf[inst.id]); }
+    else if (inst.type === 'sf2') { if (offSF2[inst.id]) sf2Voice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offSF2[inst.id]); }
     else chipVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
   }
   try { const buf = await oc.startRendering(); download(E.encodeWAV(buf), (project.name || 'song').replace(/\s+/g, '_') + '.wav', 'audio/wav'); toastSafe('🌊 WAV downloaded'); }

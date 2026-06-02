@@ -373,3 +373,70 @@ export function randomDrumPattern({ voice = 'kick', genre = 'straight', bars = 1
 }
 export const RND_SCALES = Object.keys(SCALES);
 export const RND_GENRES = Object.keys(DRUM_PATTERNS);
+
+/* ============================================================================
+ * SF2 SoundFont parser (RIFF sfbk → sdta/smpl + pdta). Resolves each preset to
+ * key-zones {lo,hi,root,tune,loop, sample slice} backed by the shared 16-bit PCM.
+ * Pragmatic subset: per-zone keyRange / rootKey / tuning / loop (no modulators,
+ * no preset-level layering beyond the instrument reference). Enough to *play* a
+ * soundfont. Returns { smpl:Int16Array, presets:[{name,bank,preset,zones[]}] }.
+ * ========================================================================== */
+export function parseSF2(arrayBuffer) {
+  const ab = arrayBuffer; const dv = new DataView(ab); const u8 = new Uint8Array(ab);
+  const fourcc = o => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+  if (fourcc(0) !== 'RIFF' || fourcc(8) !== 'sfbk') throw new Error('Not an SF2 file');
+  let smpl = null; const pdta = {};
+  let p = 12;
+  while (p < ab.byteLength - 8) {
+    const id = fourcc(p), sz = dv.getUint32(p + 4, true), body = p + 8;
+    if (id === 'LIST') {
+      const listType = fourcc(body); let q = body + 4;
+      while (q < body + sz) {
+        const cid = fourcc(q), csz = dv.getUint32(q + 4, true), cbody = q + 8;
+        if (listType === 'sdta' && cid === 'smpl') smpl = new Int16Array(ab.slice(cbody, cbody + csz));
+        else if (listType === 'pdta') pdta[cid] = { off: cbody, size: csz };
+        q = cbody + csz + (csz & 1);
+      }
+    }
+    p = body + sz + (sz & 1);
+  }
+  if (!smpl || !pdta.phdr) throw new Error('SF2 missing sample/preset data');
+  const str = (o, len) => { let s = ''; for (let i = 0; i < len; i++) { const ch = u8[o + i]; if (!ch) break; s += String.fromCharCode(ch); } return s; };
+  const rd = (name, recSize, fn) => { const c = pdta[name]; if (!c) return []; const n = Math.floor(c.size / recSize); const a = []; for (let i = 0; i < n; i++) a.push(fn(c.off + i * recSize)); return a; };
+  const phdr = rd('phdr', 38, o => ({ name: str(o, 20), preset: dv.getUint16(o + 20, true), bank: dv.getUint16(o + 22, true), bag: dv.getUint16(o + 24, true) }));
+  const pbag = rd('pbag', 4, o => ({ gen: dv.getUint16(o, true) }));
+  const pgen = rd('pgen', 4, o => ({ op: dv.getUint16(o, true), amt: dv.getUint16(o + 2, true), samt: dv.getInt16(o + 2, true) }));
+  const inst = rd('inst', 22, o => ({ name: str(o, 20), bag: dv.getUint16(o + 20, true) }));
+  const ibag = rd('ibag', 4, o => ({ gen: dv.getUint16(o, true) }));
+  const igen = rd('igen', 4, o => ({ op: dv.getUint16(o, true), amt: dv.getUint16(o + 2, true), samt: dv.getInt16(o + 2, true) }));
+  const shdr = rd('shdr', 46, o => ({ name: str(o, 20), start: dv.getUint32(o + 20, true), end: dv.getUint32(o + 24, true), startLoop: dv.getUint32(o + 28, true), endLoop: dv.getUint32(o + 32, true), rate: dv.getUint32(o + 36, true), pitch: u8[o + 40] }));
+  const presets = [];
+  for (let pi = 0; pi < phdr.length - 1; pi++) {
+    const ph = phdr[pi], zones = [];
+    for (let b = ph.bag; b < phdr[pi + 1].bag; b++) {
+      if (b + 1 >= pbag.length) break;
+      let instId = -1;
+      for (let g = pbag[b].gen; g < pbag[b + 1].gen; g++) if (pgen[g] && pgen[g].op === 41) instId = pgen[g].amt;
+      if (instId < 0 || instId >= inst.length - 1) continue;
+      for (let ib = inst[instId].bag; ib < inst[instId + 1].bag; ib++) {
+        if (ib + 1 >= ibag.length) break;
+        let lo = 0, hi = 127, root = -1, sid = -1, loopMode = 0, coarse = 0, fine = 0;
+        for (let g = ibag[ib].gen; g < ibag[ib + 1].gen; g++) {
+          const ge = igen[g]; if (!ge) continue;
+          if (ge.op === 43) { lo = ge.amt & 0xff; hi = (ge.amt >> 8) & 0xff; }
+          else if (ge.op === 58) root = ge.amt;
+          else if (ge.op === 53) sid = ge.amt;
+          else if (ge.op === 54) loopMode = ge.amt;
+          else if (ge.op === 51) coarse = ge.samt;
+          else if (ge.op === 52) fine = ge.samt;
+        }
+        if (sid < 0 || sid >= shdr.length) continue;
+        const sh = shdr[sid];
+        zones.push({ lo, hi, root: root >= 0 ? root : sh.pitch, coarse, fine, loop: (loopMode === 1 || loopMode === 3), rate: sh.rate, start: sh.start, end: sh.end, loopStart: sh.startLoop, loopEnd: sh.endLoop });
+      }
+    }
+    if (zones.length) presets.push({ name: ph.name || ('Preset ' + pi), bank: ph.bank, preset: ph.preset, zones });
+  }
+  if (!presets.length) throw new Error('No playable presets in SF2');
+  return { smpl, presets };
+}

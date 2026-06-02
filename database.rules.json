@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "rooms":      { ".read": true, ".write": true },
+    "portfolios": { ".read": true, ".write": true },
+    "market":     { ".read": true, ".write": true },
+    "clockSync":  { ".read": true, ".write": true },
+    "messages":   { ".read": true, ".write": true },
+    "globalChat": { ".read": true, ".write": true },
+    "leaderboard":{ ".read": true, ".write": true },
+
+    "accounts": {
+      ".read": true,
+      "$id": {
+        ".write": "!data.exists() || newData.child('usernameLower').val() === data.child('usernameLower').val()"
+      }
+    },
+    "usernames": {
+      ".read": true,
+      "$u": { ".write": "!data.exists() || newData.val() === data.val()" }
+    },
+    "googleUsers": {
+      ".read": true,
+      "$g": { ".write": "!data.exists() || newData.val() === data.val()" }
+    },
+    "passwordResets": { ".read": true, ".write": true }
+  }
+}

@@ -686,8 +686,26 @@ function deviceStrip(inst) {
     knobCell('LVL', () => F.level, v => { F.level = v; live(); }, { min: 0, max: 1.2, def: 0.9 }),
   );
   wrap.appendChild(bank);
-  wrap.appendChild(buildMiniKeys()); // on-screen keyboard (plays + records)
+  wrap.appendChild(buildMiniKeysSection()); // collapsible on-screen keyboard (plays + records)
   return wrap;
+}
+
+// On-screen keyboard wrapped with a collapse toggle (state persisted)
+function buildMiniKeysSection() {
+  const sec = el('div', 'st-mk-wrap');
+  const collapsed = localStorage.getItem('aq_studio_keys_collapsed') === '1';
+  if (collapsed) sec.classList.add('collapsed');
+  const bar = el('div', 'st-mk-bar');
+  const btn = el('button', 'st-mk-toggle', (collapsed ? '▸' : '▾') + ' KEYS');
+  btn.onclick = () => {
+    const c = sec.classList.toggle('collapsed');
+    localStorage.setItem('aq_studio_keys_collapsed', c ? '1' : '0');
+    btn.textContent = (c ? '▸' : '▾') + ' KEYS';
+  };
+  bar.appendChild(btn);
+  sec.appendChild(bar);
+  sec.appendChild(buildMiniKeys());
+  return sec;
 }
 
 function buildStepGrid(inst, pat) {
@@ -905,6 +923,35 @@ function bindKnob(node, get, set, opts = {}) {
   render();
 }
 
+/* ---- draggable divider between the arrangement board and the editor ----- */
+function setupEditorSplit() {
+  const split = document.getElementById('st-vsplit');
+  const editor = document.getElementById('st-editor-wrap');
+  if (!split || !editor) return;
+  const saved = parseInt(localStorage.getItem('aq_studio_editor_h') || '0', 10);
+  if (saved >= 120) editor.style.height = saved + 'px';
+  if (split._splitInit) return;
+  split._splitInit = true;
+  split.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const startY = e.clientY, startH = editor.getBoundingClientRect().height;
+    const max = Math.round(window.innerHeight * 0.7);
+    try { split.setPointerCapture(e.pointerId); } catch (_) {}
+    const move = ev => {
+      const h = Math.max(120, Math.min(max, startH + (startY - ev.clientY)));
+      editor.style.height = h + 'px';
+    };
+    const up = ev => {
+      split.removeEventListener('pointermove', move);
+      split.removeEventListener('pointerup', up);
+      try { split.releasePointerCapture(ev.pointerId); } catch (_) {}
+      localStorage.setItem('aq_studio_editor_h', String(Math.round(editor.getBoundingClientRect().height)));
+    };
+    split.addEventListener('pointermove', move);
+    split.addEventListener('pointerup', up);
+  });
+}
+
 /* ---- build the window once --------------------------------------------- */
 function build() {
   if (_built) return; _built = true;
@@ -921,6 +968,7 @@ function build() {
   const quant = document.getElementById('st-quant');
   if (quant) quant.onchange = () => { _quantize = parseInt(quant.value) || 1; };
   setupInput();
+  setupEditorSplit();
   // BPM: scrub vertically or click to type
   const bpmBox = document.getElementById('st-bpm');
   if (bpmBox) {

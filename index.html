@@ -1968,7 +1968,16 @@
     .st-clip-resize { position:absolute; right:0; top:0; width:8px; height:100%; cursor:ew-resize; }
     .st-playhead { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent); box-shadow:0 0 8px var(--st-accent); pointer-events:none; }
 
+    #st-vsplit { height:7px; flex-shrink:0; cursor:row-resize; background:#0c0e13; position:relative; touch-action:none; }
+    #st-vsplit::after { content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:46px; height:3px; border-radius:2px; background:#3a4150; }
+    #st-vsplit:hover::after { background:var(--st-accent); }
     #st-editor-wrap { height:250px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    /* collapsible on-screen keyboard */
+    .st-mk-bar { display:flex; align-items:center; gap:6px; margin-top:9px; }
+    .st-mk-toggle { background:#2a2f3a; color:#8b95a7; border:1px solid #0a0c10; border-radius:5px; font-size:10px; font-weight:800; letter-spacing:.5px; padding:2px 8px; cursor:pointer; }
+    .st-mk-toggle:hover { color:var(--st-accent); border-color:var(--st-accent); }
+    .st-mk-wrap.collapsed .st-mk { display:none; }
+    .st-mk-wrap .st-mk { margin-top:6px; }
     /* per-track device panel (synth knobs + FX) */
     .st-device { background:#13161d; border:1px solid #0c0e13; border-radius:8px; padding:7px 8px; margin-bottom:9px; }
     .st-device-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
@@ -16625,6 +16634,7 @@ function bjUpdateBalance(){
       <div id="st-lanes-wrap"><div id="st-lanes"></div></div>
     </div>
   </div>
+  <div id="st-vsplit" title="Drag to resize the editor"></div>
   <div id="st-editor-wrap"><div id="st-editor"></div></div>
 </div>
 

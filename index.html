@@ -4199,6 +4199,15 @@ body.perf-mode #aqua-gun { display: none !important; }
   display:flex; align-items:flex-start; gap:6px; padding:3px 0;
   font-size:11px; color:var(--text); line-height:1.4;
 }
+/* Aquatune account panel */
+#aq-account-panel .aq-acct-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+#aq-account-panel input { flex:1; min-width:120px; padding:5px 8px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:12px; }
+#aq-account-panel .win95-btn { font-size:11px; padding:4px 10px; cursor:pointer; }
+#aq-account-panel .aq-link { background:none; border:none; color:var(--accent); font-size:11px; cursor:pointer; padding:0; text-decoration:underline; }
+.aq-acct-who { font-size:12px; color:var(--text); margin-bottom:8px; }
+.aq-acct-msg { font-size:11px; min-height:14px; margin-top:4px; }
+.aq-acct-note { font-size:9px; color:var(--text2); margin-top:8px; line-height:1.4; }
+.aq-admin-req { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; padding:3px 0; }
 .settings-help-row .shi { font-size:13px; flex-shrink:0; }
 .settings-help-row .shd { font-size:10px; color:var(--text2); margin-top:1px; }
 #help-section summary {
@@ -5380,6 +5389,11 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       </button>
       <span id="daily-claim-timer" style="font-size:10px;color:var(--text2)">Loading...</span>
     </div>
+  </div>
+
+  <div class="settings-section-hdr">Aquatune Account</div>
+  <div class="theme-section" style="padding-top:0">
+    <div id="aq-account-panel"></div>
   </div>
 
   <div class="settings-section-hdr">Help &amp; Features</div>
@@ -16566,8 +16580,15 @@ function bjUpdateBalance(){
 </div>
 
 
+<script>
+  // Account identity, defined inline so it's available before any deferred
+  // module (room-sync captures the user id at load). accounts.js manages it.
+  window._aqAccountId = localStorage.getItem('aq_account_id') || null;
+  window.effectiveUserId = function () { return window._aqAccountId || localStorage.getItem('aq_user_id') || 'anon'; };
+</script>
 <script type="module" src="/src/aquasynth-studio.js"></script>
 <script type="module" src="/src/chat-firebase.js"></script>
+<script type="module" src="/src/accounts.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
 <script type="module" src="/src/stocks.js"></script>
 <script type="module" src="/src/poker.js"></script>

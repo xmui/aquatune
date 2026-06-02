@@ -42,9 +42,11 @@ function syncedNow() { return Date.now() - _clockOffset; }
 function genId(len = 8) {
   return Array.from({length: len}, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
 }
-const myUserId = localStorage.getItem('aq_user_id') || (() => {
+// Ensure the anonymous id exists, then prefer the logged-in account id if any.
+const anonUserId = localStorage.getItem('aq_user_id') || (() => {
   const id = genId(12); localStorage.setItem('aq_user_id', id); return id;
 })();
+const myUserId = (typeof window.effectiveUserId === 'function' ? window.effectiveUserId() : anonUserId) || anonUserId;
 window._myUserId = myUserId;
 
 // YouTube IFrame player states

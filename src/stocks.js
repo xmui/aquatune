@@ -305,7 +305,7 @@ function maybeWriteSnapshot(tick) {
 // ---------------------------------------------------------------------------
 // Portfolio + credits (Firebase per account, localStorage as fast cache)
 // ---------------------------------------------------------------------------
-function userId() { return window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
+function userId() { return (typeof window.effectiveUserId === 'function' && window.effectiveUserId()) || window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
 let holdings = {};        // id -> { shares, avgCost }
 let _creditSyncTimer = null;
 

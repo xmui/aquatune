@@ -19,7 +19,7 @@ const LOOKAHEAD = 0.12, TICK_MS = 25;
 const EDITOR_LO = 48; // C3 — piano-roll bottom note
 
 let project = null;
-let _master = null, _noiseBuf = null;
+let _master = null, _noiseBuf = null, _buses = null;
 let _playing = false, _schedTimer = null, _rafId = null;
 let _loopBase = 0, _evIdx = 0, _events = [], _songSec = 0;
 let _loop = true;
@@ -167,11 +167,44 @@ function applyChainParams(inst) {
   ch.gain.gain.setTargetAtTime(fx.level ?? 0.9, ch.ctx.currentTime, 0.01);
   updateSends(ch, fx);
 }
-// FX send buses — implemented in P3; harmless no-ops for now.
-function liveBuses() { return null; }
-function makeBuses() { return null; }
-function attachSends() {}
-function updateSends() {}
+/* ---- shared FX send buses: reverb (convolver), delay (+fb), chorus (LFO) ---- */
+function makeImpulse(c, seconds) {
+  const len = Math.floor(c.sampleRate * seconds), buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2); }
+  return buf;
+}
+function makeBuses(c, dest) {
+  // reverb
+  const reverb = c.createGain();
+  const conv = c.createConvolver(); conv.buffer = makeImpulse(c, 2.2);
+  const revWet = c.createGain(); revWet.gain.value = 0.9;
+  reverb.connect(conv); conv.connect(revWet); revWet.connect(dest);
+  // delay (feedback echo)
+  const delay = c.createGain();
+  const dl = c.createDelay(2); dl.delayTime.value = 0.33;
+  const fb = c.createGain(); fb.gain.value = 0.36;
+  const dWet = c.createGain(); dWet.gain.value = 0.9;
+  delay.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(dWet); dWet.connect(dest);
+  // chorus (LFO-modulated short delay)
+  const chorus = c.createGain();
+  const cd = c.createDelay(0.05); cd.delayTime.value = 0.02;
+  const lfo = c.createOscillator(); lfo.frequency.value = 0.5;
+  const lg = c.createGain(); lg.gain.value = 0.006; lfo.connect(lg); lg.connect(cd.delayTime); try { lfo.start(); } catch (_) {}
+  const cWet = c.createGain(); cWet.gain.value = 0.9;
+  chorus.connect(cd); cd.connect(cWet); cWet.connect(dest);
+  return { ctx: c, reverb, delay, chorus };
+}
+function liveBuses() { const c = actx(); if (!_buses || _buses.ctx !== c) _buses = makeBuses(c, master()); return _buses; }
+function attachSends(c, chain, fx, buses) {
+  if (!buses) { chain.sends = {}; return; }
+  const mk = (busInput, amt) => { const g = c.createGain(); g.gain.value = amt || 0; chain.gain.connect(g); g.connect(busInput); return g; };
+  chain.sends = { reverb: mk(buses.reverb, fx.reverb), delay: mk(buses.delay, fx.delay), chorus: mk(buses.chorus, fx.chorus) };
+}
+function updateSends(chain, fx) {
+  if (!chain || !chain.sends) return;
+  const t = chain.ctx.currentTime;
+  for (const k of ['reverb', 'delay', 'chorus']) if (chain.sends[k]) chain.sends[k].gain.setTargetAtTime(fx[k] || 0, t, 0.01);
+}
 // Backfill synth params + fx on instruments from older projects / MIDI imports.
 function normalizeInstruments() {
   for (const i of project.instruments) {

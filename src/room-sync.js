@@ -426,6 +426,21 @@ window.initRoom = async function(roomId, isHost, opts) {
     applyRoomState(state);
   });
 
+  // Poker table (host-authoritative): everyone renders from poker/state; the
+  // current host drains poker/actions. Registered for all clients so a host
+  // takeover keeps processing new actions.
+  onValue(ref(db, `rooms/${roomId}/poker/state`), snap => {
+    const s = snap.val();
+    if (!s || s.updatedBy === myUserId) return;
+    window.onPokerState?.(s);
+  });
+  onChildAdded(ref(db, `rooms/${roomId}/poker/actions`), snap => {
+    if (!window._isRoomHost) return;            // only the host applies + clears
+    const a = snap.val(), key = snap.key;
+    try { window.onPokerAction?.(a); }
+    finally { remove(ref(db, `rooms/${roomId}/poker/actions/${key}`)); }
+  });
+
   // Instant sync on join: read the current state immediately and apply it, so a guest who joins
   // mid-song snaps to the right position without waiting for the host's next heartbeat.
   if (!isHost) {
@@ -579,6 +594,16 @@ window.sendRoomMessage = function(msg, imageData) {
   push(ref(db, `rooms/${window._currentRoomId}/messages`), {
     username, message: msg, imageData: imageData || null, timestamp: Date.now(),
   });
+};
+
+// Poker bridges — host publishes table state; anyone queues actions for the host.
+window.pokerBroadcast = function(state) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/poker/state`), { ...state, updatedBy: myUserId, updatedAt: Date.now() }).catch(() => {});
+};
+window.pokerSendAction = function(a) {
+  if (!window._currentRoomId) return;
+  push(ref(db, `rooms/${window._currentRoomId}/poker/actions`), { ...a, userId: myUserId, ts: Date.now() }).catch(() => {});
 };
 
 window.leaveRoom = function() {

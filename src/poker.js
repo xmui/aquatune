@@ -61,7 +61,7 @@ function emptyGame() {
   return { seats: new Array(NSEATS).fill(null), board: [], deck: [], pot: 0, dealer: -1, sb: SB, bb: BB,
     street: 'idle', turn: -1, toCall: 0, minRaiseTo: BB, lastRaiseSize: BB, handNo: 0, msg: 'Take a seat and press Deal.', winners: [] };
 }
-function newSeat(o) { return Object.assign({ name: 'Player', isCpu: false, isYou: false, stack: 0, hole: [], folded: false, allIn: false, bet: 0, contrib: 0, acted: false, sitOut: false }, o); }
+function newSeat(o) { return Object.assign({ name: 'Player', isCpu: false, isYou: false, ownerId: null, stack: 0, hole: [], folded: false, allIn: false, bet: 0, contrib: 0, acted: false, sitOut: false }, o); }
 function activeIdx() { return G.seats.map((s, i) => s && s.stack > 0 && !s.sitOut ? i : -1).filter(i => i >= 0); }
 function inHandIdx() { return G.seats.map((s, i) => s && s.inHand ? i : -1).filter(i => i >= 0); }
 function liveIdx() { return G.seats.map((s, i) => s && s.inHand && !s.folded ? i : -1).filter(i => i >= 0); }
@@ -75,18 +75,36 @@ function credits() { return typeof window.aqGetCredits === 'function' ? window.a
 function addCredits(n) { if (typeof window.aqAddCredits === 'function') window.aqAddCredits(n); }
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
 
+/* ---- multiplayer helpers (a room = one shared, host-authoritative table) -
+   In a room the room host runs the engine and broadcasts state; guests render
+   from it and send actions the host applies. Outside a room everything below
+   is inert, so solo play is unchanged. */
+function inRoom() { return typeof window !== 'undefined' && !!window._currentRoomId; }
+function amHost() { return typeof window !== 'undefined' && !!window._isRoomHost; }
+function myId() { return (typeof window !== 'undefined' && window._myUserId) || 'me'; }
+function isMine(s) { return !!s && (inRoom() ? s.ownerId === myId() : s.isYou); }
+function mySeatIdx() { return G ? G.seats.findIndex(isMine) : -1; }
+
 function sitYou(idx) {
   if (G.seats[idx]) return;
   if (credits() < BB) { toastSafe('Not enough credits to buy in'); return; }
   const buy = Math.min(BUYIN, credits());
-  addCredits(-buy);
-  G.seats[idx] = newSeat({ name: localStorage.getItem('aq_username') || 'You', isYou: true, stack: buy });
+  const name = (typeof localStorage !== 'undefined' && localStorage.getItem('aq_username')) || 'You';
+  addCredits(-buy); // you pay your buy-in from your own credits
+  if (inRoom() && !amHost()) {
+    // guest: ask the host to seat me — the host's broadcast will show the seat
+    if (window.pokerSendAction) window.pokerSendAction({ type: 'sit', seat: idx, name, buyin: buy });
+    return;
+  }
+  G.seats[idx] = newSeat({ name, isYou: !inRoom(), ownerId: inRoom() ? myId() : null, stack: buy });
   render();
 }
 function standYou(idx) {
-  const s = G.seats[idx]; if (!s || !s.isYou) return;
+  const s = G.seats[idx]; if (!s || !isMine(s)) return;
   if (s.inHand && !s.folded && G.street !== 'idle' && G.street !== 'showdown') { toastSafe('Finish the hand first'); return; }
-  addCredits(s.stack); G.seats[idx] = null; render();
+  addCredits(s.stack); // cash out your current stack to your credits
+  if (inRoom() && !amHost()) { if (window.pokerSendAction) window.pokerSendAction({ type: 'stand', seat: idx }); return; }
+  G.seats[idx] = null; render();
 }
 function addCpu(idx, stack = BUYIN) {
   G.seats[idx] = newSeat({ name: CPU_NAMES[(Math.random() * CPU_NAMES.length) | 0], isCpu: true, stack });
@@ -242,6 +260,9 @@ function cardEl(card, faceDown){
   return d;
 }
 function render(){
+  // In a room the host publishes every state change (placed before the headless
+  // guard so it runs server-side/in tests too). Guests/solo never broadcast.
+  if (inRoom() && amHost()) broadcastState();
   if (typeof document === 'undefined') return;
   const area=document.getElementById('holdem-area'); if(!area) return;
   area.innerHTML='';
@@ -261,21 +282,22 @@ function render(){
 function seatEl(i,p){
   const s=G.seats[i]; const d=el('div','pk-seat'); d.style.left=p.x+'%'; d.style.top=p.y+'%';
   if(!s){ const b=el('button','win95-btn pk-sit','Sit'); b.onclick=()=>sitYou(i); d.appendChild(b); return d; }
-  if(s.isYou) d.classList.add('you'); if(s.folded) d.classList.add('folded'); if(G.turn===i) d.classList.add('turn');
+  if(isMine(s)) d.classList.add('you'); if(s.folded) d.classList.add('folded'); if(G.turn===i) d.classList.add('turn');
   if(G.winners.some(w=>w.idx===i)) d.classList.add('winner');
-  const cards=el('div','pk-hole'); const showFace=s.isYou||G.street==='showdown';
+  const cards=el('div','pk-hole'); const showFace=isMine(s)||G.street==='showdown';
   if(s.inHand){ const hole=s.hole.length?s.hole:[null,null]; hole.forEach(c=>cards.appendChild((c&&showFace)?cardEl(c,false):cardEl(null,true))); }
   d.appendChild(cards);
   d.appendChild(el('div','pk-name', esc(s.name)+(G.dealer===i?' <span class="pk-dealer">D</span>':'')));
   d.appendChild(el('div','pk-stack', s.stack+' 🪙'+(s.allIn?' · ALL-IN':'')));
   if(s.bet>0) d.appendChild(el('div','pk-bet', String(s.bet)));
-  if(s.isYou && (G.street==='idle'||G.street==='showdown')){ const lv=el('button','win95-btn pk-stand','Stand'); lv.onclick=()=>standYou(i); d.appendChild(lv); }
+  if(isMine(s) && (G.street==='idle'||G.street==='showdown')){ const lv=el('button','win95-btn pk-stand','Stand'); lv.onclick=()=>standYou(i); d.appendChild(lv); }
   return d;
 }
 function buildControls(){
-  const bar=el('div','pk-controls'); const youIdx=G.seats.findIndex(s=>s&&s.isYou);
+  const bar=el('div','pk-controls'); const youIdx=G.seats.findIndex(isMine);
   if(G.street==='idle'||G.street==='showdown'){
     if(youIdx<0){ bar.appendChild(el('div','pk-wait','Take a seat to play.')); return bar; }
+    if(inRoom() && !amHost()){ bar.appendChild(el('div','pk-wait','Waiting for the host to deal…')); return bar; }
     const deal=el('button','win95-btn','Deal'); deal.onclick=()=>{ ensureOpponents(); startHand(); }; bar.appendChild(deal);
     return bar;
   }
@@ -293,9 +315,48 @@ function buildControls(){
   }
   return bar;
 }
-function act(a, amt){ const i=G.seats.findIndex(s=>s&&s.isYou); applyAction(i, a, amt); }
-function ensureOpponents(){ if(activeIdx().length<2){ for(const i of [2,3,4]){ if(!G.seats[i]) addCpu(i); } } }
+function act(a, amt){
+  if (inRoom() && !amHost()) { if (window.pokerSendAction) window.pokerSendAction({ type:'action', action:a, amount:amt }); return; }
+  const i = mySeatIdx(); if (i >= 0) applyAction(i, a, amt);
+}
+function ensureOpponents(){ if(inRoom()) return; if(activeIdx().length<2){ for(const i of [2,3,4]){ if(!G.seats[i]) addCpu(i); } } }
 function seedTable(){ addCpu(2); addCpu(3); addCpu(4); }
+
+/* ---- multiplayer sync -------------------------------------------------- */
+// Publish state minus the deck (don't leak undealt cards). Opponent hole cards
+// are render-hidden client-side; true per-seat private holes are a follow-up.
+function serializeForBroadcast(g){ const { deck, ...rest } = g; return rest; }
+function broadcastState(){ if (typeof window !== 'undefined' && window.pokerBroadcast) window.pokerBroadcast(serializeForBroadcast(G)); }
+
+function hostSeat(userId, idx, name, buyin){
+  if (idx == null || idx < 0 || idx >= NSEATS || G.seats[idx]) return;        // seat taken/invalid
+  if (G.seats.some(s => s && s.ownerId === userId)) return;                    // already seated
+  G.seats[idx] = newSeat({ name: name || 'Player', ownerId: userId, stack: Math.max(0, buyin | 0) });
+}
+function hostStand(userId){
+  const i = G.seats.findIndex(s => s && s.ownerId === userId);
+  if (i < 0) return; const s = G.seats[i];
+  if (s.inHand && !s.folded && G.street !== 'idle' && G.street !== 'showdown') return; // can't leave mid-hand
+  G.seats[i] = null;
+}
+// Guest: replace local state from the host's broadcast and render.
+function onPokerState(s){
+  if (amHost()) return;                 // host is authoritative
+  if (!s || !Array.isArray(s.seats)) return;
+  G = s; if (!G.deck) G.deck = [];
+  render();
+}
+// Host: validate + apply a queued guest action, then render (which broadcasts).
+function onPokerAction(a){
+  if (!amHost() || !G || !a) return;
+  if (a.type === 'sit') hostSeat(a.userId, a.seat, a.name, a.buyin);
+  else if (a.type === 'stand') hostStand(a.userId);
+  else if (a.type === 'action') {
+    const i = G.seats.findIndex(s => s && s.ownerId === a.userId);
+    if (i >= 0 && G.turn === i) { applyAction(i, a.action, a.amount); return; } // applyAction renders/broadcasts
+  }
+  render();
+}
 
 /* ---- entry ------------------------------------------------------------- */
 let _pkInit=false;
@@ -304,12 +365,15 @@ function openHoldem(show=true){
   if(show===false){ w.classList.remove('open'); w.style.display='none'; return; }
   w.classList.add('open'); w.style.display='flex';
   if(window.OS&&window.OS.register){ window.OS.register('holdem'); window.OS.focus('holdem'); }
-  if(!_pkInit){ _pkInit=true; G=emptyGame(); seedTable(); }
+  if(!_pkInit){ _pkInit=true; G=emptyGame(); if(!inRoom()) seedTable(); }
+  else if(inRoom() && G && G.seats.some(s=>s&&s.isCpu)){ G=emptyGame(); } // drop solo CPUs when entering a room
   render();
 }
 if (typeof window !== 'undefined') {
   window.openHoldem = openHoldem;
+  window.onPokerState = onPokerState;
+  window.onPokerAction = onPokerAction;
   window.AquaPoker = { _state: ()=>G, _eval5: eval5, _best7: best7, _sidePots: buildSidePots };
 }
 // node-testable engine handle (no effect in the browser bundle)
-export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, sit: sitYou, startHand, applyAction, legal, buildSidePots, setG: g => { G = g; }, getG: () => G };
+export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, sit: sitYou, stand: standYou, act, startHand, applyAction, legal, buildSidePots, onPokerState, onPokerAction, hostSeat, serializeForBroadcast, setG: g => { G = g; }, getG: () => G };

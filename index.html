@@ -1882,6 +1882,114 @@
       text-align:left; transition:all .12s;
     }
     .paint-send-opt:hover { background:linear-gradient(180deg,#fff,rgba(200,235,255,.95)); border-color:var(--accent); }
+
+    /* ── AQUASYNTH STUDIO (skeuomorphic mini-DAW) ─────────────── */
+    #studio-win {
+      display:none; position:fixed; left:50%; top:46%; transform:translate(-50%,-50%);
+      width:920px; max-width:97vw; height:600px; max-height:92vh; z-index:820;
+      flex-direction:column; border-radius:14px; overflow:hidden;
+      background:linear-gradient(180deg,#2b2f3a,#1b1e26);
+      border:1px solid #0c0e13; box-shadow:0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+      color:#e7ecf5; font-family:var(--font-ui);
+      --st-accent:#ffd23f;
+    }
+    #studio-win.open { display:flex; }
+    #studio-titlebar {
+      display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:move; user-select:none;
+      background:linear-gradient(180deg,#3a3f4d,#262a34); border-bottom:1px solid #0c0e13;
+    }
+    .st-logo { font-weight:900; letter-spacing:1px; font-size:13px; color:#fff; display:flex; align-items:center; gap:6px; }
+    .st-logo-sub { font-size:9px; font-weight:800; color:#11141b; background:var(--st-accent); padding:1px 5px; border-radius:4px; letter-spacing:1.5px; }
+    .st-tb-btn,.st-tb-close { width:26px;height:24px; border-radius:6px; border:1px solid #0c0e13; background:#3a3f4d; color:#dfe5f0; cursor:pointer; font-size:12px; }
+    .st-tb-close:hover { background:#c0392b; color:#fff; }
+    .st-tb-btn[disabled]{ opacity:.4; cursor:default; }
+
+    #st-transport {
+      display:flex; align-items:center; gap:10px; padding:9px 12px;
+      background:linear-gradient(180deg,#21242d,#171a21); border-bottom:1px solid #0c0e13;
+    }
+    .st-play {
+      width:46px; height:38px; border-radius:9px; border:1px solid #0a0c10; cursor:pointer; font-size:18px; color:#0c1018;
+      background:radial-gradient(circle at 50% 35%,#7CFFB0,#23a35a); box-shadow:0 3px 0 #14693a, inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    .st-play:active { transform:translateY(2px); box-shadow:0 1px 0 #14693a; }
+    .st-lcd {
+      display:flex; align-items:baseline; gap:6px; padding:6px 12px; cursor:ns-resize; user-select:none;
+      background:linear-gradient(180deg,#0a1b12,#04120a); border:1px solid #000; border-radius:8px;
+      box-shadow:inset 0 2px 6px rgba(0,0,0,.7); font-family:'VT323',ui-monospace,monospace;
+    }
+    .st-lcd-label { font-size:9px; color:#2f7d4f; letter-spacing:1px; }
+    .st-lcd-num { font-size:26px; line-height:1; color:#54ff9f; text-shadow:0 0 8px rgba(84,255,159,.6); font-family:'VT323',ui-monospace,monospace; }
+    .st-lcd-unit { font-size:10px; color:#2f7d4f; }
+    .st-chip {
+      padding:7px 10px; border-radius:8px; border:1px solid #0a0c10; cursor:pointer; font-size:11px; font-weight:800;
+      background:linear-gradient(180deg,#3a3f4d,#262a34); color:#b9c2d2; letter-spacing:.5px;
+    }
+    .st-chip.on { background:linear-gradient(180deg,#ffe07a,var(--st-accent)); color:#221b00; box-shadow:0 0 10px rgba(255,210,63,.5); }
+    .st-zoom { display:flex; gap:3px; }
+    .st-zoom button { width:28px;height:30px; border-radius:7px; border:1px solid #0a0c10; background:#3a3f4d; color:#dfe5f0; cursor:pointer; font-size:15px; font-weight:800; }
+    .st-master { display:flex; align-items:center; gap:7px; font-size:9px; font-weight:800; color:#8b95a7; letter-spacing:1px; }
+    .st-knob {
+      width:34px; height:34px; border-radius:50%; cursor:ns-resize; position:relative;
+      background:radial-gradient(circle at 50% 35%,#5a6173,#23262f); border:1px solid #0a0c10;
+      box-shadow:0 3px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);
+    }
+    .st-knob::after { content:''; position:absolute; left:50%; top:5px; width:3px; height:12px; margin-left:-1.5px; border-radius:2px; background:var(--st-accent);
+      transform-origin:50% 12px; transform:rotate(var(--ang,0deg)); box-shadow:0 0 5px rgba(255,210,63,.7); }
+
+    #st-main { flex:1; min-height:0; display:flex; }
+    #st-left { width:148px; flex-shrink:0; background:#15171d; border-right:1px solid #0c0e13; display:flex; flex-direction:column; overflow:hidden; }
+    .st-left-head { padding:8px 10px; font-size:9px; font-weight:800; letter-spacing:1.5px; color:#6b7589; border-bottom:1px solid #0c0e13; }
+    #st-tracks { flex:1; overflow-y:auto; }
+    .st-track { height:44px; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:4px 8px; border-bottom:1px solid #0c0e13; border-left:4px solid transparent; cursor:pointer; position:relative; }
+    .st-track.sel { background:#1f2530; }
+    .st-tname { display:flex; align-items:center; gap:5px; font-size:11px; color:#dfe5f0; white-space:nowrap; overflow:hidden; }
+    .st-tctrls { position:absolute; right:6px; top:50%; transform:translateY(-50%); }
+    .st-mini { width:20px;height:18px; border-radius:4px; border:1px solid #0a0c10; background:#2a2f3a; color:#8b95a7; font-size:9px; font-weight:800; cursor:pointer; }
+    .st-mini.on { background:#c0392b; color:#fff; }
+    .st-addtrack { width:calc(100% - 12px); margin:6px; padding:7px; border-radius:7px; border:1px dashed #3a4150; background:transparent; color:#8b95a7; font-size:11px; font-weight:700; cursor:pointer; }
+    .st-addtrack:hover { color:var(--st-accent); border-color:var(--st-accent); }
+
+    #st-right { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; background:#10121733; }
+    #st-ruler-wrap { height:22px; overflow:hidden; border-bottom:1px solid #0c0e13; background:#171a21; }
+    #st-ruler { position:relative; height:100%; }
+    .st-bar-tick { position:absolute; top:0; height:100%; border-left:1px solid #2c313c; font-size:9px; color:#6b7589; padding:3px 0 0 4px; box-sizing:border-box; }
+    #st-lanes-wrap { flex:1; overflow:auto; }
+    #st-lanes { position:relative; min-height:100%; }
+    .st-lane { position:relative; height:44px; border-bottom:1px solid #0c0e13; }
+    .st-lane-grid { position:absolute; top:0; height:100%; border-left:1px solid rgba(255,255,255,.04); box-sizing:border-box; }
+    .st-clip { position:absolute; top:5px; height:34px; border-radius:6px; cursor:grab; overflow:hidden;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 2px 5px rgba(0,0,0,.4); opacity:.92; }
+    .st-clip.sel { outline:2px solid #fff; opacity:1; }
+    .st-clip-name { display:block; padding:3px 7px; font-size:10px; font-weight:800; color:rgba(0,0,0,.7); white-space:nowrap; }
+    .st-clip-resize { position:absolute; right:0; top:0; width:8px; height:100%; cursor:ew-resize; }
+    .st-playhead { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent); box-shadow:0 0 8px var(--st-accent); pointer-events:none; }
+
+    #st-editor-wrap { height:206px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    #st-editor { padding:10px 12px; }
+    .st-editor-empty { color:#6b7589; font-size:12px; text-align:center; padding:60px 0; }
+    .st-editor-head { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:9px; }
+    .st-dim { color:#8b95a7; font-weight:600; }
+    .st-wave { margin-left:auto; background:#0a0c10; color:#dfe5f0; border:1px solid #2c313c; border-radius:6px; padding:3px 6px; font-size:11px; }
+    .st-stepgrid { display:grid; gap:3px; }
+    .st-step { height:38px; border-radius:5px; border:1px solid #0a0c10; background:#23262f; cursor:pointer; transition:all .08s; }
+    .st-step.beat { background:#2b2f3a; }
+    .st-step.on { background:var(--c,#ffd23f); box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 0 8px rgba(255,210,63,.4); }
+    .st-step:active { transform:scale(.94); }
+    .st-roll { display:flex; gap:4px; }
+    .st-roll-keys { display:flex; flex-direction:column; }
+    .st-roll-key { height:14px; width:30px; font-size:7px; color:#6b7589; display:flex; align-items:center; padding-left:3px; border-bottom:1px solid #0c0e13; cursor:pointer; background:#1b1e26; box-sizing:border-box; }
+    .st-roll-key.black { background:#0e1015; color:#4a5366; }
+    .st-roll-grid { display:grid; gap:1px; background:#0c0e13; }
+    .st-roll-cell { background:#1a1d24; cursor:pointer; box-sizing:border-box; }
+    .st-roll-cell.black { background:#15171d; }
+    .st-roll-cell.beat { box-shadow:inset 1px 0 0 rgba(255,255,255,.07); }
+    .st-roll-cell.on { background:var(--c,#ffd23f); box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
+    .st-addmenu { position:absolute; left:8px; bottom:8px; z-index:30; background:#262a34; border:1px solid #0a0c10; border-radius:9px; padding:6px; display:flex; flex-direction:column; gap:3px; box-shadow:0 12px 30px rgba(0,0,0,.6); max-height:300px; overflow:auto; }
+    .st-addmenu-opt { text-align:left; padding:6px 12px; border-radius:6px; border:none; background:transparent; color:#dfe5f0; font-size:12px; cursor:pointer; }
+    .st-addmenu-opt:hover { background:var(--st-accent); color:#221b00; }
+    @media (max-width:768px){ #studio-win { width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; } }
+
     @media (max-width:768px) {
       #paint-wrap { width:98vw; height:70vh; max-height:70vh; top:15%; transform:translateX(-50%); }
     }
@@ -4710,6 +4818,10 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()">
               <span class="apps-item-icon">🎹</span>
               <div class="apps-item-info"><div class="apps-item-name">AquaSynth</div><div class="apps-item-desc">Step sequencer &amp; synth</div></div>
+            </button>
+            <button class="apps-item" onclick="OS.open('studio');toggleAppsMenu()">
+              <span class="apps-item-icon">🎛️</span>
+              <div class="apps-item-info"><div class="apps-item-name">AquaSynth Studio</div><div class="apps-item-desc">Mini-DAW: timeline &amp; instruments</div></div>
             </button>
             <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
@@ -7769,6 +7881,7 @@ const APPS = {
   arcade:    { el:'win-arcade',     name:'Arcade' },
   settings:  { el:'win-settings',   name:'Settings' },
   synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout() },
+  studio:    { el:'studio-win',     name:'AquaSynth Studio', tb:'#studio-titlebar', openFn:()=>window.openStudio?.() },
   paint:     { el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
   slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots(),     nativeDrag:true },
   solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire(),   nativeDrag:true },
@@ -9640,6 +9753,7 @@ function initActx() {
     masterComp.connect(analyserNode);
     window.actx = actx;
     window.analyserNode = analyserNode;
+    window.masterComp = masterComp;   // AquaSynth Studio routes its master here
     initFilter();
   }
   if (actx.state === 'suspended') actx.resume();
@@ -16370,6 +16484,7 @@ function bjUpdateBalance(){
 </div>
 
 
+<script type="module" src="/src/aquasynth-studio.js"></script>
 <script type="module" src="/src/chat-firebase.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
 
@@ -16407,6 +16522,37 @@ function bjUpdateBalance(){
           </div>
         </div>
       </div>
+
+<!-- AQUASYNTH STUDIO (mini-DAW) -->
+<div id="studio-win">
+  <div id="studio-titlebar">
+    <span class="st-logo">🎛️ AQUASYNTH<span class="st-logo-sub">STUDIO</span></span>
+    <span style="flex:1"></span>
+    <button class="st-tb-btn" onclick="window.Studio&&Studio.load&&0" title="Save (soon)" disabled>💾</button>
+    <button class="st-tb-close" onclick="document.getElementById('studio-win').classList.remove('open')" title="Close">✕</button>
+  </div>
+  <div id="st-transport">
+    <button id="st-play" class="st-play" title="Play / Stop (Space)">▶</button>
+    <div id="st-bpm" class="st-lcd" title="Drag to change tempo · double-click to type">
+      <span class="st-lcd-label">TEMPO</span><span id="st-bpm-val" class="st-lcd-num">120</span><span class="st-lcd-unit">BPM</span>
+    </div>
+    <button id="st-loop" class="st-chip on" title="Loop">↻ LOOP</button>
+    <span style="flex:1"></span>
+    <div class="st-zoom"><button id="st-zoom-out" title="Zoom out">－</button><button id="st-zoom-in" title="Zoom in">＋</button></div>
+    <div class="st-master"><span>VOL</span><div id="st-master-knob" class="st-knob"></div></div>
+  </div>
+  <div id="st-main">
+    <div id="st-left">
+      <div class="st-left-head">TRACKS</div>
+      <div id="st-tracks"></div>
+    </div>
+    <div id="st-right">
+      <div id="st-ruler-wrap"><div id="st-ruler"></div></div>
+      <div id="st-lanes-wrap"><div id="st-lanes"></div></div>
+    </div>
+  </div>
+  <div id="st-editor-wrap"><div id="st-editor"></div></div>
+</div>
 
 <!-- PICROSS -->
 <div id="picross-wrap">

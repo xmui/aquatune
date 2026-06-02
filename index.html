@@ -1991,7 +1991,7 @@
     .st-addmenu { position:absolute; left:8px; bottom:8px; z-index:30; background:#262a34; border:1px solid #0a0c10; border-radius:9px; padding:6px; display:flex; flex-direction:column; gap:3px; box-shadow:0 12px 30px rgba(0,0,0,.6); max-height:300px; overflow:auto; }
     .st-addmenu-opt { text-align:left; padding:6px 12px; border-radius:6px; border:none; background:transparent; color:#dfe5f0; font-size:12px; cursor:pointer; }
     .st-addmenu-opt:hover { background:var(--st-accent); color:#221b00; }
-    @media (max-width:768px){ #studio-win { width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; } }
+    @media (max-width:768px){ #studio-win { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; } }
 
     @media (max-width:768px) {
       #paint-wrap { width:98vw; height:70vh; max-height:70vh; top:15%; transform:translateX(-50%); }
@@ -11582,7 +11582,8 @@ function _hslToRgb(h, s, l) {
 
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
-  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="Studio">🎹<span>Studio</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('studio')" title="AquaSynth Studio">🎛️<span>Studio</span></button>
+  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="AquaSynth">🎹<span>Synth</span></button>
   <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🖌️<span>Paint</span></button>
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>

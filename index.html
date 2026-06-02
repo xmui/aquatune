@@ -1968,7 +1968,26 @@
     .st-clip-resize { position:absolute; right:0; top:0; width:8px; height:100%; cursor:ew-resize; }
     .st-playhead { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent); box-shadow:0 0 8px var(--st-accent); pointer-events:none; }
 
-    #st-editor-wrap { height:206px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    #st-editor-wrap { height:250px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    /* per-track device panel (synth knobs + FX) */
+    .st-device { background:#13161d; border:1px solid #0c0e13; border-radius:8px; padding:7px 8px; margin-bottom:9px; }
+    .st-device-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+    .st-device-top .st-wave { margin-left:0; cursor:pointer; }
+    .st-knobs { display:flex; flex-wrap:wrap; gap:9px 12px; }
+    .st-kcell { display:flex; flex-direction:column; align-items:center; gap:3px; width:34px; }
+    .st-knob.sm { width:28px; height:28px; }
+    .st-knob.sm::after { top:4px; height:10px; transform-origin:50% 10px; }
+    .st-klabel { font-size:8px; font-weight:800; letter-spacing:.5px; color:#8b95a7; }
+    .st-rnd { margin-left:auto; display:flex; gap:4px; align-items:center; }
+    .st-rnd-sel { background:#0a0c10; color:#dfe5f0; border:1px solid #2c313c; border-radius:6px; padding:3px 5px; font-size:11px; }
+    .st-rnd-btn { background:linear-gradient(180deg,#ffe07a,#ffd23f); color:#221b00; border:1px solid #0a0c10; border-radius:7px; padding:3px 9px; font-size:13px; cursor:pointer; box-shadow:0 2px 0 #b9962b; }
+    .st-rnd-btn:active { transform:translateY(1px); box-shadow:0 1px 0 #b9962b; }
+    .st-chip.rec.on { background:linear-gradient(180deg,#ff7a7a,#e53935); color:#fff; box-shadow:0 0 11px rgba(229,57,53,.65); }
+    .st-mk { position:relative; height:46px; margin-top:9px; background:#0a0c10; border-radius:6px; overflow:hidden; touch-action:none; }
+    .st-mk-w { position:absolute; top:0; bottom:0; background:linear-gradient(180deg,#f4f6fb,#d2d8e2); border:1px solid #0a0c10; box-sizing:border-box; border-radius:0 0 3px 3px; cursor:pointer; }
+    .st-mk-w.on { background:linear-gradient(180deg,#ffe07a,#ffd23f); }
+    .st-mk-b { position:absolute; top:0; height:62%; background:linear-gradient(180deg,#3a3f4d,#10131a); border:1px solid #000; box-sizing:border-box; border-radius:0 0 3px 3px; z-index:2; cursor:pointer; }
+    .st-mk-b.on { background:#ffd23f; }
     #st-editor { padding:10px 12px; }
     .st-editor-empty { color:#6b7589; font-size:12px; text-align:center; padding:60px 0; }
     .st-editor-head { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:9px; }
@@ -4818,13 +4837,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
           <div class="apps-menu-div"></div>
           <div class="apps-section-lbl">Tools</div>
           <div class="apps-list">
-            <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()">
-              <span class="apps-item-icon">🎹</span>
-              <div class="apps-item-info"><div class="apps-item-name">AquaSynth</div><div class="apps-item-desc">Step sequencer &amp; synth</div></div>
-            </button>
             <button class="apps-item" onclick="OS.open('studio');toggleAppsMenu()">
               <span class="apps-item-icon">🎛️</span>
-              <div class="apps-item-info"><div class="apps-item-name">AquaSynth Studio</div><div class="apps-item-desc">Mini-DAW: timeline &amp; instruments</div></div>
+              <div class="apps-item-info"><div class="apps-item-name">AquaSynth Studio</div><div class="apps-item-desc">Mini-DAW: synths, timeline &amp; FX</div></div>
             </button>
             <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
@@ -8199,19 +8214,18 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','studio','synth','paint','files','photos','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','leaderboard','settings'];
 function getDockPins() {
   let p = null;
   try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
   if (!p) return DOCK_DEFAULT.slice();
-  // one-time migration: add the new AquaSynth Studio to existing saved docks
-  if (!localStorage.getItem('aq_dock_studio_v1')) {
-    localStorage.setItem('aq_dock_studio_v1', '1');
-    if (!p.includes('studio')) {
-      const at = p.indexOf('synth') >= 0 ? p.indexOf('synth') + 1 : (p.indexOf('settings') >= 0 ? p.indexOf('settings') : p.length);
-      p.splice(at, 0, 'studio');
-      _saveDockPins(p);
-    }
+  // one-time migration: replace the retired standalone AquaSynth with Studio in existing docks
+  if (!localStorage.getItem('aq_dock_retire_synth_v1')) {
+    localStorage.setItem('aq_dock_retire_synth_v1', '1');
+    const si = p.indexOf('synth');
+    if (si >= 0) { if (p.includes('studio')) p.splice(si, 1); else p[si] = 'studio'; }
+    else if (!p.includes('studio')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'studio'); }
+    _saveDockPins(p);
   }
   return p;
 }
@@ -8581,7 +8595,7 @@ function toggleStartMenu(e) {
   e?.stopPropagation();
   const m = document.getElementById('start-menu'); if (!m) return;
   if (m.classList.contains('open')) { m.classList.remove('open'); return; }
-  const apps = [['player', '♪ Player'], ['arcade', '🎮 Arcade'], ['synth', '🎹 AquaSynth'],
+  const apps = [['player', '♪ Player'], ['arcade', '🎮 Arcade'], ['studio', '🎛️ AquaSynth Studio'],
     ['paint', '🎨 AquaPaint'], ['files', '📁 Files'], ['texteditor', '📝 Text Editor'],
     ['rooms', '🌐 Public Rooms'], ['settings', '⚙️ Settings']];
   m.innerHTML = '<div class="start-side"><span>AquaOS</span></div><div class="start-list">' +
@@ -11594,7 +11608,6 @@ function _hslToRgb(h, s, l) {
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="OS.open('studio')" title="AquaSynth Studio">🎛️<span>Studio</span></button>
-  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="AquaSynth">🎹<span>Synth</span></button>
   <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🖌️<span>Paint</span></button>
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>
@@ -16556,6 +16569,10 @@ function bjUpdateBalance(){
       <span class="st-lcd-label">TEMPO</span><span id="st-bpm-val" class="st-lcd-num">120</span><span class="st-lcd-unit">BPM</span>
     </div>
     <button id="st-loop" class="st-chip on" title="Loop">↻ LOOP</button>
+    <button id="st-rec" class="st-chip rec" title="Record: play notes into the selected track">● REC</button>
+    <select id="st-quant" class="st-rnd-sel" title="Record quantize">
+      <option value="4">1/4</option><option value="2">1/8</option><option value="1" selected>1/16</option>
+    </select>
     <span style="flex:1"></span>
     <div class="st-zoom"><button id="st-zoom-out" title="Zoom out">－</button><button id="st-zoom-in" title="Zoom in">＋</button></div>
     <div class="st-master"><span>VOL</span><div id="st-master-knob" class="st-knob"></div></div>

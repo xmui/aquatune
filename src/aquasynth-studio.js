@@ -19,13 +19,16 @@ const LOOKAHEAD = 0.12, TICK_MS = 25;
 const EDITOR_LO = 48; // C3 — piano-roll bottom note
 
 let project = null;
-let _master = null, _noiseBuf = null;
+let _master = null, _noiseBuf = null, _buses = null;
 let _playing = false, _schedTimer = null, _rafId = null;
 let _loopBase = 0, _evIdx = 0, _events = [], _songSec = 0;
 let _loop = true;
 let _pxPerBar = 96;            // timeline zoom
 let _selInstId = null;         // selected track (drives the editor)
 let _built = false;
+let _recording = false, _quantize = 1, _recOct = 4; // recording + quantize (steps) + computer-kbd octave
+const _pending = {};           // midi -> pending note start during recording
+const _heldKeys = {};          // computer-key debounce
 
 /* ---- audio plumbing ----------------------------------------------------- */
 function actx() { if (window.initActx) window.initActx(); return window.actx; }
@@ -45,6 +48,22 @@ function noiseBuf(c) {
   b._sr = c.sampleRate; _noiseBuf = b; return b;
 }
 
+// Optional per-voice resonant lowpass with an envelope (cut>=11000 = bypassed,
+// so it's a no-op unless the track's CUT knob is lowered). Used by all melodic voices.
+function applyFilter(c, src, dest, t, p = {}) {
+  const cut = p.cut;
+  if (cut == null || cut >= 11000) { src.connect(dest); return; }
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = p.res ?? 1;
+  const base = Math.max(60, cut), amt = (p.fenv ?? 0) * 7000;
+  const a = p.a ?? 0.006, d = p.d ?? 0.04;
+  f.frequency.setValueAtTime(base, t);
+  if (amt > 1) {
+    f.frequency.linearRampToValueAtTime(Math.min(16000, base + amt), t + a + 0.001);
+    f.frequency.exponentialRampToValueAtTime(base, t + a + d + 0.06);
+  }
+  src.connect(f); f.connect(dest);
+}
+
 // Chiptune / melodic voice: pulse/triangle/saw oscillator or band-passed noise,
 // with a short AD-S-R gain envelope. Works on any context (live or offline render).
 function chipVoice(c, dest, midi, t, dur, vel, params = {}) {
@@ -59,7 +78,7 @@ function chipVoice(c, dest, midi, t, dur, vel, params = {}) {
   g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * s), t + a + d);
   g.gain.setValueAtTime(Math.max(0.0001, peak * s), Math.max(t + a + d, end));
   g.gain.exponentialRampToValueAtTime(0.0001, end + r);
-  g.connect(dest);
+  applyFilter(c, g, dest, t, params);
   if (wave === 'noise') {
     const src = c.createBufferSource(); src.buffer = noiseBuf(c); src.loop = true;
     const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = Math.min(freq * 2, 8000); bp.Q.value = 5;
@@ -82,7 +101,7 @@ function chipVoice(c, dest, midi, t, dur, vel, params = {}) {
 function keysVoice(c, dest, midi, t, dur, vel, params = {}) {
   const freq = E.midiToFreq(midi), preset = params.preset || 'toypiano';
   const end = t + Math.max(0.18, dur), peak = 0.26 * (vel ?? 0.9);
-  const g = c.createGain(); g.connect(dest);
+  const g = c.createGain(); applyFilter(c, g, dest, t, params);
   if (preset === 'organ') {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.02);
     g.gain.setValueAtTime(peak, Math.max(t + 0.02, end)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.06);
@@ -113,9 +132,89 @@ function samplerVoice(c, dest, midi, t, dur, vel, inst, bufOverride) {
   const src = c.createBufferSource(); src.buffer = buf;
   src.playbackRate.value = E.midiToFreq(midi) / E.midiToFreq(inst.params.baseNote || 60);
   if (inst.params.loop) src.loop = true;
-  const g = c.createGain(); g.gain.value = 0.85 * (vel ?? 0.9); src.connect(g); g.connect(dest);
+  const g = c.createGain(); g.gain.value = 0.85 * (vel ?? 0.9); src.connect(g); applyFilter(c, g, dest, t, inst.params);
   src.start(t);
   if (inst.params.loop || inst.params.oneShot === false) { const end = t + Math.max(0.05, dur); g.gain.setValueAtTime(g.gain.value, end); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.06); src.stop(end + 0.07); }
+}
+
+/* ---- per-track FX chain:  in → drive → pan → gain → (dry + FX sends) → master --- */
+function setDriveCurve(ws, amount) {
+  if (!amount || amount <= 0) { ws.curve = null; return; }
+  const k = amount * 100, n = 256, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = (Math.PI + k) * x / (Math.PI + k * Math.abs(x)); }
+  ws.curve = curve; ws.oversample = '2x';
+}
+// Build a track chain on any context, summing dry to `dest` (+ FX sends, added in P3).
+function buildChain(c, inst, dest, buses) {
+  const fx = inst.fx || (inst.fx = E.defaultFx());
+  const input = c.createGain();
+  const drive = c.createWaveShaper(); setDriveCurve(drive, fx.drive || 0);
+  const pan = c.createStereoPanner ? c.createStereoPanner() : null; if (pan) pan.pan.value = fx.pan || 0;
+  const gain = c.createGain(); gain.gain.value = fx.level ?? 0.9;
+  input.connect(drive);
+  if (pan) { drive.connect(pan); pan.connect(gain); } else { drive.connect(gain); }
+  gain.connect(dest); // dry
+  const chain = { ctx: c, input, drive, pan, gain, sends: {} };
+  if (buses) attachSends(c, chain, fx, buses); // P3
+  return chain;
+}
+function getLiveChain(inst) {
+  const c = actx();
+  if (!inst._chain || inst._chain.ctx !== c) inst._chain = buildChain(c, inst, master(), liveBuses());
+  return inst._chain;
+}
+function applyChainParams(inst) {
+  const ch = inst._chain; if (!ch) return; const fx = inst.fx || {};
+  setDriveCurve(ch.drive, fx.drive || 0);
+  if (ch.pan) ch.pan.pan.setTargetAtTime(fx.pan || 0, ch.ctx.currentTime, 0.01);
+  ch.gain.gain.setTargetAtTime(fx.level ?? 0.9, ch.ctx.currentTime, 0.01);
+  updateSends(ch, fx);
+}
+/* ---- shared FX send buses: reverb (convolver), delay (+fb), chorus (LFO) ---- */
+function makeImpulse(c, seconds) {
+  const len = Math.floor(c.sampleRate * seconds), buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2); }
+  return buf;
+}
+function makeBuses(c, dest) {
+  // reverb
+  const reverb = c.createGain();
+  const conv = c.createConvolver(); conv.buffer = makeImpulse(c, 2.2);
+  const revWet = c.createGain(); revWet.gain.value = 0.9;
+  reverb.connect(conv); conv.connect(revWet); revWet.connect(dest);
+  // delay (feedback echo)
+  const delay = c.createGain();
+  const dl = c.createDelay(2); dl.delayTime.value = 0.33;
+  const fb = c.createGain(); fb.gain.value = 0.36;
+  const dWet = c.createGain(); dWet.gain.value = 0.9;
+  delay.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(dWet); dWet.connect(dest);
+  // chorus (LFO-modulated short delay)
+  const chorus = c.createGain();
+  const cd = c.createDelay(0.05); cd.delayTime.value = 0.02;
+  const lfo = c.createOscillator(); lfo.frequency.value = 0.5;
+  const lg = c.createGain(); lg.gain.value = 0.006; lfo.connect(lg); lg.connect(cd.delayTime); try { lfo.start(); } catch (_) {}
+  const cWet = c.createGain(); cWet.gain.value = 0.9;
+  chorus.connect(cd); cd.connect(cWet); cWet.connect(dest);
+  return { ctx: c, reverb, delay, chorus };
+}
+function liveBuses() { const c = actx(); if (!_buses || _buses.ctx !== c) _buses = makeBuses(c, master()); return _buses; }
+function attachSends(c, chain, fx, buses) {
+  if (!buses) { chain.sends = {}; return; }
+  const mk = (busInput, amt) => { const g = c.createGain(); g.gain.value = amt || 0; chain.gain.connect(g); g.connect(busInput); return g; };
+  chain.sends = { reverb: mk(buses.reverb, fx.reverb), delay: mk(buses.delay, fx.delay), chorus: mk(buses.chorus, fx.chorus) };
+}
+function updateSends(chain, fx) {
+  if (!chain || !chain.sends) return;
+  const t = chain.ctx.currentTime;
+  for (const k of ['reverb', 'delay', 'chorus']) if (chain.sends[k]) chain.sends[k].gain.setTargetAtTime(fx[k] || 0, t, 0.01);
+}
+// Backfill synth params + fx on instruments from older projects / MIDI imports.
+function normalizeInstruments() {
+  for (const i of project.instruments) {
+    i.params = Object.assign(E.defaultParams(i.type), i.params || {});
+    i.fx = Object.assign(E.defaultFx(), i.fx || {});
+    i._chain = null;
+  }
 }
 
 function triggerEvent(ev, when) {
@@ -123,16 +222,17 @@ function triggerEvent(ev, when) {
   if (!inst || inst._mute) return;
   if (project.instruments.some(i => i._solo) && !inst._solo) return; // solo overrides
   const c = actx();
+  const dest = getLiveChain(inst).input;
   if (inst.type === 'drum') {
     const fn = DRUM_FNS[(inst.params && inst.params.voice) || 'kick'];
     if (typeof window[fn] === 'function') { try { window[fn](when); return; } catch (_) {} }
-    chipVoice(c, master(), ev.midi, when, ev.durSec, ev.vel, { wave: 'noise' });
+    chipVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, { wave: 'noise' });
   } else if (inst.type === 'keys') {
-    keysVoice(c, master(), ev.midi, when, ev.durSec, ev.vel, inst.params || {});
+    keysVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   } else if (inst.type === 'sampler') {
-    samplerVoice(c, master(), ev.midi, when, ev.durSec, ev.vel, inst);
+    samplerVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst);
   } else {
-    chipVoice(c, master(), ev.midi, when, ev.durSec, ev.vel, inst.params || {});
+    chipVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   }
 }
 
@@ -240,13 +340,63 @@ function renderTracks() {
     solo.title = 'Solo'; solo.onclick = e => { e.stopPropagation(); inst._solo = !inst._solo; renderTracks(); };
     const mute = el('button', 'st-mini' + (inst._mute ? ' on' : ''), 'M');
     mute.title = 'Mute'; mute.onclick = e => { e.stopPropagation(); inst._mute = !inst._mute; renderTracks(); };
-    ctrls.appendChild(solo); ctrls.appendChild(mute);
+    const more = el('button', 'st-mini more', '⋯');
+    more.title = 'Track options'; more.onclick = e => { e.stopPropagation(); showTrackMenu(inst, more); };
+    ctrls.appendChild(solo); ctrls.appendChild(mute); ctrls.appendChild(more);
     row.appendChild(ctrls);
     host.appendChild(row);
   });
   const add = el('button', 'st-addtrack', '＋ Add Track');
   add.onclick = showAddTrackMenu;
   host.appendChild(add);
+}
+
+/* ---- track duplicate / delete ------------------------------------------ */
+function showTrackMenu(inst, anchor) {
+  document.getElementById('st-trackmenu')?.remove();
+  const m = el('div', 'st-addmenu'); m.id = 'st-trackmenu';
+  const r = anchor.getBoundingClientRect();
+  m.style.position = 'fixed'; m.style.left = Math.min(r.left, window.innerWidth - 150) + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
+  [['⎘ Duplicate', () => duplicateTrack(inst)], ['🗑 Delete', () => deleteTrack(inst)]].forEach(([lbl, fn]) => {
+    const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-trackmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+}
+function duplicateTrack(inst) {
+  const ni = E.makeInstrument(inst.type, inst.name + ' copy', JSON.parse(JSON.stringify(inst.params)));
+  ni.fx = JSON.parse(JSON.stringify(inst.fx || E.defaultFx()));
+  if (inst.sampleRef && project.samples[inst.sampleRef]) { project.samples[ni.id] = project.samples[inst.sampleRef]; ni.sampleRef = ni.id; }
+  const at = project.instruments.indexOf(inst);
+  project.instruments.splice(at + 1, 0, ni);
+  const track = E.getTrack(project, inst.id);
+  const map = {};
+  const nt = E.ensureTrack(project, ni.id);
+  (track ? track.clips : []).forEach(clip => {
+    if (!map[clip.patternId]) {
+      const op = E.getPattern(project, clip.patternId);
+      const np = E.makePattern(op.name, op.bars); np.steps = op.steps.slice(); np.notes = op.notes.map(n => ({ ...n }));
+      project.patterns.push(np); map[clip.patternId] = np.id;
+    }
+    nt.clips.push(E.makeClip(map[clip.patternId], clip.startBar, clip.lenBars));
+  });
+  _selInstId = ni.id;
+  decodeAllSamples(); renderAll();
+  if (_playing) _events = E.expandArrangement(project);
+}
+function deleteTrack(inst) {
+  if (project.instruments.length <= 1) { toastSafe('Keep at least one track'); return; }
+  if (inst._chain) { try { inst._chain.input.disconnect(); inst._chain.gain.disconnect(); } catch (_) {} inst._chain = null; }
+  const track = E.getTrack(project, inst.id);
+  const usedHere = new Set((track ? track.clips : []).map(c => c.patternId));
+  project.instruments = project.instruments.filter(i => i.id !== inst.id);
+  project.arrangement = project.arrangement.filter(t => t.instId !== inst.id);
+  const stillUsed = new Set(); project.arrangement.forEach(t => t.clips.forEach(c => stillUsed.add(c.patternId)));
+  project.patterns = project.patterns.filter(p => !(usedHere.has(p.id) && !stillUsed.has(p.id))); // drop orphaned patterns
+  if (inst.sampleRef && project.samples[inst.sampleRef]) delete project.samples[inst.sampleRef];
+  if (_selInstId === inst.id) _selInstId = project.instruments[0] ? project.instruments[0].id : null;
+  renderAll();
+  if (_playing) _events = E.expandArrangement(project);
 }
 
 function renderTimeline() {
@@ -348,23 +498,83 @@ function renderEditor() {
   if (!inst || !pat) { host.appendChild(el('div', 'st-editor-empty', 'Select a track to edit its pattern')); return; }
   const head = el('div', 'st-editor-head');
   head.innerHTML = `<b style="color:${instColor(inst.id)}">${esc(inst.name)}</b> · <span class="st-dim">${esc(pat.name)} · ${pat.bars} bar${pat.bars > 1 ? 's' : ''}</span>`;
+  head.appendChild(randomizeControls(inst, pat));
+  host.appendChild(head);
+  if (inst.type !== 'drum') host.appendChild(deviceStrip(inst));
+  host.appendChild(inst.type === 'drum' ? buildStepGrid(inst, pat) : buildPianoRoll(inst, pat));
+}
+
+// 🎲 randomizer controls (scale/key for melodic, genre for drums).
+function randomizeControls(inst, pat) {
+  const g = el('div', 'st-rnd');
+  const mkSel = (vals, cur, set) => { const s = el('select', 'st-rnd-sel'); vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; if (v === cur) o.selected = true; s.appendChild(o); }); s.onchange = () => set(s.value); return s; };
+  const P = inst.params;
+  if (inst.type === 'drum') {
+    g.appendChild(mkSel(E.RND_GENRES, P.rndGenre || 'straight', v => P.rndGenre = v));
+  } else {
+    g.appendChild(mkSel(Object.keys({ C: 0, 'C#': 0, D: 0, 'D#': 0, E: 0, F: 0, 'F#': 0, G: 0, 'G#': 0, A: 0, 'A#': 0, B: 0 }), P.rndKey || 'C', v => P.rndKey = v));
+    g.appendChild(mkSel(E.RND_SCALES, P.rndScale || 'pentatonic', v => P.rndScale = v));
+  }
+  const dice = el('button', 'st-rnd-btn', '🎲');
+  dice.title = 'Randomize this pattern';
+  dice.onclick = () => {
+    if (inst.type === 'drum') pat.steps = E.randomDrumPattern({ voice: P.voice || 'kick', genre: P.rndGenre || 'straight', bars: pat.bars });
+    else pat.notes = E.randomMelody({ scale: P.rndScale || 'pentatonic', key: P.rndKey || 'C', bars: pat.bars, lo: EDITOR_LO + 2, hi: EDITOR_LO + 24 });
+    renderEditor();
+    if (_playing) _events = E.expandArrangement(project);
+  };
+  g.appendChild(dice);
+  return g;
+}
+
+// A small labelled rotary knob backed by bindKnob.
+function knobCell(label, get, set, opts = {}) {
+  const cell = el('div', 'st-kcell');
+  const k = el('div', 'st-knob sm');
+  bindKnob(k, get, set, opts);
+  cell.appendChild(k); cell.appendChild(el('div', 'st-klabel', label));
+  return cell;
+}
+// Per-track "device": sound selector + synth knobs (ADSR, filter, drive, FX sends, mix).
+function deviceStrip(inst) {
+  const wrap = el('div', 'st-device');
+  const P = inst.params, F = inst.fx || (inst.fx = E.defaultFx());
+  const live = () => applyChainParams(inst);
+  // sound selector
+  const top = el('div', 'st-device-top');
   if (inst.type === 'chip') {
     const sel = el('select', 'st-wave');
-    CHIP_WAVES.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((inst.params.wave || 'pulse') === w) o.selected = true; sel.appendChild(o); });
-    sel.onchange = () => { inst.params.wave = sel.value; };
-    head.appendChild(sel);
+    CHIP_WAVES.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((P.wave || 'pulse') === w) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { P.wave = sel.value; }; top.appendChild(sel);
   } else if (inst.type === 'keys') {
     const sel = el('select', 'st-wave');
-    ['toypiano', 'organ', 'casio'].forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((inst.params.preset || 'toypiano') === w) o.selected = true; sel.appendChild(o); });
-    sel.onchange = () => { inst.params.preset = sel.value; };
-    head.appendChild(sel);
+    ['toypiano', 'organ', 'casio'].forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((P.preset || 'toypiano') === w) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { P.preset = sel.value; }; top.appendChild(sel);
   } else if (inst.type === 'sampler') {
-    const b = el('button', 'st-wave', '🎙️ ' + (inst.params.sampleName ? esc(inst.params.sampleName).slice(0, 18) : 'Load sample'));
-    b.style.cursor = 'pointer'; b.onclick = () => loadSampleFor(inst);
-    head.appendChild(b);
+    const b = el('button', 'st-wave', '🎙️ ' + (P.sampleName ? esc(P.sampleName).slice(0, 16) : 'Load sample'));
+    b.onclick = () => loadSampleFor(inst); top.appendChild(b);
   }
-  host.appendChild(head);
-  host.appendChild(inst.type === 'drum' ? buildStepGrid(inst, pat) : buildPianoRoll(inst, pat));
+  wrap.appendChild(top);
+  // knob bank
+  const bank = el('div', 'st-knobs');
+  bank.append(
+    knobCell('ATK', () => P.a, v => P.a = v, { min: 0.001, max: 0.6, def: 0.006 }),
+    knobCell('DEC', () => P.d, v => P.d = v, { min: 0, max: 0.8, def: 0.05 }),
+    knobCell('SUS', () => P.s, v => P.s = v, { min: 0, max: 1, def: 0.6 }),
+    knobCell('REL', () => P.r, v => P.r = v, { min: 0.02, max: 2, def: 0.15 }),
+    knobCell('CUT', () => P.cut, v => P.cut = v, { min: 200, max: 12000, def: 12000 }),
+    knobCell('RES', () => P.res, v => P.res = v, { min: 0.5, max: 18, def: 1 }),
+    knobCell('F.ENV', () => P.fenv, v => P.fenv = v, { min: 0, max: 1, def: 0 }),
+    knobCell('DRIVE', () => F.drive, v => { F.drive = v; live(); }, { min: 0, max: 1, def: 0 }),
+    knobCell('VERB', () => F.reverb, v => { F.reverb = v; live(); }, { min: 0, max: 1, def: 0 }),
+    knobCell('DLY', () => F.delay, v => { F.delay = v; live(); }, { min: 0, max: 1, def: 0 }),
+    knobCell('CHOR', () => F.chorus, v => { F.chorus = v; live(); }, { min: 0, max: 1, def: 0 }),
+    knobCell('PAN', () => F.pan, v => { F.pan = v; live(); }, { min: -1, max: 1, def: 0 }),
+    knobCell('LVL', () => F.level, v => { F.level = v; live(); }, { min: 0, max: 1.2, def: 0.9 }),
+  );
+  wrap.appendChild(bank);
+  wrap.appendChild(buildMiniKeys()); // on-screen keyboard (plays + records)
+  return wrap;
 }
 
 function buildStepGrid(inst, pat) {
@@ -381,11 +591,104 @@ function buildStepGrid(inst, pat) {
 }
 
 function audition(inst, midi, dur = 0.3) {
-  const c = actx();
-  if (inst.type === 'keys') keysVoice(c, master(), midi, c.currentTime, dur, 0.9, inst.params);
-  else if (inst.type === 'sampler') samplerVoice(c, master(), midi, c.currentTime, dur, 0.9, inst);
-  else chipVoice(c, master(), midi, c.currentTime, dur, 0.9, inst.params);
+  const c = actx(), dest = getLiveChain(inst).input;
+  if (inst.type === 'keys') keysVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
+  else if (inst.type === 'sampler') samplerVoice(c, dest, midi, c.currentTime, dur, 0.9, inst);
+  else chipVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
 }
+/* ---- live recording (on-screen keys + computer keys + Web MIDI) -------- */
+function curStep() {
+  const c = actx(); const songT = c.currentTime - _loopBase;
+  return songT < 0 ? 0 : Math.round(songT / E.secPerStep(project.bpm));
+}
+function qStep(step) { return Math.round(step / _quantize) * _quantize; }
+function noteOn(midi, vel = 0.9) {
+  const inst = project.instruments.find(i => i.id === _selInstId); if (!inst) return;
+  audition(inst, midi, 0.5);
+  if (!_recording || !_playing) return;
+  const pat = selectedPattern(); if (!pat) return;
+  const patSteps = pat.bars * E.STEPS_PER_BAR;
+  const g = curStep();
+  if (inst.type === 'drum') {
+    const step = ((qStep(g) % patSteps) + patSteps) % patSteps;
+    pat.steps[step] = 1; _events = E.expandArrangement(project); renderEditor();
+  } else {
+    const step = ((qStep(g) % patSteps) + patSteps) % patSteps;
+    _pending[midi] = { step, g: qStep(g) };
+  }
+}
+function noteOff(midi) {
+  const p = _pending[midi]; if (!p) return; delete _pending[midi];
+  const inst = project.instruments.find(i => i.id === _selInstId); if (!inst) return;
+  const pat = selectedPattern(); if (!pat) return;
+  const patSteps = pat.bars * E.STEPS_PER_BAR;
+  let len = qStep(curStep()) - p.g; if (len < 1) len = _quantize; len = Math.max(1, Math.min(patSteps, len));
+  if (!pat.notes.some(n => n.midi === midi && n.start === p.step)) pat.notes.push({ midi, start: p.step, len, vel: 0.85 });
+  _events = E.expandArrangement(project);
+  if (_selInstId === inst.id) renderEditor();
+}
+const KB_W = { a: 0, s: 2, d: 4, f: 5, g: 7, h: 9, j: 11, k: 12, l: 14 };
+const KB_B = { w: 1, e: 3, t: 6, y: 8, u: 10, o: 13 };
+let _inputBound = false;
+function setupInput() {
+  if (_inputBound) return; _inputBound = true;
+  const open = () => document.getElementById('studio-win')?.classList.contains('open');
+  document.addEventListener('keydown', e => {
+    if (!open() || e.repeat) return;
+    if (e.target && e.target.closest && e.target.closest('input,select,textarea')) return;
+    const key = (e.key || '').toLowerCase();
+    if (key === 'z') { _recOct = Math.max(0, _recOct - 1); return; }
+    if (key === 'x') { _recOct = Math.min(7, _recOct + 1); return; }
+    const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
+    if (semi == null || _heldKeys[key]) return;
+    _heldKeys[key] = true; e.preventDefault();
+    noteOn((_recOct + 1) * 12 + semi, 0.9);
+  });
+  document.addEventListener('keyup', e => {
+    const key = e.key.toLowerCase();
+    const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
+    if (semi == null) return; delete _heldKeys[key];
+    noteOff((_recOct + 1) * 12 + semi);
+  });
+  // Web MIDI input (hardware keyboards)
+  if (navigator.requestMIDIAccess) {
+    navigator.requestMIDIAccess().then(acc => {
+      const hook = inp => { inp.onmidimessage = onMIDI; };
+      acc.inputs.forEach(hook);
+      acc.onstatechange = ev => { if (ev.port && ev.port.type === 'input' && ev.port.state === 'connected') hook(ev.port); };
+    }).catch(() => {});
+  }
+}
+function onMIDI(e) {
+  const [status, note, vel] = e.data; const cmd = status & 0xf0;
+  if (cmd === 0x90 && vel > 0) noteOn(note, vel / 127);
+  else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) noteOff(note);
+}
+// compact 2-octave on-screen keyboard (device panel)
+function bindMiniKey(node, midi) {
+  node.addEventListener('pointerdown', e => { e.preventDefault(); node.classList.add('on'); noteOn(midi, 0.9); try { node.setPointerCapture(e.pointerId); } catch (_) {} });
+  const up = () => { node.classList.remove('on'); noteOff(midi); };
+  node.addEventListener('pointerup', up);
+  node.addEventListener('pointerleave', e => { if (e.buttons) up(); });
+}
+function buildMiniKeys() {
+  const wrap = el('div', 'st-mk');
+  const whiteSemis = [0, 2, 4, 5, 7, 9, 11], blackAfter = { 0: 1, 1: 3, 3: 6, 4: 8, 5: 10 };
+  const octs = 2, W = octs * 7;
+  for (let o = 0; o < octs; o++) for (let wi = 0; wi < 7; wi++) {
+    const i = o * 7 + wi, midi = (_recOct + 1 + o) * 12 + whiteSemis[wi];
+    const k = el('div', 'st-mk-w'); k.style.left = (i / W * 100) + '%'; k.style.width = (100 / W) + '%';
+    bindMiniKey(k, midi); wrap.appendChild(k);
+  }
+  for (let o = 0; o < octs; o++) for (let wi = 0; wi < 7; wi++) {
+    if (!(wi in blackAfter)) continue;
+    const i = o * 7 + wi, midi = (_recOct + 1 + o) * 12 + blackAfter[wi];
+    const bk = el('div', 'st-mk-b'); bk.style.left = ((i + 1) / W * 100 - (100 / W) * 0.3) + '%'; bk.style.width = (100 / W * 0.6) + '%';
+    bindMiniKey(bk, midi); wrap.appendChild(bk);
+  }
+  return wrap;
+}
+
 function buildPianoRoll(inst, pat) {
   const rows = 25; // ~2 octaves
   const steps = pat.bars * E.STEPS_PER_BAR;
@@ -452,6 +755,7 @@ function syncTransportUI() {
   const play = document.getElementById('st-play'); if (play) play.textContent = _playing ? '⏹' : '▶';
   const bpm = document.getElementById('st-bpm-val'); if (bpm) bpm.textContent = String(project.bpm).padStart(3, '0');
   const loop = document.getElementById('st-loop'); if (loop) loop.classList.toggle('on', _loop);
+  const rec = document.getElementById('st-rec'); if (rec) rec.classList.toggle('on', _recording);
 }
 function setBpm(v) { project.bpm = Math.max(40, Math.min(240, Math.round(v))); syncTransportUI(); if (_playing) _events = E.expandArrangement(project); }
 
@@ -477,6 +781,11 @@ function build() {
   if (playBtn) playBtn.onclick = togglePlay;
   const loopBtn = document.getElementById('st-loop');
   if (loopBtn) loopBtn.onclick = () => { _loop = !_loop; syncTransportUI(); };
+  const recBtn = document.getElementById('st-rec');
+  if (recBtn) recBtn.onclick = () => { _recording = !_recording; if (_recording && !_playing) play(); syncTransportUI(); };
+  const quant = document.getElementById('st-quant');
+  if (quant) quant.onchange = () => { _quantize = parseInt(quant.value) || 1; };
+  setupInput();
   // BPM: scrub vertically or click to type
   const bpmBox = document.getElementById('st-bpm');
   if (bpmBox) {
@@ -551,7 +860,7 @@ function pickFile(accept, asArrayBuffer, cb) {
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
 
 function saveProject() {
-  const clean = JSON.parse(JSON.stringify(project, (k, v) => k === '_mute' ? undefined : v));
+  const clean = JSON.parse(JSON.stringify(project, (k, v) => (k && k[0] === '_') ? undefined : v));
   download(JSON.stringify(clean), (project.name || 'project').replace(/\s+/g, '_') + '.aqs.json', 'application/json');
   toastSafe('🎛️ Project saved');
 }
@@ -602,14 +911,18 @@ async function renderWAV() {
       try { offBuf[inst.id] = await oc.decodeAudioData(b64ToBuf(project.samples[inst.sampleRef]).slice(0)); } catch (_) {}
     }
   }
+  const buses = makeBuses(oc, m);              // P3 FX buses on the offline ctx
+  const chains = {};
+  const chainIn = inst => (chains[inst.id] || (chains[inst.id] = buildChain(oc, inst, m, buses))).input;
   const anySolo = project.instruments.some(i => i._solo);
   for (const ev of E.expandArrangement(project)) {
     const inst = project.instruments.find(i => i.id === ev.instId); if (!inst || inst._mute) continue;
     if (anySolo && !inst._solo) continue;
-    if (inst.type === 'drum') offlineDrum(oc, m, (inst.params && inst.params.voice) || 'kick', ev.timeSec);
-    else if (inst.type === 'keys') keysVoice(oc, m, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
-    else if (inst.type === 'sampler') { if (offBuf[inst.id]) samplerVoice(oc, m, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offBuf[inst.id]); }
-    else chipVoice(oc, m, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
+    const dest = chainIn(inst);
+    if (inst.type === 'drum') offlineDrum(oc, dest, (inst.params && inst.params.voice) || 'kick', ev.timeSec);
+    else if (inst.type === 'keys') keysVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
+    else if (inst.type === 'sampler') { if (offBuf[inst.id]) samplerVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offBuf[inst.id]); }
+    else chipVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
   }
   try { const buf = await oc.startRendering(); download(E.encodeWAV(buf), (project.name || 'song').replace(/\s+/g, '_') + '.wav', 'audio/wav'); toastSafe('🌊 WAV downloaded'); }
   catch (_) { toastSafe('Render failed'); }
@@ -626,7 +939,7 @@ window.openStudio = function () {
 window.Studio = {
   play, stop, togglePlay, setBpm, saveProject, loadProject, exportMIDIFile, importMIDIFile, renderWAV,
   get project() { return project; },
-  load(p) { stop(); project = p; project.samples = project.samples || {}; project.instruments.forEach(i => { i._buf = null; }); _selInstId = project.instruments[0] ? project.instruments[0].id : null; if (_master) _master.gain.value = project.master ?? 0.9; renderAll(); decodeAllSamples(); },
+  load(p) { stop(); project = p; project.samples = project.samples || {}; project.instruments.forEach(i => { i._buf = null; }); normalizeInstruments(); _selInstId = project.instruments[0] ? project.instruments[0].id : null; if (_master) _master.gain.value = project.master ?? 0.9; renderAll(); decodeAllSamples(); },
 };
 
 // minimal HTML escaper (the app's global esc may not be visible to modules)

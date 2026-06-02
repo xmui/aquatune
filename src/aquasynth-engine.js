@@ -40,8 +40,22 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 export function midiToName(midi) { return NOTE_NAMES[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1); }
 
 /* ---- factories ---------------------------------------------------------- */
+// Per-type default synth params. cut>=11000 means "filter bypassed" so defaults
+// sound exactly like before (the per-voice lowpass is only inserted when lowered).
+export function defaultParams(type) {
+  if (type === 'chip')    return { wave: 'pulse', a: 0.006, d: 0.04, s: 0.65, r: 0.1, cut: 12000, res: 1, fenv: 0 };
+  if (type === 'keys')    return { preset: 'toypiano', a: 0.006, d: 0.05, s: 0.6, r: 0.2, cut: 12000, res: 1, fenv: 0 };
+  if (type === 'sampler') return { baseNote: 60, oneShot: true, a: 0.002, d: 0, s: 1, r: 0.1, cut: 12000, res: 1, fenv: 0 };
+  return {}; // drum
+}
+export function defaultFx() { return { drive: 0, pan: 0, level: 0.9, reverb: 0, delay: 0, chorus: 0 }; }
+
 export function makeInstrument(type, name, params = {}) {
-  return { id: aqsUid('inst'), type, name: name || type, params, sampleRef: null };
+  return {
+    id: aqsUid('inst'), type, name: name || type, sampleRef: null,
+    params: Object.assign(defaultParams(type), params),
+    fx: defaultFx(),
+  };
 }
 
 // A pattern stores BOTH a step grid (for drum-style lanes) and a notes array
@@ -301,3 +315,61 @@ export function encodeWAV(buf) {
   for (let i = 0; i < frames; i++) for (let c = 0; c < nch; c++) { let s = Math.max(-1, Math.min(1, chans[c][i])); out.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
   return new Uint8Array(out.buffer);
 }
+
+/* ============================================================================
+ * Randomizers (pure) — scale-aware melodies + genre drum patterns.
+ * Ported from the legacy AquaSynth; deterministic when passed an `rng`.
+ * ========================================================================== */
+const SCALES = {
+  pentatonic: [0, 2, 4, 7, 9], major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10],
+  blues: [0, 3, 5, 6, 7, 10], dorian: [0, 2, 3, 5, 7, 9, 10],
+};
+const KEY_OFFSET = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+
+export function randomMelody({ scale = 'pentatonic', key = 'C', bars = 1, density = 0.6, lo = 50, hi = 74, rng = Math.random } = {}) {
+  const steps = bars * STEPS_PER_BAR;
+  const ivals = SCALES[scale] || SCALES.pentatonic;
+  const root = KEY_OFFSET[key] ?? 0;
+  const pool = [];
+  for (let m = lo; m <= hi; m++) if (ivals.includes((((m - root) % 12) + 12) % 12)) pool.push(m);
+  if (!pool.length) return [];
+  const notes = [];
+  let idx = Math.floor(pool.length / 2);
+  let busyUntil = -1;
+  for (let s = 0; s < steps; s++) {
+    if (s < busyUntil) continue;                 // don't overlap a held note
+    const onBeat = s % 4 === 0;
+    const p = onBeat ? Math.min(1, density + 0.25) : density * 0.4;
+    if (rng() < p) {
+      idx = Math.max(0, Math.min(pool.length - 1, idx + Math.round((rng() - 0.5) * 5)));
+      const len = rng() < 0.3 ? 2 : 1;
+      notes.push({ midi: pool[idx], start: s, len, vel: onBeat ? 0.9 : 0.72 });
+      busyUntil = s + len;
+    }
+  }
+  return notes;
+}
+
+const DRUM_ROLE = { kick: 'kick', tom: 'kick', snare: 'snare', clap: 'snare', hihat: 'hihat', openhh: 'hihat', crash: 'hihat', cowbell: 'hihat' };
+const DRUM_PATTERNS = {
+  straight: { kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0] },
+  house:    { kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat: [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0] },
+  hiphop:   { kick: [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+  trap:     { kick: [1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0], snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] },
+  dnb:      { kick: [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0], snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0] },
+  jazz:     { kick: [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], snare: [0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], hihat: [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1] },
+};
+export function randomDrumPattern({ voice = 'kick', genre = 'straight', bars = 1, rng = Math.random } = {}) {
+  const g = DRUM_PATTERNS[genre] || DRUM_PATTERNS.straight;
+  const base = g[DRUM_ROLE[voice] || 'hihat'] || g.kick;
+  const out = [];
+  for (let b = 0; b < bars; b++) for (let s = 0; s < STEPS_PER_BAR; s++) {
+    let v = base[s] ? 1 : 0;
+    if (!v && rng() < 0.08) v = 1;       // ghost hits
+    if (v && rng() < 0.06) v = 0;        // occasional drop
+    out.push(v);
+  }
+  return out;
+}
+export const RND_SCALES = Object.keys(SCALES);
+export const RND_GENRES = Object.keys(DRUM_PATTERNS);

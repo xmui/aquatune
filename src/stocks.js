@@ -1,4 +1,4 @@
-// Aquatune Exchange — a Cruelty-Squad-style satirical stock market.
+// Aquatune Exchange — a satirical stock market of brand/meme tickers.
 //
 // Design: ONE global market shared by every client, with NO server. Prices are a
 // pure deterministic function of (seed, stockId, tickIndex), so every device
@@ -14,30 +14,37 @@ import { ref, get, set, runTransaction, serverTimestamp } from 'firebase/databas
 import { db } from './firebase.js';
 
 // ---------------------------------------------------------------------------
-// Fictional, parody "stocks" — Cruelty-Squad-flavoured joke companies. Edit
-// freely: { id, ticker, name, basePrice, beta, vol }. beta = sensitivity to the
-// marketwide move; vol = idiosyncratic jitter multiplier.
+// Parody/brand "stocks". Edit freely: { id, ticker, name, basePrice, beta, vol }.
+// beta = sensitivity to the marketwide move; vol = idiosyncratic jitter multiplier.
+// Keep ids stable so existing holdings carry over across list changes.
 // ---------------------------------------------------------------------------
 const STOCKS = [
-  { id:'blz', ticker:'BLZ',  name:'Blaze Cannabis Holdings',     basePrice:42,   beta:1.2, vol:1.4 },
-  { id:'snow',ticker:'SNOW', name:'Nose Candy Logistics Inc.',   basePrice:88,   beta:1.6, vol:2.2 },
-  { id:'crnk',ticker:'CRNK', name:'Crankhouse Chemical Co.',     basePrice:13,   beta:1.8, vol:2.6 },
-  { id:'huff',ticker:'HUFF', name:'HuffCo Vapor & Nicotine',     basePrice:27,   beta:0.9, vol:1.1 },
-  { id:'orgn',ticker:'ORGN', name:'Organ Liquidity Partners',    basePrice:155,  beta:1.4, vol:1.7 },
-  { id:'gun', ticker:'GUNZ', name:'Freedom Hardware Group',      basePrice:64,   beta:1.1, vol:1.3 },
-  { id:'cult',ticker:'CULT', name:'Ascension Wellness Cult',     basePrice:9,    beta:1.5, vol:2.4 },
-  { id:'spam',ticker:'SPAM', name:'Unsolicited Comms LLC',       basePrice:3.5,  beta:0.7, vol:1.0 },
-  { id:'bone',ticker:'BONE', name:'Skeleton Futures Trust',      basePrice:120,  beta:1.3, vol:1.6 },
-  { id:'gulp',ticker:'GULP', name:'Gulpco Beverage Sludge',      basePrice:18,   beta:0.8, vol:1.2 },
-  { id:'tox', ticker:'TOXX', name:'Toxic Runoff Reclamation',    basePrice:31,   beta:1.7, vol:2.1 },
-  { id:'fame',ticker:'FAME', name:'Influencer Capital Holdings', basePrice:200,  beta:2.0, vol:2.8 },
-  { id:'rent',ticker:'RENT', name:'Slumlord Equity REIT',        basePrice:240,  beta:1.0, vol:1.1 },
-  { id:'meds',ticker:'MEDS', name:'Painless Pharma Group',       basePrice:76,   beta:1.2, vol:1.5 },
-  { id:'lure',ticker:'LURE', name:'Gambling Reflex Systems',     basePrice:49,   beta:1.6, vol:2.0 },
-  { id:'goop',ticker:'GOOP', name:'Artisanal Goop Collective',   basePrice:6.5,  beta:0.9, vol:1.3 },
-  { id:'doom',ticker:'DOOM', name:'Doomsday Bunker Brands',      basePrice:310,  beta:0.6, vol:1.0 },
-  { id:'meat',ticker:'MEAT', name:'Mystery Meat Industries',     basePrice:22,   beta:1.1, vol:1.4 },
+  // survivors keep their id so existing holdings carry over (blz is now WEED)
+  { id:'blz',     ticker:'WEED',  name:'Weed Inc.',          basePrice:42,  beta:1.2, vol:1.6 },
+  { id:'snow',    ticker:'SNOW',  name:'Snow',               basePrice:88,  beta:1.6, vol:2.2 },
+  { id:'gun',     ticker:'GUNZ',  name:'Gunz',               basePrice:64,  beta:1.1, vol:1.4 },
+  { id:'cult',    ticker:'CULT',  name:'Cult',               basePrice:9,   beta:1.5, vol:2.4 },
+  { id:'fame',    ticker:'FAME',  name:'Fame',               basePrice:200, beta:2.0, vol:2.8 },
+  { id:'goop',    ticker:'GOOP',  name:'Goop',               basePrice:6.5, beta:0.9, vol:1.3 },
+  // new tickers
+  { id:'geek',    ticker:'GEEK',  name:'Geekbar',            basePrice:18,  beta:1.3, vol:1.7 },
+  { id:'valve',   ticker:'VALVE', name:'Valve Software',     basePrice:330, beta:0.8, vol:1.1 },
+  { id:'dc',      ticker:'DC',    name:'DC Shoes',           basePrice:54,  beta:1.0, vol:1.3 },
+  { id:'osiris',  ticker:'OSIR',  name:'Osiris Shoes',       basePrice:37,  beta:1.1, vol:1.5 },
+  { id:'monster', ticker:'MNST',  name:'Monster Energy',     basePrice:96,  beta:1.2, vol:1.4 },
+  { id:'gfuel',   ticker:'GFUEL', name:'G Fuel',             basePrice:29,  beta:1.3, vol:1.8 },
+  { id:'marlboro',ticker:'MARL',  name:'Marlboro',           basePrice:140, beta:0.7, vol:1.0 },
+  { id:'camel',   ticker:'CAML',  name:'Camel',              basePrice:72,  beta:0.8, vol:1.1 },
+  { id:'lucky',   ticker:'LUCK',  name:'Lucky Strike',       basePrice:58,  beta:0.9, vol:1.2 },
+  { id:'miku',    ticker:'MIKU',  name:'Hatsune Miku',       basePrice:160, beta:1.7, vol:2.3 },
+  { id:'hottopic',ticker:'HOT',   name:'Hot Topic',          basePrice:25,  beta:1.2, vol:1.6 },
+  { id:'swag',    ticker:'SWAG',  name:'Swag',               basePrice:4.2, beta:1.8, vol:2.6 },
+  { id:'michael', ticker:'MIKE',  name:'Michael Camera',     basePrice:80,  beta:1.0, vol:1.4 },
+  { id:'slop',    ticker:'SLOP',  name:'AI Slop',            basePrice:11,  beta:1.9, vol:2.7 },
+  { id:'buddy',   ticker:'BUDDY', name:'AquaBuddy',          basePrice:50,  beta:1.0, vol:1.5 },
 ];
+const STOCK_BY_ID = Object.fromEntries(STOCKS.map(s => [s.id, s]));
+const STOCK_IDX = Object.fromEntries(STOCKS.map((s, i) => [s.id, i])); // stable per-stock discriminator
 
 // ---------------------------------------------------------------------------
 // Tunables
@@ -53,6 +60,10 @@ const PRICE_FLOOR    = 0.01;
 const MEAN_REVERT    = 0.012;  // gentle pull back toward base price (keeps stocks alive)
 
 const COMPARE_COLORS = ['#36c9ff','#ff5d8f','#ffd23f','#7be36a','#c79bff','#ff9f43','#5ad1c4','#ff6b6b'];
+
+// Chart timeframes → how many ticks of history the chart spans (TICK_MS=4s).
+const TIMEFRAMES = { '1h': 900, '1d': 21600, '1w': 151200 };
+const SERIES_POINTS = 160; // downsampled points drawn per series
 
 // ---------------------------------------------------------------------------
 // Deterministic PRNG helpers
@@ -158,9 +169,9 @@ function priceOf(id) {
   const buf = history[id];
   return buf && buf.length ? buf[buf.length - 1].price : (STOCKS.find(s => s.id === id)?.basePrice || 0);
 }
-// % change across the visible window
+// % change across the selected timeframe
 function pctChange(id) {
-  const buf = history[id];
+  const buf = seriesOf(id);
   if (!buf || buf.length < 2) return 0;
   const a = buf[0].price, b = buf[buf.length - 1].price;
   return a > 0 ? (b - a) / a * 100 : 0;
@@ -170,6 +181,69 @@ function regimeLabel(r) {
   if (r >= 0.4)  return { t: 'VOLATILE', c: '#ffb43f' };
   return { t: 'CALM', c: '#5ad17a' };
 }
+
+// ---------------------------------------------------------------------------
+// Timeframe series — deterministic price history spanning 1h / 1d / 1w.
+// We walk the same deterministic engine forward from a basePrice anchor at
+// (now - frameTicks), downsample to ~SERIES_POINTS, then rescale so the last
+// point equals the live current price (priceOf). This gives instant, shared
+// history for any timeframe without keeping huge buffers; mean-reversion makes
+// the early values converge so the anchor choice doesn't matter.
+// ---------------------------------------------------------------------------
+let _timeframe = '1h';
+const _series = {}; // id -> [{tick, price}] for the current timeframe
+
+// Fast numeric PRNG used only for the timeframe series. It needn't match the
+// live engine (the series is rescaled to end at the live price), so we avoid
+// the string/closure allocations of rngFor — a 1w span over all stocks would
+// otherwise take ~1.3s. Deterministic from SEED + STOCK_IDX ⇒ shared by all clients.
+function _u(k) { k |= 0; k = Math.imul(k ^ (k >>> 16), 0x7feb352d); k = Math.imul(k ^ (k >>> 15), 0x846ca68b); return ((k ^ (k >>> 16)) >>> 0) / 4294967296; }
+function _mix(a, b) { return (Math.imul((a ^ 0x9E3779B1) | 0, 0x85EBCA77) ^ ((b + 0x165667B1) | 0)) | 0; }
+function _seriesRegime(seg) { return _u(_mix(SEED ^ 0x5151, seg)); }
+function _regimeFast(t) {
+  const seg = Math.floor(t / REGIME_PERIOD), f = (t % REGIME_PERIOD) / REGIME_PERIOD;
+  const a = _seriesRegime(seg), b = _seriesRegime(seg + 1), s = f * f * (3 - 2 * f);
+  return a + (b - a) * s;
+}
+
+function rebuildSeries(ids) {
+  const now = lastComputedTick;
+  if (now < 1) { for (const id of ids) _series[id] = (history[id] || []).slice(); return; }
+  const frameTicks = TIMEFRAMES[_timeframe] || 900;
+  const start = Math.max(0, now - frameTicks);
+  const span = now - start;
+  const step = Math.max(1, Math.floor(span / SERIES_POINTS));
+  const price = {}, pts = {};
+  for (const id of ids) { const s = STOCK_BY_ID[id]; price[id] = s ? s.basePrice : 1; pts[id] = [{ tick: start, price: price[id] }]; }
+  for (let t = start + 1; t <= now; t++) {
+    const regime = _regimeFast(t);
+    const vol = lerp(CALM_VOL, CHAOS_VOL, regime);
+    const mk = _mix(SEED, t);
+    let mktR = DRIFT + (_u(mk) * 2 - 1) * vol;
+    if (_u(mk ^ 1) < 0.012 * regime) mktR -= (0.05 + _u(mk ^ 2) * 0.28);
+    else if (_u(mk ^ 3) < 0.012 * regime) mktR += (0.04 + _u(mk ^ 4) * 0.20);
+    const sample = ((t - start) % step === 0) || (t === now);
+    for (const id of ids) {
+      const s = STOCK_BY_ID[id]; let p = price[id];
+      const sk = _mix(mk, STOCK_IDX[id] + 1);
+      let r = s.beta * mktR + (_u(sk) * 2 - 1) * (vol * s.vol);
+      if (_u(sk ^ 1) < 0.008 + 0.04 * regime) r += (_u(sk ^ 2) * 2 - 1) * (0.10 + 0.45 * regime);
+      const revert = MEAN_REVERT * Math.log(s.basePrice / p);
+      p = p * (1 + r + revert);
+      if (!isFinite(p) || p < PRICE_FLOOR) p = PRICE_FLOOR;
+      price[id] = p;
+      if (sample) pts[id].push({ tick: t, price: p });
+    }
+  }
+  for (const id of ids) {
+    const arr = pts[id], live = priceOf(id), endP = arr[arr.length - 1].price;
+    if (endP > 0 && live > 0 && isFinite(live)) { const k = live / endP; for (const pt of arr) pt.price *= k; }
+    _series[id] = arr;
+  }
+}
+function rebuildAllSeries() { rebuildSeries(STOCKS.map(s => s.id)); }
+function visibleIds() { return _compareMode ? [..._compareSet] : [_selected]; }
+function seriesOf(id) { return _series[id] && _series[id].length ? _series[id] : (history[id] || []); }
 
 // ---------------------------------------------------------------------------
 // Firebase: config (write-once), snapshots, clock sync
@@ -248,6 +322,19 @@ async function loadPortfolio() {
       if (typeof v.credits === 'number' && (v.updatedAt || 0) >= localAt) {
         if (typeof window.aqSetCredits === 'function') window.aqSetCredits(v.credits);
       }
+      // Liquidate holdings of stocks that no longer exist (e.g. the old list)
+      // back to credits at their cost basis, so credits aren't stranded. Done
+      // after adopting remote credits so the refund isn't overwritten.
+      let refund = 0, changed = false;
+      for (const id of Object.keys(holdings)) {
+        if (!STOCK_BY_ID[id]) {
+          const h = holdings[id];
+          if (h && h.shares > 0) refund += Math.round((h.avgCost || 0) * h.shares);
+          delete holdings[id]; changed = true;
+        }
+      }
+      if (refund > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(refund);
+      if (changed) savePortfolio();
     }
   } catch {}
 }
@@ -302,7 +389,10 @@ function buildUI() {
       <div id="stk-main">
         <div id="stk-chart-head">
           <div id="stk-chart-title"></div>
-          <button id="stk-compare-btn" class="stk-btn">Compare</button>
+          <div class="stk-head-ctrls">
+            <span id="stk-tf"></span>
+            <button id="stk-compare-btn" class="stk-btn">Compare</button>
+          </div>
         </div>
         <canvas id="stk-chart"></canvas>
         <div id="stk-compare-legend"></div>
@@ -310,8 +400,19 @@ function buildUI() {
       </div>
     </div>
     <div id="stk-portfolio"></div>`;
-  document.getElementById('stk-compare-btn').onclick = () => { _compareMode = !_compareMode; renderAll(); };
+  document.getElementById('stk-compare-btn').onclick = () => { _compareMode = !_compareMode; rebuildSeries(visibleIds()); renderAll(); };
+  const tf = document.getElementById('stk-tf');
+  Object.keys(TIMEFRAMES).forEach(k => {
+    const b = el('button', 'stk-btn stk-tf-btn' + (k === _timeframe ? ' on' : ''), k.toUpperCase());
+    b.onclick = () => { _timeframe = k; rebuildAllSeries(); renderAll(); };
+    tf.appendChild(b);
+  });
   _built = true;
+}
+
+function syncTfButtons() {
+  const tf = document.getElementById('stk-tf'); if (!tf) return;
+  [...tf.children].forEach(b => b.classList.toggle('on', b.textContent.toLowerCase() === _timeframe));
 }
 
 function renderList() {
@@ -331,6 +432,7 @@ function renderList() {
     row.onclick = () => {
       if (_compareMode) { _compareSet.has(s.id) ? _compareSet.delete(s.id) : _compareSet.add(s.id); }
       else { _selected = s.id; }
+      rebuildSeries(visibleIds());
       renderAll();
     };
     list.appendChild(row);
@@ -384,8 +486,8 @@ function drawChart() {
   for (let i = 1; i < 5; i++) { const y = H * i / 5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
   const series = _compareMode
-    ? STOCKS.filter(s => _compareSet.has(s.id)).map(s => ({ s, buf: history[s.id] }))
-    : [{ s: STOCKS.find(x => x.id === _selected), buf: history[_selected] }];
+    ? STOCKS.filter(s => _compareSet.has(s.id)).map(s => ({ s, buf: seriesOf(s.id) }))
+    : [{ s: STOCKS.find(x => x.id === _selected), buf: seriesOf(_selected) }];
 
   if (_compareMode) {
     // normalized to % change from window start
@@ -522,6 +624,7 @@ function doSell(id, qty) {
 function renderAll() {
   if (!_built) return;
   renderRegime();
+  syncTfButtons();
   renderList();
   renderChartHead();
   renderTrade();
@@ -532,11 +635,17 @@ function renderAll() {
 // ---------------------------------------------------------------------------
 // Loops
 // ---------------------------------------------------------------------------
+let _sinceRebuild = 0;
 function onTick() {
   const now = tickIndex();
   if (now > lastComputedTick) {
     advanceTo(now);
     maybeWriteSnapshot(now);
+    // 1h/1d rebuild all stocks each tick (cheap, ~12-36ms) so the list % stays
+    // live; 1w only refreshes the visible chart on a throttle (a tick is a
+    // negligible slice of a week and a full 1w rebuild is ~250ms).
+    if (_timeframe === '1w') { if (++_sinceRebuild >= 4) { rebuildSeries(visibleIds()); _sinceRebuild = 0; } }
+    else rebuildAllSeries();
     renderAll();
   }
 }
@@ -553,6 +662,7 @@ async function ensureInit() {
   await sampleClock();
   await initConfig();
   await loadSnapshotAndSeed();
+  rebuildAllSeries();
   hookCreditSync();
   await loadPortfolio();
 }

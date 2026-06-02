@@ -3475,6 +3475,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     #stk-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
     #stk-chart-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     #stk-chart-title { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .stk-head-ctrls { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+    #stk-tf { display:inline-flex; gap:3px; }
+    .stk-tf-btn { padding:3px 8px; font-size:11px; }
     #stk-chart { width:100%; height:240px; border-radius:6px; background:#08101c; }
     #stk-compare-legend { display:flex; flex-wrap:wrap; gap:8px; min-height:14px; }
     .stk-leg { font-size:10px; display:flex; align-items:center; gap:4px; }
@@ -8334,7 +8337,7 @@ const DOCK_META = {
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','leaderboard','settings'];
 function getDockPins() {
   let p = null;
   try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
@@ -8346,6 +8349,11 @@ function getDockPins() {
     if (si >= 0) { if (p.includes('studio')) p.splice(si, 1); else p[si] = 'studio'; }
     else if (!p.includes('studio')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'studio'); }
     _saveDockPins(p);
+  }
+  // one-time migration: add the Exchange to existing docks
+  if (!localStorage.getItem('aq_dock_stocks_v1')) {
+    localStorage.setItem('aq_dock_stocks_v1', '1');
+    if (!p.includes('stocks')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'stocks'); _saveDockPins(p); }
   }
   return p;
 }

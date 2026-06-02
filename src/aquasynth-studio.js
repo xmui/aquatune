@@ -425,12 +425,84 @@ function build() {
   const zoomIn = document.getElementById('st-zoom-in'), zoomOut = document.getElementById('st-zoom-out');
   if (zoomIn) zoomIn.onclick = () => { _pxPerBar = Math.min(220, _pxPerBar + 24); renderTimeline(); };
   if (zoomOut) zoomOut.onclick = () => { _pxPerBar = Math.max(40, _pxPerBar - 24); renderTimeline(); };
+  // IO toolbar
+  const bind = (id, fn) => { const e = document.getElementById(id); if (e) e.onclick = fn; };
+  bind('st-save', saveProject); bind('st-open', loadProject);
+  bind('st-export-midi', exportMIDIFile); bind('st-import-midi', importMIDIFile);
+  bind('st-render-wav', renderWAV);
 
   // keyboard: space = play/stop while window focused
   root.addEventListener('keydown', e => { if (e.key === ' ' && !e.target.closest('input,select,textarea')) { e.preventDefault(); togglePlay(); } });
 
   _selInstId = project.instruments[0] ? project.instruments[0].id : null;
   renderAll();
+}
+
+/* ---- IO: save/load projects, MIDI in/out, WAV render ------------------- */
+function download(data, filename, mime) {
+  const blob = new Blob([data], { type: mime || 'application/octet-stream' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
+}
+function pickFile(accept, asArrayBuffer, cb) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = accept;
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => cb(r.result, f); asArrayBuffer ? r.readAsArrayBuffer(f) : r.readAsText(f); };
+  inp.click();
+}
+function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
+
+function saveProject() {
+  const clean = JSON.parse(JSON.stringify(project, (k, v) => k === '_mute' ? undefined : v));
+  download(JSON.stringify(clean), (project.name || 'project').replace(/\s+/g, '_') + '.aqs.json', 'application/json');
+  toastSafe('🎛️ Project saved');
+}
+function loadProject() {
+  pickFile('.json,application/json', false, (txt) => {
+    try { const pj = JSON.parse(txt); if (!pj.instruments) throw 0; window.Studio.load(pj); toastSafe('🎛️ Project loaded'); }
+    catch (_) { toastSafe('Not a valid project file'); }
+  });
+}
+function exportMIDIFile() { download(E.exportMIDI(project), (project.name || 'song').replace(/\s+/g, '_') + '.mid', 'audio/midi'); toastSafe('🎼 MIDI exported'); }
+function importMIDIFile() {
+  pickFile('.mid,.midi,audio/midi', true, (buf) => {
+    try { const pj = E.importMIDI(new Uint8Array(buf)); if (!pj.instruments.length) throw 0; window.Studio.load(pj); toastSafe('🎼 MIDI imported'); }
+    catch (_) { toastSafe('MIDI import failed'); }
+  });
+}
+
+// Offline drum synthesis (the live drum voices use the shared actx; render needs its own).
+function offlineDrum(c, dest, voice, t) {
+  const g = c.createGain(); g.connect(dest);
+  if (voice === 'kick' || voice === 'tom') {
+    const o = c.createOscillator(); const hi = voice === 'kick' ? 150 : 220, lo = voice === 'kick' ? 45 : 90;
+    o.frequency.setValueAtTime(hi, t); o.frequency.exponentialRampToValueAtTime(lo, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(g); o.start(t); o.stop(t + 0.26);
+  } else if (voice === 'snare' || voice === 'clap') {
+    const n = c.createBufferSource(); n.buffer = noiseBuf(c); const bp = c.createBiquadFilter(); bp.type = 'highpass'; bp.frequency.value = 1400;
+    g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    n.connect(bp); bp.connect(g); n.start(t); n.stop(t + 0.2);
+  } else { // hats / cymbals / cowbell → bright short noise
+    const n = c.createBufferSource(); n.buffer = noiseBuf(c); const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6500;
+    const dur = (voice === 'openhh' || voice === 'crash') ? 0.32 : 0.05;
+    g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    n.connect(hp); hp.connect(g); n.start(t); n.stop(t + dur + 0.02);
+  }
+}
+async function renderWAV() {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) { toastSafe('Offline render unsupported'); return; }
+  const sr = 44100, dur = Math.max(2, E.songLengthSec(project) + 1.5);
+  toastSafe('🌊 Rendering WAV…');
+  const oc = new OAC(2, Math.ceil(sr * dur), sr);
+  const m = oc.createGain(); m.gain.value = project.master ?? 0.9; m.connect(oc.destination);
+  for (const ev of E.expandArrangement(project)) {
+    const inst = project.instruments.find(i => i.id === ev.instId); if (!inst || inst._mute) continue;
+    if (inst.type === 'drum') offlineDrum(oc, m, (inst.params && inst.params.voice) || 'kick', ev.timeSec);
+    else chipVoice(oc, m, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
+  }
+  try { const buf = await oc.startRendering(); download(E.encodeWAV(buf), (project.name || 'song').replace(/\s+/g, '_') + '.wav', 'audio/wav'); toastSafe('🌊 WAV downloaded'); }
+  catch (_) { toastSafe('Render failed'); }
 }
 
 /* ---- public entry ------------------------------------------------------- */
@@ -441,7 +513,11 @@ window.openStudio = function () {
   build();
   syncTransportUI();
 };
-window.Studio = { play, stop, togglePlay, setBpm, get project() { return project; }, load(p) { project = p; _built = false; build(); } };
+window.Studio = {
+  play, stop, togglePlay, setBpm, saveProject, loadProject, exportMIDIFile, importMIDIFile, renderWAV,
+  get project() { return project; },
+  load(p) { stop(); project = p; _selInstId = project.instruments[0] ? project.instruments[0].id : null; if (_master) _master.gain.value = project.master ?? 0.9; renderAll(); },
+};
 
 // minimal HTML escaper (the app's global esc may not be visible to modules)
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

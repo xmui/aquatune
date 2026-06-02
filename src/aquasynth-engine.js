@@ -165,3 +165,139 @@ export function songLengthBars(project) {
   return end;
 }
 export function songLengthSec(project) { return songLengthBars(project) * secPerBar(project.bpm); }
+
+/* ============================================================================
+ * IO: MIDI (Standard MIDI File, type 1) export/import + WAV (PCM16) encode.
+ * Hand-rolled, no dependencies (single-file build constraint).
+ * ========================================================================== */
+const TICKS_PER_STEP = PPQ / STEPS_PER_BEAT; // 96/4 = 24 ticks per 16th step
+
+function _vlq(n) { // variable-length quantity
+  const bytes = [n & 0x7f]; n >>= 7;
+  while (n > 0) { bytes.unshift((n & 0x7f) | 0x80); n >>= 7; }
+  return bytes;
+}
+function _str(s) { return [...s].map(c => c.charCodeAt(0)); }
+function _u32(n) { return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]; }
+function _u16(n) { return [(n >>> 8) & 255, n & 255]; }
+function _chunk(id, data) { return [..._str(id), ..._u32(data.length), ...data]; }
+
+// Build the absolute-tick note list for one instrument across the arrangement.
+function instNoteTicks(project, inst) {
+  const isStep = inst.type === 'drum';
+  const drumMidi = inst.params && inst.params.drumMidi != null ? inst.params.drumMidi : 36;
+  const out = [];
+  const track = getTrack(project, inst.id);
+  if (!track) return out;
+  for (const clip of track.clips) {
+    const pat = getPattern(project, clip.patternId);
+    if (!pat) continue;
+    const reps = Math.max(1, Math.round((clip.lenBars || pat.bars) / pat.bars));
+    for (let r = 0; r < reps; r++) {
+      const baseStep = (clip.startBar + r * pat.bars) * STEPS_PER_BAR;
+      if (isStep) {
+        for (let s = 0; s < pat.steps.length; s++) if (pat.steps[s]) out.push({ midi: drumMidi, startTick: (baseStep + s) * TICKS_PER_STEP, durTick: TICKS_PER_STEP, vel: 100 });
+      } else {
+        for (const n of pat.notes) out.push({ midi: n.midi, startTick: (baseStep + n.start) * TICKS_PER_STEP, durTick: Math.max(1, n.len) * TICKS_PER_STEP, vel: Math.round((n.vel ?? 0.85) * 127) });
+      }
+    }
+  }
+  return out;
+}
+
+export function exportMIDI(project) {
+  const tracks = [];
+  // track 0: tempo map
+  const usPerQuarter = Math.round(60000000 / project.bpm);
+  const tempoTrack = [0x00, 0xff, 0x51, 0x03, (usPerQuarter >> 16) & 255, (usPerQuarter >> 8) & 255, usPerQuarter & 255, 0x00, 0xff, 0x2f, 0x00];
+  tracks.push(_chunk('MTrk', tempoTrack));
+  // one track per instrument
+  project.instruments.forEach((inst, ch0) => {
+    const ch = ch0 % 16;
+    const notes = instNoteTicks(project, inst);
+    const evs = [];
+    for (const n of notes) { evs.push({ tick: n.startTick, on: true, midi: n.midi, vel: n.vel }); evs.push({ tick: n.startTick + n.durTick, on: false, midi: n.midi, vel: 0 }); }
+    evs.sort((a, b) => a.tick - b.tick || (a.on ? 1 : 0) - (b.on ? 1 : 0));
+    const data = [];
+    // track name meta
+    const nm = _str(inst.name).slice(0, 127);
+    data.push(0x00, 0xff, 0x03, nm.length, ...nm);
+    let last = 0;
+    for (const e of evs) {
+      data.push(..._vlq(e.tick - last)); last = e.tick;
+      data.push((e.on ? 0x90 : 0x80) | ch, e.midi & 127, e.vel & 127);
+    }
+    data.push(0x00, 0xff, 0x2f, 0x00); // end of track
+    tracks.push(_chunk('MTrk', data));
+  });
+  const header = _chunk('MThd', [..._u16(1), ..._u16(tracks.length), ..._u16(PPQ)]);
+  return new Uint8Array([...header, ...tracks.flat()]);
+}
+
+export function importMIDI(bytes) {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let pos = 0;
+  const u32 = () => { const v = (b[pos] << 24) | (b[pos + 1] << 16) | (b[pos + 2] << 8) | b[pos + 3]; pos += 4; return v >>> 0; };
+  const u16 = () => { const v = (b[pos] << 8) | b[pos + 1]; pos += 2; return v; };
+  const id = () => { const s = String.fromCharCode(b[pos], b[pos + 1], b[pos + 2], b[pos + 3]); pos += 4; return s; };
+  if (id() !== 'MThd') throw new Error('Not a MIDI file');
+  u32(); u16(); const ntrks = u16(); const division = u16() || PPQ;
+  const project = makeProject('Imported'); project.instruments = []; project.patterns = []; project.arrangement = [];
+  let bpm = 120;
+  for (let t = 0; t < ntrks; t++) {
+    if (id() !== 'MTrk') break;
+    const len = u32(); const end = pos + len;
+    let tick = 0, running = 0, name = '';
+    const open = {}; const notes = [];
+    while (pos < end) {
+      // delta
+      let d = 0, byte; do { byte = b[pos++]; d = (d << 7) | (byte & 0x7f); } while (byte & 0x80);
+      tick += d;
+      let status = b[pos];
+      if (status & 0x80) pos++; else status = running; // running status
+      running = status;
+      const hi = status & 0xf0;
+      if (status === 0xff) { const meta = b[pos++]; let l = 0, by; do { by = b[pos++]; l = (l << 7) | (by & 0x7f); } while (by & 0x80); const data = b.slice(pos, pos + l); pos += l; if (meta === 0x51 && l === 3) { const us = (data[0] << 16) | (data[1] << 8) | data[2]; bpm = Math.round(60000000 / us); } else if (meta === 0x03) { name = String.fromCharCode(...data); } }
+      else if (status === 0xf0 || status === 0xf7) { let l = 0, by; do { by = b[pos++]; l = (l << 7) | (by & 0x7f); } while (by & 0x80); pos += l; }
+      else if (hi === 0x90 || hi === 0x80) { const midi = b[pos++], vel = b[pos++]; if (hi === 0x90 && vel > 0) { (open[midi] ||= []).push({ start: tick, vel }); } else { const arr = open[midi]; if (arr && arr.length) { const o = arr.shift(); notes.push({ midi, start: o.start, dur: Math.max(1, tick - o.start), vel: o.vel }); } } }
+      else if (hi === 0xa0 || hi === 0xb0 || hi === 0xe0) { pos += 2; }
+      else if (hi === 0xc0 || hi === 0xd0) { pos += 1; }
+      else pos++;
+    }
+    pos = end;
+    if (!notes.length) continue;
+    // build an instrument + one pattern spanning the track
+    const inst = makeInstrument('chip', name || `Track ${t}`, { wave: 'pulse' });
+    project.instruments.push(inst);
+    const maxStep = Math.max(...notes.map(n => Math.ceil((n.start + n.dur) / (division / STEPS_PER_BEAT))));
+    const bars = Math.max(1, Math.ceil(maxStep / STEPS_PER_BAR));
+    const pat = makePattern(inst.name, bars);
+    for (const n of notes) {
+      const startStep = Math.round(n.start / (division / STEPS_PER_BEAT));
+      const lenStep = Math.max(1, Math.round(n.dur / (division / STEPS_PER_BEAT)));
+      pat.notes.push({ midi: n.midi, start: startStep, len: lenStep, vel: (n.vel || 100) / 127 });
+    }
+    project.patterns.push(pat);
+    ensureTrack(project, inst.id).clips.push(makeClip(pat.id, 0, bars));
+  }
+  project.bpm = bpm;
+  return project;
+}
+
+// Encode an AudioBuffer (or {sampleRate, channels:[Float32Array,...]}) to a 16-bit PCM WAV.
+export function encodeWAV(buf) {
+  const sr = buf.sampleRate;
+  const nch = buf.numberOfChannels || buf.channels.length;
+  const chans = []; for (let c = 0; c < nch; c++) chans.push(buf.getChannelData ? buf.getChannelData(c) : buf.channels[c]);
+  const frames = chans[0].length;
+  const blockAlign = nch * 2, dataLen = frames * blockAlign;
+  const out = new DataView(new ArrayBuffer(44 + dataLen));
+  const wstr = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  wstr(0, 'RIFF'); out.setUint32(4, 36 + dataLen, true); wstr(8, 'WAVE');
+  wstr(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, nch, true);
+  out.setUint32(24, sr, true); out.setUint32(28, sr * blockAlign, true); out.setUint16(32, blockAlign, true); out.setUint16(34, 16, true);
+  wstr(36, 'data'); out.setUint32(40, dataLen, true);
+  let o = 44;
+  for (let i = 0; i < frames; i++) for (let c = 0; c < nch; c++) { let s = Math.max(-1, Math.min(1, chans[c][i])); out.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  return new Uint8Array(out.buffer);
+}

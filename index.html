@@ -1900,7 +1900,8 @@
     }
     .st-logo { font-weight:900; letter-spacing:1px; font-size:13px; color:#fff; display:flex; align-items:center; gap:6px; }
     .st-logo-sub { font-size:9px; font-weight:800; color:#11141b; background:var(--st-accent); padding:1px 5px; border-radius:4px; letter-spacing:1.5px; }
-    .st-tb-btn,.st-tb-close { width:26px;height:24px; border-radius:6px; border:1px solid #0c0e13; background:#3a3f4d; color:#dfe5f0; cursor:pointer; font-size:12px; }
+    .st-tb-btn,.st-tb-close { min-width:26px;height:24px; padding:0 6px; border-radius:6px; border:1px solid #0c0e13; background:#3a3f4d; color:#dfe5f0; cursor:pointer; font-size:12px; }
+    .st-tb-btn:hover { background:#4a5161; }
     .st-tb-close:hover { background:#c0392b; color:#fff; }
     .st-tb-btn[disabled]{ opacity:.4; cursor:default; }
 
@@ -16528,7 +16529,11 @@ function bjUpdateBalance(){
   <div id="studio-titlebar">
     <span class="st-logo">🎛️ AQUASYNTH<span class="st-logo-sub">STUDIO</span></span>
     <span style="flex:1"></span>
-    <button class="st-tb-btn" onclick="window.Studio&&Studio.load&&0" title="Save (soon)" disabled>💾</button>
+    <button class="st-tb-btn" id="st-save" title="Save project">💾</button>
+    <button class="st-tb-btn" id="st-open" title="Open project">📂</button>
+    <button class="st-tb-btn" id="st-import-midi" title="Import MIDI">🎼⬆</button>
+    <button class="st-tb-btn" id="st-export-midi" title="Export MIDI">🎼⬇</button>
+    <button class="st-tb-btn" id="st-render-wav" title="Render to WAV">🌊</button>
     <button class="st-tb-close" onclick="document.getElementById('studio-win').classList.remove('open')" title="Close">✕</button>
   </div>
   <div id="st-transport">

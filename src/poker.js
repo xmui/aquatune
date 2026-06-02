@@ -127,6 +127,7 @@ function startHand() {
   G.toCall = G.bb; G.minRaiseTo = G.bb * 2; G.lastRaiseSize = G.bb;
   // deal 2 hole cards each
   for (let r = 0; r < 2; r++) for (const i of inHandIdx()) G.seats[i].hole.push(G.deck.pop());
+  publishHoles(); // host: deliver each player their own cards privately
   G.street = 'preflop';
   G.turn = nextOccupied(bbPos, s => s.inHand && !s.allIn);
   G.msg = 'Preflop — ' + seatName(G.turn) + ' to act.';
@@ -285,7 +286,9 @@ function seatEl(i,p){
   if(isMine(s)) d.classList.add('you'); if(s.folded) d.classList.add('folded'); if(G.turn===i) d.classList.add('turn');
   if(G.winners.some(w=>w.idx===i)) d.classList.add('winner');
   const cards=el('div','pk-hole'); const showFace=isMine(s)||G.street==='showdown';
-  if(s.inHand){ const hole=s.hole.length?s.hole:[null,null]; hole.forEach(c=>cards.appendChild((c&&showFace)?cardEl(c,false):cardEl(null,true))); }
+  // own cards may arrive privately (broadcast strips them); fall back to _myHole
+  let hole=s.hole && s.hole.length ? s.hole : (isMine(s) && _myHole && _myHole.length ? _myHole : []);
+  if(s.inHand){ const hh=hole.length?hole:[null,null]; hh.forEach(c=>cards.appendChild((c&&showFace)?cardEl(c,false):cardEl(null,true))); }
   d.appendChild(cards);
   d.appendChild(el('div','pk-name', esc(s.name)+(G.dealer===i?' <span class="pk-dealer">D</span>':'')));
   d.appendChild(el('div','pk-stack', s.stack+' 🪙'+(s.allIn?' · ALL-IN':'')));
@@ -323,10 +326,28 @@ function ensureOpponents(){ if(inRoom()) return; if(activeIdx().length<2){ for(c
 function seedTable(){ addCpu(2); addCpu(3); addCpu(4); }
 
 /* ---- multiplayer sync -------------------------------------------------- */
-// Publish state minus the deck (don't leak undealt cards). Opponent hole cards
-// are render-hidden client-side; true per-seat private holes are a follow-up.
-function serializeForBroadcast(g){ const { deck, ...rest } = g; return rest; }
+let _myHole = null; // this client's own hole cards, delivered privately by the host
+
+// Publish state minus the deck (no undealt cards) and minus every seat's hole
+// cards except revealed hands at showdown. Each player's own hole is delivered
+// privately via pokerSetHoles → poker/hole/{ownerId}.
+function serializeForBroadcast(g){
+  const { deck, ...rest } = g;
+  rest.seats = g.seats.map(s => {
+    if (!s) return null;
+    const reveal = g.street === 'showdown' && s.inHand && !s.folded;
+    return { ...s, hole: reveal ? s.hole : [] };
+  });
+  return rest;
+}
 function broadcastState(){ if (typeof window !== 'undefined' && window.pokerBroadcast) window.pokerBroadcast(serializeForBroadcast(G)); }
+// Host pushes each in-hand player their own hole cards on a private path.
+function publishHoles(){
+  if (!(inRoom() && amHost() && typeof window !== 'undefined' && window.pokerSetHoles)) return;
+  const map = {};
+  for (const i of inHandIdx()) { const s = G.seats[i]; if (s && s.ownerId) map[s.ownerId] = s.hole; }
+  window.pokerSetHoles(map);
+}
 
 function hostSeat(userId, idx, name, buyin){
   if (idx == null || idx < 0 || idx >= NSEATS || G.seats[idx]) return;        // seat taken/invalid
@@ -345,6 +366,23 @@ function onPokerState(s){
   if (!s || !Array.isArray(s.seats)) return;
   G = s; if (!G.deck) G.deck = [];
   render();
+}
+// Guest: receive own hole cards privately (host wrote poker/hole/{myId}).
+function onPokerHole(hole){ _myHole = Array.isArray(hole) ? hole : null; render(); }
+
+// A guest promoted to host can't continue a hand it has no deck for, so abort
+// the in-progress hand (refunding this hand's contributions) back to idle.
+function abortHand(){
+  if (!G) return;
+  for (const s of G.seats) { if (!s) continue; s.stack += (s.contrib || 0); s.bet = 0; s.contrib = 0; s.folded = false; s.allIn = false; s.inHand = false; s.acted = false; s.hole = []; }
+  G.pot = 0; G.board = []; G.street = 'idle'; G.turn = -1; G.winners = [];
+  G.msg = 'Host changed — hand reset. Deal again.';
+  render();
+}
+function onPokerBecomeHost(){
+  if (!G) return;
+  if (G.street !== 'idle' && G.street !== 'showdown') abortHand();
+  else render(); // re-publish current idle state as the new authority
 }
 // Host: validate + apply a queued guest action, then render (which broadcasts).
 function onPokerAction(a){
@@ -373,7 +411,9 @@ if (typeof window !== 'undefined') {
   window.openHoldem = openHoldem;
   window.onPokerState = onPokerState;
   window.onPokerAction = onPokerAction;
+  window.onPokerHole = onPokerHole;
+  window.onPokerBecomeHost = onPokerBecomeHost;
   window.AquaPoker = { _state: ()=>G, _eval5: eval5, _best7: best7, _sidePots: buildSidePots };
 }
 // node-testable engine handle (no effect in the browser bundle)
-export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, sit: sitYou, stand: standYou, act, startHand, applyAction, legal, buildSidePots, onPokerState, onPokerAction, hostSeat, serializeForBroadcast, setG: g => { G = g; }, getG: () => G };
+export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, sit: sitYou, stand: standYou, act, startHand, applyAction, legal, buildSidePots, onPokerState, onPokerAction, onPokerHole, onPokerBecomeHost, abortHand, hostSeat, serializeForBroadcast, getMyHole: () => _myHole, setG: g => { G = g; }, getG: () => G };

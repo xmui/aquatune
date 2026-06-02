@@ -294,6 +294,7 @@ window.claimHost = async function() {
   document.body.classList.remove('room-guest');
   try { localStorage.setItem('aq_session_room', JSON.stringify({ roomId, wasHost: true })); } catch {}
   _registerHostListeners(roomId);
+  window.onPokerBecomeHost?.(); // abort any hand we can't continue (no deck) → idle
   renderMembersPanel();
   window.toast?.('👑 You are now the host');
 };
@@ -439,6 +440,10 @@ window.initRoom = async function(roomId, isHost, opts) {
     const a = snap.val(), key = snap.key;
     try { window.onPokerAction?.(a); }
     finally { remove(ref(db, `rooms/${roomId}/poker/actions/${key}`)); }
+  });
+  // Receive my own hole cards privately (host wrote poker/hole/{myUserId}).
+  onValue(ref(db, `rooms/${roomId}/poker/hole/${myUserId}`), snap => {
+    window.onPokerHole?.(snap.val());
   });
 
   // Instant sync on join: read the current state immediately and apply it, so a guest who joins
@@ -604,6 +609,11 @@ window.pokerBroadcast = function(state) {
 window.pokerSendAction = function(a) {
   if (!window._currentRoomId) return;
   push(ref(db, `rooms/${window._currentRoomId}/poker/actions`), { ...a, userId: myUserId, ts: Date.now() }).catch(() => {});
+};
+// Host delivers each player's hole cards privately: { ownerId: [card,card] }.
+window.pokerSetHoles = function(map) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/poker/hole`), map || {}).catch(() => {});
 };
 
 window.leaveRoom = function() {

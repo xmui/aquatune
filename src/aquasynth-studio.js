@@ -15,6 +15,30 @@ const TRACK_COLORS = ['#ff5d73', '#ffb020', '#ffd23f', '#4cd07d', '#36c5f0', '#7
 const DRUM_FNS = { kick: 'drumKick', snare: 'drumSnare', hihat: 'drumHihat', openhh: 'drumOpenHH', clap: 'drumClap', tom: 'drumTom', crash: 'drumCrash', cowbell: 'drumCowbell' };
 const DRUM_VOICES = ['kick', 'snare', 'hihat', 'openhh', 'clap', 'tom', 'crash', 'cowbell'];
 const CHIP_WAVES = ['pulse', 'triangle', 'sawtooth', 'noise'];
+// Sound presets (mirror the legacy AquaSynth variety). Each sets synth params + fx.
+const PRESETS = [
+  { name: 'Square Lead',  type: 'chip', params: { wave: 'pulse',    a: 0.005, d: 0.05, s: 0.7, r: 0.12, cut: 12000, res: 1, fenv: 0, vibrato: true } },
+  { name: 'Saw Lead',     type: 'chip', params: { wave: 'sawtooth', a: 0.004, d: 0.08, s: 0.6, r: 0.12, cut: 4500, res: 3, fenv: 0.45 } },
+  { name: 'Chip Arp',     type: 'chip', params: { wave: 'pulse',    a: 0.002, d: 0.04, s: 0.3, r: 0.05, cut: 8000, res: 2, fenv: 0.3 } },
+  { name: 'Pluck',        type: 'chip', params: { wave: 'pulse',    a: 0.002, d: 0.12, s: 0.0, r: 0.08, cut: 5000, res: 4, fenv: 0.6 } },
+  { name: 'Sub Bass',     type: 'chip', params: { wave: 'triangle', a: 0.004, d: 0.1,  s: 0.85, r: 0.1, cut: 1200, res: 2, fenv: 0.2 } },
+  { name: 'Reese Bass',   type: 'chip', params: { wave: 'sawtooth', a: 0.005, d: 0.1,  s: 0.85, r: 0.12, cut: 900, res: 6, fenv: 0.3 }, fx: { drive: 0.4 } },
+  { name: 'Soft Pad',     type: 'chip', params: { wave: 'triangle', a: 0.3,  d: 0.25, s: 0.85, r: 0.6, cut: 3000, res: 1, fenv: 0.2 }, fx: { reverb: 0.35, chorus: 0.4 } },
+  { name: 'Noise Hit',    type: 'chip', params: { wave: 'noise',    a: 0.002, d: 0.1,  s: 0.2, r: 0.1, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Toy Piano',    type: 'keys', params: { preset: 'toypiano', a: 0.005, d: 0.2, s: 0.4, r: 0.3, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Glass Bells',  type: 'keys', params: { preset: 'toypiano', a: 0.002, d: 0.5, s: 0.0, r: 0.5, cut: 12000, res: 1, fenv: 0 }, fx: { reverb: 0.45 } },
+  { name: 'Organ',        type: 'keys', params: { preset: 'organ', a: 0.02, d: 0.05, s: 0.9, r: 0.1, cut: 12000, res: 1, fenv: 0 } },
+  { name: 'Warm Strings', type: 'keys', params: { preset: 'organ', a: 0.25, d: 0.2, s: 0.85, r: 0.5, cut: 4000, res: 1, fenv: 0.3 }, fx: { reverb: 0.4, chorus: 0.5 } },
+  { name: 'Casio Tone',   type: 'keys', params: { preset: 'casio', a: 0.005, d: 0.1, s: 0.6, r: 0.15, cut: 9000, res: 1, fenv: 0 } },
+];
+function applyPreset(inst, preset) {
+  Object.assign(inst.params, JSON.parse(JSON.stringify(preset.params)));
+  if (preset.fx) Object.assign(inst.fx, preset.fx);
+  inst.name = preset.name;
+  inst._chain = null;              // rebuild so drive/sends pick up new values
+  renderAll();
+  if (_playing) _events = E.expandArrangement(project);
+}
 const LOOKAHEAD = 0.12, TICK_MS = 25;
 const EDITOR_LO = 48; // C3 — piano-roll bottom note
 
@@ -542,6 +566,13 @@ function deviceStrip(inst) {
   const live = () => applyChainParams(inst);
   // sound selector
   const top = el('div', 'st-device-top');
+  if (inst.type === 'chip' || inst.type === 'keys') {
+    const ps = el('select', 'st-rnd-sel');
+    const ph = document.createElement('option'); ph.textContent = '✦ Preset…'; ph.value = ''; ps.appendChild(ph);
+    PRESETS.filter(pr => pr.type === inst.type).forEach(pr => { const o = document.createElement('option'); o.value = pr.name; o.textContent = pr.name; ps.appendChild(o); });
+    ps.onchange = () => { const pr = PRESETS.find(x => x.name === ps.value); if (pr) applyPreset(inst, pr); };
+    top.appendChild(ps);
+  }
   if (inst.type === 'chip') {
     const sel = el('select', 'st-wave');
     CHIP_WAVES.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; if ((P.wave || 'pulse') === w) o.selected = true; sel.appendChild(o); });
@@ -725,22 +756,20 @@ function showAddTrackMenu() {
   const existing = document.getElementById('st-addmenu'); if (existing) { existing.remove(); return; }
   const menu = el('div', '', '');
   menu.id = 'st-addmenu'; menu.className = 'st-addmenu';
+  const ico = pr => pr.type === 'keys' ? '🎹' : (pr.params.wave === 'noise' ? '📻' : '🎛️');
   const opts = [
-    ['🎹 Chip Lead', () => addInstrument('chip', 'Chip Lead', { wave: 'pulse', vibrato: true })],
-    ['🔊 Chip Bass', () => addInstrument('chip', 'Chip Bass', { wave: 'triangle' })],
-    ['📻 Noise', () => addInstrument('chip', 'Noise', { wave: 'noise' })],
-    ['🎀 Toy Piano', () => addInstrument('keys', 'Toy Piano', { preset: 'toypiano' })],
-    ['🎚️ Organ', () => addInstrument('keys', 'Organ', { preset: 'organ' })],
-    ['📺 Casio', () => addInstrument('keys', 'Casio', { preset: 'casio' })],
+    ...PRESETS.map(pr => [`${ico(pr)} ${pr.name}`, () => addInstrument(pr.type, pr.name, pr.params, pr.fx)]),
     ['🎙️ Sampler', () => addInstrument('sampler', 'Sampler', { baseNote: 60, oneShot: true })],
+    ['🎵 SF2 SoundFont', () => importSF2()],
     ...DRUM_VOICES.map(v => [`🥁 ${v}`, () => addInstrument('drum', v[0].toUpperCase() + v.slice(1), { voice: v, drumMidi: 36 })]),
   ];
   opts.forEach(([label, fn]) => { const b = el('button', 'st-addmenu-opt', label); b.onclick = () => { fn(); menu.remove(); }; menu.appendChild(b); });
   document.getElementById('studio-win').appendChild(menu);
   setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-addmenu') && !ev.target.closest('.st-addtrack')) { menu.remove(); document.removeEventListener('pointerdown', h); } }), 0);
 }
-function addInstrument(type, name, params) {
+function addInstrument(type, name, params, fx) {
   const inst = E.makeInstrument(type, name, params);
+  if (fx) Object.assign(inst.fx, fx);
   project.instruments.push(inst);
   const pat = E.makePattern(name, 1);
   if (type === 'drum') [0, 4, 8, 12].forEach(s => { if (params.voice === 'kick' || params.voice === 'snare') pat.steps[s] = params.voice === 'snare' ? (s % 8 === 4 ? 1 : 0) : 1; });
@@ -858,6 +887,7 @@ function pickFile(accept, asArrayBuffer, cb) {
   inp.click();
 }
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
+function importSF2() { toastSafe('Loading SF2…'); } // replaced in the SF2 increment
 
 function saveProject() {
   const clean = JSON.parse(JSON.stringify(project, (k, v) => (k && k[0] === '_') ? undefined : v));

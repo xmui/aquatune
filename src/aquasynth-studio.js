@@ -697,8 +697,25 @@ function setupInput() {
     if (!open() || e.repeat) return;
     if (e.target && e.target.closest && e.target.closest('input,select,textarea')) return;
     const key = (e.key || '').toLowerCase();
-    if (key === 'z') { _recOct = Math.max(0, _recOct - 1); return; }
-    if (key === 'x') { _recOct = Math.min(7, _recOct + 1); return; }
+    // command shortcuts with modifiers (don't trigger notes)
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      const inst = project.instruments.find(i => i.id === _selInstId);
+      if (key === 'd' && inst) { e.preventDefault(); duplicateTrack(inst); }
+      return;
+    }
+    // single-key commands (these letters are not in the note map)
+    switch (key) {
+      case ' ': e.preventDefault(); togglePlay(); return;
+      case 'r': e.preventDefault(); document.getElementById('st-rec')?.click(); return;
+      case 'q': e.preventDefault(); cycleQuant(); return;
+      case '[': e.preventDefault(); zoomBy(-1); return;
+      case ']': e.preventDefault(); zoomBy(1); return;
+      case ',': e.preventDefault(); setBpm(project.bpm - 1); return;
+      case '.': e.preventDefault(); setBpm(project.bpm + 1); return;
+      case '/': e.preventDefault(); toastSafe('Keys: Space play · R rec · Q quantize · [ ] zoom · , . tempo · Z/X octave · ⌘D dup track · A–L/W–O notes'); return;
+      case 'z': _recOct = Math.max(0, _recOct - 1); return;
+      case 'x': _recOct = Math.min(7, _recOct + 1); return;
+    }
     const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
     if (semi == null || _heldKeys[key]) return;
     _heldKeys[key] = true; e.preventDefault();
@@ -816,6 +833,12 @@ function syncTransportUI() {
   const rec = document.getElementById('st-rec'); if (rec) rec.classList.toggle('on', _recording);
 }
 function setBpm(v) { project.bpm = Math.max(40, Math.min(240, Math.round(v))); syncTransportUI(); if (_playing) _events = E.expandArrangement(project); }
+function zoomBy(dir) { _pxPerBar = Math.max(40, Math.min(220, _pxPerBar + dir * 24)); renderTimeline(); }
+function cycleQuant() {
+  const order = [4, 2, 1]; _quantize = order[(order.indexOf(_quantize) + 1) % order.length];
+  const sel = document.getElementById('st-quant'); if (sel) sel.value = String(_quantize);
+  toastSafe('Quantize: 1/' + (16 / _quantize));
+}
 
 function bindKnob(node, get, set, opts = {}) {
   const min = opts.min ?? 0, max = opts.max ?? 1, step = opts.step ?? (max - min) / 100;
@@ -864,9 +887,7 @@ function build() {
   bind('st-export-midi', exportMIDIFile); bind('st-import-midi', importMIDIFile);
   bind('st-render-wav', renderWAV);
 
-  // keyboard: space = play/stop while window focused
-  root.addEventListener('keydown', e => { if (e.key === ' ' && !e.target.closest('input,select,textarea')) { e.preventDefault(); togglePlay(); } });
-
+  // (keyboard shortcuts incl. Space are handled in setupInput, document-level)
   _selInstId = project.instruments[0] ? project.instruments[0].id : null;
   renderAll();
   decodeAllSamples();

@@ -16790,18 +16790,8 @@ function bjUpdateBalance(){
     <span>🂡 Texas Hold'em</span>
     <button class="sol-titlebtn sol-close" onclick="openHoldem(false)">×</button>
   </div>
-  <div id="holdem-area">
-    <div class="he-seat"><div class="he-label">Dealer (CPU) — <span id="he-cpu-chips">500</span> 🪙</div><div id="he-cpu-cards" class="he-cards"></div></div>
-    <div id="he-board-row"><div class="he-label">Board · Pot <span id="he-pot">0</span></div><div id="he-board" class="he-cards"></div></div>
-    <div id="he-msg">Press Deal to start a hand.</div>
-    <div class="he-seat"><div class="he-label">You — <span id="he-you-chips">500</span> 🪙</div><div id="he-you-cards" class="he-cards"></div></div>
-    <div id="he-controls">
-      <button class="win95-btn" id="he-deal-btn" onclick="heDeal()">Deal</button>
-      <button class="win95-btn" id="he-check-btn" onclick="heAction('check')" style="display:none">Check/Call</button>
-      <button class="win95-btn" id="he-bet-btn" onclick="heAction('bet')" style="display:none">Bet 20</button>
-      <button class="win95-btn" id="he-fold-btn" onclick="heAction('fold')" style="display:none">Fold</button>
-    </div>
-  </div>
+  <!-- Filled by src/poker.js (the 6-max engine) on open. -->
+  <div id="holdem-area"></div>
 </div>
 
 <!-- AQUATUNE EXCHANGE (stock market) -->

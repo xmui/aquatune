@@ -14400,32 +14400,55 @@ function pcSetCellDom(i){
 }
 // Conservative edge-anchored matcher: which clue numbers are unambiguously satisfied.
 // lineVals: 0 empty / 1 filled / 2 X-mark.  Returns boolean[] aligned to `clue`.
+// Decide which clue numbers are "done" for one line (0 empty / 1 filled / 2 X-mark).
+// Strategy: read the filled cells as maximal runs, then match runs to clues from each
+// edge. A clue is crossed when it is part of a matching prefix (from the left) or suffix
+// (from the right) whose anchoring run leaves enough room for the remaining clues — so a
+// finished run crosses even without X-marks, runs aren't double-counted, and genuinely
+// ambiguous middle runs are left alone. Returns boolean[] aligned to `clue`.
 function pcLineCrossed(lineVals, clue){
-  const n = lineVals.length;
-  const out = clue.map(() => false);
-  if (clue.length === 1 && clue[0] === 0) return out;   // empty line: nothing to cross
-  // Left pass
-  let li = 0, p = 0;
-  while (li < clue.length) {
-    while (p < n && lineVals[p] !== 1) p++;
-    if (p >= n) break;
-    const s = p; while (p < n && lineVals[p] === 1) p++;
-    const len = p - s;
-    const rightBounded = (p >= n) || (lineVals[p] === 2); // a plain empty could still grow
-    if (len === clue[li] && rightBounded) { out[li] = true; li++; }
-    else break;
+  const n = lineVals.length, k = clue.length;
+  const out = new Array(k).fill(false);
+  if (k === 1 && clue[0] === 0) return out;             // empty-line clue ("0"): nothing to cross
+  // Maximal runs of filled cells, with positions
+  const runs = [];
+  for (let i = 0; i < n; ) {
+    if (lineVals[i] === 1) { const s = i; while (i < n && lineVals[i] === 1) i++; runs.push({ len: i - s, start: s, end: i - 1 }); }
+    else i++;
   }
-  // Right pass (mirror), never crossing past the left-matched index
-  let ri = clue.length - 1, q = n - 1;
-  while (ri > li - 1) {
-    while (q >= 0 && lineVals[q] !== 1) q--;
-    if (q < 0) break;
-    const e = q; while (q >= 0 && lineVals[q] === 1) q--;
-    const len = e - q;
-    const leftBounded = (q < 0) || (lineVals[q] === 2);
-    if (len === clue[ri] && leftBounded) { out[ri] = true; ri--; }
-    else break;
+  const m = runs.length;
+  if (m === 0) return out;
+  // Whole line drawn exactly as the clue sequence → everything is done
+  if (m === k && runs.every((r, t) => r.len === clue[t])) return out.fill(true);
+
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  // Longest matching prefix whose last run still leaves room for the clues after it
+  let L = 0; while (L < k && L < m && runs[L].len === clue[L]) L++;
+  while (L > 0) {
+    const rest = clue.slice(L);                          // clues that must follow the prefix
+    const need = sum(rest) + rest.length;                // their lengths + one gap before each
+    const avail = n - 1 - runs[L - 1].end;               // cells to the right of the last prefix run
+    if (avail >= need) break;                             // fits → this run is anchored as clue[L-1]
+    L--;                                                  // otherwise it must be a later clue; back off
   }
+  // Longest matching suffix whose first run leaves room for the clues before it
+  let R = 0; while (R < k && R < m && runs[m - 1 - R].len === clue[k - 1 - R]) R++;
+  while (R > 0) {
+    const rest = clue.slice(0, k - R);                   // clues that must precede the suffix
+    const need = sum(rest) + rest.length;                // their lengths + one gap after each
+    const avail = runs[m - R].start;                     // cells to the left of the first suffix run
+    if (avail >= need) break;
+    R--;
+  }
+  // Prefix and suffix must claim disjoint runs and disjoint clues. If they collide,
+  // the contested matches are ambiguous (the run could be either clue) → cross neither.
+  let cL = L, cR = R;
+  if (L + R > m || L + R > k) {
+    cL = Math.max(0, Math.min(L, m - R, k - R));
+    cR = Math.max(0, Math.min(R, m - L, k - L));
+  }
+  for (let t = 0; t < cL; t++) out[t] = true;
+  for (let t = 0; t < cR; t++) out[k - 1 - t] = true;
   return out;
 }
 // Toggle `.crossed` on individual clue-number spans based on current fills

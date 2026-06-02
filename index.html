@@ -4837,13 +4837,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
           <div class="apps-menu-div"></div>
           <div class="apps-section-lbl">Tools</div>
           <div class="apps-list">
-            <button class="apps-item" onclick="toggleSynthFlyout();toggleAppsMenu()">
-              <span class="apps-item-icon">🎹</span>
-              <div class="apps-item-info"><div class="apps-item-name">AquaSynth</div><div class="apps-item-desc">Step sequencer &amp; synth</div></div>
-            </button>
             <button class="apps-item" onclick="OS.open('studio');toggleAppsMenu()">
               <span class="apps-item-icon">🎛️</span>
-              <div class="apps-item-info"><div class="apps-item-name">AquaSynth Studio</div><div class="apps-item-desc">Mini-DAW: timeline &amp; instruments</div></div>
+              <div class="apps-item-info"><div class="apps-item-name">AquaSynth Studio</div><div class="apps-item-desc">Mini-DAW: synths, timeline &amp; FX</div></div>
             </button>
             <button class="apps-item" onclick="openPaint();toggleAppsMenu()">
               <span class="apps-item-icon">🎨</span>
@@ -8218,19 +8214,18 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','studio','synth','paint','files','photos','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','leaderboard','settings'];
 function getDockPins() {
   let p = null;
   try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
   if (!p) return DOCK_DEFAULT.slice();
-  // one-time migration: add the new AquaSynth Studio to existing saved docks
-  if (!localStorage.getItem('aq_dock_studio_v1')) {
-    localStorage.setItem('aq_dock_studio_v1', '1');
-    if (!p.includes('studio')) {
-      const at = p.indexOf('synth') >= 0 ? p.indexOf('synth') + 1 : (p.indexOf('settings') >= 0 ? p.indexOf('settings') : p.length);
-      p.splice(at, 0, 'studio');
-      _saveDockPins(p);
-    }
+  // one-time migration: replace the retired standalone AquaSynth with Studio in existing docks
+  if (!localStorage.getItem('aq_dock_retire_synth_v1')) {
+    localStorage.setItem('aq_dock_retire_synth_v1', '1');
+    const si = p.indexOf('synth');
+    if (si >= 0) { if (p.includes('studio')) p.splice(si, 1); else p[si] = 'studio'; }
+    else if (!p.includes('studio')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'studio'); }
+    _saveDockPins(p);
   }
   return p;
 }
@@ -8600,7 +8595,7 @@ function toggleStartMenu(e) {
   e?.stopPropagation();
   const m = document.getElementById('start-menu'); if (!m) return;
   if (m.classList.contains('open')) { m.classList.remove('open'); return; }
-  const apps = [['player', '♪ Player'], ['arcade', '🎮 Arcade'], ['synth', '🎹 AquaSynth'],
+  const apps = [['player', '♪ Player'], ['arcade', '🎮 Arcade'], ['studio', '🎛️ AquaSynth Studio'],
     ['paint', '🎨 AquaPaint'], ['files', '📁 Files'], ['texteditor', '📝 Text Editor'],
     ['rooms', '🌐 Public Rooms'], ['settings', '⚙️ Settings']];
   m.innerHTML = '<div class="start-side"><span>AquaOS</span></div><div class="start-list">' +
@@ -11613,7 +11608,6 @@ function _hslToRgb(h, s, l) {
 <!-- MOBILE BOTTOM TAB BAR (hidden on desktop via CSS) -->
 <div id="mob-tools-bar">
   <button class="mob-tool-btn" onclick="OS.open('studio')" title="AquaSynth Studio">🎛️<span>Studio</span></button>
-  <button class="mob-tool-btn" onclick="toggleSynthFlyout()" title="AquaSynth">🎹<span>Synth</span></button>
   <button class="mob-tool-btn" onclick="openPaint()" title="Paint">🖌️<span>Paint</span></button>
   <button class="mob-tool-btn" onclick="toggleSlots()" title="Slots">🎰<span>Slots</span></button>
   <button class="mob-tool-btn" onclick="openSolitaire()" title="Solitaire">♠️<span>Solitaire</span></button>

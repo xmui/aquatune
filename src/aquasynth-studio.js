@@ -357,6 +357,7 @@ function renderTracks() {
     const row = el('div', 'st-track' + (inst.id === _selInstId ? ' sel' : ''));
     row.style.borderLeftColor = instColor(inst.id);
     row.onclick = () => { _selInstId = inst.id; renderAll(); };
+    row.oncontextmenu = e => { e.preventDefault(); _selInstId = inst.id; renderAll(); showTrackMenu(inst, row, e); };
     const icon = inst.type === 'drum' ? '🥁' : (inst.params && inst.params.wave === 'noise' ? '📻' : '🎹');
     row.appendChild(el('div', 'st-tname', `<span>${icon}</span><b>${esc(inst.name)}</b>`));
     const ctrls = el('div', 'st-tctrls');
@@ -375,17 +376,38 @@ function renderTracks() {
   host.appendChild(add);
 }
 
-/* ---- track duplicate / delete ------------------------------------------ */
-function showTrackMenu(inst, anchor) {
-  document.getElementById('st-trackmenu')?.remove();
-  const m = el('div', 'st-addmenu'); m.id = 'st-trackmenu';
-  const r = anchor.getBoundingClientRect();
-  m.style.position = 'fixed'; m.style.left = Math.min(r.left, window.innerWidth - 150) + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
-  [['⎘ Duplicate', () => duplicateTrack(inst)], ['🗑 Delete', () => deleteTrack(inst)]].forEach(([lbl, fn]) => {
-    const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b);
-  });
+/* ---- right-click / context menus --------------------------------------- */
+function showCtxMenu(items, x, y) {
+  document.getElementById('st-ctxmenu')?.remove();
+  const m = el('div', 'st-addmenu'); m.id = 'st-ctxmenu';
+  m.style.position = 'fixed'; m.style.left = Math.min(x, window.innerWidth - 170) + 'px'; m.style.top = Math.min(y, window.innerHeight - 30 - items.length * 30) + 'px'; m.style.bottom = 'auto'; m.style.zIndex = 9000;
+  items.forEach(([lbl, fn]) => { const b = el('button', 'st-addmenu-opt', lbl); b.onclick = () => { m.remove(); fn(); }; m.appendChild(b); });
   document.body.appendChild(m);
-  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-trackmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+  setTimeout(() => document.addEventListener('pointerdown', function h(ev) { if (!ev.target.closest('#st-ctxmenu')) { m.remove(); document.removeEventListener('pointerdown', h); } }), 0);
+}
+function showTrackMenu(inst, anchor, ev) {
+  const r = anchor.getBoundingClientRect();
+  const x = ev ? ev.clientX : r.left, y = ev ? ev.clientY : r.bottom + 4;
+  showCtxMenu([
+    ['＋ Add clip', () => addClipAt(inst, Math.ceil(E.songLengthBars(project)))],
+    ['⎘ Duplicate track', () => duplicateTrack(inst)],
+    ['🗑 Delete track', () => deleteTrack(inst)],
+  ], x, y);
+}
+function showClipMenu(inst, clip, ev) {
+  showCtxMenu([
+    ['⎘ Duplicate clip', () => duplicateClip(inst, clip)],
+    ['🗑 Delete clip', () => deleteClip(inst, clip)],
+  ], ev.clientX, ev.clientY);
+}
+function duplicateClip(inst, clip) {
+  const t = E.getTrack(project, inst.id); const len = clip.lenBars || 1;
+  t.clips.push(E.makeClip(clip.patternId, clip.startBar + len, len)); // shares the pattern
+  renderTimeline(); if (_playing) _events = E.expandArrangement(project);
+}
+function deleteClip(inst, clip) {
+  const t = E.getTrack(project, inst.id); t.clips = t.clips.filter(c => c.id !== clip.id);
+  renderTimeline(); if (_playing) _events = E.expandArrangement(project);
 }
 function duplicateTrack(inst) {
   const ni = E.makeInstrument(inst.type, inst.name + ' copy', JSON.parse(JSON.stringify(inst.params)));
@@ -449,6 +471,12 @@ function renderTimeline() {
       const bar = Math.floor((e.offsetX) / _pxPerBar);
       addClipAt(inst, bar);
     });
+    lane.addEventListener('contextmenu', e => {
+      if (e.target !== lane && !e.target.classList.contains('st-lane-grid')) return; // clip has its own menu
+      e.preventDefault();
+      const bar = Math.floor(e.offsetX / _pxPerBar);
+      showCtxMenu([['＋ Add clip here', () => addClipAt(inst, bar)]], e.clientX, e.clientY);
+    });
     lanes.appendChild(lane);
   });
   const ph = el('div', '', ''); ph.id = 'st-playhead'; ph.className = 'st-playhead'; lanes.appendChild(ph);
@@ -463,6 +491,7 @@ function buildClip(inst, clip) {
   c.style.background = instColor(inst.id);
   c.innerHTML = `<span class="st-clip-name">${esc(pat ? pat.name : '?')}</span><i class="st-clip-resize"></i>`;
   c.onclick = e => { e.stopPropagation(); _selInstId = inst.id; renderAll(); };
+  c.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); showClipMenu(inst, clip, e); };
   // drag to move / resize
   c.addEventListener('pointerdown', e => startClipDrag(e, inst, clip, c));
   return c;

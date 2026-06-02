@@ -884,7 +884,7 @@
       display:flex; flex-direction:column;
       font-family:'M PLUS Rounded 1c',Tahoma,'Segoe UI',Arial,sans-serif;
       overflow:hidden;
-      resize:both;
+      position:relative;
     }
     /* Aero title bar */
     .board-titlebar {
@@ -12324,10 +12324,29 @@ function boardRaise() {
   if (!ov) return;
   ov.style.zIndex = (OS.z = Math.min(OS.z + 1, 2999));
 }
+// Make AquaChat resizable via a bottom-right grip (anchors the overlay top-left first
+// so growth tracks the cursor instead of recentering).
+function boardMakeResizable() {
+  const win = document.getElementById('board-wrap'); if (!win || win._bResize) return;
+  win._bResize = true;
+  const grip = document.createElement('div'); grip.className = 'os-resize-grip'; grip.title = 'Resize';
+  win.appendChild(grip);
+  grip.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const ov = document.getElementById('board-overlay'); const or = ov.getBoundingClientRect();
+    ov.style.transform = 'none'; ov.style.left = or.left + 'px'; ov.style.top = or.top + 'px';
+    const r = win.getBoundingClientRect(); const s = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+    try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+    const move = ev => { win.style.width = Math.max(320, s.w + (ev.clientX - s.x)) + 'px'; win.style.height = Math.max(260, s.h + (ev.clientY - s.y)) + 'px'; win.style.maxWidth = 'none'; win.style.maxHeight = 'none'; };
+    const up = ev => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); try { grip.releasePointerCapture(ev.pointerId); } catch (_) {} };
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
+  });
+}
 function openBoard() {
   document.getElementById('board-overlay').classList.add('show');
   document.getElementById('board-wrap').classList.remove('minimized');
   boardRaise();
+  boardMakeResizable();
   // Re-raise on any interaction so the chat behaves like a real (non-modal) window
   const ov = document.getElementById('board-overlay');
   if (ov && !ov._raiseBound) { ov._raiseBound = true; ov.addEventListener('pointerdown', boardRaise, true); }

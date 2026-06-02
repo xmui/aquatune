@@ -1982,6 +1982,12 @@
     .st-rnd-sel { background:#0a0c10; color:#dfe5f0; border:1px solid #2c313c; border-radius:6px; padding:3px 5px; font-size:11px; }
     .st-rnd-btn { background:linear-gradient(180deg,#ffe07a,#ffd23f); color:#221b00; border:1px solid #0a0c10; border-radius:7px; padding:3px 9px; font-size:13px; cursor:pointer; box-shadow:0 2px 0 #b9962b; }
     .st-rnd-btn:active { transform:translateY(1px); box-shadow:0 1px 0 #b9962b; }
+    .st-chip.rec.on { background:linear-gradient(180deg,#ff7a7a,#e53935); color:#fff; box-shadow:0 0 11px rgba(229,57,53,.65); }
+    .st-mk { position:relative; height:46px; margin-top:9px; background:#0a0c10; border-radius:6px; overflow:hidden; touch-action:none; }
+    .st-mk-w { position:absolute; top:0; bottom:0; background:linear-gradient(180deg,#f4f6fb,#d2d8e2); border:1px solid #0a0c10; box-sizing:border-box; border-radius:0 0 3px 3px; cursor:pointer; }
+    .st-mk-w.on { background:linear-gradient(180deg,#ffe07a,#ffd23f); }
+    .st-mk-b { position:absolute; top:0; height:62%; background:linear-gradient(180deg,#3a3f4d,#10131a); border:1px solid #000; box-sizing:border-box; border-radius:0 0 3px 3px; z-index:2; cursor:pointer; }
+    .st-mk-b.on { background:#ffd23f; }
     #st-editor { padding:10px 12px; }
     .st-editor-empty { color:#6b7589; font-size:12px; text-align:center; padding:60px 0; }
     .st-editor-head { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:9px; }
@@ -16569,6 +16575,10 @@ function bjUpdateBalance(){
       <span class="st-lcd-label">TEMPO</span><span id="st-bpm-val" class="st-lcd-num">120</span><span class="st-lcd-unit">BPM</span>
     </div>
     <button id="st-loop" class="st-chip on" title="Loop">↻ LOOP</button>
+    <button id="st-rec" class="st-chip rec" title="Record: play notes into the selected track">● REC</button>
+    <select id="st-quant" class="st-rnd-sel" title="Record quantize">
+      <option value="4">1/4</option><option value="2">1/8</option><option value="1" selected>1/16</option>
+    </select>
     <span style="flex:1"></span>
     <div class="st-zoom"><button id="st-zoom-out" title="Zoom out">－</button><button id="st-zoom-in" title="Zoom in">＋</button></div>
     <div class="st-master"><span>VOL</span><div id="st-master-knob" class="st-knob"></div></div>

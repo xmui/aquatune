@@ -26,6 +26,9 @@ let _loop = true;
 let _pxPerBar = 96;            // timeline zoom
 let _selInstId = null;         // selected track (drives the editor)
 let _built = false;
+let _recording = false, _quantize = 1, _recOct = 4; // recording + quantize (steps) + computer-kbd octave
+const _pending = {};           // midi -> pending note start during recording
+const _heldKeys = {};          // computer-key debounce
 
 /* ---- audio plumbing ----------------------------------------------------- */
 function actx() { if (window.initActx) window.initActx(); return window.actx; }
@@ -570,6 +573,7 @@ function deviceStrip(inst) {
     knobCell('LVL', () => F.level, v => { F.level = v; live(); }, { min: 0, max: 1.2, def: 0.9 }),
   );
   wrap.appendChild(bank);
+  wrap.appendChild(buildMiniKeys()); // on-screen keyboard (plays + records)
   return wrap;
 }
 
@@ -592,6 +596,99 @@ function audition(inst, midi, dur = 0.3) {
   else if (inst.type === 'sampler') samplerVoice(c, dest, midi, c.currentTime, dur, 0.9, inst);
   else chipVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
 }
+/* ---- live recording (on-screen keys + computer keys + Web MIDI) -------- */
+function curStep() {
+  const c = actx(); const songT = c.currentTime - _loopBase;
+  return songT < 0 ? 0 : Math.round(songT / E.secPerStep(project.bpm));
+}
+function qStep(step) { return Math.round(step / _quantize) * _quantize; }
+function noteOn(midi, vel = 0.9) {
+  const inst = project.instruments.find(i => i.id === _selInstId); if (!inst) return;
+  audition(inst, midi, 0.5);
+  if (!_recording || !_playing) return;
+  const pat = selectedPattern(); if (!pat) return;
+  const patSteps = pat.bars * E.STEPS_PER_BAR;
+  const g = curStep();
+  if (inst.type === 'drum') {
+    const step = ((qStep(g) % patSteps) + patSteps) % patSteps;
+    pat.steps[step] = 1; _events = E.expandArrangement(project); renderEditor();
+  } else {
+    const step = ((qStep(g) % patSteps) + patSteps) % patSteps;
+    _pending[midi] = { step, g: qStep(g) };
+  }
+}
+function noteOff(midi) {
+  const p = _pending[midi]; if (!p) return; delete _pending[midi];
+  const inst = project.instruments.find(i => i.id === _selInstId); if (!inst) return;
+  const pat = selectedPattern(); if (!pat) return;
+  const patSteps = pat.bars * E.STEPS_PER_BAR;
+  let len = qStep(curStep()) - p.g; if (len < 1) len = _quantize; len = Math.max(1, Math.min(patSteps, len));
+  if (!pat.notes.some(n => n.midi === midi && n.start === p.step)) pat.notes.push({ midi, start: p.step, len, vel: 0.85 });
+  _events = E.expandArrangement(project);
+  if (_selInstId === inst.id) renderEditor();
+}
+const KB_W = { a: 0, s: 2, d: 4, f: 5, g: 7, h: 9, j: 11, k: 12, l: 14 };
+const KB_B = { w: 1, e: 3, t: 6, y: 8, u: 10, o: 13 };
+let _inputBound = false;
+function setupInput() {
+  if (_inputBound) return; _inputBound = true;
+  const open = () => document.getElementById('studio-win')?.classList.contains('open');
+  document.addEventListener('keydown', e => {
+    if (!open() || e.repeat) return;
+    if (e.target && e.target.closest && e.target.closest('input,select,textarea')) return;
+    const key = (e.key || '').toLowerCase();
+    if (key === 'z') { _recOct = Math.max(0, _recOct - 1); return; }
+    if (key === 'x') { _recOct = Math.min(7, _recOct + 1); return; }
+    const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
+    if (semi == null || _heldKeys[key]) return;
+    _heldKeys[key] = true; e.preventDefault();
+    noteOn((_recOct + 1) * 12 + semi, 0.9);
+  });
+  document.addEventListener('keyup', e => {
+    const key = e.key.toLowerCase();
+    const semi = key in KB_W ? KB_W[key] : (key in KB_B ? KB_B[key] : null);
+    if (semi == null) return; delete _heldKeys[key];
+    noteOff((_recOct + 1) * 12 + semi);
+  });
+  // Web MIDI input (hardware keyboards)
+  if (navigator.requestMIDIAccess) {
+    navigator.requestMIDIAccess().then(acc => {
+      const hook = inp => { inp.onmidimessage = onMIDI; };
+      acc.inputs.forEach(hook);
+      acc.onstatechange = ev => { if (ev.port && ev.port.type === 'input' && ev.port.state === 'connected') hook(ev.port); };
+    }).catch(() => {});
+  }
+}
+function onMIDI(e) {
+  const [status, note, vel] = e.data; const cmd = status & 0xf0;
+  if (cmd === 0x90 && vel > 0) noteOn(note, vel / 127);
+  else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) noteOff(note);
+}
+// compact 2-octave on-screen keyboard (device panel)
+function bindMiniKey(node, midi) {
+  node.addEventListener('pointerdown', e => { e.preventDefault(); node.classList.add('on'); noteOn(midi, 0.9); try { node.setPointerCapture(e.pointerId); } catch (_) {} });
+  const up = () => { node.classList.remove('on'); noteOff(midi); };
+  node.addEventListener('pointerup', up);
+  node.addEventListener('pointerleave', e => { if (e.buttons) up(); });
+}
+function buildMiniKeys() {
+  const wrap = el('div', 'st-mk');
+  const whiteSemis = [0, 2, 4, 5, 7, 9, 11], blackAfter = { 0: 1, 1: 3, 3: 6, 4: 8, 5: 10 };
+  const octs = 2, W = octs * 7;
+  for (let o = 0; o < octs; o++) for (let wi = 0; wi < 7; wi++) {
+    const i = o * 7 + wi, midi = (_recOct + 1 + o) * 12 + whiteSemis[wi];
+    const k = el('div', 'st-mk-w'); k.style.left = (i / W * 100) + '%'; k.style.width = (100 / W) + '%';
+    bindMiniKey(k, midi); wrap.appendChild(k);
+  }
+  for (let o = 0; o < octs; o++) for (let wi = 0; wi < 7; wi++) {
+    if (!(wi in blackAfter)) continue;
+    const i = o * 7 + wi, midi = (_recOct + 1 + o) * 12 + blackAfter[wi];
+    const bk = el('div', 'st-mk-b'); bk.style.left = ((i + 1) / W * 100 - (100 / W) * 0.3) + '%'; bk.style.width = (100 / W * 0.6) + '%';
+    bindMiniKey(bk, midi); wrap.appendChild(bk);
+  }
+  return wrap;
+}
+
 function buildPianoRoll(inst, pat) {
   const rows = 25; // ~2 octaves
   const steps = pat.bars * E.STEPS_PER_BAR;
@@ -658,6 +755,7 @@ function syncTransportUI() {
   const play = document.getElementById('st-play'); if (play) play.textContent = _playing ? '⏹' : '▶';
   const bpm = document.getElementById('st-bpm-val'); if (bpm) bpm.textContent = String(project.bpm).padStart(3, '0');
   const loop = document.getElementById('st-loop'); if (loop) loop.classList.toggle('on', _loop);
+  const rec = document.getElementById('st-rec'); if (rec) rec.classList.toggle('on', _recording);
 }
 function setBpm(v) { project.bpm = Math.max(40, Math.min(240, Math.round(v))); syncTransportUI(); if (_playing) _events = E.expandArrangement(project); }
 
@@ -683,6 +781,11 @@ function build() {
   if (playBtn) playBtn.onclick = togglePlay;
   const loopBtn = document.getElementById('st-loop');
   if (loopBtn) loopBtn.onclick = () => { _loop = !_loop; syncTransportUI(); };
+  const recBtn = document.getElementById('st-rec');
+  if (recBtn) recBtn.onclick = () => { _recording = !_recording; if (_recording && !_playing) play(); syncTransportUI(); };
+  const quant = document.getElementById('st-quant');
+  if (quant) quant.onchange = () => { _quantize = parseInt(quant.value) || 1; };
+  setupInput();
   // BPM: scrub vertically or click to type
   const bpmBox = document.getElementById('st-bpm');
   if (bpmBox) {

@@ -412,9 +412,33 @@ function renderEditor() {
   if (!inst || !pat) { host.appendChild(el('div', 'st-editor-empty', 'Select a track to edit its pattern')); return; }
   const head = el('div', 'st-editor-head');
   head.innerHTML = `<b style="color:${instColor(inst.id)}">${esc(inst.name)}</b> · <span class="st-dim">${esc(pat.name)} · ${pat.bars} bar${pat.bars > 1 ? 's' : ''}</span>`;
+  head.appendChild(randomizeControls(inst, pat));
   host.appendChild(head);
   if (inst.type !== 'drum') host.appendChild(deviceStrip(inst));
   host.appendChild(inst.type === 'drum' ? buildStepGrid(inst, pat) : buildPianoRoll(inst, pat));
+}
+
+// 🎲 randomizer controls (scale/key for melodic, genre for drums).
+function randomizeControls(inst, pat) {
+  const g = el('div', 'st-rnd');
+  const mkSel = (vals, cur, set) => { const s = el('select', 'st-rnd-sel'); vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; if (v === cur) o.selected = true; s.appendChild(o); }); s.onchange = () => set(s.value); return s; };
+  const P = inst.params;
+  if (inst.type === 'drum') {
+    g.appendChild(mkSel(E.RND_GENRES, P.rndGenre || 'straight', v => P.rndGenre = v));
+  } else {
+    g.appendChild(mkSel(Object.keys({ C: 0, 'C#': 0, D: 0, 'D#': 0, E: 0, F: 0, 'F#': 0, G: 0, 'G#': 0, A: 0, 'A#': 0, B: 0 }), P.rndKey || 'C', v => P.rndKey = v));
+    g.appendChild(mkSel(E.RND_SCALES, P.rndScale || 'pentatonic', v => P.rndScale = v));
+  }
+  const dice = el('button', 'st-rnd-btn', '🎲');
+  dice.title = 'Randomize this pattern';
+  dice.onclick = () => {
+    if (inst.type === 'drum') pat.steps = E.randomDrumPattern({ voice: P.voice || 'kick', genre: P.rndGenre || 'straight', bars: pat.bars });
+    else pat.notes = E.randomMelody({ scale: P.rndScale || 'pentatonic', key: P.rndKey || 'C', bars: pat.bars, lo: EDITOR_LO + 2, hi: EDITOR_LO + 24 });
+    renderEditor();
+    if (_playing) _events = E.expandArrangement(project);
+  };
+  g.appendChild(dice);
+  return g;
 }
 
 // A small labelled rotary knob backed by bindKnob.

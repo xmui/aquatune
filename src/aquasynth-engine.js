@@ -40,8 +40,22 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 export function midiToName(midi) { return NOTE_NAMES[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1); }
 
 /* ---- factories ---------------------------------------------------------- */
+// Per-type default synth params. cut>=11000 means "filter bypassed" so defaults
+// sound exactly like before (the per-voice lowpass is only inserted when lowered).
+export function defaultParams(type) {
+  if (type === 'chip')    return { wave: 'pulse', a: 0.006, d: 0.04, s: 0.65, r: 0.1, cut: 12000, res: 1, fenv: 0 };
+  if (type === 'keys')    return { preset: 'toypiano', a: 0.006, d: 0.05, s: 0.6, r: 0.2, cut: 12000, res: 1, fenv: 0 };
+  if (type === 'sampler') return { baseNote: 60, oneShot: true, a: 0.002, d: 0, s: 1, r: 0.1, cut: 12000, res: 1, fenv: 0 };
+  return {}; // drum
+}
+export function defaultFx() { return { drive: 0, pan: 0, level: 0.9, reverb: 0, delay: 0, chorus: 0 }; }
+
 export function makeInstrument(type, name, params = {}) {
-  return { id: aqsUid('inst'), type, name: name || type, params, sampleRef: null };
+  return {
+    id: aqsUid('inst'), type, name: name || type, sampleRef: null,
+    params: Object.assign(defaultParams(type), params),
+    fx: defaultFx(),
+  };
 }
 
 // A pattern stores BOTH a step grid (for drum-style lanes) and a notes array

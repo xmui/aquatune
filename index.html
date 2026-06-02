@@ -1968,7 +1968,16 @@
     .st-clip-resize { position:absolute; right:0; top:0; width:8px; height:100%; cursor:ew-resize; }
     .st-playhead { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent); box-shadow:0 0 8px var(--st-accent); pointer-events:none; }
 
-    #st-editor-wrap { height:206px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    #st-editor-wrap { height:250px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    /* per-track device panel (synth knobs + FX) */
+    .st-device { background:#13161d; border:1px solid #0c0e13; border-radius:8px; padding:7px 8px; margin-bottom:9px; }
+    .st-device-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+    .st-device-top .st-wave { margin-left:0; cursor:pointer; }
+    .st-knobs { display:flex; flex-wrap:wrap; gap:9px 12px; }
+    .st-kcell { display:flex; flex-direction:column; align-items:center; gap:3px; width:34px; }
+    .st-knob.sm { width:28px; height:28px; }
+    .st-knob.sm::after { top:4px; height:10px; transform-origin:50% 10px; }
+    .st-klabel { font-size:8px; font-weight:800; letter-spacing:.5px; color:#8b95a7; }
     #st-editor { padding:10px 12px; }
     .st-editor-empty { color:#6b7589; font-size:12px; text-align:center; padding:60px 0; }
     .st-editor-head { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:9px; }

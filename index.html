@@ -8191,7 +8191,7 @@ const DESKTOP_APPS = [
 /* ---------- Dock (rendered from a persisted pin list) ---------- */
 const DOCK_META = {
   chat:{icon:'💬',label:'Chat'}, player:{icon:'♪',label:'Player'}, arcade:{icon:'🎮',label:'Arcade'},
-  synth:{icon:'🎹',label:'AquaSynth'}, paint:{icon:'🎨',label:'AquaPaint'},
+  synth:{icon:'🎹',label:'AquaSynth'}, studio:{icon:'🎛️',label:'AquaSynth Studio'}, paint:{icon:'🎨',label:'AquaPaint'},
   files:{icon:'📁',label:'Files'}, texteditor:{icon:'📝',label:'Text Editor'},
   leaderboard:{icon:'🏆',label:'Leaderboard'}, photos:{icon:'📷',label:'Photos'}, rooms:{icon:'🌐',label:'Public Rooms'},
   settings:{icon:'⚙️',label:'Settings'},
@@ -8199,10 +8199,21 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','synth','paint','files','photos','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','synth','paint','files','photos','texteditor','leaderboard','settings'];
 function getDockPins() {
-  try { const p = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(p)) return p; } catch {}
-  return DOCK_DEFAULT.slice();
+  let p = null;
+  try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
+  if (!p) return DOCK_DEFAULT.slice();
+  // one-time migration: add the new AquaSynth Studio to existing saved docks
+  if (!localStorage.getItem('aq_dock_studio_v1')) {
+    localStorage.setItem('aq_dock_studio_v1', '1');
+    if (!p.includes('studio')) {
+      const at = p.indexOf('synth') >= 0 ? p.indexOf('synth') + 1 : (p.indexOf('settings') >= 0 ? p.indexOf('settings') : p.length);
+      p.splice(at, 0, 'studio');
+      _saveDockPins(p);
+    }
+  }
+  return p;
 }
 function _saveDockPins(p) { localStorage.setItem('aq_dock_pins', JSON.stringify(p)); }
 function renderDock() {

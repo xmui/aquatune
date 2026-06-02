@@ -241,6 +241,50 @@ function normalizeInstruments() {
   }
 }
 
+/* ---- SF2 soundfont instrument ------------------------------------------ */
+function buildSF2Zones(parsed, presetIndex, c) {
+  const preset = parsed.presets[presetIndex] || parsed.presets[0];
+  const smpl = parsed.smpl;
+  return preset.zones.map(z => {
+    const len = Math.max(1, z.end - z.start), rate = z.rate || 44100;
+    const buf = c.createBuffer(1, len, rate); const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = smpl[z.start + i] / 32768;
+    return Object.assign({}, z, { _buf: buf, loopStartSec: (z.loopStart - z.start) / rate, loopEndSec: (z.loopEnd - z.start) / rate });
+  });
+}
+// (re)build the selected preset's zones for the given context, caching on the instrument
+function ensureSF2(inst, c) {
+  const pi = inst.params.presetIndex || 0;
+  if (inst._sf2 && inst._sf2.ctx === c && inst._sf2.presetIndex === pi) return inst._sf2;
+  if (!inst._sf2 || !inst._sf2.parsed) {
+    if (!inst.sampleRef || !project.samples[inst.sampleRef]) return null;
+    try { inst._sf2 = { parsed: E.parseSF2(b64ToBuf(project.samples[inst.sampleRef])) }; } catch (_) { return null; }
+  }
+  inst._sf2.ctx = c; inst._sf2.presetIndex = pi; inst._sf2.zones = buildSF2Zones(inst._sf2.parsed, pi, c);
+  inst.params.presetNames = inst._sf2.parsed.presets.map(p => p.name);
+  return inst._sf2;
+}
+function pickZone(zones, midi) {
+  let best = null;
+  for (const z of zones) { if (midi >= z.lo && midi <= z.hi) return z; }
+  for (const z of zones) { if (!best || Math.abs(z.root - midi) < Math.abs(best.root - midi)) best = z; }
+  return best;
+}
+function sf2Voice(c, dest, midi, t, dur, vel, inst, zonesOverride) {
+  const zones = zonesOverride || (ensureSF2(inst, c) || {}).zones; if (!zones || !zones.length) return;
+  const z = pickZone(zones, midi); if (!z || !z._buf) return;
+  const src = c.createBufferSource(); src.buffer = z._buf;
+  const tune = Math.pow(2, ((z.coarse || 0) * 100 + (z.fine || 0)) / 1200);
+  src.playbackRate.value = (E.midiToFreq(midi) / E.midiToFreq(z.root || 60)) * tune;
+  if (z.loop && z.loopEndSec > z.loopStartSec) { src.loop = true; src.loopStart = z.loopStartSec; src.loopEnd = z.loopEndSec; }
+  const p = inst.params, a = p.a ?? 0.004, r = p.r ?? 0.25, peak = 0.9 * (vel ?? 0.9), end = t + Math.max(0.05, dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.setValueAtTime(peak, Math.max(t + a, end)); g.gain.exponentialRampToValueAtTime(0.0001, end + r);
+  src.connect(g); applyFilter(c, g, dest, t, p);
+  src.start(t); src.stop(end + r + 0.05);
+}
+
 function triggerEvent(ev, when) {
   const inst = project.instruments.find(i => i.id === ev.instId);
   if (!inst || inst._mute) return;
@@ -255,6 +299,8 @@ function triggerEvent(ev, when) {
     keysVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   } else if (inst.type === 'sampler') {
     samplerVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst);
+  } else if (inst.type === 'sf2') {
+    sf2Voice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst);
   } else {
     chipVoice(c, dest, ev.midi, when, ev.durSec, ev.vel, inst.params || {});
   }
@@ -613,6 +659,13 @@ function deviceStrip(inst) {
   } else if (inst.type === 'sampler') {
     const b = el('button', 'st-wave', '🎙️ ' + (P.sampleName ? esc(P.sampleName).slice(0, 16) : 'Load sample'));
     b.onclick = () => loadSampleFor(inst); top.appendChild(b);
+  } else if (inst.type === 'sf2') {
+    const names = P.presetNames || [];
+    const sel = el('select', 'st-rnd-sel');
+    names.forEach((n, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = (n || ('Preset ' + i)).slice(0, 22); if ((P.presetIndex || 0) === i) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { P.presetIndex = parseInt(sel.value) || 0; ensureSF2(inst, actx()); renderAll(); if (_playing) _events = E.expandArrangement(project); };
+    top.appendChild(el('span', 'st-dim', '🎵 SF2'));
+    if (names.length) top.appendChild(sel);
   }
   wrap.appendChild(top);
   // knob bank
@@ -654,6 +707,7 @@ function audition(inst, midi, dur = 0.3) {
   const c = actx(), dest = getLiveChain(inst).input;
   if (inst.type === 'keys') keysVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
   else if (inst.type === 'sampler') samplerVoice(c, dest, midi, c.currentTime, dur, 0.9, inst);
+  else if (inst.type === 'sf2') sf2Voice(c, dest, midi, c.currentTime, dur, 0.9, inst);
   else chipVoice(c, dest, midi, c.currentTime, dur, 0.9, inst.params);
 }
 /* ---- live recording (on-screen keys + computer keys + Web MIDI) -------- */
@@ -906,6 +960,8 @@ async function decodeAllSamples() {
   for (const inst of project.instruments) {
     if (inst.type === 'sampler' && inst.sampleRef && project.samples[inst.sampleRef] && !sampleBuffer(inst, c)) {
       try { inst._buf = await c.decodeAudioData(b64ToBuf(project.samples[inst.sampleRef]).slice(0)); } catch (_) {}
+    } else if (inst.type === 'sf2' && inst.sampleRef && project.samples[inst.sampleRef]) {
+      try { ensureSF2(inst, c); } catch (_) {}
     }
   }
   renderEditor();
@@ -937,7 +993,27 @@ function pickFile(accept, asArrayBuffer, cb) {
   inp.click();
 }
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
-function importSF2() { toastSafe('Loading SF2…'); } // replaced in the SF2 increment
+function importSF2() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.sf2';
+  input.onchange = async () => {
+    const f = input.files[0]; if (!f) return;
+    toastSafe('Loading ' + f.name + '…');
+    try {
+      const ab = await f.arrayBuffer();
+      const parsed = E.parseSF2(ab);                          // validate before committing
+      const inst = E.makeInstrument('sf2', f.name.replace(/\.sf2$/i, '').slice(0, 18), { presetIndex: 0, a: 0.004, d: 0, s: 1, r: 0.25, cut: 12000, res: 1, fenv: 0 });
+      const url = await fileToDataURL(f); project.samples[inst.id] = url; inst.sampleRef = inst.id;
+      inst._sf2 = { parsed, ctx: actx(), presetIndex: 0, zones: buildSF2Zones(parsed, 0, actx()) };
+      inst.params.presetNames = parsed.presets.map(p => p.name);
+      project.instruments.push(inst);
+      const pat = E.makePattern(inst.name, 1); project.patterns.push(pat);
+      E.ensureTrack(project, inst.id).clips.push(E.makeClip(pat.id, 0, Math.max(1, Math.ceil(E.songLengthBars(project)) || 1)));
+      _selInstId = inst.id; renderAll();
+      toastSafe('🎵 ' + inst.name + ' · ' + parsed.presets.length + ' presets');
+    } catch (e) { toastSafe('SF2 load failed: ' + (e && e.message || e)); }
+  };
+  input.click();
+}
 
 function saveProject() {
   const clean = JSON.parse(JSON.stringify(project, (k, v) => (k && k[0] === '_') ? undefined : v));
@@ -984,11 +1060,13 @@ async function renderWAV() {
   toastSafe('🌊 Rendering WAV…');
   const oc = new OAC(2, Math.ceil(sr * dur), sr);
   const m = oc.createGain(); m.gain.value = project.master ?? 0.9; m.connect(oc.destination);
-  // pre-decode sampler audio into the offline context
-  const offBuf = {};
+  // pre-decode sampler audio + build SF2 zones into the offline context
+  const offBuf = {}, offSF2 = {};
   for (const inst of project.instruments) {
     if (inst.type === 'sampler' && inst.sampleRef && project.samples[inst.sampleRef]) {
       try { offBuf[inst.id] = await oc.decodeAudioData(b64ToBuf(project.samples[inst.sampleRef]).slice(0)); } catch (_) {}
+    } else if (inst.type === 'sf2' && inst.sampleRef && project.samples[inst.sampleRef]) {
+      try { offSF2[inst.id] = buildSF2Zones(E.parseSF2(b64ToBuf(project.samples[inst.sampleRef])), inst.params.presetIndex || 0, oc); } catch (_) {}
     }
   }
   const buses = makeBuses(oc, m);              // P3 FX buses on the offline ctx
@@ -1002,6 +1080,7 @@ async function renderWAV() {
     if (inst.type === 'drum') offlineDrum(oc, dest, (inst.params && inst.params.voice) || 'kick', ev.timeSec);
     else if (inst.type === 'keys') keysVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
     else if (inst.type === 'sampler') { if (offBuf[inst.id]) samplerVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offBuf[inst.id]); }
+    else if (inst.type === 'sf2') { if (offSF2[inst.id]) sf2Voice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst, offSF2[inst.id]); }
     else chipVoice(oc, dest, ev.midi, ev.timeSec, ev.durSec, ev.vel, inst.params || {});
   }
   try { const buf = await oc.startRendering(); download(E.encodeWAV(buf), (project.name || 'song').replace(/\s+/g, '_') + '.wav', 'audio/wav'); toastSafe('🌊 WAV downloaded'); }

@@ -1869,7 +1869,7 @@
       image-rendering:pixelated; image-rendering:crisp-edges; background:#fff;
     }
     #paint-send-menu {
-      display:none; position:fixed; z-index:920;
+      display:none; position:fixed; z-index:4350;
       background:var(--panel); border:1.5px solid var(--border); border-radius:12px;
       padding:7px; box-shadow:0 10px 32px rgba(0,80,160,0.28);
       flex-direction:column; gap:5px; min-width:150px;
@@ -12148,9 +12148,19 @@ function boardUpdateBadge() {
   else { b.textContent='● Local'; b.className='board-fb-badge local'; }
 }
 
+// Raise AquaChat above app windows using the shared OS stacking counter.
+function boardRaise() {
+  const ov = document.getElementById('board-overlay');
+  if (!ov) return;
+  ov.style.zIndex = (OS.z = Math.min(OS.z + 1, 2999));
+}
 function openBoard() {
   document.getElementById('board-overlay').classList.add('show');
   document.getElementById('board-wrap').classList.remove('minimized');
+  boardRaise();
+  // Re-raise on any interaction so the chat behaves like a real (non-modal) window
+  const ov = document.getElementById('board-overlay');
+  if (ov && !ov._raiseBound) { ov._raiseBound = true; ov.addEventListener('pointerdown', boardRaise, true); }
   const inp = document.getElementById('board-fb-inp');
   if (inp && boardFbUrl) inp.value = boardFbUrl;
   _lastSeenPostTs = Date.now();
@@ -14031,7 +14041,7 @@ function playJoinChime() {
 window.playJoinChime = playJoinChime;
 function renderChatMsg(logEl, p) {
   const ts = p.timestamp || p.ts || 0;
-  if (ts && ts < Date.now() - 3600000) return; // skip messages older than 1 hour
+  if (ts && ts < Date.now() - 86400000) return; // skip messages older than 24 hours (chat auto-archives daily)
   const div = document.createElement('div');
   div.className = 'bmsg';
   const name = p.username || p.name || 'Anonymous';

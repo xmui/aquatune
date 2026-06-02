@@ -45,6 +45,19 @@ onChildRemoved(messagesRef, (snapshot) => {
   if (typeof updateChatBadge === 'function') updateChatBadge(allPosts.size);
 });
 
+// ── 24h auto-archive: prune messages older than a day so the board stays fresh ──
+const ARCHIVE_MS = 24 * 60 * 60 * 1000; // 24 hours
+function pruneOldMessages() {
+  const cutoff = Date.now() - ARCHIVE_MS;
+  for (const [key, post] of allPosts) {
+    if (post.ts && post.ts < cutoff) {
+      remove(ref(db, `${MESSAGES_PATH}/${key}`)).catch(() => {}); // onChildRemoved updates cache + DOM
+    }
+  }
+}
+setTimeout(pruneOldMessages, 8000);              // shortly after the initial backlog arrives
+setInterval(pruneOldMessages, 30 * 60 * 1000);   // then every 30 minutes
+
 // ── Override global chat functions ───────────────────────────
 
 window.boardFbEnabled = () => true;

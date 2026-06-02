@@ -3417,6 +3417,32 @@ body.perf-mode #aqua-gun { display: none !important; }
     #he-controls { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
     @media (max-width:768px) { #holdem-wrap { width:100vw; top:0; left:0; transform:none; } }
 
+    /* AquaPoker 6-max table (in-flight engine in src/poker.js; not yet wired) */
+    .pk-table { position:relative; height:300px; border-radius:140px/120px;
+      background:radial-gradient(ellipse at 50% 42%, #0a7a44 0%, #06502c 70%, #043a1f 100%);
+      border:6px solid #5a3a1a; box-shadow:inset 0 0 28px rgba(0,0,0,0.5); }
+    .pk-center { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:5px; }
+    .pk-pot { font-size:12px; font-weight:800; color:#ffd700; text-shadow:0 1px 2px #000; }
+    .pk-board { display:flex; gap:3px; }
+    .pk-card { position:static !important; width:30px; height:42px; padding:2px 3px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.4); flex-shrink:0; }
+    .pk-card .sol-card-top { font-size:11px; } .pk-card .sol-card-suit { font-size:13px; margin-top:1px; }
+    .pk-card.pk-empty { background:rgba(255,255,255,0.07); border:1px dashed rgba(255,255,255,0.25); box-shadow:none; }
+    .pk-seat { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; width:96px; }
+    .pk-seat .pk-hole { display:flex; gap:2px; min-height:42px; }
+    .pk-name { font-size:10px; font-weight:800; color:#fff; text-shadow:0 1px 1px #000; white-space:nowrap; }
+    .pk-stack { font-size:10px; color:#cfe; }
+    .pk-dealer { background:#fff; color:#a00; border-radius:50%; padding:0 4px; font-size:8px; font-weight:900; }
+    .pk-bet { position:absolute; top:-14px; right:8px; background:#ffd700; color:#222; font-size:9px; font-weight:800; border-radius:8px; padding:0 5px; }
+    .pk-seat.turn { outline:2px solid #ffd700; outline-offset:3px; border-radius:8px; }
+    .pk-seat.folded { opacity:0.4; }
+    .pk-seat.winner .pk-name { color:#ffd700; }
+    .pk-seat .pk-sit, .pk-seat .pk-stand { font-size:10px; padding:1px 7px; min-height:18px; }
+    .pk-msg { font-size:12px; text-align:center; min-height:16px; color:#ffd700; font-weight:700; }
+    .pk-controls { display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap; min-height:26px; }
+    .pk-wait { font-size:12px; color:#cfe; }
+    .pk-slider { width:120px; }
+    .pk-raise-amt { font-size:12px; font-weight:800; color:#ffd700; min-width:34px; text-align:center; }
+
     /* ── SPACE PINBALL (native canvas) ─── */
     #pinball-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);

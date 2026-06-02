@@ -301,13 +301,11 @@ function seedTable(){ addCpu(2); addCpu(3); addCpu(4); }
 let _pkInit=false;
 function openHoldem(show=true){
   const w=document.getElementById('holdem-wrap'); if(!w) return;
-  if(show===false){ w.classList.remove('open'); return; }
-  w.classList.toggle('open');
-  if(w.classList.contains('open')){
-    if(window.OS&&window.OS.register){ window.OS.register('holdem'); window.OS.focus('holdem'); }
-    if(!_pkInit){ _pkInit=true; G=emptyGame(); seedTable(); }
-    render();
-  }
+  if(show===false){ w.classList.remove('open'); w.style.display='none'; return; }
+  w.classList.add('open'); w.style.display='flex';
+  if(window.OS&&window.OS.register){ window.OS.register('holdem'); window.OS.focus('holdem'); }
+  if(!_pkInit){ _pkInit=true; G=emptyGame(); seedTable(); }
+  render();
 }
 if (typeof window !== 'undefined') {
   window.openHoldem = openHoldem;

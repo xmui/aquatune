@@ -42,9 +42,11 @@ function syncedNow() { return Date.now() - _clockOffset; }
 function genId(len = 8) {
   return Array.from({length: len}, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
 }
-const myUserId = localStorage.getItem('aq_user_id') || (() => {
+// Ensure the anonymous id exists, then prefer the logged-in account id if any.
+const anonUserId = localStorage.getItem('aq_user_id') || (() => {
   const id = genId(12); localStorage.setItem('aq_user_id', id); return id;
 })();
+const myUserId = (typeof window.effectiveUserId === 'function' ? window.effectiveUserId() : anonUserId) || anonUserId;
 window._myUserId = myUserId;
 
 // YouTube IFrame player states
@@ -292,6 +294,7 @@ window.claimHost = async function() {
   document.body.classList.remove('room-guest');
   try { localStorage.setItem('aq_session_room', JSON.stringify({ roomId, wasHost: true })); } catch {}
   _registerHostListeners(roomId);
+  window.onPokerBecomeHost?.(); // abort any hand we can't continue (no deck) → idle
   renderMembersPanel();
   window.toast?.('👑 You are now the host');
 };
@@ -422,6 +425,25 @@ window.initRoom = async function(roomId, isHost, opts) {
     const state = snap.val();
     if (!state || state.updatedBy === myUserId) return;
     applyRoomState(state);
+  });
+
+  // Poker table (host-authoritative): everyone renders from poker/state; the
+  // current host drains poker/actions. Registered for all clients so a host
+  // takeover keeps processing new actions.
+  onValue(ref(db, `rooms/${roomId}/poker/state`), snap => {
+    const s = snap.val();
+    if (!s || s.updatedBy === myUserId) return;
+    window.onPokerState?.(s);
+  });
+  onChildAdded(ref(db, `rooms/${roomId}/poker/actions`), snap => {
+    if (!window._isRoomHost) return;            // only the host applies + clears
+    const a = snap.val(), key = snap.key;
+    try { window.onPokerAction?.(a); }
+    finally { remove(ref(db, `rooms/${roomId}/poker/actions/${key}`)); }
+  });
+  // Receive my own hole cards privately (host wrote poker/hole/{myUserId}).
+  onValue(ref(db, `rooms/${roomId}/poker/hole/${myUserId}`), snap => {
+    window.onPokerHole?.(snap.val());
   });
 
   // Instant sync on join: read the current state immediately and apply it, so a guest who joins
@@ -579,7 +601,26 @@ window.sendRoomMessage = function(msg, imageData) {
   });
 };
 
+// Poker bridges — host publishes table state; anyone queues actions for the host.
+window.pokerBroadcast = function(state) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/poker/state`), { ...state, updatedBy: myUserId, updatedAt: Date.now() }).catch(() => {});
+};
+window.pokerSendAction = function(a) {
+  if (!window._currentRoomId) return;
+  push(ref(db, `rooms/${window._currentRoomId}/poker/actions`), { ...a, userId: myUserId, ts: Date.now() }).catch(() => {});
+};
+// Host delivers each player's hole cards privately: { ownerId: [card,card] }.
+window.pokerSetHoles = function(map) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/poker/hole`), map || {}).catch(() => {});
+};
+
 window.leaveRoom = function() {
+  // Clear the saved room so the post-reload auto-rejoin (which keys off
+  // aq_session_room) doesn't fire — the fresh load then shows the splash.
+  try { localStorage.removeItem('aq_session_room'); } catch {}
+  window._currentRoomId = null; window._isRoomHost = false; window._canControl = false;
   window.location.hash = '';
   window.location.reload();
 };

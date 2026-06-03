@@ -1968,7 +1968,16 @@
     .st-clip-resize { position:absolute; right:0; top:0; width:8px; height:100%; cursor:ew-resize; }
     .st-playhead { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent); box-shadow:0 0 8px var(--st-accent); pointer-events:none; }
 
+    #st-vsplit { height:7px; flex-shrink:0; cursor:row-resize; background:#0c0e13; position:relative; touch-action:none; }
+    #st-vsplit::after { content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:46px; height:3px; border-radius:2px; background:#3a4150; }
+    #st-vsplit:hover::after { background:var(--st-accent); }
     #st-editor-wrap { height:250px; flex-shrink:0; border-top:2px solid #0c0e13; background:linear-gradient(180deg,#1b1e26,#13151b); overflow:auto; }
+    /* collapsible on-screen keyboard */
+    .st-mk-bar { display:flex; align-items:center; gap:6px; margin-top:9px; }
+    .st-mk-toggle { background:#2a2f3a; color:#8b95a7; border:1px solid #0a0c10; border-radius:5px; font-size:10px; font-weight:800; letter-spacing:.5px; padding:2px 8px; cursor:pointer; }
+    .st-mk-toggle:hover { color:var(--st-accent); border-color:var(--st-accent); }
+    .st-mk-wrap.collapsed .st-mk { display:none; }
+    .st-mk-wrap .st-mk { margin-top:6px; }
     /* per-track device panel (synth knobs + FX) */
     .st-device { background:#13161d; border:1px solid #0c0e13; border-radius:8px; padding:7px 8px; margin-bottom:9px; }
     .st-device-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
@@ -3466,6 +3475,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     #stk-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
     #stk-chart-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     #stk-chart-title { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .stk-head-ctrls { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+    #stk-tf { display:inline-flex; gap:3px; }
+    .stk-tf-btn { padding:3px 8px; font-size:11px; }
     #stk-chart { width:100%; height:240px; border-radius:6px; background:#08101c; }
     #stk-compare-legend { display:flex; flex-wrap:wrap; gap:8px; min-height:14px; }
     .stk-leg { font-size:10px; display:flex; align-items:center; gap:4px; }
@@ -4187,6 +4199,15 @@ body.perf-mode #aqua-gun { display: none !important; }
   display:flex; align-items:flex-start; gap:6px; padding:3px 0;
   font-size:11px; color:var(--text); line-height:1.4;
 }
+/* Aquatune account panel */
+#aq-account-panel .aq-acct-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+#aq-account-panel input { flex:1; min-width:120px; padding:5px 8px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:12px; }
+#aq-account-panel .win95-btn { font-size:11px; padding:4px 10px; cursor:pointer; }
+#aq-account-panel .aq-link { background:none; border:none; color:var(--accent); font-size:11px; cursor:pointer; padding:0; text-decoration:underline; }
+.aq-acct-who { font-size:12px; color:var(--text); margin-bottom:8px; }
+.aq-acct-msg { font-size:11px; min-height:14px; margin-top:4px; }
+.aq-acct-note { font-size:9px; color:var(--text2); margin-top:8px; line-height:1.4; }
+.aq-admin-req { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; padding:3px 0; }
 .settings-help-row .shi { font-size:13px; flex-shrink:0; }
 .settings-help-row .shd { font-size:10px; color:var(--text2); margin-top:1px; }
 #help-section summary {
@@ -5368,6 +5389,11 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       </button>
       <span id="daily-claim-timer" style="font-size:10px;color:var(--text2)">Loading...</span>
     </div>
+  </div>
+
+  <div class="settings-section-hdr">Aquatune Account</div>
+  <div class="theme-section" style="padding-top:0">
+    <div id="aq-account-panel"></div>
   </div>
 
   <div class="settings-section-hdr">Help &amp; Features</div>
@@ -8325,7 +8351,7 @@ const DOCK_META = {
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','leaderboard','settings'];
 function getDockPins() {
   let p = null;
   try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
@@ -8337,6 +8363,11 @@ function getDockPins() {
     if (si >= 0) { if (p.includes('studio')) p.splice(si, 1); else p[si] = 'studio'; }
     else if (!p.includes('studio')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'studio'); }
     _saveDockPins(p);
+  }
+  // one-time migration: add the Exchange to existing docks
+  if (!localStorage.getItem('aq_dock_stocks_v1')) {
+    localStorage.setItem('aq_dock_stocks_v1', '1');
+    if (!p.includes('stocks')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'stocks'); _saveDockPins(p); }
   }
   return p;
 }
@@ -13392,101 +13423,6 @@ const RHY_LANE_COLORS=['#ff5a87','#ffc24a','#4ad6ff','#8c6bff'];
 const RHY_APPROACH=1.9, RHY_LEADIN=2.2, RHY_HITWIN=0.22;
 const RHY_LANE_SOUNDS=[ t=>drumKick(t), t=>drumSnare(t), t=>drumHihat(t), t=>drumClap(t) ];
 /* ============================================================
-   TEXAS HOLD'EM — heads-up vs one CPU
-   ============================================================ */
-const HE_SUITS=['♠','♥','♦','♣'], HE_RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-let heYou=500, heCpu=500, heDeck=[], heYouCards=[], heCpuCards=[], heBoard=[], hePot=0, heStage=0, heToCall=0, heInited=false;
-function openHoldem(show=true){
-  const w=document.getElementById('holdem-wrap'); if(!w) return;
-  if(show===false){ w.classList.remove('open'); w.style.display='none'; return; }
-  w.classList.toggle('open');
-  if(w.classList.contains('open')){ w.style.display='flex'; if(!heInited){ heInited=true; heRender(); } }
-  else { w.style.display='none'; }
-}
-function heMakeDeck(){ const d=[]; HE_SUITS.forEach(s=>HE_RANKS.forEach((r,i)=>d.push({s,r,v:i+2,red:(s==='♥'||s==='♦')}))); for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];} return d; }
-function heCardHTML(c,hidden){ if(hidden) return '<div class="he-card back">?</div>'; return `<div class="he-card${c.red?' red':''}">${c.r}${c.s}</div>`; }
-function heRender(reveal){
-  document.getElementById('he-you-chips').textContent=heYou;
-  document.getElementById('he-cpu-chips').textContent=heCpu;
-  document.getElementById('he-pot').textContent=hePot;
-  document.getElementById('he-you-cards').innerHTML=heYouCards.map(c=>heCardHTML(c,false)).join('');
-  document.getElementById('he-cpu-cards').innerHTML=heCpuCards.map(c=>heCardHTML(c,!reveal&&heStage<5)).join('');
-  document.getElementById('he-board').innerHTML=heBoard.map(c=>heCardHTML(c,false)).join('');
-}
-function heDeal(){
-  if(heYou<=0){ heYou=500; toast('Rebought for 500 🪙'); }
-  if(heCpu<=0) heCpu=500;
-  heDeck=heMakeDeck(); heYouCards=[heDeck.pop(),heDeck.pop()]; heCpuCards=[heDeck.pop(),heDeck.pop()];
-  heBoard=[]; hePot=0; heStage=1;
-  // blinds
-  const sb=10; heYou-=sb; heCpu-=sb; hePot=sb*2; heToCall=0;
-  document.getElementById('he-deal-btn').style.display='none';
-  ['he-check-btn','he-bet-btn','he-fold-btn'].forEach(id=>document.getElementById(id).style.display='');
-  document.getElementById('he-msg').textContent='Your move — check, bet, or fold.';
-  heRender();
-}
-function _heDealBoard(n){ for(let i=0;i<n;i++) heBoard.push(heDeck.pop()); }
-function heAction(act){
-  if(heStage<1) return;
-  if(act==='fold'){ heCpu+=hePot; document.getElementById('he-msg').textContent='You folded. CPU takes '+hePot+' 🪙.'; return heEndHand(); }
-  if(act==='bet'){ const bet=20; if(heYou>=bet){ heYou-=bet; hePot+=bet; }
-    // CPU calls based on a rough hand strength
-    const cpuStr=heHandStrength(heCpuCards.concat(heBoard));
-    if(cpuStr>=1 || Math.random()<0.7){ heCpu-=bet; hePot+=bet; document.getElementById('he-msg').textContent='CPU calls.'; }
-    else { heYou+=hePot; document.getElementById('he-msg').textContent='CPU folds! You take '+hePot+' 🪙.'; return heEndHand(); }
-  } else { document.getElementById('he-msg').textContent='Checked.'; }
-  // advance street
-  if(heStage===1){ _heDealBoard(3); heStage=2; }
-  else if(heStage===2){ _heDealBoard(1); heStage=3; }
-  else if(heStage===3){ _heDealBoard(1); heStage=4; }
-  else { return heShowdown(); }
-  heRender();
-}
-function heShowdown(){
-  heStage=5; heRender(true);
-  const yv=heBest(heYouCards.concat(heBoard)), cv=heBest(heCpuCards.concat(heBoard));
-  let msg;
-  if(yv.rank>cv.rank || (yv.rank===cv.rank && yv.tie>cv.tie)){ heYou+=hePot; msg='You win '+hePot+' 🪙 with '+yv.name+'!'; if(typeof recordScore==='function') recordScore('holdem', heYou, 'won w/ '+yv.name); }
-  else if(cv.rank>yv.rank || (cv.rank===yv.rank && cv.tie>yv.tie)){ heCpu+=hePot; msg='CPU wins with '+cv.name+'.'; }
-  else { heYou+=hePot/2; heCpu+=hePot/2; msg='Split pot ('+yv.name+').'; }
-  document.getElementById('he-msg').textContent=msg;
-  heEndHand();
-}
-function heEndHand(){
-  heStage=0;
-  ['he-check-btn','he-bet-btn','he-fold-btn'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('he-deal-btn').style.display='';
-  heRender(true);
-  aqRefreshCreditDisplays?.();
-}
-function heHandStrength(cards){ return heBest(cards).rank; }
-// 5-from-7 evaluator → {rank,tie,name}
-function heBest(cards){
-  let best={rank:-1,tie:-1,name:''};
-  const idx=[...Array(cards.length).keys()];
-  const combos=(arr,k)=>{ const res=[]; const rec=(start,combo)=>{ if(combo.length===k){res.push(combo.slice());return;} for(let i=start;i<arr.length;i++){combo.push(arr[i]);rec(i+1,combo);combo.pop();} }; rec(0,[]); return res; };
-  for(const c of combos(idx,5)){ const e=heEval5(c.map(i=>cards[i])); if(e.rank>best.rank||(e.rank===best.rank&&e.tie>best.tie)) best=e; }
-  return best;
-}
-function heEval5(cs){
-  const vs=cs.map(c=>c.v).sort((a,b)=>b-a);
-  const counts={}; vs.forEach(v=>counts[v]=(counts[v]||0)+1);
-  const suits={}; cs.forEach(c=>suits[c.s]=(suits[c.s]||0)+1);
-  const flush=Object.values(suits).some(n=>n>=5);
-  const uniq=[...new Set(vs)];
-  let straight=false, shi=0;
-  if(uniq.length===5){ if(uniq[0]-uniq[4]===4){straight=true;shi=uniq[0];} else if(JSON.stringify(uniq)===JSON.stringify([14,5,4,3,2])){straight=true;shi=5;} }
-  const groups=Object.entries(counts).map(([v,n])=>({v:+v,n})).sort((a,b)=>b.n-a.n||b.v-a.v);
-  const tie=groups.reduce((acc,g)=>acc*100+g.v,0);
-  const NAMES=['High Card','Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
-  let rank;
-  if(straight&&flush) rank=8; else if(groups[0].n===4) rank=7; else if(groups[0].n===3&&groups[1]&&groups[1].n===2) rank=6;
-  else if(flush) rank=5; else if(straight) rank=4; else if(groups[0].n===3) rank=3;
-  else if(groups[0].n===2&&groups[1]&&groups[1].n===2) rank=2; else if(groups[0].n===2) rank=1; else rank=0;
-  return {rank,tie:(rank===4||rank===8)?shi:tie,name:NAMES[rank]};
-}
-
-/* ============================================================
    SPACE PINBALL — self-contained canvas physics game.
    Fully native (no external iframe): rotating flippers with proper
    segment-circle collision + angular-velocity kick, bumpers, 3 balls,
@@ -15217,8 +15153,9 @@ function solRender(){
   const st=document.getElementById('sol-status');
   if(st) st.textContent='Moves: '+solMoves+(solDrawCount>1?' | Passes: '+solStockPasses+'/'+solMaxPasses:'');
 
-  // Start timer on first move
-  if(solMoves===1) solStartTimer();
+  // Start timer once play begins (guarded against duplicate intervals);
+  // >=1 rather than ===1 so it still starts if a move bumps the count past 1.
+  if(solMoves>=1) solStartTimer();
 
   // Win check
   if(solFoundations.every(function(f){return f.length===13;})){
@@ -16643,10 +16580,18 @@ function bjUpdateBalance(){
 </div>
 
 
+<script>
+  // Account identity, defined inline so it's available before any deferred
+  // module (room-sync captures the user id at load). accounts.js manages it.
+  window._aqAccountId = localStorage.getItem('aq_account_id') || null;
+  window.effectiveUserId = function () { return window._aqAccountId || localStorage.getItem('aq_user_id') || 'anon'; };
+</script>
 <script type="module" src="/src/aquasynth-studio.js"></script>
 <script type="module" src="/src/chat-firebase.js"></script>
+<script type="module" src="/src/accounts.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
 <script type="module" src="/src/stocks.js"></script>
+<script type="module" src="/src/poker.js"></script>
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">
@@ -16719,6 +16664,7 @@ function bjUpdateBalance(){
       <div id="st-lanes-wrap"><div id="st-lanes"></div></div>
     </div>
   </div>
+  <div id="st-vsplit" title="Drag to resize the editor"></div>
   <div id="st-editor-wrap"><div id="st-editor"></div></div>
 </div>
 
@@ -16844,18 +16790,8 @@ function bjUpdateBalance(){
     <span>🂡 Texas Hold'em</span>
     <button class="sol-titlebtn sol-close" onclick="openHoldem(false)">×</button>
   </div>
-  <div id="holdem-area">
-    <div class="he-seat"><div class="he-label">Dealer (CPU) — <span id="he-cpu-chips">500</span> 🪙</div><div id="he-cpu-cards" class="he-cards"></div></div>
-    <div id="he-board-row"><div class="he-label">Board · Pot <span id="he-pot">0</span></div><div id="he-board" class="he-cards"></div></div>
-    <div id="he-msg">Press Deal to start a hand.</div>
-    <div class="he-seat"><div class="he-label">You — <span id="he-you-chips">500</span> 🪙</div><div id="he-you-cards" class="he-cards"></div></div>
-    <div id="he-controls">
-      <button class="win95-btn" id="he-deal-btn" onclick="heDeal()">Deal</button>
-      <button class="win95-btn" id="he-check-btn" onclick="heAction('check')" style="display:none">Check/Call</button>
-      <button class="win95-btn" id="he-bet-btn" onclick="heAction('bet')" style="display:none">Bet 20</button>
-      <button class="win95-btn" id="he-fold-btn" onclick="heAction('fold')" style="display:none">Fold</button>
-    </div>
-  </div>
+  <!-- Filled by src/poker.js (the 6-max engine) on open. -->
+  <div id="holdem-area"></div>
 </div>
 
 <!-- AQUATUNE EXCHANGE (stock market) -->

@@ -9,7 +9,8 @@
     "https://music.youtube.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
-    "https://*.aquatune.app/*"
+    "https://*.aquatune.app/*",
+    "https://aquatune.netlify.app/*"
   ],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
@@ -20,7 +21,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*"],
+      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*", "https://aquatune.netlify.app/*"],
       "all_frames": false,
       "js": ["aq-bridge.js"],
       "run_at": "document_start"
@@ -29,7 +30,7 @@
   "web_accessible_resources": [
     {
       "resources": ["aq-page-shim.js"],
-      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*"]
+      "matches": ["http://localhost/*", "http://127.0.0.1/*", "https://*.aquatune.app/*", "https://aquatune.netlify.app/*"]
     }
   ],
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },

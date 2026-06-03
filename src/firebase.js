@@ -13,3 +13,7 @@ const app = initializeApp({
 
 export const db = getDatabase(app);
 window._aqDb = db;
+
+// Auth is used only for the optional "connect Google" account feature. It
+// reuses the already-initialised app and doesn't affect the DB-only path.
+export { app };

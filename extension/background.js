@@ -10,6 +10,7 @@ const AQ_MATCHES = [
   'http://localhost/*',
   'http://127.0.0.1/*',
   'https://*.aquatune.app/*',
+  'https://aquatune.netlify.app/*',
 ];
 
 function forwardToAquaTune(msg) {

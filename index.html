@@ -150,6 +150,15 @@
     #hdr-credits { font-size:11px;font-weight:700;color:var(--hdr-text,#fff);background:rgba(127,127,127,0.22);border:1px solid var(--hdr-text-soft,rgba(255,255,255,0.18));border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
     #hdr-credits:hover { background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.4); }
     #hdr-credits-mobile { display:none; } /* desktop hides it; the mobile media query shows it */
+    /* "new version available" banner */
+    #aq-update-banner { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:99999;
+      display:flex; align-items:center; gap:12px; max-width:94vw;
+      background:linear-gradient(180deg,#1a8fd0,#0c6fae); color:#fff; font-size:13px; font-weight:700;
+      padding:9px 14px; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.25);
+      animation:aqUpdIn .35s ease; }
+    @keyframes aqUpdIn { from{opacity:0; transform:translate(-50%,12px)} to{opacity:1; transform:translate(-50%,0)} }
+    #aq-update-refresh { background:#fff; color:#0c6fae; border:none; border-radius:8px; font-weight:800; font-size:12px; padding:5px 12px; cursor:pointer; }
+    #aq-update-refresh:hover { background:#eaf6ff; }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -16944,6 +16953,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/fishing.js"></script>
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
+<script type="module" src="/src/version-check.js"></script>
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">

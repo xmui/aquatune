@@ -108,8 +108,23 @@ async function loadSkills() {
       _saveRemote();
     }
   } catch {}
+  applyResets();
   _loaded = true;
   if (_open) renderSkillsPanel();
+}
+
+// One-time, per-user data resets. Mining XP was over-generous before it was
+// rebalanced (harder rocks, much lower XP), so wipe everyone's mining once so
+// the new economy starts clean. Bump the flag key to run a future reset.
+function applyResets() {
+  try {
+    if (!localStorage.getItem('aq_skills_reset_mining_v1')) {
+      localStorage.setItem('aq_skills_reset_mining_v1', '1');
+      _xp.mining = 0;
+      _writeLocal();
+      _saveRemote();
+    }
+  } catch {}
 }
 
 // ---------------------------------------------------------------------------
@@ -131,11 +146,13 @@ function addXp(skillId, amount) {
   if (_open) renderSkillsPanel();
 }
 
-// Single call games use: grants a "played" amount + a "won" bonus. `mult`
-// optionally scales the whole grant (e.g. by score). Tuned so low levels move
-// but the OSRS curve keeps 99 a long grind.
-const PLAYED_XP = 8;   // base for showing up
-const WON_XP = 30;     // base bonus for a win
+// Single call games use: grants a small "played" amount + a "won" bonus. `mult`
+// optionally scales the whole grant (e.g. by score / difficulty). Deliberately
+// ultra-grindy — the base trickle is tiny on the OSRS curve, so meaningful
+// levels are a long haul. Excitement comes from the rare LUCKY bonus below.
+const PLAYED_XP = 3;   // base for showing up
+const WON_XP = 9;      // base bonus for a win
+const LUCKY_CHANCE = 0.05;  // ~1 in 20 grants rolls a jackpot multiplier
 function gameXp(skillId, opts) {
   opts = opts || {};
   const mult = opts.mult != null && isFinite(opts.mult) ? Math.max(0, opts.mult) : 1;
@@ -143,7 +160,13 @@ function gameXp(skillId, opts) {
   if (opts.played !== false) amt += PLAYED_XP;
   if (opts.won) amt += WON_XP;
   amt = Math.round(amt * mult);
-  if (amt > 0) addXp(skillId, amt);
+  if (amt <= 0) return;
+  // Rare random bonus: a big multiplier that makes the grind feel alive.
+  if (Math.random() < LUCKY_CHANCE) {
+    amt *= 3 + Math.floor(Math.random() * 6); // x3..x8
+    if (typeof window.toast === 'function') window.toast(`🍀 Lucky ${SKILL_BY_ID[skillId].name}! +${amt} XP`);
+  }
+  addXp(skillId, amt);
 }
 
 function getSkills() {

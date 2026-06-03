@@ -328,6 +328,7 @@ function stop() {
   if (_schedTimer) { clearInterval(_schedTimer); _schedTimer = null; }
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
   const ph = document.getElementById('st-playhead'); if (ph) ph.style.transform = 'translateX(0px)';
+  const rph = document.getElementById('st-roll-ph'); if (rph) rph.style.display = 'none';
   syncTransportUI();
 }
 function togglePlay() { _playing ? stop() : play(); }
@@ -357,6 +358,19 @@ function playheadTick() {
   const bar = songT / E.secPerBar(project.bpm);
   const ph = document.getElementById('st-playhead');
   if (ph) ph.style.transform = `translateX(${bar * _pxPerBar}px)`;
+  // mirror it in the piano roll, mapped to the selected pattern's local position
+  const rph = document.getElementById('st-roll-ph');
+  if (rph) {
+    const pat = selectedPattern();
+    if (pat) {
+      const clip = selectedClip();
+      const start = clip ? clip.startBar : 0;
+      const span = pat.bars || 1;
+      const localBar = (((bar - start) % span) + span) % span;
+      rph.style.transform = `translateX(${localBar * E.STEPS_PER_BAR * ROLL.STEP_W}px)`;
+      rph.style.display = '';
+    } else rph.style.display = 'none';
+  }
   _rafId = requestAnimationFrame(playheadTick);
 }
 
@@ -942,6 +956,9 @@ function buildPianoRoll(inst, pat) {
   rs.title = 'Drag to change pattern length';
   rs.addEventListener('pointerdown', e => startRollResize(e, pat, grid));
   grid.appendChild(rs);
+  // playhead (mirrors the arrangement board's), positioned during playback
+  const ph = el('div', 'st-roll-ph'); ph.id = 'st-roll-ph'; ph.style.display = 'none';
+  grid.appendChild(ph);
   wrap.appendChild(keys); wrap.appendChild(grid);
   return wrap;
 }

@@ -322,35 +322,44 @@ async function aqAdminResetPassword(username, tempPassword) {
 }
 
 // ---------------------------------------------------------------------------
-// UI — rendered into #aq-account-panel (mounted in Settings)
+// UI — rendered into every .aq-account-panel mount (Settings + splash).
+// Uses container-scoped queries so the same markup can appear twice. A
+// data-variant="splash" mount renders a compact form.
 // ---------------------------------------------------------------------------
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function aqRenderAccountPanel() {
-  const box = document.getElementById('aq-account-panel');
-  if (!box) return;
+  document.querySelectorAll('.aq-account-panel').forEach(renderAccountInto);
+  // Splash "continue as guest" affordance only shows when logged out.
+  const guestRow = document.getElementById('sp-guest-row');
+  if (guestRow) guestRow.style.display = aqCurrentAccount() ? 'none' : '';
+}
+
+function renderAccountInto(box) {
+  const splash = box.dataset.variant === 'splash';
   const acct = aqCurrentAccount();
+  const $ = sel => box.querySelector(sel);
+  const msg = (t, ok) => { const m = $('.aq-acct-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
+
   if (!acct) {
     box.innerHTML = `
-      <div class="aq-acct-row"><input id="aq-acct-user" placeholder="username" autocomplete="username"></div>
-      <div class="aq-acct-row"><input id="aq-acct-pass" type="password" placeholder="password" autocomplete="current-password"></div>
+      <div class="aq-acct-row"><input class="aq-acct-user" placeholder="username" autocomplete="username"></div>
+      <div class="aq-acct-row"><input class="aq-acct-pass" type="password" placeholder="password" autocomplete="current-password"></div>
       <div class="aq-acct-row">
-        <button class="win95-btn" id="aq-acct-login">Log in</button>
-        <button class="win95-btn" id="aq-acct-signup">Create account</button>
+        <button class="win95-btn aq-acct-login">Log in</button>
+        <button class="win95-btn aq-acct-signup">Create account</button>
       </div>
       <div class="aq-acct-row">
-        <button class="win95-btn" id="aq-acct-google">Log in with Google</button>
-        <button class="aq-link" id="aq-acct-forgot">Forgot password?</button>
+        <button class="win95-btn aq-acct-google">Log in with Google</button>
+        <button class="aq-link aq-acct-forgot">Forgot password?</button>
       </div>
-      <div class="aq-acct-msg" id="aq-acct-msg"></div>
-      <div class="aq-acct-note">You can keep playing anonymously — an account just syncs your credits across devices. (Passwords are stored with basic protection; don't reuse an important one.)</div>`;
-    const msg = (t, ok) => { const m = document.getElementById('aq-acct-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
-    const u = () => document.getElementById('aq-acct-user').value;
-    const p = () => document.getElementById('aq-acct-pass').value;
-    document.getElementById('aq-acct-login').onclick = async () => { msg('Logging in…', true); const r = await aqLogin(u(), p()); if (!r.ok) msg(r.error, false); };
-    document.getElementById('aq-acct-signup').onclick = async () => { msg('Creating…', true); const r = await aqSignup(u(), p()); if (!r.ok) msg(r.error, false); };
-    document.getElementById('aq-acct-google').onclick = async () => { msg('Opening Google…', true); const r = await aqLoginWithGoogle(); if (!r.ok) msg(r.error, false); };
-    document.getElementById('aq-acct-forgot').onclick = async () => {
+      <div class="aq-acct-msg"></div>
+      ${splash ? '' : '<div class="aq-acct-note">You can keep playing without an account — signing in just syncs your credits across devices. (Passwords are stored with basic protection; don\'t reuse an important one.)</div>'}`;
+    const u = () => $('.aq-acct-user').value, p = () => $('.aq-acct-pass').value;
+    $('.aq-acct-login').onclick = async () => { msg('Logging in…', true); const r = await aqLogin(u(), p()); if (!r.ok) msg(r.error, false); };
+    $('.aq-acct-signup').onclick = async () => { msg('Creating…', true); const r = await aqSignup(u(), p()); if (!r.ok) msg(r.error, false); };
+    $('.aq-acct-google').onclick = async () => { msg('Opening Google…', true); const r = await aqLoginWithGoogle(); if (!r.ok) msg(r.error, false); };
+    $('.aq-acct-forgot').onclick = async () => {
       const name = prompt('Enter your username to request a password reset:'); if (!name) return;
       const r = await aqRequestReset(name); msg(r.ok ? 'Reset request sent to the admin.' : r.error, r.ok);
     };
@@ -361,24 +370,25 @@ function aqRenderAccountPanel() {
   box.innerHTML = `
     <div class="aq-acct-who">Signed in as <b>${esc(acct.username)}</b></div>
     <div class="aq-acct-row">
-      <button class="win95-btn" id="aq-acct-logout">Log out</button>
-      <button class="win95-btn" id="aq-acct-rename">Change username</button>
-      <button class="win95-btn" id="aq-acct-changepw">Change password</button>
-      <button class="win95-btn" id="aq-acct-link" ${linked ? 'disabled' : ''}>${linked ? 'Google linked ✓' : 'Connect Google'}</button>
+      <button class="win95-btn aq-acct-logout">Log out</button>
+      <button class="win95-btn aq-acct-rename">Change username</button>
+      ${splash ? '' : `<button class="win95-btn aq-acct-changepw">Change password</button>
+      <button class="win95-btn aq-acct-link" ${linked ? 'disabled' : ''}>${linked ? 'Google linked ✓' : 'Connect Google'}</button>`}
     </div>
-    <div class="aq-acct-msg" id="aq-acct-msg"></div>
-    ${acct.admin ? '<div class="aq-acct-row"><button class="win95-btn" id="aq-acct-admin">Admin: password resets</button></div><div id="aq-admin-box"></div>' : ''}`;
-  const msg = (t, ok) => { const m = document.getElementById('aq-acct-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
-  document.getElementById('aq-acct-logout').onclick = () => aqLogout();
-  document.getElementById('aq-acct-rename').onclick = async () => { const nn = prompt('New username:', acct.username); if (!nn) return; msg('Renaming…', true); const r = await aqChangeUsername(nn); msg(r.ok ? 'Username changed.' : r.error, r.ok); };
-  document.getElementById('aq-acct-changepw').onclick = async () => { const np = prompt('New password:'); if (!np) return; const r = await aqChangePassword(np); msg(r.ok ? 'Password changed.' : r.error, r.ok); };
-  const linkBtn = document.getElementById('aq-acct-link');
-  if (linkBtn && !linked) linkBtn.onclick = async () => { msg('Opening Google…', true); const r = await aqLinkGoogle(); msg(r.ok ? 'Google linked.' : r.error, r.ok); };
-  if (acct.admin) document.getElementById('aq-acct-admin').onclick = renderAdminBox;
+    <div class="aq-acct-msg"></div>
+    ${(!splash && acct.admin) ? '<div class="aq-acct-row"><button class="win95-btn aq-acct-admin">Admin: password resets</button></div><div class="aq-admin-box"></div>' : ''}`;
+  $('.aq-acct-logout').onclick = () => aqLogout();
+  $('.aq-acct-rename').onclick = async () => { const nn = prompt('New username:', acct.username); if (!nn) return; msg('Renaming…', true); const r = await aqChangeUsername(nn); msg(r.ok ? 'Username changed.' : r.error, r.ok); };
+  if (!splash) {
+    $('.aq-acct-changepw').onclick = async () => { const np = prompt('New password:'); if (!np) return; const r = await aqChangePassword(np); msg(r.ok ? 'Password changed.' : r.error, r.ok); };
+    const linkBtn = $('.aq-acct-link');
+    if (linkBtn && !linked) linkBtn.onclick = async () => { msg('Opening Google…', true); const r = await aqLinkGoogle(); msg(r.ok ? 'Google linked.' : r.error, r.ok); };
+    if (acct.admin) $('.aq-acct-admin').onclick = () => renderAdminBox(box.querySelector('.aq-admin-box'));
+  }
 }
 
-async function renderAdminBox() {
-  const box = document.getElementById('aq-admin-box'); if (!box) return;
+async function renderAdminBox(box) {
+  if (!box) return;
   box.innerHTML = '<div class="aq-acct-note">Loading reset requests…</div>';
   const resets = await aqAdminListResets();
   const keys = Object.keys(resets);
@@ -386,16 +396,16 @@ async function renderAdminBox() {
     ? keys.map(k => `<div class="aq-admin-req"><span>${esc(resets[k].username || k)}</span><button class="win95-btn aq-admin-reset" data-u="${esc(resets[k].username || k)}">Reset</button></div>`).join('')
     : '<div class="aq-acct-note">No pending requests.</div>';
   box.innerHTML = `${list}
-    <div class="aq-acct-row"><input id="aq-admin-user" placeholder="username to reset"><button class="win95-btn" id="aq-admin-go">Reset password</button></div>
-    <div class="aq-acct-msg" id="aq-admin-msg"></div>`;
-  const msg = (t, ok) => { const m = document.getElementById('aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
+    <div class="aq-acct-row"><input class="aq-admin-user" placeholder="username to reset"><button class="win95-btn aq-admin-go">Reset password</button></div>
+    <div class="aq-acct-msg aq-admin-msg"></div>`;
+  const msg = (t, ok) => { const m = box.querySelector('.aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   const doReset = async (name) => {
     const r = await aqAdminResetPassword(name);
-    if (r.ok) { msg(`Temp password for ${name}: ${r.tempPassword} — share it; they'll be asked to change it.`, true); renderAdminBox(); }
+    if (r.ok) { msg(`Temp password for ${name}: ${r.tempPassword} — share it; they'll be asked to change it.`, true); renderAdminBox(box); }
     else msg(r.error, false);
   };
   box.querySelectorAll('.aq-admin-reset').forEach(b => b.onclick = () => doReset(b.dataset.u));
-  document.getElementById('aq-admin-go').onclick = () => { const v = document.getElementById('aq-admin-user').value.trim(); if (v) doReset(v); };
+  box.querySelector('.aq-admin-go').onclick = () => { const v = box.querySelector('.aq-admin-user').value.trim(); if (v) doReset(v); };
 }
 
 // expose

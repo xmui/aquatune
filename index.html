@@ -6712,7 +6712,7 @@ function startProg() {
     // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
     if (playing) {
       _musicWatchMs = (_musicWatchMs || 0) + 500;
-      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 7500); }
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 50); }
     }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;
@@ -14484,6 +14484,46 @@ function fishingSfx(name) {
   } catch (e) {}
 }
 window.fishingSfx = fishingSfx;
+
+/* ── MINING SFX — bitcrushed pickaxe hits / break / upgrade ── */
+function miningSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  // shared bitcrush waveshaper (4-bit quantize) for that lo-fi crunch
+  const crush = cx.createWaveShaper(); crush.oversample = 'none';
+  { const n = 1024, curve = new Float32Array(n), steps = Math.pow(2, 4); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = Math.round(x * steps) / steps; } crush.curve = curve; }
+  const out = cx.createGain(); out.gain.value = 1; crush.connect(out); out.connect(cx.destination);
+  // pitched blip routed through the crusher
+  const cblip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(crush);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  // crushed noise burst
+  const cnoise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 1.0;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(crush);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'hit':   cblip(190, 0, 0.07, 'square', 0.16, 130); cnoise(0, 2200, 0.05, 0.18); break;   // pick clink
+      case 'break': cnoise(0, 600, 0.32, 0.30, true); cblip(150, 0, 0.34, 'sawtooth', 0.16, 60); cblip(300, 0.02, 0.2, 'square', 0.08, 120); break; // rock shatter
+      case 'upgrade': [330, 440, 587, 784].forEach((f, i) => cblip(f, i * 0.07, 0.12, 'square', 0.14)); break; // chime
+    }
+  } catch (e) {}
+}
+window.miningSfx = miningSfx;
 
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {

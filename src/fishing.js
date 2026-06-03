@@ -117,7 +117,8 @@ function landFish(now) {
   sfx('wave-stop');
   if (typeof window.playFanfare === 'function') window.playFanfare('small');
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: true, won: true, mult: (1 + f.rarity * 0.6) * (perfect ? 1.3 : 1) });
+  // XP comes ONLY from landing a fish (never from playing/missing).
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (0.7 + f.rarity * 0.5) * (perfect ? 1.2 : 1) });
   if (typeof window.recordScore === 'function') window.recordScore('fishing', value, f.name);
   try {
     const log = JSON.parse(localStorage.getItem('aq_fishing_log') || '[]');
@@ -131,7 +132,7 @@ function missFish(reason) {
   state = 'miss';
   msg = reason || 'It got away…';
   sfx('fail'); sfx('wave-stop');
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: true, won: false });
+  // no XP for misses — only catches count
   fish = null; S = null;
 }
 

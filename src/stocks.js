@@ -18,31 +18,45 @@ import { db } from './firebase.js';
 // beta = sensitivity to the marketwide move; vol = idiosyncratic jitter multiplier.
 // Keep ids stable so existing holdings carry over across list changes.
 // ---------------------------------------------------------------------------
+// `profile` drives each ticker's personality (see PROFILES below): flat names
+// hug their base price; meme names take huge slow multi-day swings. `beta` =
+// sensitivity to the marketwide (economy) move; `vol` = idiosyncratic jitter.
 const STOCKS = [
   // survivors keep their id so existing holdings carry over (blz is now WEED)
-  { id:'blz',     ticker:'WEED',  name:'Weed Inc.',          basePrice:42,  beta:1.2, vol:1.6 },
-  { id:'snow',    ticker:'SNOW',  name:'Snow',               basePrice:88,  beta:1.6, vol:2.2 },
-  { id:'gun',     ticker:'GUNZ',  name:'Gunz',               basePrice:64,  beta:1.1, vol:1.4 },
-  { id:'cult',    ticker:'CULT',  name:'Cult',               basePrice:9,   beta:1.5, vol:2.4 },
-  { id:'fame',    ticker:'FAME',  name:'Fame',               basePrice:200, beta:2.0, vol:2.8 },
-  { id:'goop',    ticker:'GOOP',  name:'Goop',               basePrice:6.5, beta:0.9, vol:1.3 },
+  { id:'blz',     ticker:'WEED',  name:'Weed Inc.',          basePrice:42,  beta:1.2, vol:1.6, profile:'steady' },
+  { id:'snow',    ticker:'SNOW',  name:'Snow',               basePrice:88,  beta:1.6, vol:2.2, profile:'swingy' },
+  { id:'gun',     ticker:'GUNZ',  name:'Gunz',               basePrice:64,  beta:1.1, vol:1.4, profile:'steady' },
+  { id:'cult',    ticker:'CULT',  name:'Cult',               basePrice:9,   beta:1.5, vol:2.4, profile:'meme' },
+  { id:'fame',    ticker:'FAME',  name:'Fame',               basePrice:200, beta:2.0, vol:2.8, profile:'swingy' },
+  { id:'goop',    ticker:'GOOP',  name:'Goop',               basePrice:6.5, beta:0.9, vol:1.3, profile:'meme' },
   // new tickers
-  { id:'geek',    ticker:'GEEK',  name:'Geekbar',            basePrice:18,  beta:1.3, vol:1.7 },
-  { id:'valve',   ticker:'VALVE', name:'Valve Software',     basePrice:330, beta:0.8, vol:1.1 },
-  { id:'dc',      ticker:'DC',    name:'DC Shoes',           basePrice:54,  beta:1.0, vol:1.3 },
-  { id:'osiris',  ticker:'OSIR',  name:'Osiris Shoes',       basePrice:37,  beta:1.1, vol:1.5 },
-  { id:'monster', ticker:'MNST',  name:'Monster Energy',     basePrice:96,  beta:1.2, vol:1.4 },
-  { id:'gfuel',   ticker:'GFUEL', name:'G Fuel',             basePrice:29,  beta:1.3, vol:1.8 },
-  { id:'marlboro',ticker:'MARL',  name:'Marlboro',           basePrice:140, beta:0.7, vol:1.0 },
-  { id:'camel',   ticker:'CAML',  name:'Camel',              basePrice:72,  beta:0.8, vol:1.1 },
-  { id:'lucky',   ticker:'LUCK',  name:'Lucky Strike',       basePrice:58,  beta:0.9, vol:1.2 },
-  { id:'miku',    ticker:'MIKU',  name:'Hatsune Miku',       basePrice:160, beta:1.7, vol:2.3 },
-  { id:'hottopic',ticker:'HOT',   name:'Hot Topic',          basePrice:25,  beta:1.2, vol:1.6 },
-  { id:'swag',    ticker:'SWAG',  name:'Swag',               basePrice:4.2, beta:1.8, vol:2.6 },
-  { id:'michael', ticker:'MIKE',  name:'Michael Camera',     basePrice:80,  beta:1.0, vol:1.4 },
-  { id:'slop',    ticker:'SLOP',  name:'AI Slop',            basePrice:11,  beta:1.9, vol:2.7 },
-  { id:'buddy',   ticker:'BUDDY', name:'AquaBuddy',          basePrice:50,  beta:1.0, vol:1.5 },
+  { id:'geek',    ticker:'GEEK',  name:'Geekbar',            basePrice:18,  beta:1.3, vol:1.7, profile:'swingy' },
+  { id:'valve',   ticker:'VALVE', name:'Valve Software',     basePrice:330, beta:0.8, vol:1.1, profile:'flat' },
+  { id:'dc',      ticker:'DC',    name:'DC Shoes',           basePrice:54,  beta:1.0, vol:1.3, profile:'steady' },
+  { id:'osiris',  ticker:'OSIR',  name:'Osiris Shoes',       basePrice:37,  beta:1.1, vol:1.5, profile:'steady' },
+  { id:'monster', ticker:'MNST',  name:'Monster Energy',     basePrice:96,  beta:1.2, vol:1.4, profile:'steady' },
+  { id:'gfuel',   ticker:'GFUEL', name:'G Fuel',             basePrice:29,  beta:1.3, vol:1.8, profile:'swingy' },
+  { id:'marlboro',ticker:'MARL',  name:'Marlboro',           basePrice:140, beta:0.7, vol:1.0, profile:'flat' },
+  { id:'camel',   ticker:'CAML',  name:'Camel',              basePrice:72,  beta:0.8, vol:1.1, profile:'flat' },
+  { id:'lucky',   ticker:'LUCK',  name:'Lucky Strike',       basePrice:58,  beta:0.9, vol:1.2, profile:'flat' },
+  { id:'miku',    ticker:'MIKU',  name:'Hatsune Miku',       basePrice:160, beta:1.7, vol:2.3, profile:'swingy' },
+  { id:'hottopic',ticker:'HOT',   name:'Hot Topic',          basePrice:25,  beta:1.2, vol:1.6, profile:'swingy' },
+  { id:'swag',    ticker:'SWAG',  name:'Swag',               basePrice:4.2, beta:1.8, vol:2.6, profile:'meme' },
+  { id:'michael', ticker:'MIKE',  name:'Michael Camera',     basePrice:80,  beta:1.0, vol:1.4, profile:'steady' },
+  { id:'slop',    ticker:'SLOP',  name:'AI Slop',            basePrice:11,  beta:1.9, vol:2.7, profile:'meme' },
+  { id:'buddy',   ticker:'BUDDY', name:'AquaBuddy',          basePrice:50,  beta:1.0, vol:1.5, profile:'steady' },
 ];
+// Per-stock personality. The main variance is the slow fair-value swing
+// (trendAmp, in log space: ~e^±amp around base over its multi-day cycle).
+// meanRevert is how tightly price tracks that fair value; `noise` is the
+// per-tick jitter std (kept small enough that reversion contains it so the
+// trend stays visible and prices never explode); spike scales rare big shocks.
+const PROFILES = {
+  flat:   { meanRevert: 0.060, trendAmp: 0.10, noise: 0.015, spike: 0.2 },
+  steady: { meanRevert: 0.035, trendAmp: 0.32, noise: 0.035, spike: 0.5 },
+  swingy: { meanRevert: 0.020, trendAmp: 0.65, noise: 0.070, spike: 1.0 },
+  meme:   { meanRevert: 0.013, trendAmp: 1.05, noise: 0.110, spike: 1.5 },
+};
 const STOCK_BY_ID = Object.fromEntries(STOCKS.map(s => [s.id, s]));
 const STOCK_IDX = Object.fromEntries(STOCKS.map((s, i) => [s.id, i])); // stable per-stock discriminator
 
@@ -52,8 +66,8 @@ const STOCK_IDX = Object.fromEntries(STOCKS.map((s, i) => [s.id, i])); // stable
 const TICK_MS        = 4000;   // one price tick every 4s
 const DRIFT          = 0.0008; // slight upward bias per tick
 const CALM_VOL       = 0.006;  // marketwide step size when regime = 0
-const CHAOS_VOL      = 0.055;  // marketwide step size when regime = 1
-const REGIME_PERIOD  = 45;     // ticks per regime segment (~3 min) — calm<->chaotic drift
+const CHAOS_VOL      = 0.040;  // marketwide step size when regime = 1
+const REGIME_PERIOD  = 600;    // ticks per regime segment (~40 min) — slow calm<->chaotic macro drift
 const SNAPSHOT_EVERY = 20;     // write a Firebase snapshot every N ticks
 const CHART_WINDOW   = 160;    // max points kept for the live chart
 const PRICE_FLOOR    = 0.01;
@@ -107,22 +121,55 @@ function regimeAt(tick) {
   return a + (b - a) * s;
 }
 
-// Marketwide return for a tick (shared by all stocks via their beta)
+// Marketwide return for a tick (the "economy" — shared by all stocks via beta).
+// Big market-wide crashes/melt-ups are deliberately RARE.
 function marketReturn(tick, regime) {
   const rng = rngFor([SEED, 'mkt', tick]);
   const vol = lerp(CALM_VOL, CHAOS_VOL, regime);
   let r = DRIFT + (rng() * 2 - 1) * vol;
-  if (rng() < 0.012 * regime)      r -= (0.05 + rng() * 0.28); // marketwide crash
-  else if (rng() < 0.012 * regime) r += (0.04 + rng() * 0.20); // marketwide melt-up
+  if (rng() < 0.004 * regime)      r -= (0.05 + rng() * 0.28); // rare marketwide crash
+  else if (rng() < 0.004 * regime) r += (0.04 + rng() * 0.20); // rare marketwide melt-up
   return r;
 }
 
-// Per-stock return for a tick
+// ── Per-stock personality: a slowly-moving "fair value" each stock reverts to.
+// Built from a couple of sine waves whose periods are randomized in [1 hour,
+// 2 weeks] (deterministic per seed+id) so every ticker has its own long bull/
+// bear cycles — some wild, some flat — independent of the others.
+const MINT = 900;        // 1 hour in ticks (TICK_MS = 4s)
+const MAXT = 302400;     // 2 weeks in ticks
+let _persCache = {}, _persSeed = null;
+function persFor(s) {
+  if (_persSeed !== SEED) { _persCache = {}; _persSeed = SEED; }
+  if (_persCache[s.id]) return _persCache[s.id];
+  const r = rngFor([SEED, s.id, 'pers']);
+  const prof = PROFILES[s.profile] || PROFILES.steady;
+  const pers = {
+    ...prof,
+    waves: [
+      { period: Math.round(lerp(MAXT * 0.3, MAXT, r())),  phase: r() * 6.2832, w: 0.7 },
+      { period: Math.round(lerp(MINT, MAXT * 0.15, r())), phase: r() * 6.2832, w: 0.3 },
+    ],
+  };
+  return (_persCache[s.id] = pers);
+}
+function trendLog(s, tick) {
+  const p = persFor(s); let v = 0;
+  for (const w of p.waves) v += w.w * Math.sin((tick / w.period) * 6.2832 + w.phase);
+  return p.trendAmp * v;
+}
+function fairValue(s, tick) { return s.basePrice * Math.exp(trendLog(s, tick)); }
+
+// Per-stock return for a tick: economy (beta·market) + personality jitter + a
+// rare idiosyncratic spike/crash (rarer for calm profiles).
 function stockReturn(stock, tick, regime, mktR) {
+  const p = persFor(stock);
   const rng = rngFor([SEED, stock.id, tick]);
-  const idioVol = lerp(CALM_VOL, CHAOS_VOL, regime) * stock.vol;
+  // small per-tick jitter (quieter in calm regimes), nudged by the ticker's vol
+  const idioVol = lerp(p.noise * 0.3, p.noise, regime) * (0.7 + 0.3 * stock.vol);
   let r = stock.beta * mktR + (rng() * 2 - 1) * idioVol;
-  if (rng() < 0.008 + 0.04 * regime) r += (rng() * 2 - 1) * (0.10 + 0.45 * regime); // idiosyncratic shock
+  // rare idiosyncratic shock — rarer AND smaller for calm profiles
+  if (rng() < (0.0010 + 0.008 * regime) * p.spike) r += (rng() * 2 - 1) * (0.15 + 0.45 * regime) * Math.min(1, p.spike);
   return r;
 }
 
@@ -153,8 +200,9 @@ function advanceTo(target) {
     for (const s of STOCKS) {
       const buf = history[s.id];
       const prev = buf[buf.length - 1].price;
-      // Mean-reversion toward base price in log space — deterministic (prev is shared).
-      const revert = MEAN_REVERT * Math.log(s.basePrice / prev);
+      // Revert toward the stock's slowly-moving fair value (its personality
+      // cycle) rather than a fixed base — this is what breaks the equilibrium.
+      const revert = persFor(s).meanRevert * Math.log(fairValue(s, t) / prev);
       let next = prev * (1 + stockReturn(s, t, regime, mktR) + revert);
       if (!isFinite(next) || next < PRICE_FLOOR) next = PRICE_FLOOR;
       buf.push({ tick: t, price: next });

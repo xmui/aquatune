@@ -11,8 +11,9 @@ paths:
 
 - `usernames/{usernameLower}` and `googleUsers/{uid}` are **claim-once** (can be
   created, can't be overwritten by another account) — prevents username/Google
-  hijacking and races.
-- `accounts/{id}` can be created and updated, but `usernameLower` can't be changed.
+  hijacking and races. Username uniqueness is enforced here.
+- `accounts/{id}` is readable/writable (the trust model below); renaming claims
+  the new name in the `usernames` index and leaves the old one pointing at you.
 
 Deploy with the Firebase CLI:
 

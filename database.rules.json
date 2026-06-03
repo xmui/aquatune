@@ -10,9 +10,7 @@
 
     "accounts": {
       ".read": true,
-      "$id": {
-        ".write": "!data.exists() || newData.child('usernameLower').val() === data.child('usernameLower').val()"
-      }
+      "$id": { ".write": true }
     },
     "usernames": {
       ".read": true,

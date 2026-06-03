@@ -215,6 +215,31 @@ async function aqChangePassword(newPassword) {
   return { ok: true };
 }
 
+// Rename works for any account, including Google-only ones (whose name was
+// auto-derived from the Google display name).
+async function aqChangeUsername(newName) {
+  if (!window._aqAccountId) return { ok: false, error: 'Not logged in.' };
+  newName = String(newName || '').trim();
+  if (!USERNAME_RE.test(newName)) return { ok: false, error: 'Username must be 3–24 chars (letters, numbers, space, _ or -).' };
+  const id = window._aqAccountId, lo = lower(newName);
+  try {
+    if (lo !== (_account && _account.usernameLower)) {
+      const existing = await get(userIdxRef(lo));
+      if (existing.exists() && existing.val() !== id) return { ok: false, error: 'That username is taken.' };
+      const claim = await runTransaction(userIdxRef(lo), cur => (cur == null || cur === id ? id : undefined));
+      if (!claim.committed || claim.snapshot.val() !== id) return { ok: false, error: 'That username was just taken.' };
+      // (the old username index is left pointing at this account, so you can
+      // still log in with it; releasing it would need server-side auth.)
+    }
+    await update(accRef(id), { username: newName, usernameLower: lo, updatedAt: Date.now() });
+    if (_account) { _account.username = newName; _account.usernameLower = lo; }
+    localStorage.setItem('aq_username', newName);
+    const chip = document.getElementById('aq-username-chip'); if (chip) chip.textContent = newName;
+    aqRenderAccountPanel();
+    return { ok: true };
+  } catch { return { ok: false, error: 'Could not change username (network?).' }; }
+}
+
 // ---------------------------------------------------------------------------
 // Forgot password — user requests, admin resets
 // ---------------------------------------------------------------------------
@@ -337,6 +362,7 @@ function aqRenderAccountPanel() {
     <div class="aq-acct-who">Signed in as <b>${esc(acct.username)}</b></div>
     <div class="aq-acct-row">
       <button class="win95-btn" id="aq-acct-logout">Log out</button>
+      <button class="win95-btn" id="aq-acct-rename">Change username</button>
       <button class="win95-btn" id="aq-acct-changepw">Change password</button>
       <button class="win95-btn" id="aq-acct-link" ${linked ? 'disabled' : ''}>${linked ? 'Google linked ✓' : 'Connect Google'}</button>
     </div>
@@ -344,6 +370,7 @@ function aqRenderAccountPanel() {
     ${acct.admin ? '<div class="aq-acct-row"><button class="win95-btn" id="aq-acct-admin">Admin: password resets</button></div><div id="aq-admin-box"></div>' : ''}`;
   const msg = (t, ok) => { const m = document.getElementById('aq-acct-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   document.getElementById('aq-acct-logout').onclick = () => aqLogout();
+  document.getElementById('aq-acct-rename').onclick = async () => { const nn = prompt('New username:', acct.username); if (!nn) return; msg('Renaming…', true); const r = await aqChangeUsername(nn); msg(r.ok ? 'Username changed.' : r.error, r.ok); };
   document.getElementById('aq-acct-changepw').onclick = async () => { const np = prompt('New password:'); if (!np) return; const r = await aqChangePassword(np); msg(r.ok ? 'Password changed.' : r.error, r.ok); };
   const linkBtn = document.getElementById('aq-acct-link');
   if (linkBtn && !linked) linkBtn.onclick = async () => { msg('Opening Google…', true); const r = await aqLinkGoogle(); msg(r.ok ? 'Google linked.' : r.error, r.ok); };
@@ -373,7 +400,7 @@ async function renderAdminBox() {
 
 // expose
 Object.assign(window, {
-  aqSignup, aqLogin, aqLogout, aqChangePassword, aqRequestReset,
+  aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
   aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel,
 });
 

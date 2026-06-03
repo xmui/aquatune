@@ -14351,6 +14351,7 @@ function fishingSfx(name) {
       case 'tick':  blip(1500, 0, 0.05, 'triangle', 0.14, 1900); break; // struggle hit
       case 'buzz':  blip(150, 0, 0.16, 'sawtooth', 0.16, 90); break;    // struggle miss
       case 'fail':  blip(300, 0, 0.28, 'sine', 0.16, 110); break;       // got away / scared
+      case 'monster': blip(120, 0, 0.5, 'sawtooth', 0.2, 70); blip(180, 0.06, 0.45, 'square', 0.12, 90); snap(0.02, 700, 0.4, 0.14, 0.6, 200); break; // 🐋 alarm
     }
   } catch (e) {}
 }

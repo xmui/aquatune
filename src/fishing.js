@@ -26,6 +26,16 @@ const WAIT_MIN = 4200, WAIT_RAND = 8500;     // ms before the real bite (patienc
 const CAST_MS = 550;                         // toss animation before waiting
 const BITE_WINDOW_BASE = 640, BITE_WINDOW_PER = 78;   // reaction window (ms), −per rarity
 const STRUGGLE_MS_BASE = 5200, STRUGGLE_MS_PER = 560; // struggle time limit (ms), −per rarity
+const MONSTER_CHANCE = 0.04;                          // base chance per bite (×condition)
+const CONDITION_EVERY = 5;                            // re-roll water condition every N casts
+// Session water condition — shifts bite frequency AND fight difficulty.
+const CONDITIONS = {
+  calm:   { name: '🌅 Calm',   waitMult: 0.8, nibbleBias: -1, windowMult: 1.25, speedMult: 0.85, zoneMult: 1.20, monsterMult: 0.6 },
+  choppy: { name: '🌊 Choppy', waitMult: 1.0, nibbleBias: 0,  windowMult: 1.00, speedMult: 1.00, zoneMult: 1.00, monsterMult: 1.0 },
+  stormy: { name: '⛈️ Stormy', waitMult: 1.3, nibbleBias: 1,  windowMult: 0.78, speedMult: 1.25, zoneMult: 0.82, monsterMult: 1.8 },
+};
+const MONSTER = { name: 'Leviathan', rarity: 5, value: 400, color: 0, monster: true };
+const STYLE_LABEL = { steady: '', darter: 'darter!', lunger: 'lunger!', drifter: 'drifter!', thrasher: 'thrasher!', monster: 'LEVIATHAN' };
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false, _fishInfo = null;
@@ -40,6 +50,13 @@ let nibbleFlashUntil = 0;   // visual twitch
 
 // struggle state
 let S = null;
+let condition = CONDITIONS.choppy, _castCount = 0;
+function rollCondition() { condition = CONDITIONS[['calm', 'choppy', 'choppy', 'stormy'][(Math.random() * 4) | 0]]; }
+function pickStyle(rarity) {
+  const hard = ['darter', 'lunger', 'drifter', 'thrasher'];
+  const steadyChance = rarity <= 0 ? 0.6 : rarity >= 3 ? 0 : 0.35;
+  return Math.random() < steadyChance ? 'steady' : hard[(Math.random() * hard.length) | 0];
+}
 
 function lvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('fishing')) || 1; }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
@@ -59,6 +76,7 @@ function startCast() {
   state = 'casting';
   msg = 'Casting…';
   fish = null; S = null;
+  if (_castCount++ % CONDITION_EVERY === 0) rollCondition();
   castUntil = performance.now() + CAST_MS;
   sfx('wave-start');
 }
@@ -66,11 +84,11 @@ function startCast() {
 function enterWaiting(now) {
   state = 'waiting';
   msg = 'Waiting for a bite…';
-  const wait = WAIT_MIN + Math.random() * WAIT_RAND - Math.min(2500, lvl() * 25);
+  const wait = (WAIT_MIN + Math.random() * WAIT_RAND - Math.min(2500, lvl() * 25)) * condition.waitMult;
   biteAt = now + Math.max(2200, wait);
-  // schedule 0–3 fake nibbles strictly before the real bite
+  // schedule fake nibbles strictly before the real bite (more when stormy)
   nibbles = [];
-  const n = Math.floor(Math.random() * 4);
+  const n = Math.max(0, Math.min(4, Math.floor(Math.random() * 4) + condition.nibbleBias));
   for (let i = 0; i < n; i++) {
     const at = now + 1000 + Math.random() * (biteAt - now - 1400);
     if (at > now + 600 && at < biteAt - 500) nibbles.push({ at, done: false });
@@ -79,43 +97,53 @@ function enterWaiting(now) {
 }
 
 function enterBite(now) {
-  fish = pickFish();
+  const monster = Math.random() < MONSTER_CHANCE * condition.monsterMult * (1 + lvl() / 200);
+  fish = monster ? MONSTER : pickFish();
   state = 'bite';
-  msg = '! DING — REEL NOW !';
-  biteWindowEnd = now + Math.max(280, BITE_WINDOW_BASE - fish.rarity * BITE_WINDOW_PER);
-  sfx('ding');
+  // per-cast reaction-window jitter × water condition
+  const jitter = 0.8 + Math.random() * 0.4;
+  let win = (BITE_WINDOW_BASE - fish.rarity * BITE_WINDOW_PER) * condition.windowMult * jitter;
+  if (monster) win *= 0.9;
+  biteWindowEnd = now + Math.max(260, win);
+  msg = monster ? '🐋 MONSTER! REEL!' : '! DING — REEL NOW !';
+  sfx(monster ? 'monster' : 'ding');
 }
 
 function enterStruggle(now) {
-  sfx('hook');
-  const r = fish.rarity;
+  const monster = !!(fish && fish.monster);
+  sfx(monster ? 'monster' : 'hook');
+  const r = fish.rarity, c = condition;
+  // per-cast jitter so even the same fish varies cast-to-cast
+  const jv = 0.8 + Math.random() * 0.45;   // marker speed
+  const jz = 0.8 + Math.random() * 0.4;    // zone width
+  let need = Math.max(2, Math.min(4, 2 + r + (Math.random() < 0.35 ? 1 : 0) - (Math.random() < 0.25 ? 1 : 0)));
+  let markerV = (1.5 + r * 0.55) * c.speedMult * jv;
+  let zoneW = Math.max(9, (30 - r * 4) * c.zoneMult * jz);
+  let totalMs = Math.max(2600, (STRUGGLE_MS_BASE - r * STRUGGLE_MS_PER) * (0.85 + Math.random() * 0.4));
+  let maxMiss = r >= 3 ? 0 : 1;
+  let style = monster ? 'monster' : pickStyle(r);
+  if (monster) { markerV *= 1.45; zoneW = Math.max(10, zoneW * 0.85); need = Math.min(6, need + 2); totalMs *= 1.5; maxMiss = 0; }
+  markerV = Math.min(6.2, markerV);   // keep the marker from skipping past the zone between frames
   S = {
-    need: Math.max(2, Math.min(4, 2 + r)),
-    hits: 0,
-    misses: 0,
-    maxMiss: r >= 3 ? 0 : 1,
-    markerX: 0,
-    markerV: 1.6 + r * 0.6,         // % per frame
-    dir: 1,
-    zoneW: Math.max(11, 30 - r * 4), // % width (shrinks with rarity)
-    zoneX: 0,
-    totalMs: Math.max(2600, STRUGGLE_MS_BASE - r * STRUGGLE_MS_PER),
-    endAt: 0,
+    need, hits: 0, misses: 0, maxMiss, style, monster,
+    markerX: 0, markerV, dir: 1,
+    zoneW, zoneW0: zoneW, zoneX: 0,
+    zoneVX: (style === 'drifter' || style === 'monster') ? (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.45) : 0,
+    totalMs, endAt: now + totalMs, t0: now,
   };
-  S.endAt = now + S.totalMs;
   rerollZone();
   state = 'struggle';
-  msg = 'Reel it in! Tap on green';
+  msg = (monster ? '🐋 ' : '') + 'Reel! ' + (STYLE_LABEL[style] || 'tap on green');
 }
-function rerollZone() { if (S) S.zoneX = Math.random() * (100 - S.zoneW); }
+function rerollZone() { if (S) S.zoneX = Math.random() * Math.max(0, 100 - S.zoneW); }
 
 function landFish(now) {
   const f = fish, perfect = S && S.misses === 0;
   const value = Math.round(f.value * (perfect ? 1.25 : 1));
   state = 'caught';
-  msg = `Caught a ${f.name}! +${value}💰` + (perfect ? ' ✨perfect' : '');
+  msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + `+${value}💰` + (perfect ? ' ✨perfect' : '');
   sfx('wave-stop');
-  if (typeof window.playFanfare === 'function') window.playFanfare('small');
+  if (typeof window.playFanfare === 'function') window.playFanfare(f.monster ? 'jackpot' : 'small');
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
   // XP comes ONLY from landing a fish (never from playing/missing).
   if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (0.7 + f.rarity * 0.5) * (perfect ? 1.2 : 1) });
@@ -150,7 +178,7 @@ function tapStruggle() {
     S.hits++; sfx('tick');
     if (S.hits >= S.need) { landFish(performance.now()); return; }
     rerollZone();
-    S.markerV *= 1.12;            // speed up each hit
+    S.markerV = Math.min(6.5, S.markerV * 1.12);   // speed up each hit (capped)
   } else {
     S.misses++; sfx('buzz');
     if (S.misses > S.maxMiss) { missFish('Line snapped!'); return; }
@@ -186,9 +214,26 @@ function tick(t) {
   }
   if (state === 'bite' && now > biteWindowEnd) missFish('Too slow — it spat the hook!');
   if (state === 'struggle' && S) {
-    S.markerX += S.markerV * S.dir * f;
+    const style = S.style, elapsed = now - S.t0;
+    let v = S.markerV;
+    if (style === 'darter' || style === 'monster') {            // jittery: flicker speed, random flips
+      if (Math.random() < 0.05 * f) S.dir *= (Math.random() < 0.35 ? -1 : 1);
+      v *= 0.65 + Math.random() * 0.95;
+    }
+    if (style === 'lunger') v *= 0.6 + Math.max(0, Math.sin(elapsed / 300)) * 1.7;  // speed bursts
+    S.markerX += v * S.dir * f;
     if (S.markerX <= 0) { S.markerX = 0; S.dir = 1; }
     if (S.markerX >= 100) { S.markerX = 100; S.dir = -1; }
+    if (S.zoneVX) {                                              // drifter/monster: moving green zone
+      S.zoneX += S.zoneVX * f;
+      const maxX = Math.max(0, 100 - S.zoneW);
+      if (S.zoneX <= 0) { S.zoneX = 0; S.zoneVX = Math.abs(S.zoneVX); }
+      if (S.zoneX >= maxX) { S.zoneX = maxX; S.zoneVX = -Math.abs(S.zoneVX); }
+    }
+    if (style === 'thrasher' || style === 'monster') {          // shrinking green zone
+      S.zoneW = Math.max(9, S.zoneW0 * (1 - Math.min(0.55, elapsed / S.totalMs)));
+      if (S.zoneX > 100 - S.zoneW) S.zoneX = Math.max(0, 100 - S.zoneW);
+    }
     if (now > S.endAt) missFish('It wore you out…');
   }
 
@@ -203,6 +248,9 @@ function draw(t) {
   if (!cx) return;
   cx.fillStyle = SKY; cx.fillRect(0, 0, W, WATER_Y);
   cx.fillStyle = WATER; cx.fillRect(0, WATER_Y, W, H - WATER_Y);
+  // water-condition label (top-right)
+  cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'right';
+  cx.fillText(condition.name, W - 3, 3); cx.textAlign = 'left';
   // animated wave lines
   cx.fillStyle = PAL[2];
   for (let y = WATER_Y + 8; y < H - 16; y += 12) {
@@ -306,6 +354,7 @@ function openFishing(show = true) {
   if (window.OS && window.OS.register) { window.OS.register('fishing'); window.OS.focus('fishing'); }
   if (!_built) build();
   state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
+  rollCondition(); _castCount = 0;
   refreshInfo();
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
   clearInterval(window._fishInfoT);

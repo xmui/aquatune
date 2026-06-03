@@ -3641,6 +3641,10 @@ body.perf-mode #aqua-gun { display: none !important; }
     .sk-rank-name { flex:1; font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sk-rank-lvl { font-size:15px; font-weight:800; color:var(--accent2); font-variant-numeric:tabular-nums; }
     .sk-rank-note { font-size:12px; color:var(--text2); padding:10px 4px; text-align:center; }
+    .sk-login-note { font-size:13px; color:var(--text); line-height:1.5; background:rgba(0,180,220,0.06); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+    .sk-credits { font-size:13px; color:var(--text2); display:flex; align-items:center; gap:6px; }
+    .sk-credits-val { color:#ffcd50; font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; }
+    .sk-wip { align-self:center; font-size:10px; font-weight:700; letter-spacing:0.5px; color:var(--text2); text-transform:uppercase; opacity:0.75; }
     @media (max-width:768px) {
       #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
       .sk-grid { grid-template-columns:1fr; }
@@ -3676,6 +3680,37 @@ body.perf-mode #aqua-gun { display: none !important; }
     .gbc-info { font-family:monospace; font-size:11px; font-weight:700; color:#1a2a0a; }
     @media (max-width:768px) {
       #fishing-wrap, #mining-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
+    }
+
+    /* ── BUDDY SHOOT ─── */
+    #buddyshoot-wrap {
+      position:fixed; top:50px; left:50%; transform:translateX(-50%);
+      width:420px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
+      background:var(--panel); border:1px solid var(--border); box-shadow:0 18px 50px rgba(0,0,0,0.4); font-family:var(--font-ui); overflow:hidden;
+    }
+    #buddyshoot-wrap.open { display:flex; }
+    #buddyshoot-area { display:flex; flex-direction:column; }
+    .bs-hud { display:flex; gap:10px; justify-content:space-between; padding:6px 12px; font-size:12px; font-weight:800; color:#fff;
+      background:linear-gradient(180deg,#1c2b6b,#0e1740); flex-wrap:wrap; }
+    .bs-stage { position:relative; height:340px; overflow:hidden; cursor:crosshair; touch-action:none; user-select:none;
+      background:linear-gradient(180deg,#7ec8ff 0%,#bfe8ff 62%,#9ad06a 62%,#7bbf4f 100%); }
+    .bs-buddy { position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
+    .bs-buddy svg { width:100%; height:auto; display:block; }
+    .bs-buddy.bs-hit { animation:bsHit .26s ease forwards; }
+    @keyframes bsHit { 0%{transform:scale(1)} 30%{transform:scale(1.25) rotate(8deg)} 100%{transform:translateY(60px) scale(.5) rotate(40deg); opacity:0} }
+    .bs-pop { position:absolute; transform:translate(-50%,-50%); font-size:14px; font-weight:900; color:#fff; text-shadow:0 1px 2px #003; pointer-events:none; animation:bsPop .7s ease-out forwards; }
+    @keyframes bsPop { 0%{opacity:0; transform:translate(-50%,-50%) scale(.6)} 20%{opacity:1} 100%{opacity:0; transform:translate(-50%,-160%) scale(1.1)} }
+    .bs-toast { position:absolute; top:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; font-size:12px; font-weight:700; padding:4px 12px; border-radius:14px; transition:opacity .3s; pointer-events:none; z-index:5; }
+    .bs-overlay { position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:16px; text-align:center; background:rgba(6,16,40,0.86); color:#fff; }
+    .bs-ov-title { font-size:20px; font-weight:900; }
+    .bs-ov-sub { font-size:12px; opacity:0.9; max-width:300px; line-height:1.4; }
+    .bs-diffrow { display:flex; gap:8px; }
+    .bs-btn { font-size:13px; font-weight:800; padding:8px 16px; border-radius:10px; cursor:pointer; color:#04121f;
+      background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
+    .bs-btn:hover { filter:brightness(1.08); }
+    @media (max-width:768px) {
+      #buddyshoot-wrap { width:100vw; top:0; left:0; transform:none; height:100dvh; border-radius:0; }
+      #buddyshoot-area { flex:1; min-height:0; } .bs-stage { flex:1; height:auto; }
     }
 
     /* ── SPACE PINBALL (native canvas) ─── */
@@ -5116,6 +5151,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             <button class="apps-game-btn" onclick="OS.open('mining');toggleAppsMenu()">
               <span class="agb-icon">⛏️</span><span class="agb-name">Mining</span>
             </button>
+            <button class="apps-game-btn" onclick="OS.open('buddyshoot');toggleAppsMenu()">
+              <span class="agb-icon">🦆</span><span class="agb-name">Buddy Shoot</span>
+            </button>
             <button class="apps-game-btn" onclick="OS.open('stats');toggleAppsMenu()">
               <span class="agb-icon">📊</span><span class="agb-name">Stats</span>
             </button>
@@ -5406,6 +5444,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="stocks" onclick="OS.open('stocks')"><span class="agb-icon">&#128200;</span><span class="agb-name">Exchange</span></button>
       <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
       <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
+      <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
       <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
@@ -6761,7 +6800,7 @@ function startProg() {
     // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
     if (playing) {
       _musicWatchMs = (_musicWatchMs || 0) + 500;
-      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 50); }
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 20); }
     }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;
@@ -8222,6 +8261,7 @@ const APPS = {
   stats:     { el:'stats-wrap',     name:'Stats',      tb:'#stats-titlebar',     openFn:()=>window.openStats?.(),   closeFn:()=>{ window.openStats?.(false); window._aqStatsClosed?.(); } },
   fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
   mining:    { el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
+  buddyshoot:{ el:'buddyshoot-wrap',name:'Buddy Shoot',tb:'#buddyshoot-titlebar',openFn:()=>window.openBuddyShoot?.(), closeFn:()=>window.openBuddyShoot?.(false) },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8547,7 +8587,7 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
-  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'},
+  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
@@ -8614,6 +8654,9 @@ const LB_GAMES = {
   rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
   holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
   pinball:  { label:'Space Pinball', icon:'🕹️', unit:'pts',     lower:false },
+  fishing:  { label:'Fishing',      icon:'🎣', unit:'value',   lower:false },
+  mining:   { label:'Mining',       icon:'⛏️', unit:'ore',     lower:false },
+  buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
 };
 const LB_PATH = 'leaderboard';
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
@@ -8633,10 +8676,10 @@ function recordScore(game, score, detail) {
   const d = _lbRead();
   d[game] = _lbSort(game, [...(d[game] || []), entry]).slice(0, 10);
   _lbWrite(d);
-  // Global leaderboard on Firebase
+  // Global leaderboard on Firebase — only logged-in accounts show up publicly.
   try {
     const { push: fbPush, ref: fbRef } = window._fbFns || {};
-    if (window._aqDb && fbPush && fbRef) fbPush(fbRef(window._aqDb, `${LB_PATH}/${game}`), entry);
+    if (window._aqAccountId && window._aqDb && fbPush && fbRef) fbPush(fbRef(window._aqDb, `${LB_PATH}/${game}`), entry);
   } catch {}
   if (document.getElementById('win-leaderboard')?.classList.contains('open')) renderLeaderboard();
 }
@@ -9383,6 +9426,19 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
       <path d="M 45 41.5 Q 50 42.5 55 41.5" fill="none" stroke="rgba(255,100,120,0.5)" stroke-width="1.5" stroke-linecap="round"/>`,
   };
   const OUTFIT_KEYS = Object.keys(OUTFIT_DEFS);
+  // Reuse the buddy + hats for the Buddy Shoot game (src/buddyshoot.js).
+  window.aqBuddyOutfitKeys = OUTFIT_KEYS;
+  window.aqMakeBuddySprite = function (outfitKey) {
+    const src = document.querySelector('#aqua-buddy svg');
+    if (!src) return null;
+    const svg = src.cloneNode(true);
+    svg.removeAttribute('style');
+    const defs = svg.querySelector('defs'); if (defs) defs.remove(); // gradients resolve to the live buddy's defs
+    const og = svg.querySelector('#ab-outfit');
+    if (og) og.innerHTML = (outfitKey && OUTFIT_DEFS[outfitKey]) ? OUTFIT_DEFS[outfitKey] : '';
+    svg.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));   // avoid duplicate ids
+    return svg;
+  };
   let outfitIdx = parseInt(localStorage.getItem('yt_buddy_outfit') || '0');
   if (outfitIdx >= OUTFIT_KEYS.length) outfitIdx = 0;
   const OUTFIT_QUIPS = {
@@ -11961,6 +12017,7 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="openHoldem()" title="Texas Hold'em">🂡<span>Hold'em</span></button>
   <button class="mob-tool-btn" onclick="OS.open('fishing')" title="Fishing">🎣<span>Fishing</span></button>
   <button class="mob-tool-btn" onclick="OS.open('mining')" title="Mining">⛏️<span>Mining</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
@@ -14347,6 +14404,7 @@ function fishingSfx(name) {
       case 'tick':  blip(1500, 0, 0.05, 'triangle', 0.14, 1900); break; // struggle hit
       case 'buzz':  blip(150, 0, 0.16, 'sawtooth', 0.16, 90); break;    // struggle miss
       case 'fail':  blip(300, 0, 0.28, 'sine', 0.16, 110); break;       // got away / scared
+      case 'monster': blip(120, 0, 0.5, 'sawtooth', 0.2, 70); blip(180, 0.06, 0.45, 'square', 0.12, 90); snap(0.02, 700, 0.4, 0.14, 0.6, 200); break; // 🐋 alarm
     }
   } catch (e) {}
 }
@@ -14386,11 +14444,47 @@ function miningSfx(name) {
     switch (name) {
       case 'hit':   cblip(190, 0, 0.07, 'square', 0.16, 130); cnoise(0, 2200, 0.05, 0.18); break;   // pick clink
       case 'break': cnoise(0, 600, 0.32, 0.30, true); cblip(150, 0, 0.34, 'sawtooth', 0.16, 60); cblip(300, 0.02, 0.2, 'square', 0.08, 120); break; // rock shatter
+      case 'crit':  cblip(520, 0, 0.10, 'square', 0.2, 880); cnoise(0, 3200, 0.07, 0.22); cblip(1040, 0.03, 0.12, 'triangle', 0.12); break; // bright clang
       case 'upgrade': [330, 440, 587, 784].forEach((f, i) => cblip(f, i * 0.07, 0.12, 'square', 0.14)); break; // chime
     }
   } catch (e) {}
 }
 window.miningSfx = miningSfx;
+
+/* ── BUDDY SHOOT SFX — gunshot / hit / empty ── */
+function buddySfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const noise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 0.8;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'shot':  noise(0, 1200, 0.12, 0.35, true); blip(180, 0, 0.1, 'sawtooth', 0.12, 60); break;  // bang
+      case 'hit':   blip(900, 0, 0.08, 'triangle', 0.18, 1500); noise(0, 2600, 0.06, 0.16); break;     // poof + ping
+      case 'empty': blip(2000, 0, 0.03, 'square', 0.1); blip(1500, 0.03, 0.03, 'square', 0.08); break; // click click
+      case 'clear': [523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.07, 0.12, 'square', 0.14)); break;
+    }
+  } catch (e) {}
+}
+window.buddySfx = buddySfx;
 
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {
@@ -16832,6 +16926,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/poker.js"></script>
 <script type="module" src="/src/fishing.js"></script>
 <script type="module" src="/src/mining.js"></script>
+<script type="module" src="/src/buddyshoot.js"></script>
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">
@@ -17038,6 +17133,15 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openMining(false)">×</button>
   </div>
   <div id="mining-area"></div>
+</div>
+
+<!-- BUDDY SHOOT (Duck-Hunt-style shooting gallery) -->
+<div id="buddyshoot-wrap" style="display:none">
+  <div class="sol-titlebar" id="buddyshoot-titlebar">
+    <span>🦆 Buddy Shoot</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openBuddyShoot(false)">×</button>
+  </div>
+  <div id="buddyshoot-area"></div>
 </div>
 
 <!-- AQUATUNE EXCHANGE (stock market) -->

@@ -19,8 +19,9 @@ const SKILLS = [
   { id: 'gambling', name: 'Gambling',  icon: '🎲', blurb: 'Slots, Blackjack & Hold’em' },
   { id: 'intellect',name: 'Intellect', icon: '🧠', blurb: 'Picross, Mines & Solitaire' },
   { id: 'speed',    name: 'Speed',     icon: '⚡', blurb: 'Beat Tap & Pinball' },
-  { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Time spent watching' },
-  { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Working the Exchange' },
+  { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Watching & making music' },
+  { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Earning & trading' },
+  { id: 'combat',   name: 'Combat',    icon: '⚔️', blurb: 'Buddy Shoot' },
 ];
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 const MAX_LEVEL = 100;
@@ -66,6 +67,9 @@ function levelProgress(xp) {
 // ---------------------------------------------------------------------------
 function userId() { return (typeof window.effectiveUserId === 'function' && window.effectiveUserId()) || window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
 function skillsRef() { return ref(db, `user-skills/${userId()}`); }
+// You must be logged into an account to earn XP / have skills (and to appear on
+// the leaderboard). Anonymous play still works — it just doesn't accrue skills.
+function hasAccount() { return typeof window !== 'undefined' && !!window._aqAccountId; }
 
 let _xp = {};            // skillId -> xp (number)
 let _saveTimer = null;
@@ -83,6 +87,7 @@ function _writeLocal() {
   try { localStorage.setItem('aq_skills', JSON.stringify(_xp)); } catch {}
 }
 function _saveRemote() {
+  if (!hasAccount()) return;   // don't write skills for anonymous users
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
@@ -126,6 +131,15 @@ function applyResets() {
       _writeLocal();
       _saveRemote();
     }
+    // Music was earned too fast (50 xp/min → ~50h to max); the rate is now
+    // 20/min (~120h to max). Rescale existing music XP by 20/50 so each user's
+    // music level reflects their actual listening time under the new rate.
+    if (!localStorage.getItem('aq_skills_music_rescale_v1')) {
+      localStorage.setItem('aq_skills_music_rescale_v1', '1');
+      _xp.music = Math.round((_xp.music | 0) * 0.4);
+      _writeLocal();
+      _saveRemote();
+    }
   } catch {}
 }
 
@@ -133,6 +147,7 @@ function applyResets() {
 // Public API (on window so inline games + modules can grant XP)
 // ---------------------------------------------------------------------------
 function addXp(skillId, amount) {
+  if (!hasAccount()) return;   // no account → no XP
   if (!SKILL_BY_ID[skillId]) return;
   amount = Math.round(amount);
   if (!isFinite(amount) || amount <= 0) return;
@@ -173,6 +188,7 @@ const PLAYED_XP = 2;   // base for showing up
 const WON_XP = 8;      // base bonus for a win
 const LUCKY_CHANCE = 0.05;  // ~1 in 20 grants rolls a jackpot multiplier
 function gameXp(skillId, opts) {
+  if (!hasAccount()) return;   // no account → no XP
   opts = opts || {};
   const mult = opts.mult != null && isFinite(opts.mult) ? Math.max(0, opts.mult) : 1;
   let amt = 0;
@@ -260,10 +276,26 @@ function renderSkillsPanel() {
   const mk = (id, label) => { const b = el('button', 'sk-tab' + (_statsTab === id ? ' on' : ''), label); b.onclick = () => { _statsTab = id; _rankDetail = null; renderSkillsPanel(); }; return b; };
   tabs.append(mk('me', 'My Skills'), mk('rank', 'Rankings'));
   area.appendChild(tabs);
+  area.appendChild(el('div', 'sk-wip', '🚧 Work in progress'));
 
   if (_statsTab === 'me') {
+    if (!hasAccount()) {
+      const note = el('div', 'sk-login-note');
+      note.innerHTML = '🔒 <b>Create an account to earn skills.</b><br>Anonymous play still works, but XP, skill levels and the leaderboard need an account.';
+      area.appendChild(note);
+      const btn = el('button', 'sk-tab on', 'Open account settings');
+      btn.style.alignSelf = 'flex-start';
+      btn.onclick = () => { try { window.OS ? window.OS.open('settings') : window.toggleThemePanel?.(); } catch {} };
+      area.appendChild(btn);
+      return;
+    }
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
     area.appendChild(statsHeader(name, totalLevelOf(_xp)));
+    const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
+    const credLine = el('div', 'sk-credits', 'Credits ');
+    // `.aq-credits-display` makes aqRefreshCreditDisplays() keep this live.
+    credLine.appendChild(el('span', 'aq-credits-display sk-credits-val', `💰 ${credits.toLocaleString()}`));
+    area.appendChild(credLine);
     area.appendChild(skillGrid(_xp));
   } else {
     renderRankings(area);
@@ -339,6 +371,19 @@ function openStats(show = true) {
 
 // ---------------------------------------------------------------------------
 // Wire up globals + boot
+// Earning money grants a little Finance XP. Wrap aqAddCredits (the "earn" path —
+// spending and remote-sync go through aqSetCredits, so they don't trigger this,
+// and stock sells keep their own grant). Small + capped to limit farming.
+function hookEarnXp() {
+  if (typeof window === 'undefined' || window._aqEarnXpHooked || typeof window.aqAddCredits !== 'function') return;
+  window._aqEarnXpHooked = true;
+  const orig = window.aqAddCredits;
+  window.aqAddCredits = function (n) {
+    orig(n);
+    if (typeof n === 'number' && n > 0) addXp('finance', Math.max(1, Math.min(6, Math.round(n / 50))));
+  };
+}
+
 // ---------------------------------------------------------------------------
 if (typeof window !== 'undefined') {
   window.aqAddXp = addXp;
@@ -347,6 +392,7 @@ if (typeof window !== 'undefined') {
   window.aqSkillLevel = skillLevel;
   window.openStats = openStats;
   window._aqStatsClosed = () => { _open = false; };
+  hookEarnXp();
   // Load early so XP grants during the session persist + sync.
   loadSkills();
 }

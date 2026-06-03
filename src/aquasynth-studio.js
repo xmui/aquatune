@@ -310,6 +310,7 @@ function triggerEvent(ev, when) {
 }
 
 /* ---- transport / scheduler --------------------------------------------- */
+let _studioMusicMs = 0, _studioMusicLast = 0;  // accrue Music XP while making beats
 function play() {
   if (_playing) return;
   const c = actx();
@@ -318,6 +319,7 @@ function play() {
   _evIdx = 0;
   _loopBase = c.currentTime + 0.08;
   _playing = true;
+  _studioMusicLast = performance.now();
   _schedTimer = setInterval(scheduleTick, TICK_MS);
   scheduleTick();
   _rafId = requestAnimationFrame(playheadTick);
@@ -352,6 +354,11 @@ function scheduleTick() {
 }
 function playheadTick() {
   if (!_playing) return;
+  // accrue Music XP for time spent making beats (~20 XP / 60s, like watching video)
+  const _pnow = performance.now();
+  _studioMusicMs += Math.min(1000, _pnow - (_studioMusicLast || _pnow));
+  _studioMusicLast = _pnow;
+  if (_studioMusicMs >= 60000) { _studioMusicMs = 0; if (window.aqAddXp) window.aqAddXp('music', 20); }
   const c = actx();
   let songT = c.currentTime - _loopBase;
   if (songT < 0) songT = 0;

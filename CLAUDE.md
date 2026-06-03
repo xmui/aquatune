@@ -11,8 +11,9 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - **Tens of hours to max a single stat, with a steady climb.** Levels 1–100 use a
   **quadratic** curve (`xp(L)=GROWTH*(L-1)^2`, ~147k XP to L100) — NOT OSRS's
   front-loaded exponential, which made early levels free. Per-action XP is small
-  (`PLAYED_XP`/`WON_XP` ≈ 2/8 in `skills.js`, music tick ~50/min in `index.html`),
-  so a handful of actions nets only a level or two and maxing a skill is ~30–70h.
+  (`PLAYED_XP`/`WON_XP` ≈ 2/8 in `skills.js`, music tick ~20/min in `index.html`),
+  so a handful of actions nets only a level or two and maxing a skill is ~30–70h
+  (music is the slowest/most passive at ~120h).
   If you change rewards OR the curve, re-check both: early levels shouldn't be
   instant, and max should stay tens of hours. Cap any score-scaled `mult`.
 - **Always pop up on XP.** Every XP gain shows a floating "+N XP" popup chip, and a
@@ -21,6 +22,12 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - A rare (~5%) **lucky bonus** multiplies a grant for variance.
 - Skills are data-driven (the `SKILLS` array) so more can be added later. Games grant
   XP via the global `window.aqGameXp(skill, {played, won, mult})` / `window.aqAddXp`.
+  Current skills: fishing, mining, gambling, intellect, speed, music, finance, combat.
+- XP is account-gated: no account ⇒ no XP/leaderboard (see `hasAccount()`).
+- **Music** accrues from watching videos (`startProg` tick in `index.html`) AND making
+  beats in the Studio (`playheadTick` in `aquasynth-studio.js`). **Finance** accrues
+  from trading (`doBuy`/`doSell`) AND from earning credits generally (`hookEarnXp`
+  wraps `aqAddCredits`, small + capped). **Combat** comes from Buddy Shoot.
 - XP is cached in localStorage and synced per-user to Firebase (`user-skills/<uid>`),
   mirroring the stocks/portfolio pattern.
 

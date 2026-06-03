@@ -3597,6 +3597,14 @@ body.perf-mode #aqua-gun { display: none !important; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
+    /* ── XP gain / level-up popups (always shown on XP gain) ─── */
+    #aq-xp-popups { position:fixed; right:16px; bottom:84px; display:flex; flex-direction:column; gap:5px; align-items:flex-end; z-index:3000; pointer-events:none; }
+    .aq-xp-pop { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:14px; padding:4px 11px; font-size:12px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,0.25); white-space:nowrap; font-variant-numeric:tabular-nums; animation:aqXpRise 1.75s ease-out forwards; }
+    .aq-xp-pop span { color:var(--text2); font-weight:600; }
+    .aq-xp-pop.lvl { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); font-size:13px; font-weight:800; }
+    @keyframes aqXpRise { 0%{opacity:0; transform:translateY(10px) scale(.9);} 12%{opacity:1; transform:translateY(0) scale(1);} 72%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-16px);} }
+    @media (max-width:768px) { #aq-xp-popups { bottom:calc(108px + env(safe-area-inset-bottom,0px)); right:8px; } }
+
     /* ── GAME BOY COLOR mini-games (Fishing / Mining) ─── */
     #fishing-wrap, #mining-wrap {
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
@@ -6704,7 +6712,7 @@ function startProg() {
     // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
     if (playing) {
       _musicWatchMs = (_musicWatchMs || 0) + 500;
-      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 25); }
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 7500); }
     }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;
@@ -14399,6 +14407,83 @@ function pokerSfx(name){
   } catch(e) {}
 }
 window.pokerSfx = pokerSfx;
+
+/* ── FISHING SFX — lo-fi GBC-ish: bitcrushed water ambient loop + event blips ── */
+let _fishWave = null;  // { src, gain, lfo } refs for the looping ambient
+function fishingSfx(name) {
+  if (_gameVol === 0 && name !== 'wave-stop') return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+
+  // short pitched blip (with optional glide) — mirrors pokerSfx.blip
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const snap = (start, freq, dur, vol, q = 0.9, glide) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const bp = cx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q;
+    bp.frequency.setValueAtTime(freq, t + start);
+    if (glide) bp.frequency.exponentialRampToValueAtTime(glide, t + start + dur);
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(bp); bp.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  // 4-bit quantizing waveshaper curve (same idea as the studio _setCrushCurve)
+  const crushCurve = (bits) => {
+    const n = 1024, curve = new Float32Array(n), steps = Math.pow(2, bits);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = Math.round(x * steps) / steps; }
+    return curve;
+  };
+
+  try {
+    switch (name) {
+      case 'wave-start': {
+        if (_fishWave) return; // already running
+        const src = cx.createBufferSource(); src.buffer = _pkNoise(cx); src.loop = true;
+        const lp = cx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.7;
+        const crush = cx.createWaveShaper(); crush.curve = crushCurve(4); crush.oversample = 'none';
+        const g = cx.createGain(); g.gain.value = 0.0001;
+        // slow "wave" swell via an LFO on the gain
+        const lfo = cx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.35;
+        const lfoG = cx.createGain(); lfoG.gain.value = 0.03 * V;
+        lfo.connect(lfoG); lfoG.connect(g.gain);
+        src.connect(lp); lp.connect(crush); crush.connect(g); g.connect(cx.destination);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.05 * V, t + 0.6); // base bed level
+        src.start(t); lfo.start(t);
+        _fishWave = { src, gain: g, lfo };
+        break;
+      }
+      case 'wave-stop': {
+        if (!_fishWave) return;
+        const w = _fishWave; _fishWave = null;
+        try {
+          w.gain.gain.cancelScheduledValues(t);
+          w.gain.gain.setValueAtTime(Math.max(0.0002, w.gain.gain.value || 0.02), t);
+          w.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+          w.src.stop(t + 0.34); w.lfo.stop(t + 0.34);
+        } catch (e) {}
+        break;
+      }
+      case 'nibble': blip(360, 0, 0.06, 'sine', 0.10, 300); break;     // soft plip
+      case 'ding':  blip(880, 0, 0.10, 'square', 0.16, 1320); blip(1320, 0.04, 0.16, 'sine', 0.12); break; // fish on!
+      case 'hook':  snap(0, 2600, 0.06, 0.22); blip(520, 0.005, 0.05, 'square', 0.06, 900); break;
+      case 'tick':  blip(1500, 0, 0.05, 'triangle', 0.14, 1900); break; // struggle hit
+      case 'buzz':  blip(150, 0, 0.16, 'sawtooth', 0.16, 90); break;    // struggle miss
+      case 'fail':  blip(300, 0, 0.28, 'sine', 0.16, 110); break;       // got away / scared
+    }
+  } catch (e) {}
+}
+window.fishingSfx = fishingSfx;
 
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {

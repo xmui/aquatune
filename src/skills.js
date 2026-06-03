@@ -139,19 +139,36 @@ function addXp(skillId, amount) {
   const after = levelForXp(_xp[skillId]);
   _writeLocal();
   _saveRemote();
-  if (after > before && typeof window.toast === 'function') {
-    const s = SKILL_BY_ID[skillId];
-    window.toast(`${s.icon} ${s.name} level ${after}!`);
-  }
+  // Always pop: a "+N XP" chip on every gain, plus a level-up chip when it ticks.
+  showXpPopup(skillId, amount, after > before ? after : 0);
   if (_open) renderSkillsPanel();
 }
 
-// Single call games use: grants a small "played" amount + a "won" bonus. `mult`
-// optionally scales the whole grant (e.g. by score / difficulty). Deliberately
-// ultra-grindy — the base trickle is tiny on the OSRS curve, so meaningful
-// levels are a long haul. Excitement comes from the rare LUCKY bonus below.
-const PLAYED_XP = 3;   // base for showing up
-const WON_XP = 9;      // base bonus for a win
+// Floating popup chips for XP gains / level-ups (always shown).
+function showXpPopup(skillId, amount, leveledTo) {
+  if (typeof document === 'undefined') return;
+  const s = SKILL_BY_ID[skillId]; if (!s) return;
+  let host = document.getElementById('aq-xp-popups');
+  if (!host) { host = document.createElement('div'); host.id = 'aq-xp-popups'; document.body.appendChild(host); }
+  const add = (html, cls) => {
+    const chip = document.createElement('div');
+    chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
+    chip.innerHTML = html;
+    host.appendChild(chip);
+    setTimeout(() => chip.remove(), 1750);
+  };
+  add(`+${Math.round(amount).toLocaleString()} XP <span>${s.icon} ${esc(s.name)}</span>`);
+  if (leveledTo) add(`${s.icon} ${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
+  while (host.children.length > 7) host.firstChild.remove();
+}
+
+// Single call games use: grants a "played" amount + a "won" bonus. `mult`
+// optionally scales the whole grant (e.g. by score / difficulty). Tuned so the
+// system stays GRINDY but reachable: against the authentic OSRS curve (~14.4M XP
+// to level 100), these rates put maxing a single skill at roughly 20–40 hours of
+// engaged play (≈one grant every 12–20s). The rare LUCKY bonus adds variance.
+const PLAYED_XP = 300;   // base for showing up
+const WON_XP = 1000;     // base bonus for a win
 const LUCKY_CHANCE = 0.05;  // ~1 in 20 grants rolls a jackpot multiplier
 function gameXp(skillId, opts) {
   opts = opts || {};

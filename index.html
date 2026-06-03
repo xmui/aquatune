@@ -16166,17 +16166,34 @@ function aqRefreshCreditDisplays() {
   const c = aqGetCredits();
   document.querySelectorAll('.aq-credits-display').forEach(el => el.textContent = `💰 ${c}`);
 }
-// Daily free credits
-function claimDailyCredits() {
-  const last = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
-  if (Date.now() - last < 86400000) return;
-  localStorage.setItem('aq_last_claim', String(Date.now()));
-  aqAddCredits(100);
-  if (window.toast) window.toast('🎁 +100 daily credits claimed!');
-  updateDailyClaimUI();
+// Daily free credits. The cooldown is enforced on the account (Firebase, via
+// aqTryClaimDaily) so it can't be farmed across devices / by clearing localStorage;
+// anonymous users fall back to a local cooldown.
+let _claimingDaily = false;
+async function claimDailyCredits() {
+  if (_claimingDaily) return;
+  _claimingDaily = true;
+  try {
+    let ok;
+    if (window.aqTryClaimDaily) ok = await window.aqTryClaimDaily();
+    else {
+      const last = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
+      if (Date.now() - last < 86400000) ok = false;
+      else { localStorage.setItem('aq_last_claim', String(Date.now())); ok = true; }
+    }
+    if (!ok) { updateDailyClaimUI(); return; }
+    aqAddCredits(100);
+    if (window.toast) window.toast('🎁 +100 daily credits claimed!');
+    updateDailyClaimUI();
+  } finally { _claimingDaily = false; }
+}
+function _dailyLastClaim() {
+  const local = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
+  const acct = (window._aqAccountId && window.aqAccountLastDaily) ? window.aqAccountLastDaily() : 0;
+  return Math.max(local, acct);
 }
 function updateDailyClaimUI() {
-  const last = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
+  const last = _dailyLastClaim();
   const elapsed = Date.now() - last;
   const ready = elapsed >= 86400000;
   const btn = document.getElementById('daily-claim-btn');

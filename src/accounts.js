@@ -55,6 +55,37 @@ function aqCurrentAccount() { return _account ? { accountId: window._aqAccountId
 window.aqCurrentAccount = aqCurrentAccount;
 
 // ---------------------------------------------------------------------------
+// Daily bonus cooldown — enforced on the ACCOUNT (Firebase), not localStorage,
+// so it can't be farmed by claiming on multiple devices / clearing site data.
+// Anonymous users fall back to localStorage (their credits don't sync anyway).
+// ---------------------------------------------------------------------------
+const DAILY_MS = 86400000;
+window.aqAccountLastDaily = () => (_account && typeof _account.lastDaily === 'number') ? _account.lastDaily : 0;
+window.aqTryClaimDaily = async function () {
+  // → true if the bonus is granted (caller then adds the credits)
+  if (!window._aqAccountId) {
+    const last = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
+    if (Date.now() - last < DAILY_MS) return false;
+    localStorage.setItem('aq_last_claim', String(Date.now()));
+    return true;
+  }
+  try {
+    const res = await runTransaction(ref(db, 'accounts/' + window._aqAccountId + '/lastDaily'), cur => {
+      const last = (typeof cur === 'number') ? cur : 0;
+      if (Date.now() - last < DAILY_MS) return;   // undefined → abort (already claimed)
+      return Date.now();
+    });
+    if (res && res.committed) {
+      const now = Date.now();
+      if (_account) _account.lastDaily = now;
+      localStorage.setItem('aq_last_claim', String(now));
+      return true;
+    }
+    return false;
+  } catch { return false; }
+};
+
+// ---------------------------------------------------------------------------
 // Credits: local cache <-> account, live cross-device sync
 // ---------------------------------------------------------------------------
 let _creditUnsub = null, _acctCreditTimer = null, _applyingRemote = false;

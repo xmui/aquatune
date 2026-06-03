@@ -3709,7 +3709,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
     .bs-btn:hover { filter:brightness(1.08); }
     @media (max-width:768px) {
-      #buddyshoot-wrap { width:100vw; top:0; left:0; transform:none; height:100dvh; border-radius:0; }
+      /* leave room for the bottom mobile bars (tab 50 + tools 44 + safe area) so the whole stage stays tappable */
+      #buddyshoot-wrap { width:100vw; top:0; left:0; transform:none; height:calc(100dvh - 94px - env(safe-area-inset-bottom,0px)); border-radius:0; }
       #buddyshoot-area { flex:1; min-height:0; } .bs-stage { flex:1; height:auto; }
     }
 
@@ -9433,10 +9434,18 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
     if (!src) return null;
     const svg = src.cloneNode(true);
     svg.removeAttribute('style');
-    const defs = svg.querySelector('defs'); if (defs) defs.remove(); // gradients resolve to the live buddy's defs
     const og = svg.querySelector('#ab-outfit');
     if (og) og.innerHTML = (outfitKey && OUTFIT_DEFS[outfitKey]) ? OUTFIT_DEFS[outfitKey] : '';
-    svg.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));   // avoid duplicate ids
+    // Give the clone's gradients unique ids and rewrite the fill/stroke refs so
+    // each flying buddy is fully self-contained (body/head render correctly).
+    const uid = 'bs' + (window._aqBuddyN = (window._aqBuddyN || 0) + 1) + '_';
+    svg.querySelectorAll('defs [id]').forEach(g => {
+      const old = g.id; g.id = uid + old;
+      svg.querySelectorAll('[fill="url(#' + old + ')"]').forEach(n => n.setAttribute('fill', 'url(#' + uid + old + ')'));
+      svg.querySelectorAll('[stroke="url(#' + old + ')"]').forEach(n => n.setAttribute('stroke', 'url(#' + uid + old + ')'));
+    });
+    const om = svg.querySelector('#ab-mouth'); if (om) om.removeAttribute('id');
+    if (og) og.removeAttribute('id');
     return svg;
   };
   let outfitIdx = parseInt(localStorage.getItem('yt_buddy_outfit') || '0');

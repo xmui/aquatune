@@ -66,6 +66,9 @@ function levelProgress(xp) {
 // ---------------------------------------------------------------------------
 function userId() { return (typeof window.effectiveUserId === 'function' && window.effectiveUserId()) || window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
 function skillsRef() { return ref(db, `user-skills/${userId()}`); }
+// You must be logged into an account to earn XP / have skills (and to appear on
+// the leaderboard). Anonymous play still works — it just doesn't accrue skills.
+function hasAccount() { return typeof window !== 'undefined' && !!window._aqAccountId; }
 
 let _xp = {};            // skillId -> xp (number)
 let _saveTimer = null;
@@ -83,6 +86,7 @@ function _writeLocal() {
   try { localStorage.setItem('aq_skills', JSON.stringify(_xp)); } catch {}
 }
 function _saveRemote() {
+  if (!hasAccount()) return;   // don't write skills for anonymous users
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
@@ -142,6 +146,7 @@ function applyResets() {
 // Public API (on window so inline games + modules can grant XP)
 // ---------------------------------------------------------------------------
 function addXp(skillId, amount) {
+  if (!hasAccount()) return;   // no account → no XP
   if (!SKILL_BY_ID[skillId]) return;
   amount = Math.round(amount);
   if (!isFinite(amount) || amount <= 0) return;
@@ -182,6 +187,7 @@ const PLAYED_XP = 2;   // base for showing up
 const WON_XP = 8;      // base bonus for a win
 const LUCKY_CHANCE = 0.05;  // ~1 in 20 grants rolls a jackpot multiplier
 function gameXp(skillId, opts) {
+  if (!hasAccount()) return;   // no account → no XP
   opts = opts || {};
   const mult = opts.mult != null && isFinite(opts.mult) ? Math.max(0, opts.mult) : 1;
   let amt = 0;
@@ -271,8 +277,20 @@ function renderSkillsPanel() {
   area.appendChild(tabs);
 
   if (_statsTab === 'me') {
+    if (!hasAccount()) {
+      const note = el('div', 'sk-login-note');
+      note.innerHTML = '🔒 <b>Create an account to earn skills.</b><br>Anonymous play still works, but XP, skill levels and the leaderboard need an account.';
+      area.appendChild(note);
+      const btn = el('button', 'sk-tab on', 'Open account settings');
+      btn.style.alignSelf = 'flex-start';
+      btn.onclick = () => { try { window.OS ? window.OS.open('settings') : window.toggleThemePanel?.(); } catch {} };
+      area.appendChild(btn);
+      return;
+    }
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
     area.appendChild(statsHeader(name, totalLevelOf(_xp)));
+    const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
+    area.appendChild(el('div', 'sk-credits', `💰 <b>${credits.toLocaleString()}</b> credits`));
     area.appendChild(skillGrid(_xp));
   } else {
     renderRankings(area);

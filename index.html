@@ -3641,6 +3641,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     .sk-rank-name { flex:1; font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sk-rank-lvl { font-size:15px; font-weight:800; color:var(--accent2); font-variant-numeric:tabular-nums; }
     .sk-rank-note { font-size:12px; color:var(--text2); padding:10px 4px; text-align:center; }
+    .sk-login-note { font-size:13px; color:var(--text); line-height:1.5; background:rgba(0,180,220,0.06); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+    .sk-credits { font-size:14px; color:var(--text2); } .sk-credits b { color:#ffcd50; font-size:16px; font-variant-numeric:tabular-nums; }
     @media (max-width:768px) {
       #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
       .sk-grid { grid-template-columns:1fr; }
@@ -8633,10 +8635,10 @@ function recordScore(game, score, detail) {
   const d = _lbRead();
   d[game] = _lbSort(game, [...(d[game] || []), entry]).slice(0, 10);
   _lbWrite(d);
-  // Global leaderboard on Firebase
+  // Global leaderboard on Firebase — only logged-in accounts show up publicly.
   try {
     const { push: fbPush, ref: fbRef } = window._fbFns || {};
-    if (window._aqDb && fbPush && fbRef) fbPush(fbRef(window._aqDb, `${LB_PATH}/${game}`), entry);
+    if (window._aqAccountId && window._aqDb && fbPush && fbRef) fbPush(fbRef(window._aqDb, `${LB_PATH}/${game}`), entry);
   } catch {}
   if (document.getElementById('win-leaderboard')?.classList.contains('open')) renderLeaderboard();
 }

@@ -390,7 +390,14 @@ function pokerSounds(){
 }
 function act(a, amt){
   if (a === 'fold') sfx('fold'); else if (a === 'check') sfx('check'); // instant feedback on your own action
-  if (inRoom() && !amHost()) { if (window.pokerSendAction) window.pokerSendAction({ type:'action', action:a, amount:amt }); return; }
+  if (inRoom() && !amHost()) {
+    if (window.pokerSendAction) {
+      const msg = { type:'action', action:a };
+      if (amt != null) msg.amount = amt;   // never send undefined — Firebase rejects it (the call/check/fold bug)
+      window.pokerSendAction(msg);
+    }
+    return;
+  }
   const i = mySeatIdx(); if (i >= 0) applyAction(i, a, amt);
 }
 function ensureOpponents(){ if(inRoom()) return; if(activeIdx().length<2){ for(const i of [2,3,4]){ if(!G.seats[i]) addCpu(i); } } }

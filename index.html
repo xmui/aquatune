@@ -2007,19 +2007,32 @@
     .st-step.beat { background:#2b2f3a; }
     .st-step.on { background:var(--c,#ffd23f); box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 0 8px rgba(255,210,63,.4); }
     .st-step:active { transform:scale(.94); }
-    .st-roll { display:flex; gap:4px; }
-    .st-roll-keys { display:flex; flex-direction:column; }
-    .st-roll-key { height:14px; width:30px; font-size:7px; color:#6b7589; display:flex; align-items:center; padding-left:3px; border-bottom:1px solid #0c0e13; cursor:pointer; background:#1b1e26; box-sizing:border-box; }
+    .st-roll { display:flex; gap:0; overflow:auto; max-height:300px; position:relative; user-select:none; touch-action:none; background:#0c0e13; border-radius:6px; }
+    .st-roll-keys { display:flex; flex-direction:column; position:sticky; left:0; z-index:4; flex-shrink:0; background:#1b1e26; }
+    .st-roll-key { height:14px; width:34px; font-size:7px; color:#6b7589; display:flex; align-items:center; padding-left:3px; border-bottom:1px solid #0c0e13; cursor:pointer; background:#1b1e26; box-sizing:border-box; }
     .st-roll-key.black { background:#0e1015; color:#4a5366; }
-    .st-roll-grid { display:grid; gap:1px; background:#0c0e13; }
-    .st-roll-cell { background:#1a1d24; cursor:pointer; box-sizing:border-box; }
-    .st-roll-cell.black { background:#15171d; }
-    .st-roll-cell.beat { box-shadow:inset 1px 0 0 rgba(255,255,255,.07); }
-    .st-roll-cell.on { background:var(--c,#ffd23f); box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
+    .st-roll-grid { position:relative; flex-shrink:0; background:#15171d; }
+    .st-roll-rowbg { position:absolute; left:0; width:100%; background:#0f1116; pointer-events:none; }
+    .st-roll-vline { position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,.045); pointer-events:none; }
+    .st-roll-vline.beat { background:rgba(255,255,255,.09); }
+    .st-roll-vline.bar { background:rgba(255,255,255,.20); width:2px; }
+    .st-roll-octline { position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,.13); pointer-events:none; }
+    .st-note { position:absolute; border-radius:3px; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(0,0,0,.45); cursor:grab; box-sizing:border-box; z-index:2; }
+    .st-note.sel { outline:2px solid #fff; outline-offset:-1px; z-index:3; }
+    .st-note-rs { position:absolute; right:0; top:0; bottom:0; width:7px; cursor:ew-resize; }
+    .st-marquee { position:absolute; border:1px solid var(--st-accent,#36c5f0); background:rgba(54,197,240,.15); pointer-events:none; z-index:5; }
+    .st-rolltools { display:inline-flex; gap:3px; }
+    .st-rolltool { font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid #2c313c; background:#0a0c10; color:#8b95a7; cursor:pointer; }
+    .st-rolltool.on { background:var(--st-accent,#36c5f0); color:#04121f; border-color:var(--st-accent,#36c5f0); }
+    .st-bars { display:inline-flex; align-items:center; gap:4px; }
+    .st-bars-btn { width:18px; height:18px; border-radius:5px; border:1px solid #2c313c; background:#0a0c10; color:#dfe5f0; font-size:12px; line-height:1; cursor:pointer; }
+    .st-bars-n { font-size:10px; color:#8b95a7; min-width:42px; text-align:center; }
+    .st-sf2-sel { background:#0a0c10; color:#dfe5f0; border:1px solid #2c313c; border-radius:6px; padding:3px 6px; font-size:11px; max-width:180px; }
+    .st-scope { width:140px; height:30px; border-radius:5px; background:#0a0c10; border:1px solid #0a0c10; flex-shrink:0; margin-left:auto; }
     .st-addmenu { position:absolute; left:8px; bottom:8px; z-index:30; background:#262a34; border:1px solid #0a0c10; border-radius:9px; padding:6px; display:flex; flex-direction:column; gap:3px; box-shadow:0 12px 30px rgba(0,0,0,.6); max-height:300px; overflow:auto; }
     .st-addmenu-opt { text-align:left; padding:6px 12px; border-radius:6px; border:none; background:transparent; color:#dfe5f0; font-size:12px; cursor:pointer; }
     .st-addmenu-opt:hover { background:var(--st-accent); color:#221b00; }
-    @media (max-width:768px){ #studio-win { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; } }
+    @media (max-width:768px){ #studio-win { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; } #st-scope { display:none; } }
 
     @media (max-width:768px) {
       #paint-wrap { width:98vw; height:70vh; max-height:70vh; top:15%; transform:translateX(-50%); }
@@ -16755,6 +16768,7 @@ function bjUpdateBalance(){
   <div id="studio-titlebar">
     <span class="st-logo">🎛️ AQUASYNTH<span class="st-logo-sub">STUDIO</span></span>
     <span style="flex:1"></span>
+    <button class="st-tb-btn" id="st-new" title="New empty project">🆕</button>
     <button class="st-tb-btn" id="st-save" title="Save project">💾</button>
     <button class="st-tb-btn" id="st-open" title="Open project">📂</button>
     <button class="st-tb-btn" id="st-import-midi" title="Import MIDI">🎼⬆</button>
@@ -16772,7 +16786,7 @@ function bjUpdateBalance(){
     <select id="st-quant" class="st-rnd-sel" title="Record quantize">
       <option value="4">1/4</option><option value="2">1/8</option><option value="1" selected>1/16</option>
     </select>
-    <span style="flex:1"></span>
+    <canvas id="st-scope" class="st-scope" title="Master output — oscilloscope"></canvas>
     <div class="st-zoom"><button id="st-zoom-out" title="Zoom out">－</button><button id="st-zoom-in" title="Zoom in">＋</button></div>
     <div class="st-master"><span>VOL</span><div id="st-master-knob" class="st-knob"></div></div>
   </div>

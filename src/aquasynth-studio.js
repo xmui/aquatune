@@ -49,6 +49,9 @@ let _loopBase = 0, _evIdx = 0, _events = [], _songSec = 0;
 let _loop = true;
 let _pxPerBar = 96;            // timeline zoom
 let _selInstId = null;         // selected track (drives the editor)
+let _selClipId = null;         // selected clip (drives which pattern the editor edits)
+let _rollTool = 'draw';        // piano-roll tool: 'draw' (pencil) | 'select' (marquee)
+let _selNotes = new Set();     // selected note objects in the piano roll
 let _built = false;
 let _recording = false, _quantize = 1, _recOct = 4; // recording + quantize (steps) + computer-kbd octave
 const _pending = {};           // midi -> pending note start during recording
@@ -402,7 +405,7 @@ function renderTracks() {
   project.instruments.forEach(inst => {
     const row = el('div', 'st-track' + (inst.id === _selInstId ? ' sel' : ''));
     row.style.borderLeftColor = instColor(inst.id);
-    row.onclick = () => { _selInstId = inst.id; renderAll(); };
+    row.onclick = () => { if (_selInstId !== inst.id) { _selInstId = inst.id; _selClipId = null; _selNotes.clear(); } renderAll(); };
     row.oncontextmenu = e => { e.preventDefault(); _selInstId = inst.id; renderAll(); showTrackMenu(inst, row, e); };
     const icon = inst.type === 'drum' ? '🥁' : (inst.params && inst.params.wave === 'noise' ? '📻' : '🎹');
     row.appendChild(el('div', 'st-tname', `<span>${icon}</span><b>${esc(inst.name)}</b>`));
@@ -442,7 +445,9 @@ function showTrackMenu(inst, anchor, ev) {
 }
 function showClipMenu(inst, clip, ev) {
   showCtxMenu([
+    ['✎ Edit pattern', () => selectClip(inst, clip)],
     ['⎘ Duplicate clip', () => duplicateClip(inst, clip)],
+    ['❖ Make unique', () => makeClipUnique(inst, clip)],
     ['🗑 Delete clip', () => deleteClip(inst, clip)],
   ], ev.clientX, ev.clientY);
 }
@@ -531,21 +536,26 @@ function renderTimeline() {
 function buildClip(inst, clip) {
   const pat = E.getPattern(project, clip.patternId);
   const lenBars = clip.lenBars || (pat ? pat.bars : 1);
-  const c = el('div', 'st-clip' + (inst.id === _selInstId ? ' sel' : ''));
+  const c = el('div', 'st-clip' + (clip.id === _selClipId ? ' sel' : ''));
   c.style.left = (clip.startBar * _pxPerBar) + 'px';
   c.style.width = (lenBars * _pxPerBar - 2) + 'px';
   c.style.background = instColor(inst.id);
   c.innerHTML = `<span class="st-clip-name">${esc(pat ? pat.name : '?')}</span><i class="st-clip-resize"></i>`;
-  c.onclick = e => { e.stopPropagation(); _selInstId = inst.id; renderAll(); };
+  c.onclick = e => { e.stopPropagation(); selectClip(inst, clip); };
   c.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); showClipMenu(inst, clip, e); };
   // drag to move / resize
   c.addEventListener('pointerdown', e => startClipDrag(e, inst, clip, c));
   return c;
 }
 
+function selectClip(inst, clip) {
+  _selInstId = inst.id; _selClipId = clip.id; _selNotes.clear();
+  renderAll();
+}
 let _clipDrag = null;
 function startClipDrag(e, inst, clip, node) {
   e.preventDefault(); e.stopPropagation();
+  if (_selClipId !== clip.id) { _selInstId = inst.id; _selClipId = clip.id; _selNotes.clear(); } // select on grab
   const resize = e.target.classList.contains('st-clip-resize');
   _clipDrag = { inst, clip, node, resize, x0: e.clientX, startBar0: clip.startBar, len0: clip.lenBars || 1 };
   node.setPointerCapture(e.pointerId);
@@ -570,37 +580,85 @@ function endClipDrag(e) {
   _clipDrag.node.removeEventListener('pointermove', onClipDrag);
   _clipDrag.node.removeEventListener('pointerup', endClipDrag);
   _clipDrag = null;
-  renderTimeline();
+  renderAll(); // refresh editor too (selection / length may have changed)
   if (_playing) { _events = E.expandArrangement(project); }
 }
 
 function addClipAt(inst, bar) {
-  // reuse the instrument's first pattern, or make one
-  let pat = project.patterns.find(p => (E.getTrack(project, inst.id)?.clips || []).some(c => c.patternId === p.id));
-  if (!pat) { pat = E.makePattern(inst.name, 1); project.patterns.push(pat); }
-  E.ensureTrack(project, inst.id).clips.push(E.makeClip(pat.id, Math.max(0, bar), pat.bars));
-  renderTimeline();
+  // each new clip gets its OWN fresh pattern, so a track can hold several
+  // distinct patterns (use the clip menu's "Duplicate" to repeat one).
+  const pat = E.makePattern(inst.name, 1); project.patterns.push(pat);
+  const clip = E.makeClip(pat.id, Math.max(0, bar), pat.bars);
+  E.ensureTrack(project, inst.id).clips.push(clip);
+  _selInstId = inst.id; _selClipId = clip.id; _selNotes.clear();
+  renderAll();
+  if (_playing) _events = E.expandArrangement(project);
+}
+// Clone the selected clip's pattern so edits no longer affect its siblings.
+function makeClipUnique(inst, clip) {
+  const op = E.getPattern(project, clip.patternId); if (!op) return;
+  const np = E.makePattern(op.name, op.bars); np.steps = op.steps.slice(); np.notes = op.notes.map(n => ({ ...n }));
+  project.patterns.push(np); clip.patternId = np.id;
+  renderAll(); if (_playing) _events = E.expandArrangement(project);
+  toastSafe('Pattern is now unique to this clip');
 }
 
 /* ---- pattern editor (step grid for drums, piano-roll for melodic) ------ */
-function selectedPattern() {
-  if (!_selInstId) return null;
-  const t = E.getTrack(project, _selInstId);
+// The editor edits the SELECTED clip's pattern (falling back to the selected
+// track's first clip), so different clips on a track edit different patterns.
+function selectedClip() {
+  const t = _selInstId && E.getTrack(project, _selInstId);
   if (!t || !t.clips.length) return null;
-  return E.getPattern(project, t.clips[0].patternId);
+  return t.clips.find(c => c.id === _selClipId) || t.clips[0];
+}
+function selectedPattern() {
+  const c = selectedClip();
+  return c ? E.getPattern(project, c.patternId) : null;
+}
+// Grow/shrink a pattern's bar length (preserving existing steps/notes in range).
+function setPatternBars(pat, bars) {
+  bars = Math.max(1, Math.min(8, bars | 0));
+  if (bars === pat.bars) return;
+  const n = bars * E.STEPS_PER_BAR;
+  const steps = new Array(n).fill(0);
+  for (let i = 0; i < Math.min(n, pat.steps.length); i++) steps[i] = pat.steps[i];
+  pat.steps = steps;
+  pat.notes = pat.notes.filter(no => no.start < n);
+  pat.bars = bars;
+  renderEditor(); renderTimeline(); if (_playing) _events = E.expandArrangement(project);
 }
 function renderEditor() {
   const host = document.getElementById('st-editor'); if (!host) return;
+  const prevRoll = host.querySelector('.st-roll');       // capture scroll before clearing
+  const prevScroll = prevRoll ? { t: prevRoll.scrollTop, l: prevRoll.scrollLeft } : null;
   host.innerHTML = '';
   const inst = project.instruments.find(i => i.id === _selInstId);
   const pat = selectedPattern();
   if (!inst || !pat) { host.appendChild(el('div', 'st-editor-empty', 'Select a track to edit its pattern')); return; }
   const head = el('div', 'st-editor-head');
-  head.innerHTML = `<b style="color:${instColor(inst.id)}">${esc(inst.name)}</b> · <span class="st-dim">${esc(pat.name)} · ${pat.bars} bar${pat.bars > 1 ? 's' : ''}</span>`;
+  head.innerHTML = `<b style="color:${instColor(inst.id)}">${esc(inst.name)}</b> · <span class="st-dim">${esc(pat.name)}</span>`;
+  // pattern length stepper
+  const len = el('div', 'st-bars');
+  len.append(el('button', 'st-bars-btn', '−'), el('span', 'st-bars-n', pat.bars + ' bar' + (pat.bars > 1 ? 's' : '')), el('button', 'st-bars-btn', '＋'));
+  len.children[0].onclick = () => setPatternBars(pat, pat.bars - 1);
+  len.children[2].onclick = () => setPatternBars(pat, pat.bars + 1);
+  head.appendChild(len);
+  if (inst.type !== 'drum') {
+    const tools = el('div', 'st-rolltools');
+    const mk = (id, label, title) => { const b = el('button', 'st-rolltool' + (_rollTool === id ? ' on' : ''), label); b.title = title; b.onclick = () => { _rollTool = id; renderEditor(); }; return b; };
+    tools.append(mk('draw', '✎ Draw', 'Pencil: click/drag to add notes'), mk('select', '⬚ Select', 'Marquee: drag a box to select notes'));
+    head.appendChild(tools);
+  }
   head.appendChild(randomizeControls(inst, pat));
   host.appendChild(head);
   if (inst.type !== 'drum') host.appendChild(deviceStrip(inst));
   host.appendChild(inst.type === 'drum' ? buildStepGrid(inst, pat) : buildPianoRoll(inst, pat));
+  // preserve piano-roll scroll across re-renders (or center on ~C4 the first time)
+  const roll = host.querySelector('.st-roll');
+  if (roll) {
+    if (prevScroll) { roll.scrollTop = prevScroll.t; roll.scrollLeft = prevScroll.l; }
+    else roll.scrollTop = Math.max(0, (rollTopMidi() - 60) * ROLL.ROW_H - 120); // center ~C4
+  }
 }
 
 // 🎲 randomizer controls (scale/key for melodic, genre for drums).
@@ -661,11 +719,14 @@ function deviceStrip(inst) {
     b.onclick = () => loadSampleFor(inst); top.appendChild(b);
   } else if (inst.type === 'sf2') {
     const names = P.presetNames || [];
-    const sel = el('select', 'st-rnd-sel');
-    names.forEach((n, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = (n || ('Preset ' + i)).slice(0, 22); if ((P.presetIndex || 0) === i) o.selected = true; sel.appendChild(o); });
-    sel.onchange = () => { P.presetIndex = parseInt(sel.value) || 0; ensureSF2(inst, actx()); renderAll(); if (_playing) _events = E.expandArrangement(project); };
     top.appendChild(el('span', 'st-dim', '🎵 SF2'));
-    if (names.length) top.appendChild(sel);
+    const sel = el('select', 'st-sf2-sel');
+    sel.title = 'Choose an instrument (preset) from the SoundFont';
+    if (!names.length) { const o = document.createElement('option'); o.textContent = '(import a .sf2)'; sel.appendChild(o); sel.disabled = true; }
+    names.forEach((n, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = (i + 1) + '. ' + (n || ('Preset ' + i)).slice(0, 28); if ((P.presetIndex || 0) === i) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { P.presetIndex = parseInt(sel.value) || 0; if (window.actx) ensureSF2(inst, window.actx); renderAll(); if (_playing) _events = E.expandArrangement(project); };
+    top.appendChild(sel);
+    const rep = el('button', 'st-wave', '📂'); rep.title = 'Load a different .sf2 file'; rep.onclick = () => importSF2(inst); top.appendChild(rep);
   }
   wrap.appendChild(top);
   // knob bank
@@ -778,6 +839,7 @@ function setupInput() {
     // single-key commands (these letters are not in the note map)
     switch (key) {
       case ' ': e.preventDefault(); togglePlay(); return;
+      case 'delete': case 'backspace': if (deleteSelectedNotes()) e.preventDefault(); return;
       case 'r': e.preventDefault(); document.getElementById('st-rec')?.click(); return;
       case 'q': e.preventDefault(); cycleQuant(); return;
       case '[': e.preventDefault(); zoomBy(-1); return;
@@ -838,35 +900,146 @@ function buildMiniKeys() {
   return wrap;
 }
 
+/* ---- piano roll (DAW-style: draw / move / resize / marquee-select) ------ */
+const ROLL = { STEP_W: 22, ROW_H: 14, ROWS: 37 }; // 37 rows ≈ 3 octaves from EDITOR_LO
+function rollTopMidi() { return EDITOR_LO + ROLL.ROWS - 1; }
+const _isBlack = midi => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
+
 function buildPianoRoll(inst, pat) {
-  const rows = 25; // ~2 octaves
-  const steps = pat.bars * E.STEPS_PER_BAR;
+  const steps = pat.bars * E.STEPS_PER_BAR, top = rollTopMidi();
   const wrap = el('div', 'st-roll');
   const keys = el('div', 'st-roll-keys');
-  const grid = el('div', 'st-roll-grid');
-  grid.style.gridTemplateColumns = `repeat(${steps}, 22px)`;
-  grid.style.gridTemplateRows = `repeat(${rows}, 14px)`;
-  for (let r = 0; r < rows; r++) {
-    const midi = EDITOR_LO + (rows - 1 - r);
-    const isBlack = [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
-    const k = el('div', 'st-roll-key' + (isBlack ? ' black' : ''), E.midiToName(midi));
+  for (let r = 0; r < ROLL.ROWS; r++) {
+    const midi = top - r;
+    const k = el('div', 'st-roll-key' + (_isBlack(midi) ? ' black' : ''), E.midiToName(midi));
     k.onclick = () => audition(inst, midi, 0.28);
     keys.appendChild(k);
-    for (let s = 0; s < steps; s++) {
-      const has = pat.notes.find(n => n.midi === midi && n.start === s);
-      const cell = el('div', 'st-roll-cell' + (isBlack ? ' black' : '') + (s % 4 === 0 ? ' beat' : '') + (has ? ' on' : ''));
-      cell.style.setProperty('--c', instColor(inst.id));
-      cell.onclick = () => {
-        const i = pat.notes.findIndex(n => n.midi === midi && n.start === s);
-        if (i >= 0) { pat.notes.splice(i, 1); cell.classList.remove('on'); }
-        else { pat.notes.push({ midi, start: s, len: 2, vel: 0.85 }); cell.classList.add('on'); audition(inst, midi, 0.28); }
-        if (_playing) _events = E.expandArrangement(project);
-      };
-      grid.appendChild(cell);
-    }
   }
+  const grid = el('div', 'st-roll-grid');
+  grid.style.width = (steps * ROLL.STEP_W) + 'px';
+  grid.style.height = (ROLL.ROWS * ROLL.ROW_H) + 'px';
+  // background: black-key row shading + octave lines + bar/beat verticals
+  for (let r = 0; r < ROLL.ROWS; r++) {
+    const midi = top - r;
+    if (_isBlack(midi)) { const rb = el('div', 'st-roll-rowbg'); rb.style.top = (r * ROLL.ROW_H) + 'px'; rb.style.height = ROLL.ROW_H + 'px'; grid.appendChild(rb); }
+    if (((midi % 12) + 12) % 12 === 0) { const ol = el('div', 'st-roll-octline'); ol.style.top = (r * ROLL.ROW_H) + 'px'; grid.appendChild(ol); }
+  }
+  for (let s = 0; s <= steps; s++) {
+    const ln = el('div', 'st-roll-vline' + (s % E.STEPS_PER_BAR === 0 ? ' bar' : (s % 4 === 0 ? ' beat' : '')));
+    ln.style.left = (s * ROLL.STEP_W) + 'px'; grid.appendChild(ln);
+  }
+  pat.notes.forEach(n => grid.appendChild(buildNote(inst, n, top)));
+  grid.addEventListener('pointerdown', e => onRollDown(e, inst, pat, grid, top));
   wrap.appendChild(keys); wrap.appendChild(grid);
   return wrap;
+}
+function buildNote(inst, n, top) {
+  const b = el('div', 'st-note' + (_selNotes.has(n) ? ' sel' : ''));
+  b.style.left = (n.start * ROLL.STEP_W) + 'px';
+  b.style.top = ((top - n.midi) * ROLL.ROW_H) + 'px';
+  b.style.width = Math.max(6, n.len * ROLL.STEP_W - 1) + 'px';
+  b.style.height = (ROLL.ROW_H - 1) + 'px';
+  b.style.background = instColor(inst.id);
+  b._note = n;
+  b.appendChild(el('i', 'st-note-rs'));
+  b.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); deleteNote(n); };
+  return b;
+}
+function deleteNote(n) {
+  const pat = selectedPattern(); if (!pat) return;
+  const i = pat.notes.indexOf(n); if (i >= 0) pat.notes.splice(i, 1);
+  _selNotes.delete(n); renderEditor(); if (_playing) _events = E.expandArrangement(project);
+}
+function deleteSelectedNotes() {
+  if (!_selNotes.size) return false;
+  const pat = selectedPattern(); if (!pat) return false;
+  pat.notes = pat.notes.filter(n => !_selNotes.has(n));
+  _selNotes.clear(); renderEditor(); if (_playing) _events = E.expandArrangement(project);
+  return true;
+}
+function rollXY(e, grid) { const r = grid.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function snapStep(step) { const q = _quantize || 1; return Math.max(0, Math.round(step / q) * q); }
+function refreshNotePositions(grid, top) {
+  grid.querySelectorAll('.st-note').forEach(eln => { const n = eln._note; if (!n) return;
+    eln.style.left = (n.start * ROLL.STEP_W) + 'px'; eln.style.top = ((top - n.midi) * ROLL.ROW_H) + 'px';
+    eln.style.width = Math.max(6, n.len * ROLL.STEP_W - 1) + 'px'; });
+}
+function rollDrag(grid, e, onMove, onUp) {
+  try { grid.setPointerCapture(e.pointerId); } catch (_) {}
+  const mv = ev => onMove(ev);
+  const up = ev => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { grid.releasePointerCapture(ev.pointerId); } catch (_) {} onUp && onUp(ev); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+function onRollDown(e, inst, pat, grid, top) {
+  e.preventDefault();
+  const steps = pat.bars * E.STEPS_PER_BAR;
+  const noteEl = e.target.closest('.st-note');
+  const { x, y } = rollXY(e, grid);
+  if (noteEl && noteEl._note) {
+    const n = noteEl._note;
+    if (e.shiftKey) { _selNotes.has(n) ? _selNotes.delete(n) : _selNotes.add(n); renderEditor(); return; }
+    if (!_selNotes.has(n)) { _selNotes.clear(); _selNotes.add(n); }
+    grid.querySelectorAll('.st-note').forEach(el2 => el2.classList.toggle('sel', _selNotes.has(el2._note)));
+    const handle = e.target.classList.contains('st-note-rs') || (x - (n.start + n.len) * ROLL.STEP_W) > -7;
+    if (handle) startNoteResize(e, grid, n);
+    else startNoteMove(e, grid, n, top);
+    return;
+  }
+  if (_rollTool === 'draw') {
+    const start = Math.min(snapStep(Math.floor(x / ROLL.STEP_W)), steps - 1);
+    const midi = Math.max(EDITOR_LO, Math.min(top, top - Math.floor(y / ROLL.ROW_H)));
+    const n = { midi, start, len: Math.max(1, _quantize), vel: 0.85 };
+    pat.notes.push(n); _selNotes.clear(); _selNotes.add(n);
+    grid.appendChild(buildNote(inst, n, top));
+    audition(inst, midi, 0.28);
+    if (_playing) _events = E.expandArrangement(project);
+    startNoteResize(e, grid, n);             // drag right to set length
+  } else {
+    startMarquee(e, inst, pat, grid, top);
+  }
+}
+function startNoteMove(e, grid, n, top) {
+  const x0 = e.clientX, y0 = e.clientY;
+  const sel = _selNotes.has(n) ? [..._selNotes] : [n];
+  const base = sel.map(o => ({ o, start: o.start, midi: o.midi }));
+  const pat = selectedPattern(); const steps = pat ? pat.bars * E.STEPS_PER_BAR : 64;
+  const q = _quantize || 1;
+  rollDrag(grid, e, ev => {
+    const dStep = q * Math.round(((ev.clientX - x0) / ROLL.STEP_W) / q);
+    const dRow = Math.round((ev.clientY - y0) / ROLL.ROW_H);
+    for (const b of base) {
+      b.o.start = Math.max(0, Math.min(steps - 1, b.start + dStep));
+      b.o.midi = Math.max(EDITOR_LO, Math.min(rollTopMidi(), b.midi - dRow));
+    }
+    refreshNotePositions(grid, top);
+  }, () => { renderEditor(); if (_playing) _events = E.expandArrangement(project); });
+}
+function startNoteResize(e, grid, n) {
+  const x0 = e.clientX, len0 = n.len, q = _quantize || 1;
+  rollDrag(grid, e, ev => {
+    const d = Math.round((ev.clientX - x0) / ROLL.STEP_W);
+    n.len = Math.max(q, Math.round(Math.max(1, len0 + d) / q) * q);
+    const eln = [...grid.querySelectorAll('.st-note')].find(el2 => el2._note === n);
+    if (eln) eln.style.width = Math.max(6, n.len * ROLL.STEP_W - 1) + 'px';
+  }, () => { renderEditor(); if (_playing) _events = E.expandArrangement(project); });
+}
+function startMarquee(e, inst, pat, grid, top) {
+  const box = el('div', 'st-marquee'); grid.appendChild(box);
+  const p0 = rollXY(e, grid);
+  rollDrag(grid, e, ev => {
+    const p = rollXY(ev, grid);
+    box.style.left = Math.min(p.x, p0.x) + 'px'; box.style.top = Math.min(p.y, p0.y) + 'px';
+    box.style.width = Math.abs(p.x - p0.x) + 'px'; box.style.height = Math.abs(p.y - p0.y) + 'px';
+  }, ev => {
+    const p = rollXY(ev, grid);
+    const l = Math.min(p.x, p0.x), rgt = Math.max(p.x, p0.x), tp = Math.min(p.y, p0.y), bot = Math.max(p.y, p0.y);
+    if (!ev.shiftKey) _selNotes.clear();
+    for (const n of pat.notes) {
+      const nl = n.start * ROLL.STEP_W, nr = (n.start + n.len) * ROLL.STEP_W, ntp = (top - n.midi) * ROLL.ROW_H, nbot = ntp + ROLL.ROW_H;
+      if (nl < rgt && nr > l && ntp < bot && nbot > tp) _selNotes.add(n);
+    }
+    box.remove(); renderEditor();
+  });
 }
 
 /* ---- add-track menu ----------------------------------------------------- */
@@ -985,6 +1158,7 @@ function build() {
   if (zoomOut) zoomOut.onclick = () => { _pxPerBar = Math.max(40, _pxPerBar - 24); renderTimeline(); };
   // IO toolbar
   const bind = (id, fn) => { const e = document.getElementById(id); if (e) e.onclick = fn; };
+  bind('st-new', newProject);
   bind('st-save', saveProject); bind('st-open', loadProject);
   bind('st-export-midi', exportMIDIFile); bind('st-import-midi', importMIDIFile);
   bind('st-render-wav', renderWAV);
@@ -1041,7 +1215,9 @@ function pickFile(accept, asArrayBuffer, cb) {
   inp.click();
 }
 function toastSafe(m) { if (typeof window.toast === 'function') window.toast(m); }
-function importSF2() {
+// Import a SoundFont. With `target` set, swap the SF2 on an existing track;
+// otherwise create a new SF2 instrument.
+function importSF2(target) {
   const input = document.createElement('input'); input.type = 'file'; input.accept = '.sf2';
   input.onchange = async () => {
     const f = input.files[0]; if (!f) return;
@@ -1049,20 +1225,40 @@ function importSF2() {
     try {
       const ab = await f.arrayBuffer();
       const parsed = E.parseSF2(ab);                          // validate before committing
+      const url = await fileToDataURL(f);
+      if (target && target.type === 'sf2') {
+        if (target.sampleRef) delete project.samples[target.sampleRef];
+        project.samples[target.id] = url; target.sampleRef = target.id;
+        target._sf2 = { parsed, ctx: actx(), presetIndex: 0, zones: buildSF2Zones(parsed, 0, actx()) };
+        target.params.presetIndex = 0; target.params.presetNames = parsed.presets.map(p => p.name);
+        target.name = f.name.replace(/\.sf2$/i, '').slice(0, 18);
+        _selInstId = target.id; renderAll();
+        toastSafe('🎵 ' + target.name + ' · ' + parsed.presets.length + ' presets'); return;
+      }
       const inst = E.makeInstrument('sf2', f.name.replace(/\.sf2$/i, '').slice(0, 18), { presetIndex: 0, a: 0.004, d: 0, s: 1, r: 0.25, cut: 12000, res: 1, fenv: 0 });
-      const url = await fileToDataURL(f); project.samples[inst.id] = url; inst.sampleRef = inst.id;
+      project.samples[inst.id] = url; inst.sampleRef = inst.id;
       inst._sf2 = { parsed, ctx: actx(), presetIndex: 0, zones: buildSF2Zones(parsed, 0, actx()) };
       inst.params.presetNames = parsed.presets.map(p => p.name);
       project.instruments.push(inst);
       const pat = E.makePattern(inst.name, 1); project.patterns.push(pat);
-      E.ensureTrack(project, inst.id).clips.push(E.makeClip(pat.id, 0, Math.max(1, Math.ceil(E.songLengthBars(project)) || 1)));
-      _selInstId = inst.id; renderAll();
+      const clip = E.makeClip(pat.id, 0, Math.max(1, Math.ceil(E.songLengthBars(project)) || 1));
+      E.ensureTrack(project, inst.id).clips.push(clip);
+      _selInstId = inst.id; _selClipId = clip.id; renderAll();
       toastSafe('🎵 ' + inst.name + ' · ' + parsed.presets.length + ' presets');
     } catch (e) { toastSafe('SF2 load failed: ' + (e && e.message || e)); }
   };
   input.click();
 }
 
+// Start fresh with an empty project (no tracks). Add tracks with "＋ Add Track".
+function newProject() {
+  if (project && project.instruments.length && typeof confirm === 'function' && !confirm('Start a new empty project? Unsaved changes will be lost.')) return;
+  stop();
+  project = E.makeProject('Untitled');
+  _selInstId = null; _selClipId = null; _selNotes.clear(); _events = null;
+  renderAll();
+  toastSafe('🆕 New empty project');
+}
 function saveProject() {
   const clean = JSON.parse(JSON.stringify(project, (k, v) => (k && k[0] === '_') ? undefined : v));
   download(JSON.stringify(clean), (project.name || 'project').replace(/\s+/g, '_') + '.aqs.json', 'application/json');
@@ -1142,7 +1338,37 @@ window.openStudio = function () {
   if (window.OS && window.OS.register) { window.OS.register('studio'); window.OS.focus('studio'); }
   build();
   syncTransportUI();
+  scopeStart();
 };
+
+/* ---- oscilloscope (master output waveform) ----------------------------- */
+let _scope = null, _scopeRaf = null;
+function scopeAnalyser() {
+  const c = window.actx; if (!c) return null;
+  if (!_scope || _scope.context !== c) { _scope = c.createAnalyser(); _scope.fftSize = 1024; try { master().connect(_scope); } catch (_) {} }
+  return _scope;
+}
+function drawScope() {
+  const cv = document.getElementById('st-scope'); if (!cv) return;
+  const w = cv.width = cv.clientWidth || 220, h = cv.height = cv.clientHeight || 34;
+  const ctx = cv.getContext('2d'); if (!ctx) return;
+  ctx.fillStyle = '#0a0c10'; ctx.fillRect(0, 0, w, h);
+  const accent = (getComputedStyle(document.documentElement).getPropertyValue('--st-accent') || '#36c5f0').trim() || '#36c5f0';
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.beginPath();
+  const an = scopeAnalyser();
+  if (an) {
+    const buf = new Uint8Array(an.fftSize); an.getByteTimeDomainData(buf);
+    for (let i = 0; i < w; i++) { const v = (buf[Math.floor(i / w * buf.length)] - 128) / 128; const y = h / 2 - v * (h / 2 - 2); i ? ctx.lineTo(i, y) : ctx.moveTo(i, y); }
+  } else { ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); } // no audio context yet → flat line
+  ctx.stroke();
+}
+function scopeTick() {
+  const win = document.getElementById('studio-win');
+  if (!win || !win.classList.contains('open')) { _scopeRaf = null; return; } // self-stop when closed
+  drawScope();
+  _scopeRaf = requestAnimationFrame(scopeTick);
+}
+function scopeStart() { if (!_scopeRaf) _scopeRaf = requestAnimationFrame(scopeTick); }
 window.Studio = {
   play, stop, togglePlay, setBpm, saveProject, loadProject, exportMIDIFile, importMIDIFile, renderWAV,
   get project() { return project; },

@@ -3592,6 +3592,20 @@ body.perf-mode #aqua-gun { display: none !important; }
     .sk-bar { height:8px; background:rgba(0,90,130,0.16); border-radius:5px; overflow:hidden; }
     .sk-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:5px; transition:width .3s; }
     .sk-xp { font-size:10px; color:var(--text2); font-variant-numeric:tabular-nums; }
+    .sk-tabs { display:flex; gap:6px; }
+    .sk-tab { flex:1; font-size:12px; font-weight:700; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:rgba(0,180,220,0.05); color:var(--text2); cursor:pointer; }
+    .sk-tab.on { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); }
+    .sk-back { align-self:flex-start; font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:rgba(0,180,220,0.05); color:var(--accent); cursor:pointer; }
+    .sk-search { width:100%; box-sizing:border-box; padding:7px 11px; border-radius:9px; border:1px solid var(--border); background:rgba(0,90,130,0.10); color:var(--text); font-size:13px; }
+    .sk-search:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,180,220,0.18); }
+    .sk-ranklist { display:flex; flex-direction:column; gap:4px; }
+    .sk-rank-row { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; background:rgba(0,180,220,0.05); border:1px solid var(--border); cursor:pointer; }
+    .sk-rank-row:hover { background:rgba(0,180,220,0.12); }
+    .sk-rank-row.me { border-color:var(--accent); box-shadow:inset 3px 0 0 var(--accent); }
+    .sk-rank-pos { font-size:12px; font-weight:800; color:var(--text2); min-width:34px; }
+    .sk-rank-name { flex:1; font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sk-rank-lvl { font-size:15px; font-weight:800; color:var(--accent2); font-variant-numeric:tabular-nums; }
+    .sk-rank-note { font-size:12px; color:var(--text2); padding:10px 4px; text-align:center; }
     @media (max-width:768px) {
       #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
       .sk-grid { grid-template-columns:1fr; }
@@ -12182,7 +12196,7 @@ function _slotsEvaluate(){
 let _slotsWonThisSpin=false;
 function _slotsFinish(){
   slotsSpinning=false;document.getElementById('slots-spin-btn').disabled=false;updateSlotsUI();
-  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:_slotsWonThisSpin});
+  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:_slotsWonThisSpin,luck:0.4});
   _slotsWonThisSpin=false;
 }
 
@@ -16409,7 +16423,7 @@ function bjStand(){
     setTimeout(() => window.abSayBJ?.('lose'), 400);
     bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
   }
-  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:(dt>21||pt>dt)});
+  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:(dt>21||pt>dt),luck:0.4});
   bjRender();
 }
 

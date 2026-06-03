@@ -265,7 +265,7 @@ function settleYou() {
   if (typeof window.aqGameXp === 'function') {
     const myIdx = G.seats.findIndex(s => s && s.isYou);
     const iWon = myIdx >= 0 && Array.isArray(G.winners) && G.winners.some(w => w.idx === myIdx);
-    if (myIdx >= 0) window.aqGameXp('gambling', { played: true, won: iWon });
+    if (myIdx >= 0) window.aqGameXp('gambling', { played: true, won: iWon, luck: 0.4 });
   }
 }
 

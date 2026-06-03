@@ -20,6 +20,17 @@ const FISH = [
   { name: 'Legendary', rarity: 4, value: 120, color: 3 },
 ];
 
+// Stardew-style reel tuning. The green "catch bar" is raised by CLICKING (each
+// click is an upward impulse); gravity constantly pulls it down. The bar is
+// heavy/weighted (momentum via damping) so control is slow and deliberate.
+const TRACK_H = 120;       // playable height of the vertical reel track (px)
+const F_GRAV = 0.018;      // downward acceleration per ~16ms frame
+const F_IMPULSE = 1.05;    // upward velocity added per click
+const F_DAMP = 0.94;       // momentum retained per frame (weighted feel)
+// Fish behaviors, mirroring Stardew's motion types (erraticness ∝ difficulty).
+const MOTIONS = ['smooth', 'sinker', 'floater', 'dart', 'mixed'];
+
+
 let cv = null, cx = null, raf = null;
 let state = 'idle';   // idle | casting | bite | reel | caught | miss
 let _built = false;
@@ -52,22 +63,53 @@ function startCast() {
 
 function startReel() {
   const fish = pickFish();
-  // catch zone size grows with level (easier), shrinks with rarity (harder).
-  // Generous by default so it feels fair; track is 0..120.
-  const zone = Math.max(34, 74 - fish.rarity * 5 + lvl() * 0.3);
+  // Stardew maps difficulty 1..100 → bar size & fish erraticness. We derive a
+  // difficulty from rarity. Bar is LONG by default (forgiving), shrinking a
+  // little with rarity and growing with Fishing level.
+  const difficulty = 8 + fish.rarity * 16;
+  const zone = Math.max(48, 94 - fish.rarity * 5 + lvl() * 0.4);
+  const motion = fish.rarity >= 3 ? 'dart' : MOTIONS[(Math.random() * 4) | 0];
   state = 'reel';
-  msg = 'Reel it in!';
+  msg = 'Click to reel it in!';
   R = {
-    fish,
-    zoneH: zone,            // px height of the green catch bar
-    zoneY: 120 - zone,      // top of catch zone (player-controlled)
-    vel: 0,
-    fishY: 60,              // fish position on track
+    fish, difficulty, motion,
+    zoneH: zone,                  // px height of the green catch bar (long)
+    zoneY: TRACK_H - zone,        // top of catch zone (player-controlled)
+    vel: 0,                       // bar velocity (weighted momentum)
+    fishY: 60,                    // fish position on track
     fishV: 0,
     fishTarget: 60,
-    progress: 55,           // 0..100, lose at 0, win at 100 (start with a head start)
-    holding: false,
+    progress: 55,                 // 0..100, lose at 0, win at 100 (head start)
   };
+}
+
+// One click = one upward pump. Spam clicks to rise; stop to let it sink.
+function pump() { if (state === 'reel' && R) R.vel -= F_IMPULSE; }
+
+// Move the fish according to its Stardew-style motion type.
+function moveFish(R, f, dt) {
+  const d = R.difficulty;
+  let chance, lo = 2, hi = 118;
+  switch (R.motion) {
+    case 'smooth':  chance = 0.010; break;
+    case 'sinker':  chance = 0.018; lo = 55; break;   // tends to sink (lower on track)
+    case 'floater': chance = 0.018; hi = 65; break;   // tends to rise
+    case 'dart':    chance = 0.045 + d / 100 * 0.04; break; // jumpy; amplitude ∝ difficulty
+    default:        chance = 0.022; break;            // mixed
+  }
+  if (Math.random() < chance * f) {
+    if (R.motion === 'dart') {
+      const amp = 30 * (1 + d / 50);                  // [2×difficulty]%-ish bigger jumps
+      R.fishTarget = Math.max(2, Math.min(118, R.fishY + (Math.random() * 2 - 1) * amp));
+    } else {
+      R.fishTarget = lo + Math.random() * (hi - lo);
+    }
+  }
+  const seek = (R.motion === 'dart' ? 0.0055 : 0.0032);
+  R.fishV += (R.fishTarget - R.fishY) * seek * dt;
+  R.fishV *= 0.88;
+  R.fishY += R.fishV;
+  R.fishY = Math.max(2, Math.min(118, R.fishY));
 }
 
 function landFish() {
@@ -94,29 +136,28 @@ function loseFish() {
   R = null;
 }
 
-function setHold(on) {
-  if (state === 'reel' && R) R.holding = on;
-  else if ((state === 'idle' || state === 'caught' || state === 'miss')) startCast();
+// A press either starts a cast (when idle) or pumps the bar (during reel).
+function press() {
+  if (state === 'bite') { startReel(); pump(); }
+  else if (state === 'reel') pump();
+  else if (state === 'idle' || state === 'caught' || state === 'miss') startCast();
 }
 
 let _lastT = 0;
 function tick(t) {
   const dt = Math.min(50, t - (_lastT || t)); _lastT = t;
-  if (state === 'casting' && t >= biteAt) { state = 'bite'; msg = '! BITE ! Tap to reel!'; biteAt = t; }
+  const f = dt / 16;
+  if (state === 'casting' && t >= biteAt) { state = 'bite'; msg = '! BITE ! Click to reel!'; biteAt = t; }
   if (state === 'bite' && t - biteAt > 2600) { loseFish(); } // generous bite window
   if (state === 'reel' && R) {
-    // player bar physics (hold = up) — gentle so it's easy to steer
-    R.vel += (R.holding ? -0.15 : 0.13) * dt;
-    R.vel *= 0.9;
-    R.zoneY += R.vel;
-    if (R.zoneY < 0) { R.zoneY = 0; R.vel = 0; }
-    if (R.zoneY > 120 - R.zoneH) { R.zoneY = 120 - R.zoneH; R.vel = 0; }
-    // fish wandering — calmer, especially for common fish
-    if (Math.random() < 0.018 + R.fish.rarity * 0.008) R.fishTarget = 10 + Math.random() * 100;
-    R.fishV += (R.fishTarget - R.fishY) * 0.0028 * dt;
-    R.fishV *= 0.9;
-    R.fishY += R.fishV;
-    R.fishY = Math.max(2, Math.min(118, R.fishY));
+    // weighted bar physics: gravity pulls down, clicks pump up, momentum lingers
+    R.vel += F_GRAV * f;
+    R.vel *= Math.pow(F_DAMP, f);
+    R.zoneY += R.vel * f;
+    const maxY = TRACK_H - R.zoneH;
+    if (R.zoneY < 0) { R.zoneY = 0; if (R.vel < 0) R.vel *= -0.3; }   // soft bounce
+    if (R.zoneY > maxY) { R.zoneY = maxY; if (R.vel > 0) R.vel *= -0.2; }
+    moveFish(R, f, dt);
     // in-zone? fill fast, drain slow → forgiving
     const inZone = R.fishY >= R.zoneY && R.fishY <= R.zoneY + R.zoneH;
     R.progress += (inZone ? 0.085 : -0.04) * dt;
@@ -187,7 +228,7 @@ function build() {
   bar.className = 'gbc-bar';
   const cast = document.createElement('button');
   cast.className = 'gbc-btn';
-  cast.textContent = '🎣 CAST / REEL';
+  cast.textContent = '🎣 CAST / PUMP';
   bar.appendChild(cast);
   const info = document.createElement('div');
   info.className = 'gbc-info';
@@ -198,13 +239,18 @@ function build() {
   cx = cv.getContext('2d');
   cx.imageSmoothingEnabled = false;
 
-  // input: a press triggers cast/reel-grab; hold raises the bar during reel
-  const down = (e) => { e.preventDefault(); if (state === 'bite') { startReel(); if (R) R.holding = true; } else setHold(true); };
-  const up = (e) => { e.preventDefault(); if (state === 'reel' && R) R.holding = false; };
+  // input: each press is a "pump" (cast when idle, raise the bar during reel)
+  const down = (e) => { e.preventDefault(); press(); };
   cv.addEventListener('pointerdown', down);
-  window.addEventListener('pointerup', up);
   cast.addEventListener('pointerdown', down);
-  cast.addEventListener('pointerup', up);
+  // keyboard: space pumps too
+  if (!window._fishKeyBound) {
+    window._fishKeyBound = true;
+    window.addEventListener('keydown', (e) => {
+      const w = document.getElementById('fishing-wrap');
+      if (e.code === 'Space' && w && w.classList.contains('open')) { e.preventDefault(); press(); }
+    });
+  }
 
   _built = true;
 }

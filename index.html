@@ -1292,6 +1292,41 @@
     #slots-paytable { display:flex; flex-wrap:wrap; gap:3px 10px; justify-content:center; padding-top:4px;
       border-top:1px solid rgba(180,80,255,0.2); }
     #slots-paytable span { font-size:10px; color:rgba(200,150,255,0.7); }
+    #slots-body { position:relative; }
+    .slots-jackpot { text-align:center; font-size:11px; font-weight:700; color:#ffd700; letter-spacing:0.5px;
+      background:rgba(255,180,0,0.12); border:1px solid rgba(255,180,0,0.35); border-radius:8px; padding:4px 8px; }
+    .slots-jackpot b { font-size:15px; }
+    .slots-lbl { font-size:10px; color:rgba(200,150,255,0.7); }
+    .slots-stat { font-size:13px; font-weight:800; color:#ffd700; min-width:30px; text-align:center; }
+    #slots-bet-row { flex-wrap:wrap; }
+    .slots-btn.on { background:rgba(255,215,0,0.25) !important; border-color:rgba(255,215,0,0.6) !important; color:#ffd700 !important; }
+    /* settings */
+    .slots-settings { background:rgba(0,0,0,0.35); border:1px solid rgba(180,80,255,0.3); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+    .slots-set-h { font-size:10px; font-weight:800; letter-spacing:0.5px; color:rgba(200,160,255,0.8); text-transform:uppercase; }
+    .slots-set-row { display:flex; gap:6px; flex-wrap:wrap; }
+    .slots-chip { font-size:11px; font-weight:700; padding:4px 9px; border-radius:14px; cursor:pointer;
+      background:rgba(80,10,140,0.4); border:1px solid rgba(180,80,255,0.35); color:#d0a0ff; }
+    .slots-chip.on { background:linear-gradient(180deg,#9933ff,#6600cc); border-color:rgba(200,100,255,0.7); color:#fff; }
+    /* overlay (gamble / chest) */
+    .slots-overlay { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+      background:rgba(8,0,24,0.93); border-radius:inherit; padding:16px; }
+    .slots-ov-title { font-size:14px; font-weight:800; color:#f0d0ff; text-align:center; }
+    .slots-ov-amt { font-size:26px; font-weight:900; color:#ffd700; text-shadow:0 0 12px rgba(255,215,0,0.6); }
+    .slots-ov-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    .slots-gamble-red { background:linear-gradient(180deg,#ff5a5a,#c41e1e) !important; color:#fff !important; }
+    .slots-gamble-black { background:linear-gradient(180deg,#444,#111) !important; color:#fff !important; }
+    .slots-collect { background:linear-gradient(180deg,#3fd07a,#1c9c54) !important; color:#04210f !important; font-weight:800 !important; }
+    .slots-chest { width:58px; height:58px; font-size:34px; border-radius:10px; cursor:pointer;
+      background:rgba(80,10,140,0.5); border:2px solid rgba(200,150,80,0.6); transition:transform .1s; }
+    .slots-chest:hover:not(:disabled) { transform:translateY(-3px); }
+    .slots-chest.open { background:rgba(255,200,0,0.25); border-color:#ffd700; }
+    /* 5-reel sizing */
+    #slots-wrap.reels-5 .slot-reel { width:62px; }
+    #slots-wrap.reels-5 .slot-sym { width:62px; font-size:28px; }
+    /* themed skins (subtle tints over the base purple) */
+    #slots-wrap.skin-fruit { border-color:#ff5d8f; box-shadow:0 0 50px rgba(255,80,120,0.22),0 20px 60px rgba(0,0,0,0.7); }
+    #slots-wrap.skin-spooky { background:linear-gradient(160deg,#1a0a2e 0%,#0a0a14 60%,#160026 100%); border-color:#7bff9e; }
+    #slots-wrap.skin-space { background:linear-gradient(160deg,#001033 0%,#000018 55%,#0a0030 100%); border-color:#5ad1ff; }
     [data-era=mono90s] #slots-wrap { background:#000 !important; border-color:#fff !important; }
     [data-era=mono90s] .slot-sym { filter:none !important; }
     [data-era=mono90s] .slots-btn { background:#000 !important; border-color:#fff !important; color:#fff !important; }
@@ -12016,189 +12051,7 @@ function _hslToRgb(h, s, l) {
   window.__beatUpdateFn = updateBeat;
 })();
 
-// ─────────────────────────────────────────────────────────
-//  SLOT MACHINE — Hacksaw-inspired 3×3 grid
-// ─────────────────────────────────────────────────────────
-const SLOT_POOL = [
-  {sym:'🃏',cls:'sym-wild',   weight:2,  pay:0},
-  {sym:'💫',cls:'sym-scatter',weight:3,  pay:0},
-  {sym:'💎',cls:'sym-diamond',weight:4,  pay:50},
-  {sym:'👑',cls:'',           weight:6,  pay:30},
-  {sym:'🎵',cls:'',           weight:8,  pay:15},
-  {sym:'⭐',cls:'',           weight:12, pay:8},
-  {sym:'🍒',cls:'',           weight:18, pay:4},
-  {sym:'🍋',cls:'',           weight:24, pay:2},
-  {sym:'🔔',cls:'',           weight:24, pay:1.5},
-];
-const _SLOT_TOTAL_W = SLOT_POOL.reduce((a,s)=>a+s.weight,0);
-let slotsBet=10, slotsSpinning=false, _slotsInited=false;
-let _slotsGrid=[[],[],[]], _slotsFreeSpins=0, _slotsFreeMulti=1, _slotsCascadeMult=1;
-const SLOT_PAYLINES=[[0,0,0],[1,1,1],[2,2,2],[0,1,2],[2,1,0]];
-
-function _slotPick(){let r=Math.random()*_SLOT_TOTAL_W;for(const s of SLOT_POOL){r-=s.weight;if(r<=0)return s;}return SLOT_POOL[SLOT_POOL.length-1];}
-
-function toggleSlots(){
-  const w=document.getElementById('slots-wrap');if(!w)return;
-  const opening=!w.classList.contains('open');
-  w.classList.toggle('open',opening);
-  if(opening){if(!_slotsInited){initSlots();_slotsInited=true;}updateSlotsUI();window.abSaySlots?.('open');}
-}
-function initSlots(){
-  for(let r=0;r<3;r++){_slotsGrid[r]=Array.from({length:3},()=>_slotPick());_slotsRenderReel(r);}
-  updateSlotsUI();
-}
-function _slotsRenderReel(reel,highlight=[]){
-  const strip=document.getElementById(`slot-strip-${reel}`);if(!strip)return;
-  strip.innerHTML='';
-  _slotsGrid[reel].forEach((s,row)=>{
-    const d=document.createElement('div');
-    d.className='slot-sym'+(s.cls?' '+s.cls:'')+(highlight.includes(row)?' sym-win':'');
-    d.textContent=s.sym;strip.appendChild(d);
-  });
-}
-function updateSlotsUI(){
-  const cr=document.getElementById('slots-credits');if(cr)cr.textContent=aqGetCredits();
-  aqRefreshCreditDisplays();
-  const bi=document.getElementById('slots-bet-inp');if(bi)bi.value=slotsBet;
-  const fb=document.getElementById('slots-free-spins-banner');
-  if(fb)fb.style.display=_slotsFreeSpins>0?'':'none';
-  if(fb&&_slotsFreeSpins>0)fb.textContent=`🎰 FREE SPINS: ${_slotsFreeSpins} remaining (${_slotsFreeMulti}× multiplier)`;
-}
-function slotsAdjustBet(delta){
-  if(slotsSpinning)return;
-  slotsBet=Math.max(1,Math.min(aqGetCredits(),slotsBet+delta));
-  const bi=document.getElementById('slots-bet-inp');if(bi)bi.value=slotsBet;
-}
-function spinSlots(){
-  if(slotsSpinning)return;
-  const isFree=_slotsFreeSpins>0;
-  if(!isFree){
-    const bi=document.getElementById('slots-bet-inp');if(bi)slotsBet=Math.max(0,parseInt(bi.value)||10);
-    // allow a free 0-credit spin when broke so you can keep playing
-    slotsBet=Math.max(0,Math.min(aqGetCredits(),slotsBet));
-    if(bi)bi.value=slotsBet;
-    if(slotsBet<=0){
-      const msg=document.getElementById('slots-msg');if(msg)msg.textContent='Free spin (no credits) — win nothing, but play on!';
-    } else {
-      aqSetCredits(aqGetCredits()-slotsBet);
-    }
-  } else { _slotsFreeSpins--; }
-  slotsSpinning=true; _slotsCascadeMult=1;
-  document.getElementById('slots-spin-btn').disabled=true;
-  const msg=document.getElementById('slots-msg');if(msg)msg.textContent='';
-  const wl=document.getElementById('slots-win-line');if(wl)wl.textContent='';
-  updateSlotsUI(); playTone(400,0.08,'square',0.1);
-  // Build each reel strip: result symbols at TOP, many random symbols below.
-  // Animation scrolls from bottom → top (translateY: negative → 0),
-  // so symbols appear to fall DOWN into the window.
-  const SPIN_H = 84, SPIN_ROWS = 22;
-  let doneReels = 0;
-  for(let r=0;r<3;r++) _slotsGrid[r]=Array.from({length:3},()=>_slotPick());
-  [0,1,2].forEach(r=>{
-    const strip=document.getElementById(`slot-strip-${r}`);if(!strip)return;
-    // Build strip: [result[0], result[1], result[2], ...SPIN_ROWS random]
-    const allSyms=[..._slotsGrid[r]];
-    for(let j=0;j<SPIN_ROWS;j++) allSyms.push(_slotPick());
-    strip.innerHTML='';
-    allSyms.forEach(s=>{
-      const d=document.createElement('div');
-      d.className='slot-sym'+(s.cls?' '+s.cls:'');
-      d.textContent=s.sym; strip.appendChild(d);
-    });
-    // Start with strip positioned so the LAST 3 random symbols are visible
-    const startY=-(SPIN_ROWS*SPIN_H); // negative → strip is up, we see the bottom rows
-    strip.style.transition='none';
-    strip.style.transform=`translateY(${startY}px)`;
-    strip.style.filter='blur(5px)';
-    // Stagger: reel 0 stops first, reel 2 last
-    const delay=r*220;
-    const dur=1300+r*300; // ms: 1300, 1600, 1900
-    setTimeout(()=>{
-      let t0=null;
-      function easeOut(t){return 1-Math.pow(1-t,3);}
-      function tick(now){
-        if(!t0) t0=now;
-        const t=Math.min((now-t0)/dur,1);
-        const y=startY*(1-easeOut(t)); // startY→0
-        strip.style.transform=`translateY(${y.toFixed(1)}px)`;
-        // blur fades out over first 45% of animation
-        const bl=Math.max(0,(0.45-t)/0.45*5);
-        strip.style.filter=bl>0.2?`blur(${bl.toFixed(1)}px)`:'';
-        if(t<1){requestAnimationFrame(tick);}
-        else{
-          strip.style.transform='translateY(0)';strip.style.filter='';
-          _slotsRenderReel(r); // trim to 3 symbols
-          doneReels++;if(doneReels===3)setTimeout(_slotsAfterSpin,80);
-        }
-      }
-      requestAnimationFrame(tick);
-    },delay);
-  });
-}
-function _slotsAfterSpin(){
-  let scatterCt=0;
-  for(let r=0;r<3;r++)for(let row=0;row<3;row++)if(_slotsGrid[r][row].sym==='💫')scatterCt++;
-  if(scatterCt>=3){
-    _slotsFreeSpins+=5;_slotsFreeMulti=2;
-    const msg=document.getElementById('slots-msg');if(msg)msg.textContent='💫 FREE SPINS! 5 spins awarded!';
-    playFanfare('win');
-  }
-  _slotsEvaluate();
-}
-function _slotsEvaluate(){
-  let totalWin=0;const winCells={};const winDescs=[];
-  for(let pl=0;pl<SLOT_PAYLINES.length;pl++){
-    const rows=SLOT_PAYLINES[pl];
-    const syms=rows.map((row,r)=>_slotsGrid[r][row]);
-    const base=syms.find(s=>s.sym!=='🃏');
-    if(!base)continue;
-    const match=syms.every(s=>s.sym===base.sym||s.sym==='🃏');
-    if(match&&base.pay>0){
-      const mult=_slotsFreeSpins>0?_slotsFreeMulti:1;
-      const win=Math.round(slotsBet*base.pay*_slotsCascadeMult*mult);
-      totalWin+=win; winDescs.push(`${base.sym}×3 +${win}`);
-      rows.forEach((row,r)=>{if(!winCells[r])winCells[r]=new Set();winCells[r].add(row);});
-    }
-  }
-  if(totalWin>0){
-    aqAddCredits(totalWin);
-    _slotsWonThisSpin = true;
-    if(typeof recordScore==='function') recordScore('slots', totalWin, winDescs[0]||'');
-    for(let r=0;r<3;r++){document.getElementById(`slot-reel-${r}`)?.classList.add('winning');_slotsRenderReel(r,[...(winCells[r]||new Set())]);}
-    const wl=document.getElementById('slots-win-line');if(wl)wl.textContent=winDescs.join(', ');
-    const isJackpot=winDescs.some(d=>/💎|👑/.test(d));
-    const msgEl=document.getElementById('slots-msg');
-    if(isJackpot){
-      if(msgEl)msgEl.textContent=`💰 BIG WIN! +${totalWin} credits!`;
-      playFanfare('win');window.abSaySlots?.('jackpot','+'+totalWin);
-      if(window.sendGlobalMessage){const u=localStorage.getItem('aq_username')||'Someone';window.sendGlobalMessage(`🎰 JACKPOT! ${u} won ${totalWin} credits in AquaSlots!`);}
-      unlockTheme('neon');
-    } else {
-      if(msgEl)msgEl.textContent=`+${totalWin} credits`;
-      playTone(880,0.15,'sine',0.12);setTimeout(()=>playTone(1100,0.15,'sine',0.12),120);
-      window.abSaySlots?.('win');
-    }
-    _slotsCascadeMult++;
-    setTimeout(()=>{
-      for(let r=0;r<3;r++)document.getElementById(`slot-reel-${r}`)?.classList.remove('winning');
-      if(_slotsCascadeMult<=3){
-        for(let r=0;r<3;r++)if(winCells[r])winCells[r].forEach(row=>{_slotsGrid[r][row]=_slotPick();});
-        for(let r=0;r<3;r++)_slotsRenderReel(r);
-        setTimeout(_slotsEvaluate,280);return;
-      }
-      _slotsFinish();
-    },700);
-  } else {
-    playTone(120,0.3,'sawtooth',0.12);window.abSaySlots?.('lose');
-    _slotsFinish();
-  }
-}
-let _slotsWonThisSpin=false;
-function _slotsFinish(){
-  slotsSpinning=false;document.getElementById('slots-spin-btn').disabled=false;updateSlotsUI();
-  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:_slotsWonThisSpin,luck:0.4});
-  _slotsWonThisSpin=false;
-}
+// SLOT MACHINE logic now lives in src/slots.js (loaded as an ES module below).
 
 // ─────────────────────────────────────────────────────────
 //  CURSOR BUBBLES — glossy, physics-based gravity pull
@@ -16974,6 +16827,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/accounts.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
 <script type="module" src="/src/skills.js"></script>
+<script type="module" src="/src/slots.js"></script>
 <script type="module" src="/src/stocks.js"></script>
 <script type="module" src="/src/poker.js"></script>
 <script type="module" src="/src/fishing.js"></script>
@@ -16988,30 +16842,8 @@ function bjUpdateBalance(){
             <button onclick="toggleSlots()" style="background:rgba(200,40,40,0.7);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">✕</button>
           </div>
         </div>
-        <div id="slots-body">
-          <div id="slots-free-spins-banner"></div>
-          <div id="slots-reels">
-            <div class="slot-reel" id="slot-reel-0"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-0"></div></div>
-            <div class="slot-reel" id="slot-reel-1"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-1"></div></div>
-            <div class="slot-reel" id="slot-reel-2"><div class="slot-reel-win-line"></div><div class="slot-strip" id="slot-strip-2"></div></div>
-          </div>
-          <div id="slots-win-line"></div>
-          <div id="slots-msg"></div>
-          <div id="slots-bet-row">
-            <span id="slots-bet-label">Bet:</span>
-            <button class="slots-btn" onclick="slotsAdjustBet(-5)">−</button>
-            <input id="slots-bet-inp" type="number" min="0" value="10">
-            <button class="slots-btn" onclick="slotsAdjustBet(5)">+</button>
-          </div>
-          <div id="slots-controls">
-            <button id="slots-spin-btn" class="slots-btn slots-spin" onclick="spinSlots()">SPIN 🎰</button>
-          </div>
-          <div id="slots-paytable">
-            <span>🃏 Wild</span><span>💫×3 Free Spins</span><span>💎×3 = 50×</span>
-            <span>👑×3 = 30×</span><span>🎵×3 = 15×</span><span>⭐×3 = 8×</span>
-            <span>🍒×3 = 4×</span><span>🍋×3 = 2×</span><span>5 lines</span>
-          </div>
-        </div>
+        <!-- body is built by src/slots.js on open -->
+        <div id="slots-body"></div>
       </div>
 
 <!-- AQUASYNTH STUDIO (mini-DAW) -->

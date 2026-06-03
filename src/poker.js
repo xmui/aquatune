@@ -57,6 +57,18 @@ function cmpHand(x, y) { return x.rank !== y.rank ? x.rank - y.rank : x.tie - y.
 
 /* ---- game state --------------------------------------------------------- */
 let G = null;
+let _creditMirror = null; // last stack value mirrored into your credits (your local seat)
+// Mirror your seat's chips into your real account credits, applying only the
+// poker-induced delta (so credits earned in other apps are preserved). Browser
+// only; headless render (tests) skips this so engine assertions stay stack-pure.
+function syncCreditsToStack() {
+  if (typeof window === 'undefined' || typeof window.aqAddCredits !== 'function') return;
+  const i = mySeatIdx();
+  if (i < 0) { _creditMirror = null; return; }
+  const st = G.seats[i].stack;
+  if (_creditMirror == null) { _creditMirror = st; return; } // just sat — anchor, no delta
+  if (st !== _creditMirror) { addCredits(st - _creditMirror); _creditMirror = st; }
+}
 function emptyGame() {
   return { seats: new Array(NSEATS).fill(null), board: [], deck: [], pot: 0, dealer: -1, sb: SB, bb: BB,
     street: 'idle', turn: -1, toCall: 0, minRaiseTo: BB, lastRaiseSize: BB, handNo: 0, msg: 'Take a seat and press Deal.', winners: [] };
@@ -87,10 +99,11 @@ function mySeatIdx() { return G ? G.seats.findIndex(isMine) : -1; }
 
 function sitYou(idx) {
   if (G.seats[idx]) return;
-  if (credits() < BB) { toastSafe('Not enough credits to buy in'); return; }
-  const buy = Math.min(BUYIN, credits());
+  if (credits() < BB) { toastSafe('Not enough credits to play'); return; }
+  // Nothing is "held" by the table: your seat stack simply mirrors your real
+  // credits, and wins/losses flow straight to your account (see syncCreditsToStack).
+  const buy = credits();
   const name = (typeof localStorage !== 'undefined' && localStorage.getItem('aq_username')) || 'You';
-  addCredits(-buy); // you pay your buy-in from your own credits
   if (inRoom() && !amHost()) {
     // guest: ask the host to seat me — the host's broadcast will show the seat
     if (window.pokerSendAction) window.pokerSendAction({ type: 'sit', seat: idx, name, buyin: buy });
@@ -102,16 +115,40 @@ function sitYou(idx) {
 function standYou(idx) {
   const s = G.seats[idx]; if (!s || !isMine(s)) return;
   if (s.inHand && !s.folded && G.street !== 'idle' && G.street !== 'showdown') { toastSafe('Finish the hand first'); return; }
-  addCredits(s.stack); // cash out your current stack to your credits
+  // No cash-out needed — your credits already reflect your stack live.
   if (inRoom() && !amHost()) { if (window.pokerSendAction) window.pokerSendAction({ type: 'stand', seat: idx }); return; }
   G.seats[idx] = null; render();
 }
-function addCpu(idx, stack = BUYIN) {
-  G.seats[idx] = newSeat({ name: CPU_NAMES[(Math.random() * CPU_NAMES.length) | 0], isCpu: true, stack });
+// A competitive, non-busting stack for bots: match your (credit-mirrored) stack.
+function botStack() {
+  const i = mySeatIdx();
+  const base = (i >= 0 && G.seats[i]) ? G.seats[i].stack : BUYIN;
+  return Math.max(BB * 20, base);
+}
+function addCpu(idx, stack) {
+  G.seats[idx] = newSeat({ name: CPU_NAMES[(Math.random() * CPU_NAMES.length) | 0], isCpu: true, stack: stack || botStack() });
+}
+// Bot management is available to the solo player and to the room host only.
+function canManageBots() { return !inRoom() || amHost(); }
+function addBotAt(idx) {
+  if (!canManageBots() || idx == null || idx < 0 || idx >= NSEATS || G.seats[idx]) return;
+  addCpu(idx); render();
+}
+function kickBot(idx) {
+  const s = G.seats[idx];
+  if (!s || !s.isCpu || !canManageBots()) return;
+  if (s.inHand && !s.folded && G.street !== 'idle' && G.street !== 'showdown') { toastSafe('Finish the hand first'); return; }
+  G.seats[idx] = null; render();
 }
 
 /* ---- hand flow ---------------------------------------------------------- */
 function startHand() {
+  // Re-sync your seat to your current credits (you may have earned/spent
+  // elsewhere) so the table always reflects your real balance, and keep solo
+  // bots stacked so they stay competitive and never bust out from under you.
+  const me0 = mySeatIdx();
+  if (me0 >= 0) { G.seats[me0].stack = credits(); _creditMirror = credits(); }
+  if (!inRoom()) { const ref = botStack(); G.seats.forEach(s => { if (s && s.isCpu && s.stack < ref) s.stack = ref; }); }
   const seated = activeIdx();
   if (seated.length < 2) { G.msg = 'Need at least 2 players with chips.'; render(); return; }
   G.deck = makeDeck(); G.board = []; G.pot = 0; G.winners = []; G.handNo++;
@@ -265,6 +302,7 @@ function render(){
   // guard so it runs server-side/in tests too). Guests/solo never broadcast.
   if (inRoom() && amHost()) broadcastState();
   if (typeof document === 'undefined') return;
+  syncCreditsToStack(); // keep your real credits mirroring your seat's chips
   const area=document.getElementById('holdem-area'); if(!area) return;
   area.innerHTML='';
   const table=el('div','pk-table');
@@ -282,7 +320,12 @@ function render(){
 }
 function seatEl(i,p){
   const s=G.seats[i]; const d=el('div','pk-seat'); d.style.left=p.x+'%'; d.style.top=p.y+'%';
-  if(!s){ const b=el('button','win95-btn pk-sit','Sit'); b.onclick=()=>sitYou(i); d.appendChild(b); return d; }
+  if(!s){
+    const btns=el('div','pk-seatbtns');
+    const b=el('button','win95-btn pk-sit','Sit'); b.onclick=()=>sitYou(i); btns.appendChild(b);
+    if(canManageBots()){ const ab=el('button','win95-btn pk-addbot','+ Bot'); ab.title='Add a bot here'; ab.onclick=()=>addBotAt(i); btns.appendChild(ab); }
+    d.appendChild(btns); return d;
+  }
   if(isMine(s)) d.classList.add('you'); if(s.folded) d.classList.add('folded'); if(G.turn===i) d.classList.add('turn');
   if(G.winners.some(w=>w.idx===i)) d.classList.add('winner');
   const cards=el('div','pk-hole'); const showFace=isMine(s)||G.street==='showdown';
@@ -294,6 +337,8 @@ function seatEl(i,p){
   d.appendChild(el('div','pk-stack', s.stack+' 🪙'+(s.allIn?' · ALL-IN':'')));
   if(s.bet>0) d.appendChild(el('div','pk-bet', String(s.bet)));
   if(isMine(s) && (G.street==='idle'||G.street==='showdown')){ const lv=el('button','win95-btn pk-stand','Stand'); lv.onclick=()=>standYou(i); d.appendChild(lv); }
+  // Table manager (solo player or room host) can kick a bot between hands.
+  if(s.isCpu && canManageBots() && (G.street==='idle'||G.street==='showdown')){ const k=el('button','pk-kick','✕'); k.title='Kick bot'; k.onclick=()=>kickBot(i); d.appendChild(k); }
   return d;
 }
 function buildControls(){
@@ -403,8 +448,8 @@ function openHoldem(show=true){
   if(show===false){ w.classList.remove('open'); w.style.display='none'; return; }
   w.classList.add('open'); w.style.display='flex';
   if(window.OS&&window.OS.register){ window.OS.register('holdem'); window.OS.focus('holdem'); }
-  if(!_pkInit){ _pkInit=true; G=emptyGame(); if(!inRoom()) seedTable(); }
-  else if(inRoom() && G && G.seats.some(s=>s&&s.isCpu)){ G=emptyGame(); } // drop solo CPUs when entering a room
+  if(!_pkInit){ _pkInit=true; G=emptyGame(); if(!inRoom()){ seedTable(); G.solo=true; } }
+  else if(inRoom() && G && G.solo){ G=emptyGame(); } // drop a leftover solo table when entering a room (keeps room bots)
   render();
 }
 if (typeof window !== 'undefined') {
@@ -416,4 +461,4 @@ if (typeof window !== 'undefined') {
   window.AquaPoker = { _state: ()=>G, _eval5: eval5, _best7: best7, _sidePots: buildSidePots };
 }
 // node-testable engine handle (no effect in the browser bundle)
-export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, sit: sitYou, stand: standYou, act, startHand, applyAction, legal, buildSidePots, onPokerState, onPokerAction, onPokerHole, onPokerBecomeHost, abortHand, hostSeat, serializeForBroadcast, getMyHole: () => _myHole, setG: g => { G = g; }, getG: () => G };
+export const _engine = { eval5, best7, cmpHand, makeDeck, emptyGame, newSeat, addCpu, addBotAt, kickBot, canManageBots, sit: sitYou, stand: standYou, act, startHand, applyAction, legal, buildSidePots, onPokerState, onPokerAction, onPokerHole, onPokerBecomeHost, abortHand, hostSeat, serializeForBroadcast, getMyHole: () => _myHole, setG: g => { G = g; }, getG: () => G };

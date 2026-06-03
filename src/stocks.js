@@ -422,10 +422,12 @@ function renderList() {
   for (const s of STOCKS) {
     const pct = pctChange(s.id);
     const up = pct >= 0;
-    const row = el('div', 'stk-row' + (s.id === _selected ? ' sel' : ''));
+    const h = holdings[s.id];
+    const held = !!(h && h.shares > 0);
+    const row = el('div', 'stk-row' + (s.id === _selected ? ' sel' : '') + (held ? ' held' : ''));
     const inCompare = _compareMode && _compareSet.has(s.id);
     row.innerHTML = `
-      <span class="stk-tk">${s.ticker}</span>
+      <span class="stk-tk">${s.ticker}${held ? ` <span class="stk-hold-dot" title="You hold ${h.shares} share${h.shares === 1 ? '' : 's'}">●</span>` : ''}</span>
       <span class="stk-px">${fmt(priceOf(s.id))}</span>
       <span class="stk-ch" style="color:${up ? '#5ad17a' : '#ff5d5d'}">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%</span>`;
     if (inCompare) row.style.outline = '1px solid #36c9ff';
@@ -475,7 +477,7 @@ function drawChart() {
   if (!cv || !_open) return;
   const wrap = cv.parentElement;
   const W = cv.width = wrap.clientWidth || 480;
-  const H = cv.height = 240;
+  const H = cv.height = Math.max(160, Math.round(cv.clientHeight) || 240);
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = 'rgba(8,16,28,0.6)';
@@ -683,6 +685,9 @@ async function openStocks(show = true) {
     return;
   }
   _open = true;
+  // Register with the window manager so the titlebar drags and the resize grip
+  // appears (the dock path does this too, but opening directly skips it).
+  if (window.OS && window.OS.register) { window.OS.register('stocks'); window.OS.focus('stocks'); }
   if (typeof window.aqRefreshCreditDisplays === 'function') window.aqRefreshCreditDisplays();
   if (!_built) buildUI();
   if (opening || !_initStarted) {

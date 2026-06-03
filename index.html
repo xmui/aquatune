@@ -3597,6 +3597,14 @@ body.perf-mode #aqua-gun { display: none !important; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
+    /* ── XP gain / level-up popups (always shown on XP gain) ─── */
+    #aq-xp-popups { position:fixed; right:16px; bottom:84px; display:flex; flex-direction:column; gap:5px; align-items:flex-end; z-index:3000; pointer-events:none; }
+    .aq-xp-pop { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:14px; padding:4px 11px; font-size:12px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,0.25); white-space:nowrap; font-variant-numeric:tabular-nums; animation:aqXpRise 1.75s ease-out forwards; }
+    .aq-xp-pop span { color:var(--text2); font-weight:600; }
+    .aq-xp-pop.lvl { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); font-size:13px; font-weight:800; }
+    @keyframes aqXpRise { 0%{opacity:0; transform:translateY(10px) scale(.9);} 12%{opacity:1; transform:translateY(0) scale(1);} 72%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-16px);} }
+    @media (max-width:768px) { #aq-xp-popups { bottom:calc(108px + env(safe-area-inset-bottom,0px)); right:8px; } }
+
     /* ── GAME BOY COLOR mini-games (Fishing / Mining) ─── */
     #fishing-wrap, #mining-wrap {
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
@@ -6704,7 +6712,7 @@ function startProg() {
     // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
     if (playing) {
       _musicWatchMs = (_musicWatchMs || 0) + 500;
-      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 25); }
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 7500); }
     }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;

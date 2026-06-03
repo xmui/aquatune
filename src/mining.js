@@ -31,7 +31,8 @@ const CXR = 80, CYR = 72, RW = 30, RH = 24;
 
 // ── spice dials ──────────────────────────────────────────────────────────────
 const CRIT_MULT = 4;                 // damage × on a crit
-const CRIT_BASE = 0.05, CRIT_PER_COMBO = 0.01, CRIT_CAP = 0.25;
+const CRIT_CHANCE = 0.05;            // flat random crit chance on a deliberate (non-spam) hit
+const SPAM_MS = 150;                 // clicks faster than this = mashing → NO crits (timing only)
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 3, MOTHERLODE_POWER = 2;
@@ -123,12 +124,17 @@ function breakRock() {
 function hit() {
   if (!rock) return;
   const now = performance.now();
-  combo = (now - lastHit < 900) ? combo + 1 : 0;
+  const gap = now - lastHit;
+  const spamming = gap < SPAM_MS;           // mashing too fast → no crits, just normal damage
+  combo = (gap < 900) ? combo + 1 : 0;
   lastHit = now;
   swing = 1; shake = 6; rock.flash = 1;
-  // sweet-spot timing → guaranteed crit; otherwise a combo-scaled random crit
-  const sweetHit = sweet && sweet.x >= sweet.zoneX && sweet.x <= sweet.zoneX + sweet.w;
-  const crit = sweetHit || Math.random() < Math.min(CRIT_CAP, CRIT_BASE + combo * CRIT_PER_COMBO);
+  // Crits reward TIMING, not mashing: only land on deliberate (non-spam) hits —
+  // a guaranteed crit when you tap inside the moving sweet-spot, else a small
+  // flat chance. Spamming disqualifies both, so you can spam for normal damage.
+  const inZone = sweet && sweet.x >= sweet.zoneX && sweet.x <= sweet.zoneX + sweet.w;
+  const crit = !spamming && (inZone || Math.random() < CRIT_CHANCE);
+  const perfect = crit && inZone;
   let dmg = pickPower();
   if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
   if (crit) dmg *= CRIT_MULT;
@@ -136,8 +142,8 @@ function hit() {
   rock.hp -= dmg;
   if (crit) {
     shake = 10;
-    addFloater(sweetHit ? 'PERFECT!' : 'CRIT!', 3);
-    if (sweetHit) rerollSweet();
+    addFloater(perfect ? 'PERFECT!' : 'CRIT!', 3);
+    if (perfect) rerollSweet();
     for (let i = 0; i < 10; i++) spark(true);
   } else {
     for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });

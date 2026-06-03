@@ -602,18 +602,21 @@ window.sendRoomMessage = function(msg, imageData) {
 };
 
 // Poker bridges — host publishes table state; anyone queues actions for the host.
+// Firebase rejects any payload containing `undefined` (it throws synchronously,
+// before .catch can run), so scrub it from everything we write to the poker paths.
+const _pkClean = v => { try { return JSON.parse(JSON.stringify(v ?? null)); } catch { return null; } };
 window.pokerBroadcast = function(state) {
   if (!window._currentRoomId) return;
-  set(ref(db, `rooms/${window._currentRoomId}/poker/state`), { ...state, updatedBy: myUserId, updatedAt: Date.now() }).catch(() => {});
+  set(ref(db, `rooms/${window._currentRoomId}/poker/state`), _pkClean({ ...state, updatedBy: myUserId, updatedAt: Date.now() })).catch(() => {});
 };
 window.pokerSendAction = function(a) {
   if (!window._currentRoomId) return;
-  push(ref(db, `rooms/${window._currentRoomId}/poker/actions`), { ...a, userId: myUserId, ts: Date.now() }).catch(() => {});
+  push(ref(db, `rooms/${window._currentRoomId}/poker/actions`), _pkClean({ ...a, userId: myUserId, ts: Date.now() })).catch(() => {});
 };
 // Host delivers each player's hole cards privately: { ownerId: [card,card] }.
 window.pokerSetHoles = function(map) {
   if (!window._currentRoomId) return;
-  set(ref(db, `rooms/${window._currentRoomId}/poker/hole`), map || {}).catch(() => {});
+  set(ref(db, `rooms/${window._currentRoomId}/poker/hole`), _pkClean(map || {})).catch(() => {});
 };
 
 window.leaveRoom = function() {

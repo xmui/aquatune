@@ -14391,6 +14391,7 @@ function miningSfx(name) {
     switch (name) {
       case 'hit':   cblip(190, 0, 0.07, 'square', 0.16, 130); cnoise(0, 2200, 0.05, 0.18); break;   // pick clink
       case 'break': cnoise(0, 600, 0.32, 0.30, true); cblip(150, 0, 0.34, 'sawtooth', 0.16, 60); cblip(300, 0.02, 0.2, 'square', 0.08, 120); break; // rock shatter
+      case 'crit':  cblip(520, 0, 0.10, 'square', 0.2, 880); cnoise(0, 3200, 0.07, 0.22); cblip(1040, 0.03, 0.12, 'triangle', 0.12); break; // bright clang
       case 'upgrade': [330, 440, 587, 784].forEach((f, i) => cblip(f, i * 0.07, 0.12, 'square', 0.14)); break; // chime
     }
   } catch (e) {}

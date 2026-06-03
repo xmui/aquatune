@@ -149,6 +149,7 @@
     #hdr-clock { font-size:13px;font-weight:700;color:var(--hdr-text,#fff);font-variant-numeric:tabular-nums;white-space:nowrap;opacity:0.9; }
     #hdr-credits { font-size:11px;font-weight:700;color:var(--hdr-text,#fff);background:rgba(127,127,127,0.22);border:1px solid var(--hdr-text-soft,rgba(255,255,255,0.18));border-radius:20px;padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums; }
     #hdr-credits:hover { background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.4); }
+    #hdr-credits-mobile { display:none; } /* desktop hides it; the mobile media query shows it */
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -1699,6 +1700,8 @@
       #logo img { height: 26px; }
       /* hide center clock/weather on mobile — too cramped */
       #hdr-center { display: none !important; }
+      /* but keep the credit/currency readout visible on the mobile top bar */
+      #hdr-credits-mobile { display: inline-flex; align-items:center; margin-left:8px; font-size:11px; font-weight:700; color:var(--hdr-text,#fff); background:rgba(127,127,127,0.22); border:1px solid var(--hdr-text-soft,rgba(255,255,255,0.18)); border-radius:20px; padding:3px 9px; white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums; }
       /* condense header auth area */
       #auth-area { gap: 4px; }
       /* hide desktop-only header buttons on mobile */
@@ -1808,8 +1811,10 @@
       }
       #search-wrap { background: rgba(215,238,255,0.45); }
 
-      /* Aqua Buddy is hidden on mobile — too cramped, and it overlaps content */
-      #aqua-buddy, #buddy-restore-btn { display: none !important; }
+      /* Aqua Buddy on mobile: smaller and docked above the bottom bars so it
+         doesn't cover content (it used to be hidden entirely). */
+      #aqua-buddy { width: 56px; right: 8px; bottom: calc(108px + env(safe-area-inset-bottom, 0px)); z-index: 595; padding-top: 22px; }
+      #buddy-restore-btn { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); right: 8px; z-index: 595; }
 
       /* Gun not usable on touch — hide */
       #aqua-gun { display: none !important; }
@@ -2020,6 +2025,8 @@
     .st-note { position:absolute; border-radius:3px; box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(0,0,0,.45); cursor:grab; box-sizing:border-box; z-index:2; }
     .st-note.sel { outline:2px solid #fff; outline-offset:-1px; z-index:3; }
     .st-note-rs { position:absolute; right:0; top:0; bottom:0; width:7px; cursor:ew-resize; }
+    .st-roll-rs { position:absolute; right:-1px; top:0; bottom:0; width:9px; cursor:col-resize; z-index:6; background:linear-gradient(90deg,transparent,rgba(54,197,240,.35)); }
+    .st-roll-rs:hover { background:linear-gradient(90deg,transparent,rgba(54,197,240,.7)); }
     .st-marquee { position:absolute; border:1px solid var(--st-accent,#36c5f0); background:rgba(54,197,240,.15); pointer-events:none; z-index:5; }
     .st-rolltools { display:inline-flex; gap:3px; }
     .st-rolltool { font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid #2c313c; background:#0a0c10; color:#8b95a7; cursor:pointer; }
@@ -3552,6 +3559,67 @@ body.perf-mode #aqua-gun { display: none !important; }
       #stk-left { width:100%; } #stk-list { max-height:160px; }
     }
 
+    /* ── STATS / SKILLS ─── */
+    #stats-wrap {
+      position:fixed; top:54px; left:50%; transform:translateX(-50%);
+      background:var(--panel); border:1px solid var(--border);
+      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      z-index:506; flex-direction:column; width:440px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
+    }
+    #stats-wrap.open { display:flex; }
+    #stats-area { background:#0c1322; color:#e7eefb; padding:14px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0; overflow:auto; }
+    .sk-head { display:flex; align-items:center; gap:12px; }
+    .sk-heart { font-size:30px; color:#ff3b5c; filter:drop-shadow(0 0 6px rgba(255,59,92,0.7)); animation:aq-heartbeat 1.1s ease-in-out infinite; transform-origin:center; }
+    @keyframes aq-heartbeat {
+      0%,100% { transform:scale(1); }
+      12% { transform:scale(1.42); filter:drop-shadow(0 0 14px rgba(255,59,92,0.95)); }
+      24% { transform:scale(1.05); }
+      36% { transform:scale(1.30); filter:drop-shadow(0 0 12px rgba(255,59,92,0.85)); }
+      52% { transform:scale(1); }
+    }
+    .sk-ident { display:flex; flex-direction:column; gap:2px; }
+    .sk-name { font-size:20px; font-weight:800; letter-spacing:.3px; }
+    .sk-total { font-size:12px; color:#8aa0bd; } .sk-total b { color:#ffd24a; font-size:14px; }
+    .sk-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+    .sk-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:9px 10px; display:flex; flex-direction:column; gap:6px; }
+    .sk-card-top { display:flex; align-items:center; gap:8px; }
+    .sk-icon { font-size:22px; line-height:1; }
+    .sk-meta { flex:1; min-width:0; }
+    .sk-sname { font-size:13px; font-weight:700; }
+    .sk-blurb { font-size:10px; color:#7d8fa8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sk-lvl { font-size:12px; color:#8aa0bd; } .sk-lvl b { color:#7ee0a0; font-size:17px; }
+    .sk-bar { height:8px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; }
+    .sk-bar-fill { height:100%; background:linear-gradient(90deg,#36c9ff,#7ee0a0); border-radius:5px; transition:width .3s; }
+    .sk-xp { font-size:10px; color:#6f819b; font-variant-numeric:tabular-nums; }
+    @media (max-width:768px) {
+      #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
+      .sk-grid { grid-template-columns:1fr; }
+    }
+
+    /* ── GAME BOY COLOR mini-games (Fishing / Mining) ─── */
+    #fishing-wrap, #mining-wrap {
+      position:fixed; top:54px; left:50%; transform:translateX(-50%);
+      background:#1a1f12; border:3px solid #5a6b3a; box-shadow:0 18px 50px rgba(0,0,0,0.45);
+      border-radius:10px; font-family:var(--font-ui); z-index:506; flex-direction:column;
+      width:360px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
+    }
+    #fishing-wrap.open, #mining-wrap.open { display:flex; }
+    #fishing-area, #mining-area { background:#8a9a4a; padding:10px; display:flex; flex-direction:column; gap:8px; align-items:stretch; flex:1; min-height:0; overflow:auto; }
+    .gbc-stage { display:flex; justify-content:center; background:#0f380f; border:3px solid #2a3a1a; border-radius:6px; padding:6px; }
+    .gbc-canvas { width:100%; max-width:320px; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; }
+    .gbc-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .gbc-btn {
+      font-family:monospace; font-weight:700; font-size:12px; color:#0f380f;
+      background:#cfe8a0; border:2px solid #2a3a1a; border-radius:4px; padding:7px 12px;
+      cursor:pointer; box-shadow:0 2px 0 #2a3a1a; touch-action:none; user-select:none;
+    }
+    .gbc-btn:active:not(:disabled) { transform:translateY(2px); box-shadow:none; }
+    .gbc-btn:disabled { opacity:0.5; cursor:default; }
+    .gbc-info { font-family:monospace; font-size:11px; font-weight:700; color:#1a2a0a; }
+    @media (max-width:768px) {
+      #fishing-wrap, #mining-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
+    }
+
     /* ── SPACE PINBALL (native canvas) ─── */
     #pinball-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
@@ -4925,6 +4993,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
   <div id="hdr">
     <div id="logo"><img src="aquatune-logo-outline.png" alt="AQUATUNE"></div>
     <span id="mb-appname">Aquatune Player</span>
+    <span id="hdr-credits-mobile" class="aq-credits-display" onclick="claimDailyCredits()" title="Claim daily credits">💰 100</span>
     <div id="kbd-hint" style="display:none">
       <span class="k">Space</span>play/pause &nbsp;
       <span class="k">N</span>next &nbsp;
@@ -4982,6 +5051,15 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             </button>
             <button class="apps-game-btn" onclick="openRhythm();toggleAppsMenu()">
               <span class="agb-icon">🎶</span><span class="agb-name">Beat Tap</span>
+            </button>
+            <button class="apps-game-btn" onclick="OS.open('fishing');toggleAppsMenu()">
+              <span class="agb-icon">🎣</span><span class="agb-name">Fishing</span>
+            </button>
+            <button class="apps-game-btn" onclick="OS.open('mining');toggleAppsMenu()">
+              <span class="agb-icon">⛏️</span><span class="agb-name">Mining</span>
+            </button>
+            <button class="apps-game-btn" onclick="OS.open('stats');toggleAppsMenu()">
+              <span class="agb-icon">📊</span><span class="agb-name">Stats</span>
             </button>
           </div>
           <div class="apps-menu-div"></div>
@@ -5268,6 +5346,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="holdem" onclick="OS.open('holdem')"><span class="agb-icon">&#127183;</span><span class="agb-name">Hold'em</span></button>
       <button class="apps-game-btn" data-app="pinball" onclick="OS.open('pinball')"><span class="agb-icon">&#128377;&#65039;</span><span class="agb-name">Pinball</span></button>
       <button class="apps-game-btn" data-app="stocks" onclick="OS.open('stocks')"><span class="agb-icon">&#128200;</span><span class="agb-name">Exchange</span></button>
+      <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
+      <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
+      <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
   </div>
@@ -6433,7 +6514,7 @@ let scWidget = null, scReady = false;
 let playlists = JSON.parse(localStorage.getItem('yt_pls') || '[]');
 let activePlId = null;
 let playing = false, shuffle = false, repeat = false, automix = false, normalize = false, normalizeTarget = 80;
-let progTimer = null, pendingAddPl = null, toastTmr;
+let progTimer = null, pendingAddPl = null, toastTmr, _musicWatchMs = 0;
 let sessionHistory = [];
 let searchMode = 'videos';
 let restoredTime = 0;
@@ -6619,6 +6700,11 @@ function onEnded() {
 function startProg() {
   clearInterval(progTimer);
   progTimer = setInterval(() => {
+    // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
+    if (playing) {
+      _musicWatchMs = (_musicWatchMs || 0) + 500;
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 25); }
+    }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;
       scWidget.getPosition(pos => scWidget.getDuration(dur => {
@@ -8075,6 +8161,9 @@ const APPS = {
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
   pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
   stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false) },
+  stats:     { el:'stats-wrap',     name:'Stats',      tb:'#stats-titlebar',     openFn:()=>window.openStats?.(),   closeFn:()=>{ window.openStats?.(false); window._aqStatsClosed?.(); } },
+  fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
+  mining:    { el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8400,8 +8489,9 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
+  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'},
 };
-const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','leaderboard','settings'];
+const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
   let p = null;
   try { const s = JSON.parse(localStorage.getItem('aq_dock_pins')); if (Array.isArray(s)) p = s; } catch {}
@@ -8418,6 +8508,11 @@ function getDockPins() {
   if (!localStorage.getItem('aq_dock_stocks_v1')) {
     localStorage.setItem('aq_dock_stocks_v1', '1');
     if (!p.includes('stocks')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'stocks'); _saveDockPins(p); }
+  }
+  // one-time migration: add the Stats page to existing docks
+  if (!localStorage.getItem('aq_dock_stats_v1')) {
+    localStorage.setItem('aq_dock_stats_v1', '1');
+    if (!p.includes('stats')) { const set = p.indexOf('settings'); p.splice(set >= 0 ? set : p.length, 0, 'stats'); _saveDockPins(p); }
   }
   return p;
 }
@@ -11806,6 +11901,9 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="openPicross()" title="Picross">◼<span>Picross</span></button>
   <button class="mob-tool-btn" onclick="openBlackjack()" title="Blackjack">🃏<span>Blackjack</span></button>
   <button class="mob-tool-btn" onclick="openHoldem()" title="Texas Hold'em">🂡<span>Hold'em</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('fishing')" title="Fishing">🎣<span>Fishing</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('mining')" title="Mining">⛏️<span>Mining</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
@@ -12041,6 +12139,7 @@ function _slotsEvaluate(){
   }
   if(totalWin>0){
     aqAddCredits(totalWin);
+    _slotsWonThisSpin = true;
     if(typeof recordScore==='function') recordScore('slots', totalWin, winDescs[0]||'');
     for(let r=0;r<3;r++){document.getElementById(`slot-reel-${r}`)?.classList.add('winning');_slotsRenderReel(r,[...(winCells[r]||new Set())]);}
     const wl=document.getElementById('slots-win-line');if(wl)wl.textContent=winDescs.join(', ');
@@ -12071,8 +12170,11 @@ function _slotsEvaluate(){
     _slotsFinish();
   }
 }
+let _slotsWonThisSpin=false;
 function _slotsFinish(){
   slotsSpinning=false;document.getElementById('slots-spin-btn').disabled=false;updateSlotsUI();
+  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:_slotsWonThisSpin});
+  _slotsWonThisSpin=false;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -13651,6 +13753,7 @@ function pbGameOver(){
   if(lb){ lb.style.display=''; lb.textContent='Play Again'; lb.onclick=()=>pinballReset(); }
   if(typeof recordScore==='function' && pbScore>0) recordScore('pinball', pbScore, '3 balls');
   if(typeof aqAddCredits==='function'){ const r=Math.floor(pbScore/500); if(r>0){ aqAddCredits(r); toast('🕹️ +'+r+' credits!'); } }
+  if(window.aqGameXp) window.aqGameXp('speed',{played:true,won:pbScore>5000,mult:1+Math.min(3,pbScore/10000)});
 }
 function _pbFlipperPath(c, piv, ang, len, thick){
   const bx=piv.x+len*Math.cos(ang), by=piv.y+len*Math.sin(ang);
@@ -13749,6 +13852,7 @@ function rhythmEnd(){
   const msg=document.getElementById('rhythm-msg');
   if(msg) msg.textContent=`Score ${_rhythmScore} · ${acc}% hit · max combo ${_rhythmBest} · +${reward} 💰`;
   if(typeof recordScore==='function' && _rhythmScore>0) recordScore('rhythm', _rhythmScore, acc+'% · combo '+_rhythmBest);
+  if(window.aqGameXp) window.aqGameXp('speed',{played:true,won:acc>=80,mult:1+Math.min(3,_rhythmScore/3000)});
   aqRefreshCreditDisplays();
 }
 function _rhythmJudgeHit(lane){
@@ -14940,6 +15044,7 @@ function picrossOnWin() {
   aqAddCredits(25);
   if (window.toast) window.toast('◼ +25 credits for solving the puzzle!');
   if (typeof recordScore === 'function') recordScore('picross', _pcSeconds, _pcSize+'×'+_pcSize+' · '+pcFmt(_pcSeconds)+' · '+_pcMistakes+' mistakes');
+  if (window.aqGameXp) window.aqGameXp('intellect',{played:true,won:true,mult:1+_pcSize/10});
   setTimeout(() => window.abSayPicross?.('solved', _pcPuzzle?.name || null), 700);
 }
 function pcGetClues(arr, size, isRow) {
@@ -15508,6 +15613,7 @@ function solOnWin(){
   // Record to the global leaderboard (recordScore handles the Firebase write + local cache)
   const solScore=Math.floor(5000/Math.max(1,solMoves*solSeconds));
   if(typeof recordScore==='function') recordScore('solitaire', solScore, solMoves+' moves · '+solTimerFmt(solSeconds));
+  if(window.aqGameXp) window.aqGameXp('intellect',{played:true,won:true,mult:1.5});
   // Refresh the in-game top-scores panel from the same global board
   (function(){
     try {
@@ -15912,6 +16018,7 @@ function minesCheckWin(){
     const minesDiff = minesCt<=10?0:minesCt<=40?1:2;
     aqAddCredits(minesRewards[minesDiff]);
     if (typeof recordScore==='function') recordScore('mines', minesSeconds, ['Easy','Medium','Expert'][minesDiff]+' · '+minesSeconds+'s');
+    if (window.aqGameXp) window.aqGameXp('intellect',{played:true,won:true,mult:1+minesDiff*0.6});
     if (window.toast) window.toast(`💣 +${minesRewards[minesDiff]} credits for clearing the field!`);
     setTimeout(function(){ if(window.toast) window.toast('💣 You win! Time: '+minesSeconds+'s'); }, 100);
   }
@@ -16176,6 +16283,7 @@ function bjStand(){
     setTimeout(() => window.abSayBJ?.('lose'), 400);
     bjSetStatus('Dealer wins. (Player: '+pt+', Dealer: '+dt+')');
   }
+  if(window.aqGameXp) window.aqGameXp('gambling',{played:true,won:(dt>21||pt>dt)});
   bjRender();
 }
 
@@ -16725,8 +16833,11 @@ function bjUpdateBalance(){
 <script type="module" src="/src/chat-firebase.js"></script>
 <script type="module" src="/src/accounts.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
+<script type="module" src="/src/skills.js"></script>
 <script type="module" src="/src/stocks.js"></script>
 <script type="module" src="/src/poker.js"></script>
+<script type="module" src="/src/fishing.js"></script>
+<script type="module" src="/src/mining.js"></script>
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">
@@ -16928,6 +17039,33 @@ function bjUpdateBalance(){
   </div>
   <!-- Filled by src/poker.js (the 6-max engine) on open. -->
   <div id="holdem-area"></div>
+</div>
+
+<!-- STATS / SKILLS -->
+<div id="stats-wrap" style="display:none">
+  <div class="sol-titlebar" id="stats-titlebar">
+    <span>📊 Stats</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openStats(false);window._aqStatsClosed&&window._aqStatsClosed()">×</button>
+  </div>
+  <div id="stats-area"></div>
+</div>
+
+<!-- FISHING (Game Boy Color style) -->
+<div id="fishing-wrap" style="display:none">
+  <div class="sol-titlebar" id="fishing-titlebar">
+    <span>🎣 Fishing</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openFishing(false)">×</button>
+  </div>
+  <div id="fishing-area"></div>
+</div>
+
+<!-- MINING (Game Boy Color style) -->
+<div id="mining-wrap" style="display:none">
+  <div class="sol-titlebar" id="mining-titlebar">
+    <span>⛏️ Mining</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openMining(false)">×</button>
+  </div>
+  <div id="mining-area"></div>
 </div>
 
 <!-- AQUATUNE EXCHANGE (stock market) -->

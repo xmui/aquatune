@@ -605,6 +605,7 @@ function doBuy(id, qty) {
   h.shares = newShares;
   holdings[id] = h;
   savePortfolio();
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('finance', { played: true, mult: 1 + Math.min(3, cost / 500) });
   tradeMsg(`Bought ${qty} @ ${fmt(px)} (−${cost} 🪙).`, true);
   renderAll();
 }
@@ -617,8 +618,10 @@ function doSell(id, qty) {
   const proceeds = Math.round(px * qty);
   window.aqSetCredits(window.aqGetCredits() + proceeds);
   h.shares -= qty;
+  const profit = Math.round((px - (h.avgCost || px)) * qty);
   if (h.shares <= 0) delete holdings[id];
   savePortfolio();
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('finance', { played: true, won: profit > 0, mult: 1 + Math.min(3, proceeds / 500) });
   tradeMsg(`Sold ${qty} @ ${fmt(px)} (+${proceeds} 🪙).`, true);
   renderAll();
 }

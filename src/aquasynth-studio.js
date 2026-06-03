@@ -619,12 +619,19 @@ function selectedPattern() {
 function setPatternBars(pat, bars) {
   bars = Math.max(1, Math.min(8, bars | 0));
   if (bars === pat.bars) return;
+  const oldBars = pat.bars;
   const n = bars * E.STEPS_PER_BAR;
   const steps = new Array(n).fill(0);
   for (let i = 0; i < Math.min(n, pat.steps.length); i++) steps[i] = pat.steps[i];
   pat.steps = steps;
   pat.notes = pat.notes.filter(no => no.start < n);
   pat.bars = bars;
+  // Keep clips that were 1:1 with this pattern in sync, so the colored block in
+  // the arrangement grows/shrinks with the pattern (clips that were intentionally
+  // looped to a different length are left alone).
+  project.arrangement.forEach(t => (t.clips || []).forEach(c => {
+    if (c.patternId === pat.id && (c.lenBars == null || c.lenBars === oldBars)) c.lenBars = bars;
+  }));
   renderEditor(); renderTimeline(); if (_playing) _events = E.expandArrangement(project);
 }
 function renderEditor() {
@@ -930,6 +937,11 @@ function buildPianoRoll(inst, pat) {
   }
   pat.notes.forEach(n => grid.appendChild(buildNote(inst, n, top)));
   grid.addEventListener('pointerdown', e => onRollDown(e, inst, pat, grid, top));
+  // right-edge handle: drag to grow/shrink the pattern's bar length
+  const rs = el('div', 'st-roll-rs');
+  rs.title = 'Drag to change pattern length';
+  rs.addEventListener('pointerdown', e => startRollResize(e, pat, grid));
+  grid.appendChild(rs);
   wrap.appendChild(keys); wrap.appendChild(grid);
   return wrap;
 }
@@ -969,6 +981,20 @@ function rollDrag(grid, e, onMove, onUp) {
   const mv = ev => onMove(ev);
   const up = ev => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { grid.releasePointerCapture(ev.pointerId); } catch (_) {} onUp && onUp(ev); };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+// Drag the piano roll's right edge to grow/shrink the pattern's bar length.
+function startRollResize(e, pat, grid) {
+  e.preventDefault(); e.stopPropagation();
+  const x0 = e.clientX, bars0 = pat.bars;
+  let target = bars0;
+  rollDrag(grid, e, ev => {
+    const dBar = Math.round((ev.clientX - x0) / (ROLL.STEP_W * E.STEPS_PER_BAR));
+    target = Math.max(1, Math.min(8, bars0 + dBar));
+    grid.style.width = (target * E.STEPS_PER_BAR * ROLL.STEP_W) + 'px'; // live preview
+  }, () => {
+    if (target !== bars0) setPatternBars(pat, target); // rebuilds roll + syncs clips
+    else renderEditor();                                // restore preview width
+  });
 }
 function onRollDown(e, inst, pat, grid, top) {
   e.preventDefault();

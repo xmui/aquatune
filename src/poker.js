@@ -303,6 +303,7 @@ function render(){
   if (inRoom() && amHost()) broadcastState();
   if (typeof document === 'undefined') return;
   syncCreditsToStack(); // keep your real credits mirroring your seat's chips
+  pokerSounds();        // play table SFX off state transitions (host/guest/solo alike)
   const area=document.getElementById('holdem-area'); if(!area) return;
   // Defensive: never let a malformed state (e.g. a bad sync) blow away the window.
   if(!G || !Array.isArray(G.seats)){ return; }
@@ -366,7 +367,29 @@ function buildControls(){
   }
   return bar;
 }
+function sfx(n){ try { if (typeof window !== 'undefined' && window.pokerSfx) window.pokerSfx(n); } catch(e){} }
+// Drive table sounds off state transitions so every client (host, guests, solo)
+// hears the same thing from its own render. Diffed against the previous frame.
+let _pkPrev = null;
+function pokerSounds(){
+  if (typeof window === 'undefined' || !window.pokerSfx || !G) return;
+  const me = mySeatIdx();
+  const cur = {
+    street: G.street, boardLen: (G.board||[]).length, pot: G.pot||0, turn: G.turn,
+    showdown: G.street === 'showdown',
+    iWon: (G.winners||[]).some(w => w.idx === me),
+  };
+  const p = _pkPrev; _pkPrev = cur;
+  if (!p) return;                                                   // first frame: just set baseline
+  const freshDeal = p.street === 'idle' && cur.street === 'preflop';
+  if (cur.boardLen > p.boardLen) sfx('card');                       // a community card hit the board
+  else if (freshDeal) sfx('deal');                                  // a new hand was dealt
+  if (cur.pot > p.pot && !freshDeal) sfx('chip');                   // chips went into the pot
+  if (cur.showdown && !p.showdown) sfx(cur.iWon ? 'win' : 'card');  // showdown reveal
+  if (cur.turn === me && me >= 0 && p.turn !== me && !cur.showdown && cur.street !== 'idle') sfx('turn');
+}
 function act(a, amt){
+  if (a === 'fold') sfx('fold'); else if (a === 'check') sfx('check'); // instant feedback on your own action
   if (inRoom() && !amHost()) { if (window.pokerSendAction) window.pokerSendAction({ type:'action', action:a, amount:amt }); return; }
   const i = mySeatIdx(); if (i >= 0) applyAction(i, a, amt);
 }

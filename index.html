@@ -14229,6 +14229,59 @@ function playFanfare(level = 'win') {
   } catch(e) {}
 }
 
+// ── AQUAPOKER SFX ── 2000s Microsoft card-game style: crisp card snaps, ceramic
+// chip clinks, soft knocks. All synthesized; reuses the shared game AudioContext
+// and respects _gameVol. Called from src/poker.js via window.pokerSfx(name).
+let _pkNoiseBuf = null;
+function _pkNoise(cx){
+  if (_pkNoiseBuf) return _pkNoiseBuf;
+  const len = Math.floor(cx.sampleRate * 0.4);
+  const buf = cx.createBuffer(1, len, cx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return (_pkNoiseBuf = buf);
+}
+function pokerSfx(name){
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch(e){ return; }
+  const t = cx.currentTime, V = _gameVol;
+  // pitched blip with optional glide
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  // filtered noise burst — the "card snap"
+  const snap = (start, freq, dur, vol, q = 0.9, glide) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const bp = cx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q;
+    bp.frequency.setValueAtTime(freq, t + start);
+    if (glide) bp.frequency.exponentialRampToValueAtTime(glide, t + start + dur);
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(bp); bp.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'deal':  snap(0, 2400, 0.07, 0.28); blip(740, 0.005, 0.05, 'square', 0.05, 1180); break;
+      case 'card':  snap(0, 2700, 0.05, 0.20); break;          // single community card flip
+      case 'chip':  blip(2500, 0, 0.045, 'triangle', 0.10, 2050); blip(3100, 0.045, 0.05, 'triangle', 0.08, 2650); break;
+      case 'check': blip(170, 0, 0.06, 'sine', 0.24, 95); blip(170, 0.11, 0.06, 'sine', 0.18, 95); break; // knuckle knock
+      case 'fold':  snap(0, 1900, 0.2, 0.2, 1.3, 480); break;  // card-toss whoosh
+      case 'turn':  blip(640, 0, 0.1, 'sine', 0.11, 980); break; // your action prompt
+      case 'win':   [784, 1047, 1319].forEach((f, i) => { blip(f, i * 0.08, 0.2, 'triangle', 0.14); blip(f, i * 0.08, 0.2, 'sine', 0.06); }); break;
+    }
+  } catch(e) {}
+}
+window.pokerSfx = pokerSfx;
+
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {
   try {
@@ -14620,6 +14673,8 @@ let _pcDrag = null;            // { val, axis:null|'row'|'col', row0, col0 } dur
 let _pcCellsBound = false;     // delegated pointer handlers bound once
 let _pcRowClues = [], _pcColClues = []; // cached solution clues for cross-off matching
 let _pcHover = -1;             // index of the cell under the cursor (-1 = none)
+const PC_PENALTY = 10;         // seconds added to your time per wrong square (anti-cheese)
+let _pcPenalized = new Set();  // indices already penalized (charged once each)
 
 // Section-divider stride: largest of 5/4/3 that evenly divides the grid (else 5),
 // so dividers split the board into clean blocks at any size.
@@ -14643,7 +14698,7 @@ function pcApplyCell(i, val){
   _pcUserGrid[i] = val;
   if (val === 1) {
     if (_pcAutoCheck) {
-      if (_pcSolution[i] !== 1) { if (!_pcWrongCells.has(i)) _pcMistakes++; _pcWrongCells.add(i); }
+      if (_pcSolution[i] !== 1) { _pcWrongCells.add(i); pcPenalize(i); }
       else _pcWrongCells.delete(i);
       pcUpdateMistakeDisplay();
     }
@@ -14773,9 +14828,18 @@ function pcBindCells(){
 }
 function pcUpdateMistakeDisplay(){
   const el = document.getElementById('picross-mistakes');
-  if (el) el.textContent = _pcAutoCheck ? ('✗ ' + _pcMistakes) : '';
+  if (el) el.textContent = _pcMistakes ? ('✗ ' + _pcMistakes + ' · +' + (_pcMistakes * PC_PENALTY) + 's') : '';
 }
-function pcResetMistakes(){ _pcMistakes = 0; _pcWrongCells.clear(); pcUpdateMistakeDisplay(); }
+// Charge a one-time time penalty for a wrong square (so brute-forcing wrong
+// cells can't beat the leaderboard — your recorded time is _pcSeconds).
+function pcPenalize(i){
+  if (_pcPenalized.has(i)) return;
+  _pcPenalized.add(i); _pcMistakes++;
+  _pcSeconds += PC_PENALTY;
+  const e = document.getElementById('picross-timer'); if (e) e.textContent = pcFmt(_pcSeconds);
+  pcUpdateMistakeDisplay();
+}
+function pcResetMistakes(){ _pcMistakes = 0; _pcWrongCells.clear(); _pcPenalized.clear(); pcUpdateMistakeDisplay(); }
 // Auto-check: detect a solved board (all required cells filled, none wrong)
 function pcCheckSolved(){
   const need = _pcSolution.filter(v => v===1).length;
@@ -14849,7 +14913,7 @@ function loadPicrossPuzzle(puzzle) {
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
   pcResetMistakes();
   renderPicrossGrid();
-  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark  |  wrong square = +' + PC_PENALTY + 's';
 }
 function picrossNewPuzzle() {
   const size = parseInt(document.getElementById('pc-size-sel').value) || 10;
@@ -14966,7 +15030,7 @@ function checkPicross() {
     c.classList.remove('wrong');
     const userFilled = _pcUserGrid[i]===1;
     const solFilled = _pcSolution[i]===1;
-    if (userFilled && !solFilled) { c.classList.add('wrong'); _pcWrongCells.add(i); allCorrect=false; }
+    if (userFilled && !solFilled) { c.classList.add('wrong'); _pcWrongCells.add(i); pcPenalize(i); allCorrect=false; }
     else if (!userFilled && solFilled) allCorrect=false;
   });
   const status = document.getElementById('picross-status');
@@ -14985,7 +15049,7 @@ function resetPicross() {
   _pcUserGrid = new Array(_pcSize*_pcSize).fill(0);
   pcResetMistakes();
   renderPicrossGrid();
-  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark';
+  document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark  |  wrong square = +' + PC_PENALTY + 's';
 }
 // drag for picross
 (function() {

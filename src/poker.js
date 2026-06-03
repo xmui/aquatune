@@ -262,6 +262,11 @@ function showdown() {
 // reflect your seat's chips back into real credits when the hand ends
 function settleYou() {
   if (typeof window.recordScore === 'function') { const you = G.seats.find(s => s && s.isYou); if (you) window.recordScore('holdem', you.stack, 'table chips'); }
+  if (typeof window.aqGameXp === 'function') {
+    const myIdx = G.seats.findIndex(s => s && s.isYou);
+    const iWon = myIdx >= 0 && Array.isArray(G.winners) && G.winners.some(w => w.idx === myIdx);
+    if (myIdx >= 0) window.aqGameXp('gambling', { played: true, won: iWon });
+  }
 }
 
 /* ---- CPU ---------------------------------------------------------------- */

@@ -304,10 +304,13 @@ function render(){
   if (typeof document === 'undefined') return;
   syncCreditsToStack(); // keep your real credits mirroring your seat's chips
   const area=document.getElementById('holdem-area'); if(!area) return;
+  // Defensive: never let a malformed state (e.g. a bad sync) blow away the window.
+  if(!G || !Array.isArray(G.seats)){ return; }
+  if(!Array.isArray(G.board)) G.board=[]; if(!Array.isArray(G.winners)) G.winners=[];
   area.innerHTML='';
   const table=el('div','pk-table');
   const center=el('div','pk-center');
-  center.appendChild(el('div','pk-pot','Pot '+G.pot+' 🪙'));
+  center.appendChild(el('div','pk-pot','Pot '+(G.pot||0)+' 🪙'));
   const board=el('div','pk-board');
   G.board.forEach(c=>board.appendChild(cardEl(c,false)));
   for(let k=G.board.length;k<5;k++) board.appendChild(el('div','pk-card pk-empty'));
@@ -372,18 +375,42 @@ function seedTable(){ addCpu(2); addCpu(3); addCpu(4); }
 
 /* ---- multiplayer sync -------------------------------------------------- */
 let _myHole = null; // this client's own hole cards, delivered privately by the host
+const EMPTY_SEAT = '_'; // sentinel for an empty seat (see serializeForBroadcast)
 
 // Publish state minus the deck (no undealt cards) and minus every seat's hole
 // cards except revealed hands at showdown. Each player's own hole is delivered
 // privately via pokerSetHoles → poker/hole/{ownerId}.
+//
+// Firebase RTDB drops nulls/empty arrays and turns a sparse array (our 6 seats
+// with gaps) into an object — which would crash the receiver's render(). To
+// survive the round-trip we keep the seats array DENSE (empty seats become a
+// string sentinel) and always send board/winners as arrays; normalizeState()
+// undoes all of this on the way in.
 function serializeForBroadcast(g){
   const { deck, ...rest } = g;
   rest.seats = g.seats.map(s => {
-    if (!s) return null;
+    if (!s) return EMPTY_SEAT;
     const reveal = g.street === 'showdown' && s.inHand && !s.folded;
-    return { ...s, hole: reveal ? s.hole : [] };
+    return { ...s, hole: reveal ? (s.hole || []) : [] };
   });
+  rest.board = g.board || [];
+  rest.winners = g.winners || [];
   return rest;
+}
+// Rebuild a well-formed game from whatever Firebase handed back (array, object,
+// missing keys, dropped empties). Always returns a length-NSEATS seats array.
+function normalizeState(s){
+  if (!s || typeof s !== 'object') return null;
+  const seats = new Array(NSEATS).fill(null);
+  const raw = s.seats;
+  const put = (i, v) => { if (i >= 0 && i < NSEATS && v && v !== EMPTY_SEAT && typeof v === 'object') seats[i] = Object.assign({}, v, { hole: Array.isArray(v.hole) ? v.hole : [] }); };
+  if (Array.isArray(raw)) raw.forEach((v, i) => put(i, v));
+  else if (raw && typeof raw === 'object') Object.keys(raw).forEach(k => put(+k, raw[k]));
+  s.seats = seats;
+  s.board = Array.isArray(s.board) ? s.board : [];
+  s.winners = Array.isArray(s.winners) ? s.winners : [];
+  s.deck = [];
+  return s;
 }
 function broadcastState(){ if (typeof window !== 'undefined' && window.pokerBroadcast) window.pokerBroadcast(serializeForBroadcast(G)); }
 // Host pushes each in-hand player their own hole cards on a private path.
@@ -408,8 +435,9 @@ function hostStand(userId){
 // Guest: replace local state from the host's broadcast and render.
 function onPokerState(s){
   if (amHost()) return;                 // host is authoritative
-  if (!s || !Array.isArray(s.seats)) return;
-  G = s; if (!G.deck) G.deck = [];
+  const ns = normalizeState(s);         // repair Firebase's array/null coercion
+  if (!ns) return;
+  G = ns;
   render();
 }
 // Guest: receive own hole cards privately (host wrote poker/hole/{myId}).

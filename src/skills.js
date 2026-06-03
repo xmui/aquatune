@@ -85,7 +85,8 @@ function _writeLocal() {
 function _saveRemote() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
-    set(skillsRef(), { xp: _xp, updatedAt: Date.now() }).catch(() => {});
+    const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
+    set(skillsRef(), { xp: _xp, name, updatedAt: Date.now() }).catch(() => {});
   }, 800);
 }
 
@@ -179,9 +180,12 @@ function gameXp(skillId, opts) {
   if (opts.won) amt += WON_XP;
   amt = Math.round(amt * mult);
   if (amt <= 0) return;
-  // Rare random bonus: a big multiplier that makes the grind feel alive.
-  if (Math.random() < LUCKY_CHANCE) {
-    amt *= 3 + Math.floor(Math.random() * 6); // x3..x8
+  // Rare random bonus: a big multiplier that makes the grind feel alive. `luck`
+  // (default 1) scales how often/how big it is — gambling passes a small value so
+  // its lucky bonus is rarer and gentler than skills you actually grind.
+  const luck = opts.luck != null && isFinite(opts.luck) ? Math.max(0, opts.luck) : 1;
+  if (Math.random() < LUCKY_CHANCE * luck) {
+    amt *= luck < 1 ? (2 + Math.floor(Math.random() * 2)) : (3 + Math.floor(Math.random() * 6));
     if (typeof window.toast === 'function') window.toast(`🍀 Lucky ${SKILL_BY_ID[skillId].name}! +${amt} XP`);
   }
   addXp(skillId, amt);
@@ -202,26 +206,27 @@ let _open = false;
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-function renderSkillsPanel() {
-  const area = document.getElementById('stats-area');
-  if (!area) return;
-  area.innerHTML = '';
+let _statsTab = 'me';     // 'me' | 'rank'
+let _rankData = null;     // cached [{uid, name, xp, total}]
+let _rankBusy = false;
+let _rankQuery = '';
+let _rankDetail = null;   // a selected entry to show in detail
 
-  const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
-  const skills = getSkills();
-  const total = SKILLS.reduce((a, s) => a + skills[s.id].level, 0);
-
+// header: name + heart + total level
+function statsHeader(name, total) {
   const head = el('div', 'sk-head');
   head.appendChild(el('div', 'sk-heart', '❤'));
   const ident = el('div', 'sk-ident');
   ident.appendChild(el('div', 'sk-name', esc(name)));
   ident.appendChild(el('div', 'sk-total', `Total level <b>${total}</b> / ${SKILLS.length * MAX_LEVEL}`));
   head.appendChild(ident);
-  area.appendChild(head);
-
+  return head;
+}
+// the per-skill card grid for any xp map
+function skillGrid(xpMap) {
   const grid = el('div', 'sk-grid');
   for (const s of SKILLS) {
-    const xp = skills[s.id].xp;
+    const xp = (xpMap && xpMap[s.id]) | 0;
     const p = levelProgress(xp);
     const card = el('div', 'sk-card');
     const top = el('div', 'sk-card-top');
@@ -232,19 +237,92 @@ function renderSkillsPanel() {
     top.appendChild(meta);
     top.appendChild(el('div', 'sk-lvl', `<b>${p.level}</b><span>/${MAX_LEVEL}</span>`));
     card.appendChild(top);
-
     const bar = el('div', 'sk-bar');
     const fill = el('div', 'sk-bar-fill');
     fill.style.width = (p.level >= MAX_LEVEL ? 100 : p.pct) + '%';
     bar.appendChild(fill);
     card.appendChild(bar);
-
     card.appendChild(el('div', 'sk-xp', p.level >= MAX_LEVEL
       ? `${xp.toLocaleString()} XP · MAX`
       : `${p.cur.toLocaleString()} / ${p.need.toLocaleString()} XP to ${p.level + 1}`));
     grid.appendChild(card);
   }
-  area.appendChild(grid);
+  return grid;
+}
+function totalLevelOf(xpMap) { return SKILLS.reduce((a, s) => a + levelForXp((xpMap && xpMap[s.id]) | 0), 0); }
+
+function renderSkillsPanel() {
+  const area = document.getElementById('stats-area');
+  if (!area) return;
+  area.innerHTML = '';
+  // tab bar
+  const tabs = el('div', 'sk-tabs');
+  const mk = (id, label) => { const b = el('button', 'sk-tab' + (_statsTab === id ? ' on' : ''), label); b.onclick = () => { _statsTab = id; _rankDetail = null; renderSkillsPanel(); }; return b; };
+  tabs.append(mk('me', 'My Skills'), mk('rank', 'Rankings'));
+  area.appendChild(tabs);
+
+  if (_statsTab === 'me') {
+    const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
+    area.appendChild(statsHeader(name, totalLevelOf(_xp)));
+    area.appendChild(skillGrid(_xp));
+  } else {
+    renderRankings(area);
+  }
+}
+
+function renderRankings(area) {
+  // detail view for a selected user
+  if (_rankDetail) {
+    const back = el('button', 'sk-back', '← Rankings');
+    back.onclick = () => { _rankDetail = null; renderSkillsPanel(); };
+    area.appendChild(back);
+    area.appendChild(statsHeader(_rankDetail.name, _rankDetail.total));
+    area.appendChild(skillGrid(_rankDetail.xp));
+    return;
+  }
+  // search box
+  const search = el('input', 'sk-search'); search.type = 'text';
+  search.placeholder = 'Search username…'; search.value = _rankQuery;
+  search.oninput = () => { _rankQuery = search.value; paintList(); };
+  area.appendChild(search);
+
+  const list = el('div', 'sk-ranklist'); area.appendChild(list);
+  const me = userId();
+
+  function paintList() {
+    list.innerHTML = '';
+    if (_rankBusy) { list.appendChild(el('div', 'sk-rank-note', 'Loading rankings…')); return; }
+    if (!_rankData) { list.appendChild(el('div', 'sk-rank-note', 'No data yet.')); return; }
+    const q = _rankQuery.trim().toLowerCase();
+    const rows = _rankData.filter(r => !q || r.name.toLowerCase().includes(q)).slice(0, 50);
+    if (!rows.length) { list.appendChild(el('div', 'sk-rank-note', 'No players found.')); return; }
+    rows.forEach((r) => {
+      const row = el('div', 'sk-rank-row' + (r.uid === me ? ' me' : ''));
+      row.appendChild(el('span', 'sk-rank-pos', '#' + (r.rank)));
+      row.appendChild(el('span', 'sk-rank-name', esc(r.name)));
+      row.appendChild(el('span', 'sk-rank-lvl', String(r.total)));
+      row.onclick = () => { _rankDetail = r; renderSkillsPanel(); };
+      list.appendChild(row);
+    });
+  }
+  paintList();
+
+  // fetch once (cached); refresh on each Rankings open is fine
+  if (!_rankData && !_rankBusy) {
+    _rankBusy = true;
+    get(ref(db, 'user-skills')).then(snap => {
+      const v = snap.exists() ? snap.val() : {};
+      const arr = [];
+      for (const uid of Object.keys(v || {})) {
+        const node = v[uid]; if (!node || typeof node !== 'object') continue;
+        const xp = node.xp || {};
+        arr.push({ uid, name: (node.name || 'Anonymous'), xp, total: totalLevelOf(xp) });
+      }
+      arr.sort((a, b) => b.total - a.total);
+      arr.forEach((r, i) => r.rank = i + 1);
+      _rankData = arr;
+    }).catch(() => { _rankData = []; }).finally(() => { _rankBusy = false; paintList(); });
+  }
 }
 
 function openStats(show = true) {
@@ -253,6 +331,7 @@ function openStats(show = true) {
   if (show === false) { w.classList.remove('open'); w.style.display = 'none'; return; }
   w.classList.add('open'); w.style.display = 'flex';
   _open = true;
+  _rankData = null; _rankDetail = null;   // refresh rankings each open
   if (window.OS && window.OS.register) { window.OS.register('stats'); window.OS.focus('stats'); }
   if (!_loaded) loadSkills();
   renderSkillsPanel();

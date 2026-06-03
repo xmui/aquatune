@@ -48,6 +48,7 @@ function startGame(d) {
   nextWave();
 }
 function nextWave() {
+  clearOverlay();
   wave++;
   waveTarget = diff.waveSize + Math.floor((wave - 1) / 2);     // grows slowly
   waveQuota = Math.ceil(waveTarget * diff.quota);

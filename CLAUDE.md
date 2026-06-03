@@ -22,6 +22,12 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - A rare (~5%) **lucky bonus** multiplies a grant for variance.
 - Skills are data-driven (the `SKILLS` array) so more can be added later. Games grant
   XP via the global `window.aqGameXp(skill, {played, won, mult})` / `window.aqAddXp`.
+  Current skills: fishing, mining, gambling, intellect, speed, music, finance, combat.
+- XP is account-gated: no account ⇒ no XP/leaderboard (see `hasAccount()`).
+- **Music** accrues from watching videos (`startProg` tick in `index.html`) AND making
+  beats in the Studio (`playheadTick` in `aquasynth-studio.js`). **Finance** accrues
+  from trading (`doBuy`/`doSell`) AND from earning credits generally (`hookEarnXp`
+  wraps `aqAddCredits`, small + capped). **Combat** comes from Buddy Shoot.
 - XP is cached in localStorage and synced per-user to Firebase (`user-skills/<uid>`),
   mirroring the stocks/portfolio pattern.
 

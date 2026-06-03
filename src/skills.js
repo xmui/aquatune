@@ -19,8 +19,9 @@ const SKILLS = [
   { id: 'gambling', name: 'Gambling',  icon: '🎲', blurb: 'Slots, Blackjack & Hold’em' },
   { id: 'intellect',name: 'Intellect', icon: '🧠', blurb: 'Picross, Mines & Solitaire' },
   { id: 'speed',    name: 'Speed',     icon: '⚡', blurb: 'Beat Tap & Pinball' },
-  { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Time spent watching' },
-  { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Working the Exchange' },
+  { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Watching & making music' },
+  { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Earning & trading' },
+  { id: 'combat',   name: 'Combat',    icon: '⚔️', blurb: 'Buddy Shoot' },
 ];
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 const MAX_LEVEL = 100;
@@ -370,6 +371,19 @@ function openStats(show = true) {
 
 // ---------------------------------------------------------------------------
 // Wire up globals + boot
+// Earning money grants a little Finance XP. Wrap aqAddCredits (the "earn" path —
+// spending and remote-sync go through aqSetCredits, so they don't trigger this,
+// and stock sells keep their own grant). Small + capped to limit farming.
+function hookEarnXp() {
+  if (typeof window === 'undefined' || window._aqEarnXpHooked || typeof window.aqAddCredits !== 'function') return;
+  window._aqEarnXpHooked = true;
+  const orig = window.aqAddCredits;
+  window.aqAddCredits = function (n) {
+    orig(n);
+    if (typeof n === 'number' && n > 0) addXp('finance', Math.max(1, Math.min(6, Math.round(n / 50))));
+  };
+}
+
 // ---------------------------------------------------------------------------
 if (typeof window !== 'undefined') {
   window.aqAddXp = addXp;
@@ -378,6 +392,7 @@ if (typeof window !== 'undefined') {
   window.aqSkillLevel = skillLevel;
   window.openStats = openStats;
   window._aqStatsClosed = () => { _open = false; };
+  hookEarnXp();
   // Load early so XP grants during the session persist + sync.
   loadSkills();
 }

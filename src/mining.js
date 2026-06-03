@@ -30,8 +30,9 @@ const ROCKS = [
 const CXR = 80, CYR = 72, RW = 30, RH = 24;
 
 // ── spice dials ──────────────────────────────────────────────────────────────
-const CRIT_MULT = 4;                 // damage × on a crit
-const CRIT_BASE = 0.05, CRIT_PER_COMBO = 0.01, CRIT_CAP = 0.25;
+const CRIT_MULT = 2.2;               // damage × on a crit (a reward for aim, not a one-shot)
+const CRIT_CHANCE = 0.05;            // flat random crit chance on a deliberate (non-spam) hit
+const SPAM_MS = 150;                 // clicks faster than this = mashing → NO crits (timing only)
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 3, MOTHERLODE_POWER = 2;
@@ -83,11 +84,19 @@ function spawnRock() {
     for (let s = 0; s < 5; s++) { x += Math.cos(ang) * 5 + (Math.random() * 4 - 2); y += Math.sin(ang) * 5 + (Math.random() * 4 - 2); pts.push({ x: Math.round(x), y: Math.round(y) }); }
     rock.cracks.push(pts);
   }
-  // sweet-spot meter: tougher rocks get a narrower, faster zone (more reward for timing)
-  sweet = { x: Math.random() * 100, dir: Math.random() < 0.5 ? -1 : 1, v: 1.2 + def.rarity * 0.25, w: Math.max(14, 26 - def.rarity * 2), zoneX: 0 };
-  rerollSweet();
+  rerollSweet();   // place the weak-point on the rock
 }
-function rerollSweet() { if (sweet) sweet.zoneX = Math.random() * Math.max(0, 100 - sweet.w); }
+// A glowing "weak point" somewhere on the rock — click IT for a crit. Smaller on
+// tougher rocks; it relocates over time so it's a moving target (you must aim).
+function rerollSweet() {
+  if (!rock) { sweet = null; return; }
+  const r = Math.max(5, 9 - rock.def.rarity);
+  const ang = Math.random() * 6.2832, rad = Math.sqrt(Math.random()) * 0.78;
+  sweet = {
+    x: CXR + Math.cos(ang) * rad * (RW - r), y: CYR + Math.sin(ang) * rad * (RH - r),
+    r, moveAt: performance.now() + 1100 + Math.random() * 1000,
+  };
+}
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
 function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: CYR - 8 + (Math.random() - 0.5) * 26, vx: (Math.random() - 0.5) * (big ? 6 : 3), vy: -Math.random() * (big ? 5 : 3) - 1, life: big ? 24 : 16, c: 3, s: big ? 3 : 2 }); }
 
@@ -120,15 +129,20 @@ function breakRock() {
   refreshInfo();
 }
 
-function hit() {
+function hit(px, py) {
   if (!rock) return;
   const now = performance.now();
-  combo = (now - lastHit < 900) ? combo + 1 : 0;
+  const gap = now - lastHit;
+  const spamming = gap < SPAM_MS;           // mashing too fast → no crits, just normal damage
+  combo = (gap < 900) ? combo + 1 : 0;
   lastHit = now;
   swing = 1; shake = 6; rock.flash = 1;
-  // sweet-spot timing → guaranteed crit; otherwise a combo-scaled random crit
-  const sweetHit = sweet && sweet.x >= sweet.zoneX && sweet.x <= sweet.zoneX + sweet.w;
-  const crit = sweetHit || Math.random() < Math.min(CRIT_CAP, CRIT_BASE + combo * CRIT_PER_COMBO);
+  // Crits reward AIM, not mashing: click the glowing weak-point on the rock for a
+  // guaranteed crit (else a small flat chance). Spamming disqualifies both, so you
+  // can spam for normal damage but never crit.
+  const onSpot = sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 1.5;
+  const crit = !spamming && (onSpot || Math.random() < CRIT_CHANCE);
+  const perfect = crit && onSpot;
   let dmg = pickPower();
   if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
   if (crit) dmg *= CRIT_MULT;
@@ -136,8 +150,8 @@ function hit() {
   rock.hp -= dmg;
   if (crit) {
     shake = 10;
-    addFloater(sweetHit ? 'PERFECT!' : 'CRIT!', 3);
-    if (sweetHit) rerollSweet();
+    addFloater(perfect ? 'PERFECT!' : 'CRIT!', 3);
+    if (perfect) rerollSweet();
     for (let i = 0; i < 10; i++) spark(true);
   } else {
     for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
@@ -257,13 +271,13 @@ function draw(t) {
   // particles (sized chunks)
   for (const p of particles) px(p.x, p.y, p.s || 3, p.s || 3, p.c);
 
-  // sweet-spot timing meter (hit while the marker is in the green for a guaranteed crit)
-  if (rock && sweet) {
-    const mx = 18, mw = 124, my = H - 26, mh = 6;
-    px(mx - 1, my - 1, mw + 2, mh + 2, 0);
-    px(mx, my, mw, mh, 1);
-    px(mx + (sweet.zoneX / 100) * mw, my, (sweet.w / 100) * mw, mh, 2);
-    px(mx + (sweet.x / 100) * mw - 1, my - 2, 2, mh + 4, 3);
+  // weak-point reticle on the rock — click it for a guaranteed crit
+  if (rock && sweet && rock.flash <= 0.45) {
+    const rr = Math.max(3, Math.round(sweet.r * (0.7 + 0.3 * Math.sin(t / 140))));
+    const wx = (sweet.x + sx) | 0, wy = sweet.y | 0;
+    px(wx - 1, wy - rr, 2, 2, 3); px(wx - 1, wy + rr - 1, 2, 2, 3);
+    px(wx - rr, wy - 1, 2, 2, 3); px(wx + rr - 1, wy - 1, 2, 2, 3);
+    px(wx - 1, wy - 1, 2, 2, 0);
   }
 
   // floaters (CRIT! / PERFECT! / +ore)
@@ -295,7 +309,7 @@ function tick(t) {
   if (!rock && breakUntil && t >= breakUntil) { breakUntil = 0; spawnRock(); }
   for (const p of particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= dt / 16; }
   particles = particles.filter(p => p.life > 0);
-  if (sweet) { sweet.x += sweet.v * sweet.dir * (dt / 16); if (sweet.x <= 0) { sweet.x = 0; sweet.dir = 1; } if (sweet.x >= 100) { sweet.x = 100; sweet.dir = -1; } }
+  if (rock && sweet && t >= sweet.moveAt) rerollSweet();   // weak-point relocates → moving target
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
   floaters = floaters.filter(f => f.life > 0);
   draw(t);
@@ -351,9 +365,14 @@ function build() {
   shopEl = document.createElement('div'); shopEl.className = 'gbc-bar'; area.appendChild(shopEl);
 
   cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
-  const doHit = (e) => { e.preventDefault(); hit(); };
-  cv.addEventListener('pointerdown', doHit);
-  mine.addEventListener('pointerdown', doHit);
+  // click the canvas → mine at those coords (aim for the weak-point to crit);
+  // the MINE button is a no-aim fallback (normal hits, can't crit).
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const r = cv.getBoundingClientRect();
+    hit((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height));
+  });
+  mine.addEventListener('pointerdown', (e) => { e.preventDefault(); hit(); });
   _built = true;
 }
 

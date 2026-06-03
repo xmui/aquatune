@@ -47,12 +47,46 @@ function genTempPassword() {
 // ---------------------------------------------------------------------------
 const accRef = id => ref(db, 'accounts/' + id);
 const userIdxRef = lo => ref(db, 'usernames/' + lo);
+// Owner usernames (lowercase) that are always flagged admin on login — lets the
+// first admin exist without Firebase-console access. Edit this list to add owners.
+const OWNERS = ['jake'];
 const googleIdxRef = uid => ref(db, 'googleUsers/' + uid);
 const resetRef = lo => ref(db, 'passwordResets/' + lo);
 
 let _account = null; // cached current account record
 function aqCurrentAccount() { return _account ? { accountId: window._aqAccountId, ..._account } : null; }
 window.aqCurrentAccount = aqCurrentAccount;
+
+// ---------------------------------------------------------------------------
+// Daily bonus cooldown — enforced on the ACCOUNT (Firebase), not localStorage,
+// so it can't be farmed by claiming on multiple devices / clearing site data.
+// Anonymous users fall back to localStorage (their credits don't sync anyway).
+// ---------------------------------------------------------------------------
+const DAILY_MS = 86400000;
+window.aqAccountLastDaily = () => (_account && typeof _account.lastDaily === 'number') ? _account.lastDaily : 0;
+window.aqTryClaimDaily = async function () {
+  // → true if the bonus is granted (caller then adds the credits)
+  if (!window._aqAccountId) {
+    const last = parseInt(localStorage.getItem('aq_last_claim') || '0', 10);
+    if (Date.now() - last < DAILY_MS) return false;
+    localStorage.setItem('aq_last_claim', String(Date.now()));
+    return true;
+  }
+  try {
+    const res = await runTransaction(ref(db, 'accounts/' + window._aqAccountId + '/lastDaily'), cur => {
+      const last = (typeof cur === 'number') ? cur : 0;
+      if (Date.now() - last < DAILY_MS) return;   // undefined → abort (already claimed)
+      return Date.now();
+    });
+    if (res && res.committed) {
+      const now = Date.now();
+      if (_account) _account.lastDaily = now;
+      localStorage.setItem('aq_last_claim', String(now));
+      return true;
+    }
+    return false;
+  } catch { return false; }
+};
 
 // ---------------------------------------------------------------------------
 // Credits: local cache <-> account, live cross-device sync
@@ -105,6 +139,11 @@ async function attachAccount(id, { adoptCredits = true } = {}) {
       _applyingRemote = true;
       try { window.aqSetCredits(_account.credits); } finally { _applyingRemote = false; }
       localStorage.setItem('aq_credits_synced_at', String(Date.now()));
+    }
+    // Owner bootstrap: always-admin usernames get the flag (persisted).
+    if (OWNERS.includes(lower(_account.username || '')) && !_account.admin) {
+      _account.admin = true;
+      update(accRef(id), { admin: true, updatedAt: Date.now() }).catch(() => {});
     }
   }
   hookAccountCredits();
@@ -320,6 +359,27 @@ async function aqAdminResetPassword(username, tempPassword) {
   await set(resetRef(lo), null).catch(() => {});
   return { ok: true, tempPassword: temp };
 }
+// Admin: add/remove credits from any account by username (delta may be negative).
+async function aqAdminAdjustCredits(username, delta) {
+  if (!_account || !_account.admin) return { ok: false, error: 'Not an admin.' };
+  delta = Math.round(Number(delta));
+  if (!isFinite(delta) || delta === 0) return { ok: false, error: 'Enter a nonzero amount.' };
+  const lo = lower(username);
+  const idSnap = await get(userIdxRef(lo));
+  if (!idSnap.exists()) return { ok: false, error: 'No such username.' };
+  const accountId = idSnap.val();
+  let after = null;
+  try {
+    const res = await runTransaction(ref(db, 'accounts/' + accountId + '/credits'), cur => {
+      const c = (typeof cur === 'number') ? cur : 0;
+      after = Math.max(0, c + delta);
+      return after;
+    });
+    if (!res || !res.committed) return { ok: false, error: 'Update failed.' };
+  } catch (e) { return { ok: false, error: 'Update failed.' }; }
+  await update(accRef(accountId), { updatedAt: Date.now() }).catch(() => {});
+  return { ok: true, credits: after };
+}
 
 // ---------------------------------------------------------------------------
 // UI — rendered into every .aq-account-panel mount (Settings + splash).
@@ -397,6 +457,7 @@ async function renderAdminBox(box) {
     : '<div class="aq-acct-note">No pending requests.</div>';
   box.innerHTML = `${list}
     <div class="aq-acct-row"><input class="aq-admin-user" placeholder="username to reset"><button class="win95-btn aq-admin-go">Reset password</button></div>
+    <div class="aq-acct-row"><input class="aq-admin-cuser" placeholder="username"><input class="aq-admin-camt" type="number" placeholder="±credits" style="width:84px"><button class="win95-btn aq-admin-cgo">Adjust credits</button></div>
     <div class="aq-acct-msg aq-admin-msg"></div>`;
   const msg = (t, ok) => { const m = box.querySelector('.aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   const doReset = async (name) => {
@@ -406,12 +467,19 @@ async function renderAdminBox(box) {
   };
   box.querySelectorAll('.aq-admin-reset').forEach(b => b.onclick = () => doReset(b.dataset.u));
   box.querySelector('.aq-admin-go').onclick = () => { const v = box.querySelector('.aq-admin-user').value.trim(); if (v) doReset(v); };
+  box.querySelector('.aq-admin-cgo').onclick = async () => {
+    const u = box.querySelector('.aq-admin-cuser').value.trim();
+    const amt = box.querySelector('.aq-admin-camt').value;
+    if (!u) return;
+    const r = await aqAdminAdjustCredits(u, amt);
+    msg(r.ok ? `${u} now has ${r.credits} credits.` : r.error, r.ok);
+  };
 }
 
 // expose
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
-  aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel,
+  aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits,
 });
 
 // ---------------------------------------------------------------------------

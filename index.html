@@ -2366,14 +2366,23 @@
 #splash .sp-opt-sub { color: rgba(20,40,80,0.68) !important; }
 #splash .sp-opt-btn.sp-opt-create .sp-opt-label { color: #fff !important; }
 #splash .sp-opt-btn.sp-opt-create .sp-opt-sub { color: rgba(255,255,255,0.78) !important; }
-#sp-name {
-  width: 100%; padding: 8px 12px; border-radius: var(--r-btn);
+/* Splash account panel (sign in / signed-in) + guest option */
+#sp-account { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+#sp-account .aq-acct-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+#sp-account input {
+  flex: 1; min-width: 0; padding: 8px 12px; border-radius: var(--r-btn);
   border: 1.5px solid rgba(0,60,160,0.25); background: rgba(255,255,255,0.9);
-  color: #1a2a4a; font-size: 13px; font-weight: 700; text-align: center;
-  outline: none; box-sizing: border-box; font-family: inherit;
+  color: #1a2a4a; font-size: 13px; outline: none; box-sizing: border-box; font-family: inherit;
 }
-#sp-name::placeholder { color: rgba(20,40,80,0.5); font-weight: 400; }
-#sp-name:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,104,184,0.12); }
+#sp-account input::placeholder { color: rgba(20,40,80,0.5); }
+#sp-account input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,104,184,0.12); }
+#sp-account .win95-btn { flex: 1; padding: 7px 8px; font-size: 12px; cursor: pointer; }
+#sp-account .aq-acct-who { width: 100%; text-align: center; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+#sp-account .aq-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; text-decoration: underline; padding: 4px 2px; }
+#sp-account .aq-acct-msg { width: 100%; font-size: 11px; min-height: 14px; }
+#sp-guest-row { display: flex; margin-bottom: 12px; }
+#sp-guest-row .sp-btn { flex: 1; }
+[data-scheme=dark] #sp-account input { background: rgba(255,255,255,0.85); color:#1a2a4a; border-color: rgba(0,60,160,0.25); }
 .sp-btn {
   width: 100%; padding: 9px 12px; border-radius: var(--r-btn);
   border: 1.5px solid #004fa0; cursor: pointer;
@@ -4818,7 +4827,10 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <span style="position:relative;z-index:1">Aquatune</span>
     </div>
     <div id="sp-room-body">
-      <input id="sp-name" type="text" placeholder="Your display name…" maxlength="30" autocomplete="off">
+      <div id="sp-account" class="aq-account-panel" data-variant="splash"></div>
+      <div id="sp-guest-row">
+        <button class="sp-btn" onclick="splashGuest()">Continue as Anonymous →</button>
+      </div>
       <div class="sp-options">
         <button class="sp-opt-btn sp-opt-create" onclick="splashShowCreate()">
           <span class="sp-opt-icon">&#9654;</span>
@@ -5393,7 +5405,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
 
   <div class="settings-section-hdr">Aquatune Account</div>
   <div class="theme-section" style="padding-top:0">
-    <div id="aq-account-panel"></div>
+    <div id="aq-account-panel" class="aq-account-panel"></div>
   </div>
 
   <div class="settings-section-hdr">Help &amp; Features</div>
@@ -9898,7 +9910,6 @@ if (window.matchMedia('(max-width: 768px)').matches) {
 loadSavedTheme();
 restoreSession();
 // Pre-fill username from localStorage
-(function(){ const n=localStorage.getItem('aq_username'); if(n){ const el=document.getElementById('sp-name'); if(el) el.value=n; } })();
 renderPls();
 if (clientId) document.getElementById('cid-inp').value = clientId;
 tryAutoSignIn();
@@ -13819,17 +13830,16 @@ function applyLayoutOpts() {
 }
 
 /* ── SPLASH & ROOM FUNCTIONS ── */
-function _requireName() {
-  const name = document.getElementById('sp-name').value.trim();
-  if (!name) {
-    const inp = document.getElementById('sp-name');
-    inp.focus(); inp.style.borderColor = 'rgba(255,120,120,0.8)';
-    inp.placeholder = 'Name required!';
-    return null;
-  }
+// Identity is the signed-in account name, or "Anonymous" for guests. There is
+// no separate typed "room username" anymore — aq_username mirrors this.
+function currentDisplayName() {
+  const acct = window.aqCurrentAccount && window.aqCurrentAccount();
+  const name = (acct && acct.username) ? acct.username : 'Anonymous';
   localStorage.setItem('aq_username', name);
   return name;
 }
+function _requireName() { return currentDisplayName(); }   // never blocks now (guest = Anonymous)
+function splashGuest() { currentDisplayName(); splashSolo(); } // play without an account
 function splashShowCreate() {
   document.getElementById('sp-create-row').style.display = 'flex';
   document.getElementById('sp-join-row').style.display = 'none';
@@ -13936,8 +13946,7 @@ function splashJoinConfirm() {
   updateRoomMgmtPanel();
 }
 function splashSolo() {
-  const name = document.getElementById('sp-name').value.trim();
-  if (name) localStorage.setItem('aq_username', name);
+  currentDisplayName();
   localStorage.removeItem('aq_session_room');
   closeSplash();
 }
@@ -13958,12 +13967,7 @@ function copyRoomLink() {
   const url = window.location.href;
   navigator.clipboard?.writeText(url).then(() => toast('Room link copied!')).catch(() => toast(url));
 }
-function _getInlineName() {
-  const inp = document.getElementById('room-mgmt-name');
-  const v = inp?.value.trim() || localStorage.getItem('aq_username') || '';
-  if (!v) { inp?.focus(); toast('Enter your name first'); return null; }
-  localStorage.setItem('aq_username', v); return v;
-}
+function _getInlineName() { return currentDisplayName(); } // account name, or "Anonymous"
 function inlineCreateRoom() {
   if (!_getInlineName()) return;
   const hostId = localStorage.getItem('aq_host_id') || (() => {
@@ -14009,9 +14013,9 @@ function updateRoomMgmtPanel() {
   if (active) active.style.display = inRoom ? 'flex' : 'none';
   if (join) join.style.display = inRoom ? 'none' : 'flex';
   if (codeEl && inRoom) codeEl.textContent = 'Room #'+window._currentRoomId+(window._isRoomHost?' 👑':'');
-  // Pre-fill name
+  // Show current identity (account name, or Anonymous) — read-only
   const nameInp = document.getElementById('room-mgmt-name');
-  if (nameInp) nameInp.value = localStorage.getItem('aq_username') || '';
+  if (nameInp) nameInp.value = (typeof currentDisplayName === 'function' ? currentDisplayName() : (localStorage.getItem('aq_username') || 'Anonymous'));
 }
 
 function toggleMembersPanel() {
@@ -14526,9 +14530,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomUi = document.getElementById('splash-room');
     if (roomUi) {
       roomUi.style.display = 'flex';
-      const savedName = localStorage.getItem('aq_username');
-      const nameInp = document.getElementById('sp-name');
-      if (savedName && nameInp) nameInp.value = savedName;
+      if (typeof aqRenderAccountPanel === 'function') try { aqRenderAccountPanel(); } catch (_) {}
       // If URL already has a room hash, pre-fill join
       const hash = window.location.hash.slice(1);
       if (hash) {
@@ -16235,8 +16237,9 @@ function bjUpdateBalance(){
         </div>
         <div id="room-mgmt-join" style="display:flex;flex-direction:column;gap:6px">
           <div style="display:flex;gap:5px">
-            <input id="room-mgmt-name" type="text" placeholder="Your name" maxlength="30"
-              style="flex:1;padding:4px 7px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text)"
+            <input id="room-mgmt-name" type="text" placeholder="Anonymous" maxlength="30" readonly
+              title="Your room name comes from your account (sign in via Settings). Guests show as Anonymous."
+              style="flex:1;padding:4px 7px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--text2);opacity:.8"
               value="">
           </div>
           <div style="display:flex;gap:5px">

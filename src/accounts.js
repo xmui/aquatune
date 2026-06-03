@@ -47,6 +47,9 @@ function genTempPassword() {
 // ---------------------------------------------------------------------------
 const accRef = id => ref(db, 'accounts/' + id);
 const userIdxRef = lo => ref(db, 'usernames/' + lo);
+// Owner usernames (lowercase) that are always flagged admin on login — lets the
+// first admin exist without Firebase-console access. Edit this list to add owners.
+const OWNERS = ['jake'];
 const googleIdxRef = uid => ref(db, 'googleUsers/' + uid);
 const resetRef = lo => ref(db, 'passwordResets/' + lo);
 
@@ -136,6 +139,11 @@ async function attachAccount(id, { adoptCredits = true } = {}) {
       _applyingRemote = true;
       try { window.aqSetCredits(_account.credits); } finally { _applyingRemote = false; }
       localStorage.setItem('aq_credits_synced_at', String(Date.now()));
+    }
+    // Owner bootstrap: always-admin usernames get the flag (persisted).
+    if (OWNERS.includes(lower(_account.username || '')) && !_account.admin) {
+      _account.admin = true;
+      update(accRef(id), { admin: true, updatedAt: Date.now() }).catch(() => {});
     }
   }
   hookAccountCredits();

@@ -126,6 +126,15 @@ function applyResets() {
       _writeLocal();
       _saveRemote();
     }
+    // Music was earned too fast (50 xp/min → ~50h to max); the rate is now
+    // 20/min (~120h to max). Rescale existing music XP by 20/50 so each user's
+    // music level reflects their actual listening time under the new rate.
+    if (!localStorage.getItem('aq_skills_music_rescale_v1')) {
+      localStorage.setItem('aq_skills_music_rescale_v1', '1');
+      _xp.music = Math.round((_xp.music | 0) * 0.4);
+      _writeLocal();
+      _saveRemote();
+    }
   } catch {}
 }
 

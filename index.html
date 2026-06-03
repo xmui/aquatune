@@ -6761,7 +6761,7 @@ function startProg() {
     // Accrue Music skill XP for actual watch time (~1 grant per 60s playing).
     if (playing) {
       _musicWatchMs = (_musicWatchMs || 0) + 500;
-      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 50); }
+      if (_musicWatchMs >= 60000) { _musicWatchMs = 0; if (window.aqAddXp) window.aqAddXp('music', 20); }
     }
     if (currentSource === 'soundcloud') {
       if (!scWidget || !scReady) return;

@@ -139,14 +139,16 @@ export function expandArrangement(project, opts = {}) {
       const pat = getPattern(project, clip.patternId);
       if (!pat) continue;
       const lenBars = clip.lenBars || pat.bars;
-      // a clip may loop the pattern to fill its length
-      const reps = Math.max(1, Math.round(lenBars / pat.bars));
+      // a clip loops its pattern to fill its length; the final repeat is
+      // truncated so the clip plays EXACTLY lenBars (resizing changes length).
+      const reps = Math.max(1, Math.ceil(lenBars / pat.bars));
       const evs = patternEvents(pat, isStep, drumMidi);
       for (let r = 0; r < reps; r++) {
         const repStartBar = clip.startBar + r * pat.bars;
         if (repStartBar >= toBar) break;
         const baseSec = repStartBar * sBar;
         for (const e of evs) {
+          if (r * pat.bars + e.startStep / STEPS_PER_BAR >= lenBars) continue; // past the clip end
           const tSec = baseSec + e.startStep * sStep;
           const bar = repStartBar + e.startStep / STEPS_PER_BAR;
           if (bar < fromBar || bar >= toBar) continue;
@@ -206,13 +208,16 @@ function instNoteTicks(project, inst) {
   for (const clip of track.clips) {
     const pat = getPattern(project, clip.patternId);
     if (!pat) continue;
-    const reps = Math.max(1, Math.round((clip.lenBars || pat.bars) / pat.bars));
+    const lenBars = clip.lenBars || pat.bars;
+    const reps = Math.max(1, Math.ceil(lenBars / pat.bars));
+    const lenSteps = lenBars * STEPS_PER_BAR;
     for (let r = 0; r < reps; r++) {
-      const baseStep = (clip.startBar + r * pat.bars) * STEPS_PER_BAR;
+      const repOff = r * pat.bars * STEPS_PER_BAR;            // steps into the clip
+      const baseStep = clip.startBar * STEPS_PER_BAR + repOff;
       if (isStep) {
-        for (let s = 0; s < pat.steps.length; s++) if (pat.steps[s]) out.push({ midi: drumMidi, startTick: (baseStep + s) * TICKS_PER_STEP, durTick: TICKS_PER_STEP, vel: 100 });
+        for (let s = 0; s < pat.steps.length; s++) if (pat.steps[s] && repOff + s < lenSteps) out.push({ midi: drumMidi, startTick: (baseStep + s) * TICKS_PER_STEP, durTick: TICKS_PER_STEP, vel: 100 });
       } else {
-        for (const n of pat.notes) out.push({ midi: n.midi, startTick: (baseStep + n.start) * TICKS_PER_STEP, durTick: Math.max(1, n.len) * TICKS_PER_STEP, vel: Math.round((n.vel ?? 0.85) * 127) });
+        for (const n of pat.notes) if (repOff + n.start < lenSteps) out.push({ midi: n.midi, startTick: (baseStep + n.start) * TICKS_PER_STEP, durTick: Math.max(1, n.len) * TICKS_PER_STEP, vel: Math.round((n.vel ?? 0.85) * 127) });
       }
     }
   }

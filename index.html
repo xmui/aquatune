@@ -3694,10 +3694,14 @@ body.perf-mode #aqua-gun { display: none !important; }
       background:linear-gradient(180deg,#1c2b6b,#0e1740); flex-wrap:wrap; }
     .bs-stage { position:relative; height:340px; overflow:hidden; cursor:crosshair; touch-action:none; user-select:none;
       background:linear-gradient(180deg,#7ec8ff 0%,#bfe8ff 62%,#9ad06a 62%,#7bbf4f 100%); }
-    .bs-buddy { position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
+    .bs-buddy { position:absolute; left:0; top:0; will-change:transform; pointer-events:none; filter:drop-shadow(0 3px 5px rgba(0,40,90,0.35)); }
     .bs-buddy svg { width:100%; height:auto; display:block; }
-    .bs-buddy.bs-hit { animation:bsHit .26s ease forwards; }
-    @keyframes bsHit { 0%{transform:scale(1)} 30%{transform:scale(1.25) rotate(8deg)} 100%{transform:translateY(60px) scale(.5) rotate(40deg); opacity:0} }
+    .bs-buddy.bs-spook { animation:bsSpook .28s linear infinite; }   /* flash while fleeing (JS drives transform) */
+    @keyframes bsSpook { 0%,100%{filter:drop-shadow(0 3px 5px rgba(0,40,90,.35))} 50%{filter:drop-shadow(0 0 6px #fff) brightness(1.5)} }
+    .bs-buddy.bs-fall { filter:drop-shadow(0 3px 5px rgba(0,40,90,0.35)) grayscale(.4) brightness(.85); }
+    .bs-shots { display:inline-flex; gap:3px; align-items:center; }
+    .bs-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.25); box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
+    .bs-dot.on { background:#ffcd50; box-shadow:0 0 5px rgba(255,205,80,.8); }
     .bs-pop { position:absolute; transform:translate(-50%,-50%); font-size:14px; font-weight:900; color:#fff; text-shadow:0 1px 2px #003; pointer-events:none; animation:bsPop .7s ease-out forwards; }
     @keyframes bsPop { 0%{opacity:0; transform:translate(-50%,-50%) scale(.6)} 20%{opacity:1} 100%{opacity:0; transform:translate(-50%,-160%) scale(1.1)} }
     .bs-toast { position:absolute; top:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; font-size:12px; font-weight:700; padding:4px 12px; border-radius:14px; transition:opacity .3s; pointer-events:none; z-index:5; }
@@ -9427,27 +9431,10 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
       <path d="M 45 41.5 Q 50 42.5 55 41.5" fill="none" stroke="rgba(255,100,120,0.5)" stroke-width="1.5" stroke-linecap="round"/>`,
   };
   const OUTFIT_KEYS = Object.keys(OUTFIT_DEFS);
-  // Reuse the buddy + hats for the Buddy Shoot game (src/buddyshoot.js).
+  // Reuse the hats for the Buddy Shoot game (src/buddyshoot.js builds its own
+  // self-contained buddy SVG and drops in these hat markup strings).
   window.aqBuddyOutfitKeys = OUTFIT_KEYS;
-  window.aqMakeBuddySprite = function (outfitKey) {
-    const src = document.querySelector('#aqua-buddy svg');
-    if (!src) return null;
-    const svg = src.cloneNode(true);
-    svg.removeAttribute('style');
-    const og = svg.querySelector('#ab-outfit');
-    if (og) og.innerHTML = (outfitKey && OUTFIT_DEFS[outfitKey]) ? OUTFIT_DEFS[outfitKey] : '';
-    // Give the clone's gradients unique ids and rewrite the fill/stroke refs so
-    // each flying buddy is fully self-contained (body/head render correctly).
-    const uid = 'bs' + (window._aqBuddyN = (window._aqBuddyN || 0) + 1) + '_';
-    svg.querySelectorAll('defs [id]').forEach(g => {
-      const old = g.id; g.id = uid + old;
-      svg.querySelectorAll('[fill="url(#' + old + ')"]').forEach(n => n.setAttribute('fill', 'url(#' + uid + old + ')'));
-      svg.querySelectorAll('[stroke="url(#' + old + ')"]').forEach(n => n.setAttribute('stroke', 'url(#' + uid + old + ')'));
-    });
-    const om = svg.querySelector('#ab-mouth'); if (om) om.removeAttribute('id');
-    if (og) og.removeAttribute('id');
-    return svg;
-  };
+  window.aqBuddyOutfits = OUTFIT_DEFS;
   let outfitIdx = parseInt(localStorage.getItem('yt_buddy_outfit') || '0');
   if (outfitIdx >= OUTFIT_KEYS.length) outfitIdx = 0;
   const OUTFIT_QUIPS = {
@@ -14490,6 +14477,10 @@ function buddySfx(name) {
       case 'hit':   blip(900, 0, 0.08, 'triangle', 0.18, 1500); noise(0, 2600, 0.06, 0.16); break;     // poof + ping
       case 'empty': blip(2000, 0, 0.03, 'square', 0.1); blip(1500, 0.03, 0.03, 'square', 0.08); break; // click click
       case 'clear': [523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.07, 0.12, 'square', 0.14)); break;
+      case 'reload': noise(0, 1800, 0.04, 0.14); noise(0.06, 1400, 0.04, 0.12); break;       // cock the gun
+      case 'escape': blip(700, 0, 0.18, 'sine', 0.12, 1500); noise(0, 900, 0.12, 0.1, true); break; // flap away
+      case 'perfect': [659, 784, 988, 1319, 1568].forEach((f, i) => blip(f, i * 0.08, 0.2, 'triangle', 0.14)); break;
+      case 'fail':  blip(300, 0, 0.4, 'sawtooth', 0.18, 90); blip(150, 0.12, 0.4, 'sawtooth', 0.16, 70); break; // missed the round
     }
   } catch (e) {}
 }

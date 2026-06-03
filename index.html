@@ -3220,6 +3220,15 @@ body.perf-mode #aqua-gun { display: none !important; }
     .pc-cell.marked { background:rgba(220,50,50,0.12); position:relative; }
     .pc-cell.marked::after { content:'✕'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#c00; font-weight:800; }
     .pc-cell.wrong { background:#f44 !important; }
+    /* hover crosshair: tint the hovered row+column, ring the exact cell */
+    .pc-cell.pc-hl { background-image:linear-gradient(rgba(120,170,255,0.16),rgba(120,170,255,0.16)); }
+    [data-scheme=dark] .pc-cell.pc-hl { background-image:linear-gradient(rgba(120,170,255,0.20),rgba(120,170,255,0.20)); }
+    .pc-cell.pc-hover { outline:2px solid var(--accent2); outline-offset:-2px; }
+    /* block dividers every N cells (N adapts to grid size) — drawn with inset
+       shadows so they sit on top without changing the cell box */
+    .pc-cell.pc-blk-l { box-shadow:inset 2px 0 0 var(--text2); }
+    .pc-cell.pc-blk-t { box-shadow:inset 0 2px 0 var(--text2); }
+    .pc-cell.pc-blk-l.pc-blk-t { box-shadow:inset 2px 0 0 var(--text2), inset 0 2px 0 var(--text2); }
     #picross-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center; }
     #picross-status { font-size:11px; font-weight:700; color:var(--text2); min-height:16px; text-align:center; }
     .pc-puzzle-sel { font-size:11px; padding:3px 8px; border:1.5px solid var(--border); border-radius:8px; background:var(--panel); color:var(--text); cursor:pointer; }
@@ -3418,13 +3427,15 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     /* ── TEXAS HOLD'EM ─── */
     #holdem-wrap {
-      position:fixed; top:64px; left:50%; transform:translateX(-50%);
+      position:fixed; top:48px; left:50%; transform:translateX(-50%);
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
-      z-index:506; flex-direction:column; width:380px; overflow:hidden;
+      z-index:506; flex-direction:column; width:480px; max-width:96vw; max-height:calc(100vh - 60px); overflow:hidden;
     }
     #holdem-wrap.open { display:flex; }
-    #holdem-area { background:linear-gradient(160deg,#0a5c3a,#073f28); padding:12px; color:#fff; display:flex; flex-direction:column; gap:10px; }
+    /* container-type drives the cqw units below so the felt + cards + seats all
+       scale proportionally as the window is resized (incl. portrait mobile). */
+    #holdem-area { background:linear-gradient(160deg,#0a5c3a,#073f28); padding:12px; color:#fff; display:flex; flex-direction:column; gap:10px; container-type:inline-size; overflow:auto; }
     .he-seat, #he-board-row { display:flex; flex-direction:column; gap:4px; }
     .he-label { font-size:11px; font-weight:bold; color:#bfe9cf; }
     .he-cards { display:flex; gap:5px; min-height:64px; flex-wrap:wrap; }
@@ -3433,32 +3444,41 @@ body.perf-mode #aqua-gun { display: none !important; }
     .he-card.red { color:#c00; } .he-card.back { background:repeating-linear-gradient(45deg,#234,#234 4px,#2a4 4px,#2a4 8px); color:transparent; }
     #he-msg { font-size:12px; text-align:center; min-height:18px; color:#ffd700; font-weight:700; }
     #he-controls { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
-    @media (max-width:768px) { #holdem-wrap { width:100vw; top:0; left:0; transform:none; } }
+    @media (max-width:768px) {
+      #holdem-wrap { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; top:0; left:0; transform:none; border-radius:0; }
+      #holdem-area { flex:1; }
+    }
 
-    /* AquaPoker 6-max table (in-flight engine in src/poker.js; not yet wired) */
-    .pk-table { position:relative; height:300px; border-radius:140px/120px;
+    /* AquaPoker 6-max table — all sizes use cqw (container-query width) so the
+       whole felt scales smoothly with the window; clamps keep it readable. */
+    .pk-table { position:relative; width:100%; aspect-ratio:13/10; height:auto;
+      border-radius:clamp(80px,40cqw,220px) / clamp(64px,30cqw,170px);
       background:radial-gradient(ellipse at 50% 42%, #0a7a44 0%, #06502c 70%, #043a1f 100%);
       border:6px solid #5a3a1a; box-shadow:inset 0 0 28px rgba(0,0,0,0.5); }
-    .pk-center { position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:5px; }
-    .pk-pot { font-size:12px; font-weight:800; color:#ffd700; text-shadow:0 1px 2px #000; }
-    .pk-board { display:flex; gap:3px; }
-    .pk-card { position:static !important; width:30px; height:42px; padding:2px 3px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.4); flex-shrink:0; }
-    .pk-card .sol-card-top { font-size:11px; } .pk-card .sol-card-suit { font-size:13px; margin-top:1px; }
+    .pk-center { position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:clamp(3px,1cqw,7px); }
+    .pk-pot { font-size:clamp(11px,3cqw,18px); font-weight:800; color:#ffd700; text-shadow:0 1px 2px #000; }
+    .pk-board { display:flex; gap:clamp(2px,0.8cqw,5px); }
+    .pk-card { position:static !important; width:clamp(22px,7.4cqw,48px); height:auto; aspect-ratio:5/7; padding:2px 3px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.4); flex-shrink:0; }
+    .pk-card .sol-card-top { font-size:clamp(9px,2.7cqw,16px); } .pk-card .sol-card-suit { font-size:clamp(10px,3.1cqw,18px); margin-top:1px; }
     .pk-card.pk-empty { background:rgba(255,255,255,0.07); border:1px dashed rgba(255,255,255,0.25); box-shadow:none; }
-    .pk-seat { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; width:96px; }
-    .pk-seat .pk-hole { display:flex; gap:2px; min-height:42px; }
-    .pk-name { font-size:10px; font-weight:800; color:#fff; text-shadow:0 1px 1px #000; white-space:nowrap; }
-    .pk-stack { font-size:10px; color:#cfe; }
-    .pk-dealer { background:#fff; color:#a00; border-radius:50%; padding:0 4px; font-size:8px; font-weight:900; }
-    .pk-bet { position:absolute; top:-14px; right:8px; background:#ffd700; color:#222; font-size:9px; font-weight:800; border-radius:8px; padding:0 5px; }
+    .pk-seat { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:clamp(1px,0.6cqw,3px); width:clamp(72px,25cqw,140px); }
+    .pk-seat .pk-hole { display:flex; gap:clamp(1px,0.6cqw,3px); min-height:clamp(30px,10.4cqw,68px); }
+    .pk-name { font-size:clamp(9px,2.7cqw,14px); font-weight:800; color:#fff; text-shadow:0 1px 1px #000; white-space:nowrap; }
+    .pk-stack { font-size:clamp(9px,2.6cqw,13px); color:#cfe; }
+    .pk-dealer { background:#fff; color:#a00; border-radius:50%; padding:0 4px; font-size:clamp(7px,2cqw,10px); font-weight:900; }
+    .pk-bet { position:absolute; top:-14px; right:8px; background:#ffd700; color:#222; font-size:clamp(8px,2.3cqw,12px); font-weight:800; border-radius:8px; padding:0 5px; }
     .pk-seat.turn { outline:2px solid #ffd700; outline-offset:3px; border-radius:8px; }
     .pk-seat.folded { opacity:0.4; }
     .pk-seat.winner .pk-name { color:#ffd700; }
-    .pk-seat .pk-sit, .pk-seat .pk-stand { font-size:10px; padding:1px 7px; min-height:18px; }
-    .pk-msg { font-size:12px; text-align:center; min-height:16px; color:#ffd700; font-weight:700; }
+    .pk-seat .pk-sit, .pk-seat .pk-stand { font-size:clamp(9px,2.5cqw,12px); padding:1px 7px; min-height:18px; }
+    .pk-seatbtns { display:flex; gap:3px; align-items:center; }
+    .pk-addbot { font-size:clamp(8px,2.3cqw,11px); padding:1px 6px; min-height:18px; }
+    .pk-kick { font-size:clamp(8px,2.2cqw,11px); line-height:1; padding:0 4px; min-height:16px; background:#7a1f1f; color:#fff; border:1px solid #4a0f0f; border-radius:4px; cursor:pointer; }
+    .pk-kick:hover { background:#9a2a2a; }
+    .pk-msg { font-size:clamp(11px,2.8cqw,15px); text-align:center; min-height:16px; color:#ffd700; font-weight:700; }
     .pk-controls { display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap; min-height:26px; }
     .pk-wait { font-size:12px; color:#cfe; }
-    .pk-slider { width:120px; }
+    .pk-slider { width:clamp(90px,32cqw,180px); }
     .pk-raise-amt { font-size:12px; font-weight:800; color:#ffd700; min-width:34px; text-align:center; }
 
     /* ── AQUATUNE EXCHANGE (stock market) ─── */
@@ -3466,11 +3486,13 @@ body.perf-mode #aqua-gun { display: none !important; }
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
       background:var(--panel); border:1px solid var(--border);
       box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
-      z-index:506; flex-direction:column; width:720px; max-width:96vw; overflow:hidden;
+      z-index:506; flex-direction:column; width:720px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #stocks-wrap.open { display:flex; }
-    #stocks-area { background:#0a1422; color:#dfe8f5; padding:10px; display:flex; flex-direction:column; gap:8px; font-size:13px; }
-    #stk-root { display:flex; gap:10px; }
+    /* flex:1 lets the body fill the window when it's dragged taller (the resize
+       grip sets an explicit height); at default auto-height it stays content-sized. */
+    #stocks-area { background:#0a1422; color:#dfe8f5; padding:10px; display:flex; flex-direction:column; gap:8px; font-size:13px; flex:1; min-height:0; overflow:auto; }
+    #stk-root { display:flex; gap:10px; flex:1; min-height:0; }
     #stk-left { width:210px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
     #stk-regime { font-size:11px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:6px; padding:4px 6px; background:rgba(255,255,255,0.04); border-radius:6px; }
     .stk-rg-dot { width:9px; height:9px; border-radius:50%; display:inline-block; box-shadow:0 0 6px currentColor; }
@@ -3478,6 +3500,9 @@ body.perf-mode #aqua-gun { display: none !important; }
     .stk-row { display:grid; grid-template-columns:auto 1fr auto; gap:6px; align-items:center; padding:5px 7px; border-radius:5px; cursor:pointer; background:rgba(255,255,255,0.02); }
     .stk-row:hover { background:rgba(54,201,255,0.10); }
     .stk-row.sel { background:rgba(54,201,255,0.18); outline:1px solid rgba(54,201,255,0.4); }
+    .stk-row.held { background:rgba(255,205,80,0.10); box-shadow:inset 3px 0 0 #ffcd50; }
+    .stk-row.held.sel { background:rgba(54,201,255,0.18); }
+    .stk-hold-dot { color:#ffcd50; font-size:8px; vertical-align:middle; }
     .stk-tk { font-weight:800; font-size:12px; }
     .stk-px { font-family:monospace; text-align:right; }
     .stk-ch { font-size:11px; font-weight:700; text-align:right; }
@@ -3487,7 +3512,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     .stk-head-ctrls { display:flex; align-items:center; gap:5px; flex-shrink:0; }
     #stk-tf { display:inline-flex; gap:3px; }
     .stk-tf-btn { padding:3px 8px; font-size:11px; }
-    #stk-chart { width:100%; height:240px; border-radius:6px; background:#08101c; }
+    #stk-chart { width:100%; height:240px; flex:1 1 auto; min-height:200px; border-radius:6px; background:#08101c; }
     #stk-compare-legend { display:flex; flex-wrap:wrap; gap:8px; min-height:14px; }
     .stk-leg { font-size:10px; display:flex; align-items:center; gap:4px; }
     .stk-leg i { width:10px; height:3px; border-radius:2px; display:inline-block; }
@@ -8036,7 +8061,7 @@ const APPS = {
   photos:    { el:'win-photos',     name:'Photos' },
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
   pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
-  stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false), nativeDrag:true },
+  stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false) },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -14594,6 +14619,23 @@ let _pcAutoCheck = localStorage.getItem('aq_pc_autocheck') !== '0'; // default O
 let _pcDrag = null;            // { val, axis:null|'row'|'col', row0, col0 } during a drag-stroke
 let _pcCellsBound = false;     // delegated pointer handlers bound once
 let _pcRowClues = [], _pcColClues = []; // cached solution clues for cross-off matching
+let _pcHover = -1;             // index of the cell under the cursor (-1 = none)
+
+// Section-divider stride: largest of 5/4/3 that evenly divides the grid (else 5),
+// so dividers split the board into clean blocks at any size.
+function pcBlockSize(n){ for (const d of [5,4,3]) if (n % d === 0) return d; return 5; }
+
+// Crosshair: tint the hovered cell's whole row + column and ring the exact cell.
+function pcUpdateHover(){
+  const cells = document.getElementById('picross-cells'); if (!cells) return;
+  const r = _pcHover >= 0 ? Math.floor(_pcHover/_pcSize) : -1;
+  const c = _pcHover >= 0 ? _pcHover % _pcSize : -1;
+  cells.querySelectorAll('.pc-cell').forEach(el => {
+    const idx = +el.dataset.idx, er = Math.floor(idx/_pcSize), ec = idx % _pcSize;
+    el.classList.toggle('pc-hl', _pcHover >= 0 && (er === r || ec === c));
+    el.classList.toggle('pc-hover', idx === _pcHover);
+  });
+}
 
 // Apply a value (0 empty / 1 filled / 2 X-mark) to one cell with incremental DOM update
 function pcApplyCell(i, val){
@@ -14697,6 +14739,14 @@ function pcBindCells(){
   _pcCellsBound = true;
   const idxAt = (x, y) => { const el = document.elementFromPoint(x, y); return (el && el.classList.contains('pc-cell')) ? +el.dataset.idx : -1; };
   cells.addEventListener('contextmenu', e => e.preventDefault());
+  // Hover crosshair (skip on touch — no hover, and it'd fight drag-fill)
+  cells.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') return;
+    const t = e.target.closest('.pc-cell'); const i = t ? +t.dataset.idx : -1;
+    if (i === _pcHover) return;
+    _pcHover = i; pcUpdateHover();
+  });
+  cells.addEventListener('pointerleave', () => { if (_pcHover !== -1) { _pcHover = -1; pcUpdateHover(); } });
   cells.addEventListener('pointerdown', e => {
     const t = e.target.closest('.pc-cell'); if (!t) return;
     e.preventDefault();
@@ -14887,13 +14937,18 @@ function renderPicrossGrid() {
   // Cells
   const cellsEl = document.getElementById('picross-cells');
   cellsEl.innerHTML = '';
+  _pcHover = -1; // cells are rebuilt; drop any stale hover highlight
   cellsEl.style.gridTemplateColumns = `repeat(${_pcSize},${CELL}px)`;
+  const blk = pcBlockSize(_pcSize); // section-divider stride, sized to the grid
   for (let i=0;i<_pcSize*_pcSize;i++) {
     const c = document.createElement('div');
     c.className = 'pc-cell';
     c.style.width = CELL + 'px';
     c.style.height = CELL + 'px';
     c.dataset.idx = i;
+    const r = Math.floor(i/_pcSize), col = i % _pcSize;
+    if (col>0 && col % blk === 0) c.classList.add('pc-blk-l');
+    if (r>0 && r % blk === 0) c.classList.add('pc-blk-t');
     if (_pcUserGrid[i]===1) c.classList.add('filled');
     if (_pcUserGrid[i]===2) c.classList.add('marked');
     if (_pcAutoCheck && _pcWrongCells.has(i)) c.classList.add('wrong');

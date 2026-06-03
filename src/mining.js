@@ -17,12 +17,12 @@ const PICKS = [
 ];
 
 const ROCKS = [
-  { name: 'Stone',    hp: 12,  value: 3,   rarity: 0, color: 1 },
-  { name: 'Copper',   hp: 22,  value: 7,   rarity: 1, color: 2 },
-  { name: 'Iron',     hp: 40,  value: 14,  rarity: 1, color: 1 },
-  { name: 'Gold',     hp: 70,  value: 30,  rarity: 2, color: 3 },
-  { name: 'Emerald',  hp: 110, value: 60,  rarity: 3, color: 2 },
-  { name: 'Diamond',  hp: 180, value: 140, rarity: 4, color: 3 },
+  { name: 'Stone',    hp: 24,  value: 3,   rarity: 0, color: 1 },
+  { name: 'Copper',   hp: 48,  value: 7,   rarity: 1, color: 2 },
+  { name: 'Iron',     hp: 90,  value: 14,  rarity: 1, color: 1 },
+  { name: 'Gold',     hp: 160, value: 30,  rarity: 2, color: 3 },
+  { name: 'Emerald',  hp: 260, value: 60,  rarity: 3, color: 2 },
+  { name: 'Diamond',  hp: 440, value: 140, rarity: 4, color: 3 },
 ];
 
 let cv = null, cx = null, raf = null, _built = false;
@@ -50,7 +50,8 @@ function breakRock() {
   const bonus = 1 + Math.min(combo, 10) * 0.05;
   const ore = Math.round(r.value * bonus);
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: true, won: true, mult: 1 + r.rarity * 0.6 });
+  // Mining gives less XP than other skills: only the "won" trickle, scaled down.
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: 0.4 + r.rarity * 0.25 });
   if (typeof window.recordScore === 'function') window.recordScore('mining', ore, r.name);
   // burst of ore particles
   for (let i = 0; i < 14; i++) particles.push({ x: 80, y: 74, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4 - 1, life: 30, c: r.color });

@@ -52,19 +52,20 @@ function startCast() {
 
 function startReel() {
   const fish = pickFish();
-  // catch zone size grows with level (easier), shrinks with rarity (harder)
-  const zone = Math.max(20, 52 - fish.rarity * 7 + lvl() * 0.25);
+  // catch zone size grows with level (easier), shrinks with rarity (harder).
+  // Generous by default so it feels fair; track is 0..120.
+  const zone = Math.max(34, 74 - fish.rarity * 5 + lvl() * 0.3);
   state = 'reel';
   msg = 'Reel it in!';
   R = {
     fish,
-    zoneH: zone,            // px height of the green catch bar (track is 0..120)
+    zoneH: zone,            // px height of the green catch bar
     zoneY: 120 - zone,      // top of catch zone (player-controlled)
     vel: 0,
     fishY: 60,              // fish position on track
     fishV: 0,
     fishTarget: 60,
-    progress: 40,           // 0..100, lose at 0, win at 100
+    progress: 55,           // 0..100, lose at 0, win at 100 (start with a head start)
     holding: false,
   };
 }
@@ -102,23 +103,23 @@ let _lastT = 0;
 function tick(t) {
   const dt = Math.min(50, t - (_lastT || t)); _lastT = t;
   if (state === 'casting' && t >= biteAt) { state = 'bite'; msg = '! BITE ! Tap to reel!'; biteAt = t; }
-  if (state === 'bite' && t - biteAt > 1400) { loseFish(); } // missed the bite window
+  if (state === 'bite' && t - biteAt > 2600) { loseFish(); } // generous bite window
   if (state === 'reel' && R) {
-    // player bar physics (hold = up)
-    R.vel += (R.holding ? -0.22 : 0.20) * dt;
-    R.vel *= 0.92;
+    // player bar physics (hold = up) — gentle so it's easy to steer
+    R.vel += (R.holding ? -0.15 : 0.13) * dt;
+    R.vel *= 0.9;
     R.zoneY += R.vel;
     if (R.zoneY < 0) { R.zoneY = 0; R.vel = 0; }
     if (R.zoneY > 120 - R.zoneH) { R.zoneY = 120 - R.zoneH; R.vel = 0; }
-    // fish wandering
-    if (Math.random() < 0.03 + R.fish.rarity * 0.012) R.fishTarget = 6 + Math.random() * 108;
-    R.fishV += (R.fishTarget - R.fishY) * 0.004 * dt;
+    // fish wandering — calmer, especially for common fish
+    if (Math.random() < 0.018 + R.fish.rarity * 0.008) R.fishTarget = 10 + Math.random() * 100;
+    R.fishV += (R.fishTarget - R.fishY) * 0.0028 * dt;
     R.fishV *= 0.9;
     R.fishY += R.fishV;
     R.fishY = Math.max(2, Math.min(118, R.fishY));
-    // in-zone?
+    // in-zone? fill fast, drain slow → forgiving
     const inZone = R.fishY >= R.zoneY && R.fishY <= R.zoneY + R.zoneH;
-    R.progress += (inZone ? 0.05 : -0.07) * dt;
+    R.progress += (inZone ? 0.085 : -0.04) * dt;
     if (R.progress >= 100) { landFish(); }
     else if (R.progress <= 0) { loseFish(); }
   }

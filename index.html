@@ -2027,6 +2027,7 @@
     .st-note-rs { position:absolute; right:0; top:0; bottom:0; width:7px; cursor:ew-resize; }
     .st-roll-rs { position:absolute; right:-1px; top:0; bottom:0; width:9px; cursor:col-resize; z-index:6; background:linear-gradient(90deg,transparent,rgba(54,197,240,.35)); }
     .st-roll-rs:hover { background:linear-gradient(90deg,transparent,rgba(54,197,240,.7)); }
+    .st-roll-ph { position:absolute; top:0; left:0; width:2px; height:100%; background:var(--st-accent,#36c5f0); box-shadow:0 0 8px var(--st-accent,#36c5f0); pointer-events:none; z-index:5; }
     .st-marquee { position:absolute; border:1px solid var(--st-accent,#36c5f0); background:rgba(54,197,240,.15); pointer-events:none; z-index:5; }
     .st-rolltools { display:inline-flex; gap:3px; }
     .st-rolltool { font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid #2c313c; background:#0a0c10; color:#8b95a7; cursor:pointer; }
@@ -3567,8 +3568,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       z-index:506; flex-direction:column; width:440px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #stats-wrap.open { display:flex; }
-    #stats-area { background:#0c1322; color:#e7eefb; padding:14px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0; overflow:auto; }
-    .sk-head { display:flex; align-items:center; gap:12px; }
+    #stats-area { background:var(--panel); color:var(--text); padding:14px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0; overflow:auto; }
+    .sk-head { display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:1px solid var(--border); }
     .sk-heart { font-size:30px; color:#ff3b5c; filter:drop-shadow(0 0 6px rgba(255,59,92,0.7)); animation:aq-heartbeat 1.1s ease-in-out infinite; transform-origin:center; }
     @keyframes aq-heartbeat {
       0%,100% { transform:scale(1); }
@@ -3578,19 +3579,19 @@ body.perf-mode #aqua-gun { display: none !important; }
       52% { transform:scale(1); }
     }
     .sk-ident { display:flex; flex-direction:column; gap:2px; }
-    .sk-name { font-size:20px; font-weight:800; letter-spacing:.3px; }
-    .sk-total { font-size:12px; color:#8aa0bd; } .sk-total b { color:#ffd24a; font-size:14px; }
+    .sk-name { font-size:20px; font-weight:800; letter-spacing:.3px; color:var(--text); }
+    .sk-total { font-size:12px; color:var(--text2); } .sk-total b { color:var(--accent); font-size:14px; }
     .sk-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
-    .sk-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:9px 10px; display:flex; flex-direction:column; gap:6px; }
+    .sk-card { background:rgba(0,180,220,0.05); border:1px solid var(--border); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:6px; }
     .sk-card-top { display:flex; align-items:center; gap:8px; }
     .sk-icon { font-size:22px; line-height:1; }
     .sk-meta { flex:1; min-width:0; }
-    .sk-sname { font-size:13px; font-weight:700; }
-    .sk-blurb { font-size:10px; color:#7d8fa8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sk-lvl { font-size:12px; color:#8aa0bd; } .sk-lvl b { color:#7ee0a0; font-size:17px; }
-    .sk-bar { height:8px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; }
-    .sk-bar-fill { height:100%; background:linear-gradient(90deg,#36c9ff,#7ee0a0); border-radius:5px; transition:width .3s; }
-    .sk-xp { font-size:10px; color:#6f819b; font-variant-numeric:tabular-nums; }
+    .sk-sname { font-size:13px; font-weight:700; color:var(--text); }
+    .sk-blurb { font-size:10px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sk-lvl { font-size:12px; color:var(--text2); } .sk-lvl b { color:var(--accent2); font-size:17px; }
+    .sk-bar { height:8px; background:rgba(0,90,130,0.16); border-radius:5px; overflow:hidden; }
+    .sk-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:5px; transition:width .3s; }
+    .sk-xp { font-size:10px; color:var(--text2); font-variant-numeric:tabular-nums; }
     @media (max-width:768px) {
       #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
       .sk-grid { grid-template-columns:1fr; }

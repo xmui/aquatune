@@ -26,17 +26,18 @@ const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 const MAX_LEVEL = 100;
 
 // ---------------------------------------------------------------------------
-// OSRS-style XP curve. xpForLevel(L) is the cumulative XP needed to *reach* L.
-// Faithfully grindy: 99 is ~13M XP. Capped at level 100.
+// XP curve. xpForLevel(L) = cumulative XP needed to *reach* L. A STEADY
+// quadratic grind (cost per level grows linearly) rather than OSRS's hyper
+// front-loaded exponential — so early levels aren't free and the climb to 100
+// is a consistent grind of tens of hours. Combined with the small XP rates
+// below: ~30–70h to max a skill, and a handful of actions only nets a level or
+// two (not a dozen). Tune GROWTH (and the rates) together.
 // ---------------------------------------------------------------------------
+const GROWTH = 15;  // xp(L) = GROWTH*(L-1)^2  ⇒ L100 ≈ 147k XP
 const _xpTable = (() => {
-  const t = [0, 0]; // index by level; level 1 = 0xp
-  let points = 0;
-  for (let lvl = 1; lvl < MAX_LEVEL; lvl++) {
-    points += Math.floor(lvl + 300 * Math.pow(2, lvl / 7));
-    t[lvl + 1] = Math.floor(points / 4);
-  }
-  return t; // t[100] is the xp needed to hit level 100
+  const t = [0, 0];
+  for (let lvl = 2; lvl <= MAX_LEVEL; lvl++) t[lvl] = Math.round(GROWTH * (lvl - 1) * (lvl - 1));
+  return t;
 })();
 
 function xpForLevel(lvl) {
@@ -113,14 +114,14 @@ async function loadSkills() {
   if (_open) renderSkillsPanel();
 }
 
-// One-time, per-user data resets. Mining XP was over-generous before it was
-// rebalanced (harder rocks, much lower XP), so wipe everyone's mining once so
-// the new economy starts clean. Bump the flag key to run a future reset.
+// One-time, per-user data resets. The XP economy was badly over-tuned (huge
+// per-action XP on a front-loaded curve → instant levels), so wipe ALL skills
+// once for the rebalanced curve + rates. Bump the flag key to run a future reset.
 function applyResets() {
   try {
-    if (!localStorage.getItem('aq_skills_reset_mining_v1')) {
-      localStorage.setItem('aq_skills_reset_mining_v1', '1');
-      _xp.mining = 0;
+    if (!localStorage.getItem('aq_skills_reset_all_v2')) {
+      localStorage.setItem('aq_skills_reset_all_v2', '1');
+      for (const s of SKILLS) _xp[s.id] = 0;
       _writeLocal();
       _saveRemote();
     }
@@ -167,8 +168,8 @@ function showXpPopup(skillId, amount, leveledTo) {
 // system stays GRINDY but reachable: against the authentic OSRS curve (~14.4M XP
 // to level 100), these rates put maxing a single skill at roughly 20–40 hours of
 // engaged play (≈one grant every 12–20s). The rare LUCKY bonus adds variance.
-const PLAYED_XP = 300;   // base for showing up
-const WON_XP = 1000;     // base bonus for a win
+const PLAYED_XP = 2;   // base for showing up
+const WON_XP = 8;      // base bonus for a win
 const LUCKY_CHANCE = 0.05;  // ~1 in 20 grants rolls a jackpot multiplier
 function gameXp(skillId, opts) {
   opts = opts || {};

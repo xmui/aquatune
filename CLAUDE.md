@@ -8,11 +8,13 @@ Realtime Database for sync; Vite for the build (`npm run build` is the main chec
 ## Skills / XP system (design intent — keep this true)
 The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 
-- **Tens of hours to max a single stat.** Levels 1–100 use the authentic OSRS XP
-  curve (~14.4M XP to level 100). XP rates (`PLAYED_XP`, `WON_XP` in `skills.js`,
-  and the per-minute music tick in `index.html`) are tuned so an engaged player
-  needs roughly **20–40 hours per skill** — not minutes, not thousands of hours.
-  If you change rewards, re-check against this target.
+- **Tens of hours to max a single stat, with a steady climb.** Levels 1–100 use a
+  **quadratic** curve (`xp(L)=GROWTH*(L-1)^2`, ~147k XP to L100) — NOT OSRS's
+  front-loaded exponential, which made early levels free. Per-action XP is small
+  (`PLAYED_XP`/`WON_XP` ≈ 2/8 in `skills.js`, music tick ~50/min in `index.html`),
+  so a handful of actions nets only a level or two and maxing a skill is ~30–70h.
+  If you change rewards OR the curve, re-check both: early levels shouldn't be
+  instant, and max should stay tens of hours. Cap any score-scaled `mult`.
 - **Always pop up on XP.** Every XP gain shows a floating "+N XP" popup chip, and a
   level-up shows an extra gold "Level N!" chip (`showXpPopup` in `skills.js`,
   `.aq-xp-pop` CSS + `#aq-xp-popups` in `index.html`). Keep XP gains visible.

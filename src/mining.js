@@ -38,6 +38,7 @@ function credits() { return (typeof window.aqGetCredits === 'function' && window
 function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
 function pickPower() { return PICKS[pickTier()].power; }
 function mineLvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('mining')) || 1; }
+function sfx(n) { try { if (typeof window !== 'undefined' && window.miningSfx) window.miningSfx(n); } catch (e) {} }
 
 function spawnRock() {
   const luck = Math.random() + mineLvl() / 250;
@@ -89,6 +90,7 @@ function breakRock() {
     particles.push({ x: CXR, y: CYR, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 5 - 1, life: 28, c, s: 2 + (Math.random() * 2 | 0) });
   }
   shake = 9;
+  sfx('break');
   rock = null;
   breakUntil = performance.now() + 280;  // brief empty crater before respawn
   refreshInfo();
@@ -100,6 +102,7 @@ function hit() {
   combo = (now - lastHit < 900) ? combo + 1 : 0;
   lastHit = now;
   swing = 1; shake = 6; rock.flash = 1;
+  sfx('hit');
   rock.hp -= pickPower();
   for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
   if (rock.hp <= 0) breakRock();
@@ -260,6 +263,7 @@ function renderShop() {
     if (credits() < next.cost) return;
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
     localStorage.setItem('aq_mining_pick', String(tier + 1));
+    sfx('upgrade');
     refreshInfo();
   });
   shopEl.appendChild(btn);

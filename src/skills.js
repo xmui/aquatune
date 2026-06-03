@@ -275,6 +275,7 @@ function renderSkillsPanel() {
   const mk = (id, label) => { const b = el('button', 'sk-tab' + (_statsTab === id ? ' on' : ''), label); b.onclick = () => { _statsTab = id; _rankDetail = null; renderSkillsPanel(); }; return b; };
   tabs.append(mk('me', 'My Skills'), mk('rank', 'Rankings'));
   area.appendChild(tabs);
+  area.appendChild(el('div', 'sk-wip', '🚧 Work in progress'));
 
   if (_statsTab === 'me') {
     if (!hasAccount()) {
@@ -290,7 +291,10 @@ function renderSkillsPanel() {
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
     area.appendChild(statsHeader(name, totalLevelOf(_xp)));
     const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
-    area.appendChild(el('div', 'sk-credits', `💰 <b>${credits.toLocaleString()}</b> credits`));
+    const credLine = el('div', 'sk-credits', 'Credits ');
+    // `.aq-credits-display` makes aqRefreshCreditDisplays() keep this live.
+    credLine.appendChild(el('span', 'aq-credits-display sk-credits-val', `💰 ${credits.toLocaleString()}`));
+    area.appendChild(credLine);
     area.appendChild(skillGrid(_xp));
   } else {
     renderRankings(area);

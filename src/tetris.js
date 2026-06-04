@@ -42,10 +42,24 @@ function dropMsFor(lvl) { const f = lvl < GRAVITY_FRAMES.length ? GRAVITY_FRAMES
 let cv = null, cx = null, nextCv = null, nextCx = null, raf = null, _built = false;
 let board = [], cur = null, nextType = null, bag = [];
 let score = 0, lines = 0, level = 0, dropMs = dropMsFor(0);
+let startLevel = 0;                         // chosen starting level (difficulty) — gravity floor
 let lastGravity = 0;                        // absolute rAF timestamp of the last gravity step
 let state = 'start';                        // start | play | over
 let infoEl = null, overlayEl = null;
 let _keyHandler = null;
+
+// Difficulty presets: each picks a STARTING level, so gravity begins faster (higher
+// start level => fewer GRAVITY_FRAMES per cell => piece falls quicker from piece #1).
+// Natural level-ups (every 10 lines) continue ON TOP of the chosen start level.
+const DIFFICULTIES = [
+  { key: 'easy',   label: 'Easy',   startLevel: 0 },
+  { key: 'normal', label: 'Normal', startLevel: 3 },
+  { key: 'hard',   label: 'Hard',   startLevel: 6 },
+  { key: 'insane', label: 'Insane', startLevel: 10 },
+];
+function diffFor(sl) { let best = DIFFICULTIES[0]; for (const d of DIFFICULTIES) if (d.startLevel <= sl) best = d; return best; }
+// Effective playing level = chosen start level + lines/10 of natural progression.
+function levelFor(ls) { return startLevel + Math.floor(ls / 10); }
 
 function sfx(n) { try { window.tetrisSfx && window.tetrisSfx(n); } catch (e) {} }
 
@@ -96,9 +110,9 @@ function clearLines() {
   if (!cleared) return;
   score += LINE_PTS[cleared] * (level + 1);
   lines += cleared;
-  const newLevel = Math.floor(lines / 10);
+  const newLevel = levelFor(lines);                 // start level + natural progression
   if (newLevel > level) { level = newLevel; dropMs = dropMsFor(level); sfx('level'); }
-  sfx(cleared >= 4 ? 'tetris' : 'clear');
+  sfx(cleared >= 4 ? 'tetris' : (cleared === 3 ? 'triple' : (cleared === 2 ? 'double' : 'single')));
   if (window.aqGameXp) window.aqGameXp('speed', { played: false, won: true, mult: 0.3 * cleared * cleared });
   updateInfo();
 }
@@ -111,7 +125,7 @@ function rotate() {
 }
 function softDrop() {
   if (state !== 'play' || !cur) return;
-  if (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; lastGravity = performance.now(); }   // no score (no farming)
+  if (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; lastGravity = performance.now(); sfx('softdrop'); }   // no score (no farming)
   else lockPiece();
 }
 function hardDrop() {
@@ -136,11 +150,12 @@ function ghostY() { let gy = cur.y; while (!collides(cur.m, cur.x, gy + 1)) gy++
 
 function gameOver() {
   state = 'over';
-  if (window.recordScore) window.recordScore('tetris', score, 'Lv' + (level + 1) + ' · ' + lines + ' lines');
+  const diffName = diffFor(startLevel).label;
+  if (window.recordScore) window.recordScore('tetris', score, diffName + ' · Lv' + (level + 1) + ' · ' + lines + ' lines');
   if (window.aqGameXp) window.aqGameXp('speed', { played: true, won: lines >= 10, mult: Math.min(4, 1 + lines * 0.12) });
-  if (lines >= 20 && window.aqGameAnnounce) window.aqGameAnnounce(`cleared ${lines} lines in Tetris (${score.toLocaleString()} pts, Lv ${level + 1}) 🧱`);
+  if (lines >= 20 && window.aqGameAnnounce) window.aqGameAnnounce(`cleared ${lines} lines in Tetris on ${diffName} (${score.toLocaleString()} pts, Lv ${level + 1}) 🧱`);
   sfx('over');
-  showOverlay('Game Over', 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1), 'Play again', startGame);
+  showStartOverlay('Game Over', 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1), 'Play again');
 }
 
 // ── rendering ────────────────────────────────────────────────────────────────
@@ -174,7 +189,7 @@ function drawNext() {
   const ox = (PREV * CELL - n * sz) / 2, oy = (PREV * CELL - n * sz) / 2;
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (m[y][x]) cell(nextCx, ox + x * sz, oy + y * sz, m[y][x], sz);
 }
-function updateInfo() { if (infoEl) infoEl.innerHTML = `<div class="tt-stat"><span>SCORE</span><b>${score.toLocaleString()}</b></div><div class="tt-stat"><span>LINES</span><b>${lines}</b></div><div class="tt-stat"><span>LEVEL</span><b>${level + 1}</b></div>`; }
+function updateInfo() { if (infoEl) infoEl.innerHTML = `<div class="tt-stat"><span>SCORE</span><b>${score.toLocaleString()}</b></div><div class="tt-stat"><span>LINES</span><b>${lines}</b></div><div class="tt-stat"><span>LEVEL</span><b>${level + 1}</b></div><div class="tt-stat"><span>MODE</span><b>${diffFor(startLevel).label}</b></div>`; }
 
 // Bulletproof gravity: compare against the absolute rAF timestamp so a piece always
 // falls on its own (no fragile per-frame delta accumulation).
@@ -195,17 +210,35 @@ function tick(t) {
   } catch (e) { try { console && console.warn && console.warn('tetris tick', e); } catch (_) {} }
 }
 
-function showOverlay(title, sub, btn, fn) {
+// Start / Play-again overlay with a difficulty (start-level) chooser. The selected
+// difficulty's startLevel is fed straight into startGame so piece #1 already falls fast.
+function showStartOverlay(title, sub, btn) {
   if (!overlayEl) return;
-  overlayEl.innerHTML = `<div class="tt-ov-title">${title}</div><div class="tt-ov-sub">${sub}</div><button class="tt-btn">${btn}</button>`;
-  overlayEl.querySelector('.tt-btn').onclick = fn;
+  let pick = startLevel;                                  // remember last choice
+  const rows = DIFFICULTIES.map(d =>
+    `<button class="tt-diff-btn${d.startLevel === pick ? ' sel' : ''}" data-sl="${d.startLevel}">${d.label}<br><small style="opacity:.7;font-weight:600">Lv ${d.startLevel + 1}</small></button>`
+  ).join('');
+  overlayEl.innerHTML =
+    `<div class="tt-ov-title">${title}</div>` +
+    `<div class="tt-ov-sub">${sub}</div>` +
+    `<div class="tt-diff"><span class="tt-diff-lbl">DIFFICULTY · START SPEED</span>` +
+      `<div class="tt-diff-row">${rows}</div></div>` +
+    `<button class="tt-btn">${btn}</button>`;
+  overlayEl.querySelectorAll('.tt-diff-btn').forEach(b => {
+    b.onclick = () => {
+      pick = parseInt(b.getAttribute('data-sl'), 10) || 0;
+      overlayEl.querySelectorAll('.tt-diff-btn').forEach(x => x.classList.toggle('sel', x === b));
+    };
+  });
+  overlayEl.querySelector('.tt-btn').onclick = () => startGame(pick);
   overlayEl.style.display = 'flex';
 }
 function hideOverlay() { if (overlayEl) overlayEl.style.display = 'none'; }
 
-function startGame() {
+function startGame(sl) {
+  startLevel = Math.max(0, (typeof sl === 'number' && isFinite(sl)) ? sl : 0);
   newBoard(); bag = []; nextType = null; cur = null;
-  score = 0; lines = 0; level = 0; dropMs = dropMsFor(0); lastGravity = 0;
+  score = 0; lines = 0; level = startLevel; dropMs = dropMsFor(level); lastGravity = 0;
   state = 'play'; hideOverlay(); updateInfo(); spawn(); draw();
 }
 
@@ -292,7 +325,7 @@ function openTetris(show = true) {
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('tetris'); window.OS.focus('tetris'); }
   if (!_built) build();
-  if (state !== 'play') showOverlay('🧱 Tetris', 'Move the mouse to slide · click to drop · right-click or scroll to rotate.', 'Start', startGame);
+  if (state !== 'play') showStartOverlay('🧱 Tetris', 'Move the mouse to slide · click to drop · right-click or scroll to rotate.', 'Start');
   updateInfo();
   lastGravity = 0;
   if (!raf) { raf = requestAnimationFrame(tick); }

@@ -3833,6 +3833,13 @@ body.perf-mode #aqua-gun { display: none !important; }
     .tt-overlay { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
       text-align:center; padding:14px; background:rgba(20,13,51,0.9); color:#fff; border-radius:4px; }
     .tt-ov-title { font-size:20px; font-weight:900; } .tt-ov-sub { font-size:11px; opacity:0.9; max-width:200px; line-height:1.4; }
+    .tt-diff { display:flex; flex-direction:column; gap:6px; width:170px; }
+    .tt-diff-lbl { font-size:9px; letter-spacing:1px; color:#c9b6ff; font-weight:800; }
+    .tt-diff-row { display:flex; gap:6px; }
+    .tt-diff-btn { flex:1; font-size:11px; font-weight:800; padding:6px 4px; border-radius:6px; cursor:pointer; color:#fff;
+      background:linear-gradient(180deg,#6a4ed8,#3f2aa0); border:1px solid #8a6fff; }
+    .tt-diff-btn.sel { background:linear-gradient(180deg,#ffd21e,#d99a00); color:#241a55; border-color:#fff; }
+    .tt-diff-btn:hover { filter:brightness(1.1); }
     .tt-pad { display:none; gap:6px; justify-content:center; }   /* keyboard on desktop; pad shown on mobile only */
     .tt-key { flex:1; max-width:64px; font-size:18px; padding:10px 0; border-radius:8px; cursor:pointer; color:#fff; touch-action:none; user-select:none;
       background:linear-gradient(180deg,#6a4ed8,#3f2aa0); border:1px solid #8a6fff; box-shadow:0 2px 0 #2a1a70; }
@@ -14721,16 +14728,31 @@ function tetrisSfx(name) {
     o.connect(g); g.connect(cx.destination);
     o.start(t + start); o.stop(t + start + dur + 0.02);
   };
+  const noise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 1.0;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
   try {
     switch (name) {
-      case 'move':  blip(330, 0, 0.03, 'square', 0.07); break;
-      case 'rotate':blip(520, 0, 0.04, 'square', 0.09, 660); break;
-      case 'lock':  blip(180, 0, 0.05, 'triangle', 0.12, 120); break;
-      case 'drop':  blip(140, 0, 0.07, 'square', 0.12, 80); break;
-      case 'clear': [523, 784].forEach((f, i) => blip(f, i * 0.05, 0.1, 'square', 0.13)); break;
-      case 'tetris':[523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.06, 0.16, 'square', 0.15)); break;
-      case 'level': [659, 988, 1319].forEach((f, i) => blip(f, i * 0.07, 0.15, 'triangle', 0.14)); break;
-      case 'over':  blip(440, 0, 0.4, 'sawtooth', 0.16, 110); blip(220, 0.16, 0.45, 'sawtooth', 0.14, 70); break;
+      case 'move':   blip(300, 0, 0.025, 'square', 0.05); break;                                   // subtle tick
+      case 'rotate': blip(520, 0, 0.04, 'square', 0.08, 680); break;                               // up-chirp
+      case 'softdrop': blip(240, 0, 0.018, 'square', 0.04); break;                                 // very quiet per-step tick
+      case 'lock':   blip(170, 0, 0.05, 'triangle', 0.11, 115); break;                             // settle
+      case 'drop':                                                                                 // hard-drop thud
+      case 'thud':   blip(120, 0, 0.08, 'square', 0.14, 60); noise(0, 700, 0.06, 0.16, true); break;
+      case 'single': blip(523, 0, 0.10, 'square', 0.12); break;                                    // 1 line
+      case 'double': [523, 698].forEach((f, i) => blip(f, i * 0.05, 0.11, 'square', 0.13)); break; // 2 lines
+      case 'triple': [523, 698, 880].forEach((f, i) => blip(f, i * 0.05, 0.12, 'square', 0.14)); break; // 3 lines
+      case 'clear':  [523, 784].forEach((f, i) => blip(f, i * 0.05, 0.1, 'square', 0.13)); break;  // generic clear (fallback)
+      case 'tetris': [523, 659, 784, 1047, 1319].forEach((f, i) => blip(f, i * 0.05, 0.20, 'square', 0.17)); // 4 lines — bright fanfare
+                     noise(0, 2400, 0.10, 0.08); break;
+      case 'level':  [659, 988, 1319].forEach((f, i) => blip(f, i * 0.07, 0.15, 'triangle', 0.14)); break;
+      case 'over':   blip(440, 0, 0.4, 'sawtooth', 0.16, 110); blip(220, 0.16, 0.45, 'sawtooth', 0.14, 70); break;
     }
   } catch (e) {}
 }

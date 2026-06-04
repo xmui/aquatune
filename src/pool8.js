@@ -18,15 +18,17 @@ const M = 30;                           // cushion margin
 const R = 10.5;                         // ball radius
 const POCKET_R = 16;                    // pocket geometric/capture radius
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
-const MAXPULL = 150, MAXSPEED = 1020;   // slingshot pull → launch speed
+const MAXPULL = 150, MAXSPEED = 1150;   // slingshot pull → launch speed
 // Two-phase felt friction (px/s²): a struck ball SLIDES (kinetic) until its roll
-// speed catches up (v = r·ω), then ROLLS (low resistance) to a gentle stop.
-const SLIDE_DECEL = 1150;               // kinetic (sliding) friction
-const ROLL_DECEL = 90;                  // rolling resistance
+// speed catches up (v = r·ω), then ROLLS to a stop. The ROLLING figure is what kills
+// the "ice rink" glide — a rolling ball must die within ~1-2 table lengths, not coast
+// forever. (ROLL_DECEL was far too low before, hence the slippery feel.)
+const SLIDE_DECEL = 1500;               // kinetic (sliding) friction
+const ROLL_DECEL = 250;                 // rolling resistance
 const SPINUP = 2.5;                     // a solid sphere spins up at 2.5× the linear decel
-const CUSHION_REST = 0.72;              // cushion coefficient of restitution (<1, lossy)
-const BALL_REST = 0.96;                 // ball-ball restitution
-const STOP = 6;                         // speed below which a ball is "stopped"
+const CUSHION_REST = 0.60;              // cushion coefficient of restitution (<1, lossy)
+const BALL_REST = 0.94;                 // ball-ball restitution
+const STOP = 9;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
 const POCKETS = [
@@ -105,11 +107,16 @@ function anyMoving() {
 function applyFriction(b, dt) {
   const sp = Math.hypot(b.vx, b.vy);
   const sx = b.vx - b.rvx, sy = b.vy - b.rvy, slip = Math.hypot(sx, sy);
-  if (slip > 4) {                       // SLIDING: kinetic friction opposes the slip
+  // The slip closes by `reduce` each step; gate on THAT (not a tiny constant) so a
+  // fast ball can't leap the threshold and oscillate in the slide phase forever —
+  // that overshoot bug is what made the table feel like ice (balls never started
+  // rolling, so they never decelerated).
+  const reduce = SLIDE_DECEL * (1 + SPINUP) * dt;
+  if (slip > reduce) {                  // SLIDING: kinetic friction opposes the slip
     const ux = sx / slip, uy = sy / slip;
     b.vx -= ux * SLIDE_DECEL * dt; b.vy -= uy * SLIDE_DECEL * dt;          // linear slows
     b.rvx += ux * SLIDE_DECEL * SPINUP * dt; b.rvy += uy * SLIDE_DECEL * SPINUP * dt; // roll spins up
-  } else {                              // ROLLING: lock roll to linear, low resistance
+  } else {                              // ROLLING: lock roll to linear, resistance only
     const ns = Math.max(0, sp - ROLL_DECEL * dt);
     if (sp > 0) { b.vx = b.vx / sp * ns; b.vy = b.vy / sp * ns; }
     b.rvx = b.vx; b.rvy = b.vy;
@@ -326,7 +333,7 @@ function aiShoot() {
   const err = (Math.random() - 0.5) * 0.09;
   const ca = Math.cos(err), sa = Math.sin(err);
   const ax = best.aim.x * ca - best.aim.y * sa, ay = best.aim.x * sa + best.aim.y * ca;
-  const speed = Math.min(MAXSPEED, 360 + best.dist * 1.15);
+  const speed = Math.min(MAXSPEED, 440 + best.dist * 1.6);
   doShoot(ax, ay, speed);
 }
 

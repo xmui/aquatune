@@ -86,6 +86,10 @@ const PAYLINES = {
 };
 // 3-reel: a line is always 3 long → 1×. 5-reel: 3/4/5-of-a-kind (sim-tuned RTP).
 function lenMult(n) { return cfg.reels === 3 ? 1 : (n >= 5 ? 3.8 : n === 4 ? 1.1 : 0.5); }
+// The per-line multiplier a player actually receives for `n`-of-a-kind of a
+// symbol with working pay `pay` (win = betLevel × this). Single source of truth
+// shared by the win math AND the paytable, so the advertised number is paid.
+function payMult(pay, n) { return Math.round(pay * lenMult(n) * 10) / 10; }
 
 // ── Persisted settings ───────────────────────────────────────────────────────
 const DEFAULTS = { machineId: 'music', volatility: 'med', betLevel: 5, lines: 5, reels: 3, unlocked: ['music'] };
@@ -125,6 +129,22 @@ function pool() {
 }
 function pick() { const p = pool(); let r = Math.random() * p._total; for (const s of p) { r -= s.weight; if (r <= 0) return s; } return p[p.length - 1]; }
 function isWild(s) { return s && s.sym === machine().wild; }
+// Highest-paying *regular* symbol in the working pool (used when a line is
+// entirely wild). Excludes the jackpot symbol so all-wild pays the top line
+// combo, not the progressive jackpot.
+function bestPaySymbol() {
+  const j = machine().jackpot;
+  return pool().reduce((a, s) => (s.sym !== j && s.pay > (a ? a.pay : 0) ? s : a), null) || pool()[0];
+}
+// A mid-tier regular symbol (excludes wild/scatter/bonus + the jackpot symbol). Used
+// to score all-wild lines DURING FREE SPINS: sticky/expanding wilds make lines go
+// all-wild routinely, so paying the absolute top symbol × free multiplier on every
+// line at once is wildly overpowered — a mid symbol keeps it rewarding but bounded.
+function midPaySymbol() {
+  const j = machine().jackpot;
+  const paying = pool().filter(s => s.pay > 0 && s.sym !== j).sort((a, b) => a.pay - b.pay);
+  return paying.length ? paying[Math.floor(paying.length / 2)] : bestPaySymbol();
+}
 
 // ── Runtime state ────────────────────────────────────────────────────────────
 let _built = false, spinning = false;
@@ -220,7 +240,14 @@ function renderPaytable() {
   els.paytable.appendChild(el('span', null, `${m.wild} Wild`));
   els.paytable.appendChild(el('span', null, `${m.scatter}×3 Free`));
   els.paytable.appendChild(el('span', null, `${m.bonus}×3 Bonus`));
-  tops.forEach(s => els.paytable.appendChild(el('span', null, `${s.sym} ${s.pay}×`)));
+  // Show the exact per-line multiplier the win math pays (payMult). On 5-reel the
+  // win depends on run length, so advertise the 3-of-a-kind → 5-of-a-kind range.
+  tops.forEach(s => {
+    const label = cfg.reels === 5
+      ? `${s.sym} ${payMult(s.pay, 3)}–${payMult(s.pay, 5)}×`
+      : `${s.sym} ${payMult(s.pay, 3)}×`;
+    els.paytable.appendChild(el('span', null, label));
+  });
   els.paytable.appendChild(el('span', null, `${cfg.volatility} vol`));
 }
 
@@ -305,7 +332,10 @@ function spin() {
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - bet);
     addJackpot(bet * 0.005);
   } else { free--; freeMulti = Math.min(10, freeMulti + 1); }
-  spinning = true; cascade = 1; wonThisSpin = false; spinWin = 0;
+  // spinWin accumulates a whole free-spin session (finish() defers banking until
+  // free runs out), so only zero it on a PAID spin — resetting it every free spin
+  // would wipe all but the last free spin's winnings.
+  spinning = true; cascade = 1; wonThisSpin = false; if (!isFree) spinWin = 0;
   els.spin.disabled = true; flash(''); if (els.win) els.win.textContent = '';
   updateUI(); tone(400, 0.08, 'square', 0.1);
 
@@ -367,13 +397,17 @@ function evaluate() {
   for (const line of lines) {
     const cells = line.map((row, reel) => grid[reel][row]);
     let base = null; for (const c of cells) { if (!isWild(c)) { base = c; break; } }
-    if (!base) base = cells[0]; // all wild
+    // All-wild line: pays the top symbol on a (rare) paid spin, but only a mid-tier
+    // symbol during free spins where stacked sticky wilds make all-wild routine.
+    if (!base) base = free > 0 ? midPaySymbol() : bestPaySymbol();
     if (base.pay <= 0 && base.sym !== m.jackpot) continue;
     let count = 0; for (const c of cells) { if (c.sym === base.sym || isWild(c)) count++; else break; }
     if (count < 3) continue;
     if (base.sym === m.jackpot && count === cfg.reels) { jackpotHit = true; }
     const mult = free > 0 ? freeMulti : 1;
-    const win = Math.round(cfg.betLevel * base.pay * lenMult(count) * cascade * mult);
+    // Pay exactly betLevel × the advertised per-line multiplier (payMult), then
+    // apply cascade/free-spin multipliers. Keeps awarded credits == paytable.
+    const win = Math.round(cfg.betLevel * payMult(base.pay, count) * cascade * mult);
     if (win > 0) {
       total += win; descs.push(`${base.sym}×${count} +${win}`);
       line.forEach((row, reel) => { if (count > reel) { (winCells[reel] = winCells[reel] || new Set()).add(row); } });

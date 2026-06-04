@@ -3712,8 +3712,12 @@ body.perf-mode #aqua-gun { display: none !important; }
     .bs-hud { display:flex; gap:10px; justify-content:space-between; padding:6px 12px; font-size:12px; font-weight:800; color:#fff;
       background:linear-gradient(180deg,#1c2b6b,#0e1740); flex-wrap:wrap; }
     .bs-stage { position:relative; height:340px; overflow:hidden; cursor:crosshair; touch-action:none; user-select:none;
-      background:linear-gradient(180deg,#7ec8ff 0%,#bfe8ff 62%,#9ad06a 62%,#7bbf4f 100%); }
-    .bs-buddy { position:absolute; left:0; top:0; will-change:transform; pointer-events:none; filter:drop-shadow(0 3px 5px rgba(0,40,90,0.35)); }
+      background:linear-gradient(180deg,#7ec8ff 0%,#bfe8ff 100%); }
+    /* Foreground hill — sits ABOVE the buddies so they spawn behind it and rise out. */
+    .bs-hill { position:absolute; left:-10%; right:-10%; bottom:0; width:120%; height:42%; z-index:4; pointer-events:none;
+      background:linear-gradient(180deg,#9ad06a 0%,#7bbf4f 100%); border-radius:50% 50% 0 0 / 64px 64px 0 0;
+      box-shadow:inset 0 6px 12px rgba(255,255,255,0.25); }
+    .bs-buddy { position:absolute; left:0; top:0; z-index:1; will-change:transform; pointer-events:none; filter:drop-shadow(0 3px 5px rgba(0,40,90,0.35)); }
     .bs-buddy svg { width:100%; height:auto; display:block; }
     .bs-buddy.bs-spook { animation:bsSpook .28s linear infinite; }   /* flash while fleeing (JS drives transform) */
     @keyframes bsSpook { 0%,100%{filter:drop-shadow(0 3px 5px rgba(0,40,90,.35))} 50%{filter:drop-shadow(0 0 6px #fff) brightness(1.5)} }
@@ -3721,7 +3725,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     .bs-shots { display:inline-flex; gap:3px; align-items:center; }
     .bs-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.25); box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); }
     .bs-dot.on { background:#ffcd50; box-shadow:0 0 5px rgba(255,205,80,.8); }
-    .bs-pop { position:absolute; transform:translate(-50%,-50%); font-size:14px; font-weight:900; color:#fff; text-shadow:0 1px 2px #003; pointer-events:none; animation:bsPop .7s ease-out forwards; }
+    .bs-pop { position:absolute; z-index:6; transform:translate(-50%,-50%); font-size:14px; font-weight:900; color:#fff; text-shadow:0 1px 2px #003; pointer-events:none; animation:bsPop .7s ease-out forwards; }
     @keyframes bsPop { 0%{opacity:0; transform:translate(-50%,-50%) scale(.6)} 20%{opacity:1} 100%{opacity:0; transform:translate(-50%,-160%) scale(1.1)} }
     .bs-toast { position:absolute; top:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; font-size:12px; font-weight:700; padding:4px 12px; border-radius:14px; transition:opacity .3s; pointer-events:none; z-index:5; }
     .bs-overlay { position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:16px; text-align:center; background:rgba(6,16,40,0.86); color:#fff; }

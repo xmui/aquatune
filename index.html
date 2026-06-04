@@ -1113,6 +1113,16 @@
       transition:background .12s; align-self:flex-end; margin-bottom:2px;
     }
     .emoji-toggle-btn:hover { background:rgba(0,104,184,0.1); color:var(--accent); }
+    /* stack the kaomoji toggle above the emoji toggle */
+    .emoji-toggle-col { display:flex; flex-direction:column; gap:2px; align-self:flex-end; }
+    .emoji-toggle-col .emoji-toggle-btn { align-self:stretch; margin-bottom:0; }
+    /* Japanese text-emoticon (kaomoji) bar — wider text buttons */
+    .board-kaomoji-btn {
+      line-height:1.1; background:none; border:1px solid transparent; cursor:pointer;
+      border-radius:5px; padding:3px 6px; font-size:13px; white-space:nowrap;
+      font-family:'Segoe UI','Tahoma',sans-serif; color:var(--text);
+    }
+    .board-kaomoji-btn:hover { background:rgba(0,104,184,0.12); border-color:var(--border); }
     .board-fb-inp:focus { outline:1px solid #316AC5; border-color:#316AC5; }
     .board-fb-connect {
       background:linear-gradient(180deg,#F0F8FF,#C8E0F8); border:1px solid #4878B8;
@@ -12455,6 +12465,48 @@ function toggleEmojiBar(pane) {
   if (!bar) return;
   const shown = bar.style.display !== 'none';
   bar.style.display = shown ? 'none' : 'flex';
+  const ka = document.getElementById(pane + '-kaomoji-bar');   // only one bar open at a time
+  if (ka && !shown) ka.style.display = 'none';
+}
+
+/* Japanese text emoticons (kaomoji) — inserted as plain text into the message box. */
+const KAOMOJI = [
+  '(◕‿◕)', '(^_^)', '(>_<)', '(T_T)', '(￣ー￣)', '(¬_¬)', '(；一_一)', '(ಠ_ಠ)',
+  '(≧▽≦)', '(◠‿◠)', '(•‿•)', '(✿◠‿◠)', 'ʕ•ᴥ•ʔ', '(づ｡◕‿‿◕｡)づ', '¯\\_(ツ)_/¯',
+  '(╯°□°)╯︵ ┻━┻', '┬─┬ ノ( ゜-゜ノ)', '(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧', 'ʘ‿ʘ', '( ͡° ͜ʖ ͡°)',
+  'o(╥﹏╥)o', '(╥﹏╥)', '(* ^ ω ^)', '(„• ֊ •„)', '(=^･ω･^=)', '(ↀДↀ)', 'ᕦ(ò_óˇ)ᕤ',
+  '(╬ Ò﹏Ó)', '(ノಠ益ಠ)ノ彡┻━┻', 'ヽ(•‿•)ノ', '(♡°▽°♡)', '(っ◔◡◔)っ ♥', 'ε=ε=┌(;*´Д`)ﾉ',
+];
+function toggleKaomojiBar(pane) {
+  const bar = document.getElementById(pane + '-kaomoji-bar');
+  if (!bar) return;
+  const shown = bar.style.display !== 'none';
+  bar.style.display = shown ? 'none' : 'flex';
+  const em = document.getElementById(pane + '-emoji-bar');   // only one bar open at a time
+  if (em && !shown) em.style.display = 'none';
+}
+function buildKaomojiBar(barId, textareaId) {
+  const bar = document.getElementById(barId);
+  if (!bar || bar.dataset.built) return;
+  bar.dataset.built = '1';
+  KAOMOJI.forEach(code => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'board-kaomoji-btn';
+    btn.textContent = code;
+    btn.title = code;
+    btn.addEventListener('pointerdown', e => e.preventDefault());
+    btn.onclick = () => {
+      const ta = document.getElementById(textareaId);
+      if (!ta) return;
+      const s = ta.selectionStart ?? ta.value.length;
+      const e2 = ta.selectionEnd ?? s;
+      ta.value = ta.value.slice(0, s) + code + ta.value.slice(e2);
+      ta.selectionStart = ta.selectionEnd = s + code.length;
+      ta.focus();
+    };
+    bar.appendChild(btn);
+  });
 }
 function buildEmojiBar(barId, textareaId) {
   const bar = document.getElementById(barId);
@@ -14987,10 +15039,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1500);
   // Inject emote CSS (data URIs live only in CSS, never in HTML)
   buildEmoteCss();
-  // Build emoji bars lazily (after DOM ready)
+  // Build emoji + kaomoji bars lazily (after DOM ready)
   setTimeout(() => {
     buildEmojiBar('global-emoji-bar', 'global-msg');
     buildEmojiBar('room-emoji-bar', 'room-msg');
+    buildKaomojiBar('global-kaomoji-bar', 'global-msg');
+    buildKaomojiBar('room-kaomoji-bar', 'room-msg');
   }, 100);
 
   // Listen to global chat
@@ -16769,9 +16823,13 @@ function bjUpdateBalance(){
     <div class="board-chat-pane active" id="bpane-global">
       <div id="global-log" class="board-log" style="flex:1;overflow-y:auto"></div>
       <div class="board-input-area">
+        <div class="board-emoji-bar" id="global-kaomoji-bar" style="display:none"></div>
         <div class="board-emoji-bar" id="global-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
-          <button class="emoji-toggle-btn" onclick="toggleEmojiBar('global')" title="Emoticons">☺</button>
+          <div class="emoji-toggle-col">
+            <button class="emoji-toggle-btn" onclick="toggleKaomojiBar('global')" title="Text faces (kaomoji)">(•‿•)</button>
+            <button class="emoji-toggle-btn" onclick="toggleEmojiBar('global')" title="Emoticons">☺</button>
+          </div>
           <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalChatMsg();}"></textarea>
           <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
         </div>
@@ -16808,9 +16866,13 @@ function bjUpdateBalance(){
         <div class="board-empty-log">Join or create a room to use room chat</div>
       </div>
       <div class="board-input-area">
+        <div class="board-emoji-bar" id="room-kaomoji-bar" style="display:none"></div>
         <div class="board-emoji-bar" id="room-emoji-bar" style="display:none"></div>
         <div class="board-msg-wrap">
-          <button class="emoji-toggle-btn" onclick="toggleEmojiBar('room')" title="Emoticons">☺</button>
+          <div class="emoji-toggle-col">
+            <button class="emoji-toggle-btn" onclick="toggleKaomojiBar('room')" title="Text faces (kaomoji)">(•‿•)</button>
+            <button class="emoji-toggle-btn" onclick="toggleEmojiBar('room')" title="Emoticons">☺</button>
+          </div>
           <textarea id="room-msg" class="board-msg-inp" maxlength="500" placeholder="Room chat… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendRoomChatMsg();}"></textarea>
           <button class="board-send-btn" onclick="sendRoomChatMsg()">Send</button>
         </div>

@@ -409,6 +409,18 @@ if (typeof window !== 'undefined') {
   window.aqGetSkills = getSkills;
   window.aqSkillLevel = skillLevel;
   window.aqXpForLevel = xpForLevel;   // admin tools compute XP for a target level
+  window.aqSkillList = SKILLS.map(s => ({ id: s.id, name: s.name, icon: s.icon }));   // for admin dropdowns
+  // Admin: force-set one of the CURRENT user's skills to a level (used when an admin
+  // edits their own account so the change shows live, including lowering a skill).
+  window.aqForceOwnSkill = (skillId, level) => {
+    if (!SKILL_BY_ID[skillId]) return false;
+    level = Math.max(1, Math.min(MAX_LEVEL, Math.round(Number(level)) || 1));
+    _xp[skillId] = xpForLevel(level);
+    _writeLocal();
+    _saveRemote();
+    if (_open) renderSkillsPanel();
+    return true;
+  };
   window.openStats = openStats;
   window._aqStatsClosed = () => { _open = false; };
   hookEarnXp();

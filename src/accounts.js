@@ -381,7 +381,11 @@ async function aqAdminAdjustCredits(username, delta) {
     });
     if (!res || !res.committed) return { ok: false, error: 'Update failed.' };
   } catch (e) { return { ok: false, error: 'Update failed.' }; }
-  await update(accRef(accountId), { updatedAt: Date.now() }).catch(() => {});
+  const at = Date.now();
+  await update(accRef(accountId), { updatedAt: at }).catch(() => {});
+  // Mirror to the stocks portfolio node so the two credit stores never drift
+  // (otherwise a later portfolio load could resurrect the pre-adjust balance).
+  await update(ref(db, 'portfolios/' + accountId), { credits: after, updatedAt: at }).catch(() => {});
   return { ok: true, credits: after };
 }
 // Admin: set a user's skill to a given level (writes the XP for that level into
@@ -439,6 +443,7 @@ const BANNABLE_GAMES = [
   { id: 'slots', name: 'Slots' }, { id: 'blackjack', name: 'Blackjack' },
   { id: 'holdem', name: "Texas Hold'em" }, { id: 'rhythm', name: 'Beat Tap' },
   { id: 'pinball', name: 'Space Pinball' }, { id: 'stocks', name: 'Exchange' },
+  { id: 'pool', name: '8-Ball Pool' }, { id: 'tetris', name: 'Tetris' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -530,12 +535,18 @@ async function renderAdminBox(box) {
   };
   box.querySelectorAll('.aq-admin-reset').forEach(b => b.onclick = () => doReset(b.dataset.u));
   box.querySelector('.aq-admin-go').onclick = () => { const v = box.querySelector('.aq-admin-user').value.trim(); if (v) doReset(v); };
-  box.querySelector('.aq-admin-cgo').onclick = async () => {
+  box.querySelector('.aq-admin-cgo').onclick = async (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) return;                 // guard against double-clicks applying twice
     const u = box.querySelector('.aq-admin-cuser').value.trim();
     const amt = box.querySelector('.aq-admin-camt').value;
     if (!u) return;
-    const r = await aqAdminAdjustCredits(u, amt);
-    msg(r.ok ? `${u} now has ${r.credits} credits.` : r.error, r.ok);
+    btn.disabled = true; msg('Adjusting…', true);
+    try {
+      const r = await aqAdminAdjustCredits(u, amt);
+      msg(r.ok ? `${u} now has ${r.credits} credits.` : r.error, r.ok);
+      if (r.ok) box.querySelector('.aq-admin-camt').value = '';   // clear so a stray re-click can't re-apply
+    } finally { btn.disabled = false; }
   };
   box.querySelector('.aq-admin-sgo').onclick = async () => {
     const u = box.querySelector('.aq-admin-suser').value.trim();

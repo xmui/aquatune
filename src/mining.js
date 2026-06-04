@@ -68,8 +68,8 @@ const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
 // player out of mining for 10 minutes (persisted, so a reload doesn't dodge it).
 const LOCK_MS = 10 * 60 * 1000;      // 10-minute lockout
 const LOCK_KEY = 'aq_mining_lock_until';
-const CLK_WINDOW = 18;               // clicks examined for cadence
-const CLK_MIN = 14;                  // need this many before judging
+const CLK_WINDOW = 30;               // clicks examined for cadence
+const CLK_MIN = 24;                  // need a long sustained run before judging (fast human bursts are short)
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false;
@@ -80,6 +80,9 @@ let seq = null, seqHits = 0;         // active crit chain + how many points tapp
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
 let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0;
+// One-time: the auto-clicker check used to be too sensitive (it could flag fast
+// manual clicking). Clear any lockout it left behind so those players are freed.
+try { if (!localStorage.getItem('aq_mining_lock_reset_v1')) { localStorage.setItem('aq_mining_lock_reset_v1', '1'); localStorage.removeItem(LOCK_KEY); } } catch (e) {}
 
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
@@ -98,14 +101,15 @@ function registerClick(now) {
   const iv = [];
   for (let i = 1; i < _clkT.length; i++) iv.push(_clkT[i] - _clkT[i - 1]);
   const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
-  // Superhuman sustained rate (>~22 clicks/sec across the whole window): impossible by hand.
-  if (mean < 45) return true;
-  // Fast AND machine-regular: low coefficient of variation = no human jitter.
-  if (mean < 150) {
-    let v = 0; for (const x of iv) v += (x - mean) * (x - mean);
-    const cv2 = Math.sqrt(v / iv.length) / mean;
-    if (cv2 < 0.09) return true;
-  }
+  // Truly superhuman sustained rate (>~30 clicks/sec over the whole window): no human
+  // hits that by hand. (Fast manual mashing tops out around 10–15 cps.)
+  if (mean < 33) return true;
+  // Machine-regular cadence is the real tell: an auto-clicker's intervals are nearly
+  // identical (coefficient of variation ≈ 0), while even very fast human clicking has
+  // plenty of jitter. Require an extremely low CV over a long run so fast clicking is safe.
+  let v = 0; for (const x of iv) v += (x - mean) * (x - mean);
+  const cv2 = Math.sqrt(v / iv.length) / mean;
+  if (cv2 < 0.045 && mean < 240) return true;
   return false;
 }
 function lockOut() {

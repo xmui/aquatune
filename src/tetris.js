@@ -151,11 +151,18 @@ function ghostY() { let gy = cur.y; while (!collides(cur.m, cur.x, gy + 1)) gy++
 function gameOver() {
   state = 'over';
   const diffName = diffFor(startLevel).label;
+  // Credit payout: scaled by lines cleared, with a small bonus for harder starts,
+  // capped so it stays inside the grindy economy (a marathon can't farm credits).
+  // You must actually clear lines to earn — pure difficulty selection pays nothing.
+  const diffMult = 1 + startLevel * 0.08;
+  const payout = Math.round(Math.min(180, lines * 2.5 * diffMult));
+  if (payout > 0 && window.aqAddCredits) window.aqAddCredits(payout);   // also feeds Finance XP
   if (window.recordScore) window.recordScore('tetris', score, diffName + ' · Lv' + (level + 1) + ' · ' + lines + ' lines');
   if (window.aqGameXp) window.aqGameXp('speed', { played: true, won: lines >= 10, mult: Math.min(4, 1 + lines * 0.12) });
   if (lines >= 20 && window.aqGameAnnounce) window.aqGameAnnounce(`cleared ${lines} lines in Tetris on ${diffName} (${score.toLocaleString()} pts, Lv ${level + 1}) 🧱`);
   sfx('over');
-  showStartOverlay('Game Over', 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1), 'Play again');
+  const sub = 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1) + (payout > 0 ? ' · +' + payout + ' 💰' : '');
+  showStartOverlay('Game Over', sub, 'Play again');
 }
 
 // ── rendering ────────────────────────────────────────────────────────────────

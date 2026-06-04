@@ -63,6 +63,7 @@ function sfx(n) { try { window.buddySfx && window.buddySfx(n); } catch (e) {} }
 function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 function stageW() { return (stage && stage.clientWidth) || 360; }
 function stageH() { return (stage && stage.clientHeight) || 320; }
+function groundY() { return stageH() * 0.6; }   // grass line — buddies fly in the sky above this
 function liveCount() { return buddies.reduce((a, b) => a + (b.resolved ? 0 : 1), 0); }
 
 function pickType() {
@@ -128,10 +129,11 @@ function spawnBuddy() {
   const w = t.size;
   node.style.width = w + 'px';
   node.innerHTML = buddySvg(t, randomHat());
-  const sw = stageW(), sh = stageH(), h = w * 1.12;
+  const sw = stageW(), h = w * 1.12, gy = groundY();
   const x = 16 + Math.random() * Math.max(1, sw - 32 - w);
   const s = BASE_SPEED * diff.speed * t.speedMul * speedScale;
-  const b = { node, type: t, w, h, x, y: sh - h - 6, s, vx: (Math.random() < 0.5 ? -1 : 1) * s * 0.8, vy: -s * 0.7, born: performance.now(), turnAt: 0, spooked: false, falling: false, resolved: false };
+  // Emerge from the grass line and rise into the sky.
+  const b = { node, type: t, w, h, x, y: gy - h * 0.55, s, vx: (Math.random() < 0.5 ? -1 : 1) * s * 0.8, vy: -s * 0.7, born: performance.now(), turnAt: 0, spooked: false, falling: false, resolved: false };
   node.style.transform = `translate(${x}px,${b.y}px)`;
   stage.appendChild(node);
   buddies.push(b);
@@ -201,7 +203,7 @@ function popPoints(b, pts) {
 function tick(t) {
   const dt = Math.min(50, t - (_lastT || t)); _lastT = t; const f = dt / 16;
   if (state === 'round') {
-    const sw = stageW(), sh = stageH();
+    const sw = stageW(), sh = stageH(), gy = groundY();
     for (const b of buddies) {
       if (b.falling) {
         b.vy += 0.45 * f; b.x += b.vx * f; b.y += b.vy * f;
@@ -221,7 +223,8 @@ function tick(t) {
       if (b.x <= 4) { b.x = 4; b.vx = Math.abs(b.vx); }
       if (b.x >= sw - b.w - 4) { b.x = sw - b.w - 4; b.vx = -Math.abs(b.vx); }
       if (b.y <= 4) { b.y = 4; b.vy = Math.abs(b.vy) * 0.6; }
-      if (b.y >= sh - b.h - 2) { b.y = sh - b.h - 2; b.vy = -Math.abs(b.vy); }
+      // Floor at the grass line so buddies stay in the sky, never in front of the hill.
+      if (b.y >= gy - b.h) { b.y = gy - b.h; b.vy = -Math.abs(b.vy); }
       b.node.style.transform = `translate(${b.x}px,${b.y}px) scaleX(${b.vx < 0 ? -1 : 1})`;
       if (t - b.born > roundFlightMs) spook(b);
     }

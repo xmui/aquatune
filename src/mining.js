@@ -49,12 +49,16 @@ const ROCKS = [
 const CXR = 80, CYR = 72, RW = 30, RH = 24;
 
 // ── spice dials ──────────────────────────────────────────────────────────────
-// Crits are rare, high-value events: a weak-point flashes onto the screen now and
-// then; click it for a big hit. The rest of the time you just mine the rock. A
-// well-aimed crit beats steady spamming (unless you're a spam god who tags it fast).
-const CRIT_MULT = 6;                 // a crit hits HARD (rare, so it can afford to)
-const CRIT_WINDOW_MS = 1600;         // how long the weak-point stays clickable
-const CRIT_GAP_MIN = 2600, CRIT_GAP_RAND = 3800;   // random delay between appearances
+// Crits are a rare CHAIN: a tap-point appears on an (invisible) circle around the
+// rock; tap it and the next appears further around the circle, and so on. The chain
+// length is random (it doesn't always complete the circle) — the more points you
+// tap, the more damage AND the more Mining XP you get at the end of the chain.
+const CRIT_POINT_MULT = 2.5;         // damage per tap-point hit (× pick power)
+const POINT_MS = 1050;               // time to tap each point before the chain breaks
+const SEQ_MIN = 2, SEQ_RAND = 6;     // chain length 2..8 points (not always the whole circle)
+const CIRCLE_STEPS = 8;              // tap positions around the circle (45° apart)
+const CIRCLE_R = 38;                 // radius of the invisible circle around the rock
+const CRIT_GAP_MIN = 2600, CRIT_GAP_RAND = 3800;   // random delay between chains
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
@@ -64,6 +68,7 @@ let cv = null, cx = null, raf = null, _built = false;
 let rock = null, swing = 0, shake = 0, particles = [];
 let breakUntil = 0;
 let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
+let seq = null, seqHits = 0;         // active crit chain + how many points tapped so far
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
 
@@ -109,19 +114,33 @@ function spawnRock() {
   }
   scheduleSweet(performance.now());   // first weak-point will flash in after a delay
 }
-// A glowing "weak point" flashes onto the screen at random intervals — click it in
-// time for a big crit, then it's gone until the next one. The rest of the time you
-// just mine. Random tapping rarely lands it (small target, brief window).
-function scheduleSweet(now) { sweet = null; sweetNextAt = now + CRIT_GAP_MIN + Math.random() * CRIT_GAP_RAND; }
-function spawnSweet(now) {
-  if (!rock) { sweet = null; return; }
+// Crit chains: schedule → start → tap a point → spawn the next around the circle.
+function scheduleSweet(now) { sweet = null; seq = null; seqHits = 0; sweetNextAt = now + CRIT_GAP_MIN + Math.random() * CRIT_GAP_RAND; }
+// Grant the chain's Mining XP (scaled by points tapped) — paid at the END of a chain.
+function awardChainXp() {
+  if (seqHits > 0) {
+    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: 0.4 + seqHits * 0.45 });
+    addFloater('+chain XP ×' + seqHits, 3);
+  }
+  seqHits = 0;
+}
+function endSeq(now) { awardChainXp(); scheduleSweet(now); }
+function startSeq(now) {
+  if (!rock) { scheduleSweet(now); return; }
+  const total = SEQ_MIN + ((Math.random() * (SEQ_RAND + 1)) | 0);   // 2..8 points
+  seq = { remaining: total, total, angle: Math.random() * 6.2832, step: (Math.random() < 0.5 ? -1 : 1) * (6.2832 / CIRCLE_STEPS) };
+  seqHits = 0;
+  spawnNextPoint(now);
+}
+function spawnNextPoint(now) {
+  if (!seq || seq.remaining <= 0 || !rock) { endSeq(now); return; }
   const r = Math.max(5, 8 - rock.def.rarity);    // smaller target on richer rocks
-  const m = r + 12;
-  sweet = {
-    x: m + Math.random() * (W - 2 * m),
-    y: 16 + Math.random() * (H - 32 - 16),        // below the top HUD, above the name bar
-    r, born: now, expireAt: now + CRIT_WINDOW_MS,
-  };
+  let x = CXR + Math.cos(seq.angle) * CIRCLE_R;
+  let y = CYR + Math.sin(seq.angle) * CIRCLE_R;
+  x = Math.max(r + 2, Math.min(W - r - 2, x));
+  y = Math.max(16, Math.min(H - 30, y));
+  sweet = { x, y, r, born: now, expireAt: now + POINT_MS };
+  seq.angle += seq.step; seq.remaining--;
 }
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
 function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: CYR - 8 + (Math.random() - 0.5) * 26, vx: (Math.random() - 0.5) * (big ? 6 : 3), vy: -Math.random() * (big ? 5 : 3) - 1, life: big ? 24 : 16, c: 3, s: big ? 3 : 2 }); }
@@ -149,7 +168,7 @@ function breakRock() {
     addFloater('★ MOTHERLODE! ★', 3);
     try { window.playFanfare?.('jackpot'); } catch (e) {}
   }
-  rock = null;
+  rock = null; sweet = null; seq = null;
   breakUntil = now + 280;  // brief empty crater before respawn
   refreshInfo();
 }
@@ -158,22 +177,23 @@ function hit(px, py) {
   if (!rock) return;
   const now = performance.now();
   swing = 1; shake = 6; rock.flash = 1;
-  // Crit ONLY if a weak-point is currently flashing and you click it. It's a rare,
-  // high-damage event — the rest of your clicks are just normal mining.
+  // Crit if a chain point is showing and you tap it: deal a big hit and chain to the
+  // next point around the circle. (XP for the chain is paid when the chain ends.)
   const crit = sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 3;
   let dmg = pickPower();
   if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
-  if (crit) dmg *= CRIT_MULT;
+  if (crit) dmg *= CRIT_POINT_MULT;
   sfx(crit ? 'crit' : 'hit');
   rock.hp -= dmg;
   if (crit) {
-    shake = 12;
+    shake = 12; seqHits++;
     addFloater('CRIT!', 3);
-    scheduleSweet(now);   // consume the weak-point; next one flashes in later
     for (let i = 0; i < 12; i++) spark(true);
-  } else {
-    for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
+    if (rock.hp <= 0) { awardChainXp(); breakRock(); return; }   // rock died mid-chain: pay XP now
+    spawnNextPoint(now);   // chain to the next point (ends + pays XP when done)
+    return;
   }
+  for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
   if (rock.hp <= 0) breakRock();
 }
 
@@ -312,8 +332,8 @@ function draw(t) {
     cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'center';
     cx.fillText('★ MOTHERLODE ' + Math.ceil((motherlodeUntil - t) / 1000) + 's ★', W / 2, 2); cx.textAlign = 'left';
   }
-  // weak-point hint
-  else if (sweet) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('★ weak point!', 6, 2); }
+  // crit-chain hint
+  else if (sweet) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('★ tap! ×' + seqHits, 6, 2); }
   // rock name banner
   cx.fillStyle = PAL[0]; cx.fillRect(0, H - 14, W, 14);
   cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
@@ -329,10 +349,11 @@ function tick(t) {
   if (!rock && breakUntil && t >= breakUntil) { breakUntil = 0; spawnRock(); }
   for (const p of particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= dt / 16; }
   particles = particles.filter(p => p.life > 0);
-  // Weak-point lifecycle: flash in after a random delay, linger briefly, then vanish.
+  // Crit-chain lifecycle: start after a random delay; if a point isn't tapped in
+  // time the chain breaks (and pays out XP for whatever was tapped).
   if (rock) {
-    if (sweet) { if (t >= sweet.expireAt) scheduleSweet(t); }
-    else if (t >= sweetNextAt) spawnSweet(t);
+    if (sweet) { if (t >= sweet.expireAt) endSeq(t); }
+    else if (t >= sweetNextAt) startSeq(t);
   }
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
   floaters = floaters.filter(f => f.life > 0);

@@ -1437,6 +1437,7 @@
     #daily-claim-btn.claim-ready { background:rgba(255,215,0,0.2) !important; border-color:rgba(255,215,0,0.5) !important; color:#ffd700 !important; animation:claimPulse 1.5s ease-in-out infinite; }
     @keyframes claimPulse { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 10px rgba(255,215,0,0.4)} }
     .mbtn { padding:7px 16px;border-radius:var(--r-btn);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:700;transition:all .18s; }
+    .mbtn:disabled { opacity:.45; cursor:default; filter:grayscale(.6); }
     .mbtn.p { background:linear-gradient(180deg,#2080d0,#0060b0);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(0,96,176,0.3); }
     .mbtn.p:hover { transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,96,176,0.4); }
     .mbtn.s { background:#fff;color:var(--text2);border-color:var(--border); }
@@ -14900,6 +14901,7 @@ let _pcMistakes = 0;                                  // cumulative wrong placem
 let _pcWrongCells = new Set();                        // indices currently flagged wrong
 let _pcAutoCheck = localStorage.getItem('aq_pc_autocheck') !== '0'; // default ON
 let _pcTreasure = -1, _pcTreasureClaimed = false;     // rare hidden bonus cell (money/XP)
+let _pcWon = false;                                   // guard: pay out a solve only once
 let _pcDrag = null;            // { val, axis:null|'row'|'col', row0, col0 } during a drag-stroke
 let _pcCellsBound = false;     // delegated pointer handlers bound once
 let _pcRowClues = [], _pcColClues = []; // cached solution clues for cross-off matching
@@ -15110,8 +15112,14 @@ function pcToggleAutoCheck(){
   if (btn) { btn.classList.toggle('p', _pcAutoCheck); btn.classList.toggle('s', !_pcAutoCheck); btn.textContent = 'Auto-check: ' + (_pcAutoCheck ? 'On' : 'Off'); }
   const chk = document.getElementById('picross-status');
   if (chk) chk.textContent = _pcAutoCheck ? 'Auto-check on — mistakes flagged live' : 'Auto-check off — use Check button';
+  pcUpdateCheckBtn();
   pcUpdateMistakeDisplay();
   renderPicrossGrid();
+}
+// Manual Check is redundant (and a re-payout vector) while auto-check is on, so gray it out.
+function pcUpdateCheckBtn(){
+  const c = document.getElementById('pc-check-btn');
+  if (c) { c.disabled = _pcAutoCheck; c.classList.toggle('s', _pcAutoCheck); c.classList.toggle('p', !_pcAutoCheck); }
 }
 function pcFmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function pcStartTimer(){ pcStopTimer(); _pcSeconds=0; const el=document.getElementById('picross-timer'); if(el) el.textContent='0:00';
@@ -15154,6 +15162,7 @@ function openPicross(show = true) {
     if (!_picrossInited) { _picrossInited = true; picrossNewPuzzle(); }
     const ab = document.getElementById('pc-autocheck-btn');
     if (ab) { ab.classList.toggle('p', _pcAutoCheck); ab.classList.toggle('s', !_pcAutoCheck); ab.textContent = 'Auto-check: ' + (_pcAutoCheck ? 'On' : 'Off'); }
+    pcUpdateCheckBtn();
     pcUpdateMistakeDisplay();
   }
 }
@@ -15164,7 +15173,7 @@ function loadPicrossPuzzle(puzzle) {
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
   // Rarely, hide a treasure pixel in one of the filled cells — fill it correctly
   // for a surprise money/XP bonus. ~22% of puzzles have one (so it stays rare).
-  _pcTreasure = -1; _pcTreasureClaimed = false;
+  _pcTreasure = -1; _pcTreasureClaimed = false; _pcWon = false;
   if (Math.random() < 0.22) {
     const filled = [];
     for (let i = 0; i < _pcSolution.length; i++) if (_pcSolution[i] === 1) filled.push(i);
@@ -15180,6 +15189,8 @@ function picrossNewPuzzle() {
   pcStartTimer();
 }
 function picrossOnWin() {
+  if (_pcWon) return;   // only pay out once per puzzle (no re-checking the solved board)
+  _pcWon = true;
   pcStopTimer();
   unlockTheme('pixel');
   playFanfare('win');
@@ -15283,6 +15294,7 @@ function renderPicrossGrid() {
   pcUpdateClues();
 }
 function checkPicross() {
+  if (_pcAutoCheck) return;   // disabled while auto-check is on (also gated by the grayed button)
   let allCorrect = true;
   _pcWrongCells.clear();
   const cells = document.querySelectorAll('.pc-cell');
@@ -17090,7 +17102,7 @@ function bjUpdateBalance(){
     <div id="picross-status">Left-click: fill &nbsp;|&nbsp; Right-click: mark</div>
     <div id="picross-controls">
       <button id="pc-autocheck-btn" class="mbtn p" onclick="pcToggleAutoCheck()">Auto-check: On</button>
-      <button class="mbtn p" onclick="checkPicross()">Check</button>
+      <button id="pc-check-btn" class="mbtn p" onclick="checkPicross()">Check</button>
       <button class="mbtn s" onclick="resetPicross()">Reset</button>
       <button class="mbtn s" onclick="picrossNewPuzzle()">New</button>
     </div>

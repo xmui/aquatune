@@ -3781,6 +3781,12 @@ body.perf-mode #aqua-gun { display: none !important; }
     .p8-hud .p8-turn { opacity:0.7; } .p8-hud .p8-turn.on { opacity:1; }
     .p8-stage { position:relative; padding:6px; background:#ece9d8; }
     .p8-canvas { width:100%; height:auto; display:block; border-radius:4px; touch-action:none; cursor:crosshair; }
+    /* portrait phones: rotate the landscape table 90° so it fills the screen
+       (pool8.js sizes the canvas in px and remaps pointer coords for the rotation) */
+    @media (max-width:820px) and (orientation:portrait) {
+      .p8-stage { display:flex; align-items:center; justify-content:center; min-height:70vh; overflow:hidden; }
+      .p8-canvas.p8-rot { width:auto; height:auto; transform:rotate(90deg); transform-origin:center; }
+    }
     .p8-status { padding:4px 10px; font-size:11px; color:#1a2a4a; background:#d9d6c3; border-top:1px solid #b6b39c; min-height:18px; }
     /* sunk-balls trays — solids on the left, the 8 in the middle, stripes on the right */
     .p8-trays { display:flex; align-items:center; gap:8px; padding:5px 10px; background:linear-gradient(180deg,#0e2a18,#0a1f12); }
@@ -14928,6 +14934,22 @@ function sendGlobalChatMsg() {
   window.sendGlobalMessage?.(msg);
   if (msgEl) msgEl.value = '';
 }
+
+// Broadcast a noteworthy game event (a win, a rare drop, a personal best) to the
+// GLOBAL chat so the whole lobby sees it — same channel AquaSlots already uses.
+// Throttled and account-gated so it never spams. `msg` should read naturally after
+// the player's name, e.g. "won an 8-Ball match! 🎱".
+let _aqAnnounceAt = 0;
+window.aqGameAnnounce = function (msg) {
+  try {
+    if (typeof window.hasAccount === 'function' && !window.hasAccount()) return;
+    const now = Date.now();
+    if (now - _aqAnnounceAt < 4000) return;          // at most one shout every 4s
+    _aqAnnounceAt = now;
+    const name = localStorage.getItem('aq_username') || 'Someone';
+    window.sendGlobalMessage?.(`${name} ${msg}`);
+  } catch (e) {}
+};
 
 function sendRoomChatMsg() {
   const msgEl = document.getElementById('room-msg');

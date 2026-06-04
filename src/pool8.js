@@ -16,12 +16,17 @@
 const W = 700, H = 380;                 // logical canvas (CSS-scaled)
 const M = 30;                           // cushion margin
 const R = 10.5;                         // ball radius
-const PR = 17;                          // pocket capture radius
+const POCKET_R = 16;                    // pocket geometric/capture radius
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
 const MAXPULL = 150, MAXSPEED = 1020;   // slingshot pull → launch speed
-const DECEL = 520, REST = 0.62;         // rolling friction (px/s²), cushion restitution
-const BALL_REST = 0.95;                 // ball-ball energy retained (real ivory ~0.95)
-const STOP = 7;                         // speed below which a ball is "stopped"
+// Two-phase felt friction (px/s²): a struck ball SLIDES (kinetic) until its roll
+// speed catches up (v = r·ω), then ROLLS (low resistance) to a gentle stop.
+const SLIDE_DECEL = 1150;               // kinetic (sliding) friction
+const ROLL_DECEL = 90;                  // rolling resistance
+const SPINUP = 2.5;                     // a solid sphere spins up at 2.5× the linear decel
+const CUSHION_REST = 0.72;              // cushion coefficient of restitution (<1, lossy)
+const BALL_REST = 0.96;                 // ball-ball restitution
+const STOP = 6;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
 const POCKETS = [
@@ -31,10 +36,18 @@ const POCKETS = [
 // ball tints (1..7 solids; 9..15 are the striped versions of 1..7; 8 black; 0 cue)
 const TINT = { 1: '#f4c20d', 2: '#1f57d6', 3: '#d62828', 4: '#7b2fb5', 5: '#e87a17', 6: '#1f8a4c', 7: '#7a1f2b', 8: '#1a1a1a' };
 function tintFor(n) { return n === 0 ? '#f7f7f2' : (n <= 8 ? TINT[n] : TINT[n - 8]); }
+// darken (amt<0) / lighten (amt>0) a #rrggbb hex by a fraction
+function shade(hex, amt) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex); if (!m) return hex;
+  const v = parseInt(m[1], 16); let r = v >> 16, g = (v >> 8) & 255, b = v & 255;
+  const f = (c) => Math.max(0, Math.min(255, Math.round(c + (amt < 0 ? c : 255 - c) * amt)));
+  r = f(r); g = f(g); b = f(b);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
 function groupOf(n) { return n === 0 ? 'cue' : n === 8 ? 'eight' : (n <= 7 ? 'solid' : 'stripe'); }
 function other(seat) { return seat === 'A' ? 'B' : 'A'; }
 
-let cv = null, cx = null, raf = null, _built = false, _lastT = 0;
+let cv = null, cx = null, raf = null, _built = false, _lastT = 0, _rotated = false;
 let balls = [], state = 'start';        // start | aim | shoot | place | ai | remote | watch | over
 let aiming = null, placing = false;
 let turn = 'A', groups = { A: null, B: null }, open = true, broke = false;
@@ -59,7 +72,7 @@ function engineSeat() { return 'A'; }   // the engine-side human always sits A (
 // ── setup ──────────────────────────────────────────────────────────────────
 function rack() {
   balls = [];
-  balls.push({ n: 0, x: W * 0.26, y: H / 2, vx: 0, vy: 0, potted: false });   // cue
+  balls.push({ n: 0, x: W * 0.26, y: H / 2, vx: 0, vy: 0, rvx: 0, rvy: 0, potted: false });   // cue
   const rest = [9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7];
   for (let i = rest.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[rest[i], rest[j]] = [rest[j], rest[i]]; }
   const apexX = W * 0.72, dx = R * 1.74;
@@ -73,7 +86,7 @@ function rack() {
       else if (col === 4 && row === 0) n = 9;                     // a stripe corner
       else if (col === 4 && row === 4) n = 1;                     // a solid corner
       else n = rest[idx++];
-      balls.push({ n, x, y, vx: 0, vy: 0, potted: false });
+      balls.push({ n, x, y, vx: 0, vy: 0, rvx: 0, rvy: 0, potted: false });
     }
   }
 }
@@ -81,45 +94,95 @@ function cueBall() { return balls.find(b => b.n === 0); }
 function liveOf(group) { return balls.filter(b => !b.potted && groupOf(b.n) === group); }
 
 // ── physics ────────────────────────────────────────────────────────────────
-function anyMoving() { return balls.some(b => !b.potted && (b.vx * b.vx + b.vy * b.vy) > STOP * STOP); }
+// A ball is "in play and moving" if it has speed OR is mid-drop into a pocket.
+function anyMoving() {
+  return balls.some(b => !b.potted && (b.sink !== undefined || (b.vx * b.vx + b.vy * b.vy) > STOP * STOP || (b.rvx * b.rvx + b.rvy * b.rvy) > STOP * STOP));
+}
+
+// Two-phase friction: kinetic while the ball SLIDES (contact point slips), then
+// rolling once linear velocity matches the roll velocity rv (= r·ω). This is what
+// gives a real "skid then grip" feel instead of a uniform `v *= 0.98` slide.
+function applyFriction(b, dt) {
+  const sp = Math.hypot(b.vx, b.vy);
+  const sx = b.vx - b.rvx, sy = b.vy - b.rvy, slip = Math.hypot(sx, sy);
+  if (slip > 4) {                       // SLIDING: kinetic friction opposes the slip
+    const ux = sx / slip, uy = sy / slip;
+    b.vx -= ux * SLIDE_DECEL * dt; b.vy -= uy * SLIDE_DECEL * dt;          // linear slows
+    b.rvx += ux * SLIDE_DECEL * SPINUP * dt; b.rvy += uy * SLIDE_DECEL * SPINUP * dt; // roll spins up
+  } else {                              // ROLLING: lock roll to linear, low resistance
+    const ns = Math.max(0, sp - ROLL_DECEL * dt);
+    if (sp > 0) { b.vx = b.vx / sp * ns; b.vy = b.vy / sp * ns; }
+    b.rvx = b.vx; b.rvy = b.vy;
+    if (ns < STOP) { b.vx = b.vy = b.rvx = b.rvy = 0; }
+  }
+}
+
+// Soft-drop "gravity well": once a ball reaches a pocket mouth it gets sucked to
+// the centre, shrinking (b.sink 1→0) as it falls in, then is marked potted.
+function stepSink(b, dt) {
+  const dx = b.sx - b.x, dy = b.sy - b.y, d = Math.hypot(dx, dy) || 1;
+  b.vx += (dx / d) * 2000 * dt; b.vy += (dy / d) * 2000 * dt;   // pulled toward the hole
+  b.vx *= 0.86; b.vy *= 0.86;                                   // decelerate rapidly
+  b.x += b.vx * dt; b.y += b.vy * dt;
+  b.sink -= dt * 3.4;                                           // scale down as it drops
+  if (b.sink <= 0.12 || d < 2) potBall(b);
+}
+
 function step(dt) {
   // Substep count scales with the fastest ball so a hard break never tunnels a
   // ball straight through another (continuous-ish collision on a cheap budget).
   let vmax = 0; for (const b of balls) { if (!b.potted) { const v = Math.hypot(b.vx, b.vy); if (v > vmax) vmax = v; } }
-  const SUB = Math.max(4, Math.min(16, Math.ceil(vmax * dt / (R * 0.6)))), sdt = dt / SUB;
+  const SUB = Math.max(4, Math.min(20, Math.ceil(vmax * dt / (R * 0.55)))), sdt = dt / SUB;
   for (let s = 0; s < SUB; s++) {
+    // movement + friction (sinking balls follow their own well dynamics)
     for (const b of balls) {
       if (b.potted) continue;
-      const sp = Math.hypot(b.vx, b.vy);
-      if (sp > 0) { const ns = Math.max(0, sp - DECEL * sdt); b.vx = b.vx / sp * ns; b.vy = b.vy / sp * ns; if (ns < STOP) { b.vx = b.vy = 0; } }
+      if (b.sink !== undefined) { stepSink(b, sdt); continue; }
+      applyFriction(b, sdt);
       b.x += b.vx * sdt; b.y += b.vy * sdt;
     }
+    // pocket capture (gravity well begins at the mouth, before the cushion clamp)
     for (const b of balls) {
-      if (b.potted) continue;
-      for (const p of POCKETS) { if (Math.hypot(b.x - p.x, b.y - p.y) < PR) { potBall(b); break; } }
+      if (b.potted || b.sink !== undefined) continue;
+      for (const p of POCKETS) {
+        if (Math.hypot(b.x - p.x, b.y - p.y) < POCKET_R * 1.4) { b.sink = 1; b.sx = p.x; b.sy = p.y; break; }
+      }
     }
+    // cushions (restitution < 1 — balls bleed speed off the rails)
     for (const b of balls) {
-      if (b.potted) continue;
-      if (b.x < LX + R) { b.x = LX + R; b.vx = Math.abs(b.vx) * REST; cushion(b); }
-      else if (b.x > RXn - R) { b.x = RXn - R; b.vx = -Math.abs(b.vx) * REST; cushion(b); }
-      if (b.y < TY + R) { b.y = TY + R; b.vy = Math.abs(b.vy) * REST; cushion(b); }
-      else if (b.y > BY - R) { b.y = BY - R; b.vy = -Math.abs(b.vy) * REST; cushion(b); }
+      if (b.potted || b.sink !== undefined) continue;
+      if (b.x < LX + R) { b.x = LX + R; b.vx = Math.abs(b.vx) * CUSHION_REST; b.rvx *= CUSHION_REST; cushion(b); }
+      else if (b.x > RXn - R) { b.x = RXn - R; b.vx = -Math.abs(b.vx) * CUSHION_REST; b.rvx *= CUSHION_REST; cushion(b); }
+      if (b.y < TY + R) { b.y = TY + R; b.vy = Math.abs(b.vy) * CUSHION_REST; b.rvy *= CUSHION_REST; cushion(b); }
+      else if (b.y > BY - R) { b.y = BY - R; b.vy = -Math.abs(b.vy) * CUSHION_REST; b.rvy *= CUSHION_REST; cushion(b); }
     }
+    // ball-ball: static (position) resolution FIRST, then 2D elastic on normal/tangent
     for (let i = 0; i < balls.length; i++) {
-      const a = balls[i]; if (a.potted) continue;
+      const a = balls[i]; if (a.potted || a.sink !== undefined) continue;
       for (let j = i + 1; j < balls.length; j++) {
-        const c = balls[j]; if (c.potted) continue;
-        const dx = c.x - a.x, dy = c.y - a.y; let d = Math.hypot(dx, dy);
+        const c = balls[j]; if (c.potted || c.sink !== undefined) continue;
+        const dx = c.x - a.x, dy = c.y - a.y; const d = Math.hypot(dx, dy);
         if (d > 0 && d < R * 2) {
-          const nx = dx / d, ny = dy / d, overlap = R * 2 - d;
+          const nx = dx / d, ny = dy / d;       // collision normal
+          const tx = -ny, ty = nx;              // collision tangent
+          // (1) push the pair apart along the normal so they never clump/clip
+          const overlap = R * 2 - d;
           a.x -= nx * overlap / 2; a.y -= ny * overlap / 2; c.x += nx * overlap / 2; c.y += ny * overlap / 2;
-          const av = a.vx * nx + a.vy * ny, cvv = c.vx * nx + c.vy * ny, rel = av - cvv;
-          if (rel > 0) {
-            // equal masses, restitution e: exchanged normal impulse = (1+e)/2 · rel
-            const p = rel * (1 + BALL_REST) / 2;
-            a.vx -= p * nx; a.vy -= p * ny; c.vx += p * nx; c.vy += p * ny;
+          // (2) decompose velocities, exchange the normal components (equal mass + restitution)
+          const an = a.vx * nx + a.vy * ny, at = a.vx * tx + a.vy * ty;
+          const cn = c.vx * nx + c.vy * ny, ct = c.vx * tx + c.vy * ty;
+          if (an - cn > 0) {                    // only if actually approaching
+            const e = BALL_REST;
+            const an2 = ((1 - e) * an + (1 + e) * cn) / 2;
+            const cn2 = ((1 + e) * an + (1 - e) * cn) / 2;
+            a.vx = an2 * nx + at * tx; a.vy = an2 * ny + at * ty;
+            c.vx = cn2 * nx + ct * tx; c.vy = cn2 * ny + ct * ty;
+            // a ball launched from (near) rest skids before it rolls — reset its roll
+            if (Math.hypot(a.rvx, a.rvy) < 6) { a.rvx = a.rvy = 0; }
+            if (Math.hypot(c.rvx, c.rvy) < 6) { c.rvx = c.rvy = 0; }
             if (!firstHit && (a.n === 0 || c.n === 0)) firstHit = (a.n === 0 ? c.n : a.n);
-            if (p > 60) sfx(p > 400 ? 'break' : 'hit');
+            const impact = an - cn;
+            if (impact > 60) sfx(impact > 420 ? 'break' : 'hit');
           }
         }
       }
@@ -129,7 +192,7 @@ function step(dt) {
 let _cushAt = 0;
 function cushion(b) { const now = performance.now(); if (now - _cushAt > 40) { _cushAt = now; sfx('wall'); } }
 function potBall(b) {
-  b.potted = true; b.vx = b.vy = 0; pottedThisShot.push(b.n); sfx('pocket');
+  b.potted = true; b.vx = b.vy = b.rvx = b.rvy = 0; delete b.sink; pottedThisShot.push(b.n); sfx('pocket');
   updateHud();   // refresh the sunk-balls trays the moment a ball drops
 }
 
@@ -137,6 +200,7 @@ function potBall(b) {
 function doShoot(dirx, diry, speed) {
   const cue = cueBall(); if (!cue) return;
   cue.vx = dirx * speed; cue.vy = diry * speed;
+  cue.rvx = cue.rvy = 0;                 // struck ball starts sliding (no roll yet)
   pottedThisShot = []; firstHit = null; cueStruck = true; pendingInhand = false;
   state = 'shoot'; setMsg('');
   broadcastState(true);
@@ -184,7 +248,7 @@ function resolveShot() {
 }
 function respotCue() {
   const cue = cueBall();
-  cue.potted = false; cue.vx = cue.vy = 0; cue.x = W * 0.26; cue.y = H / 2;
+  cue.potted = false; cue.vx = cue.vy = cue.rvx = cue.rvy = 0; delete cue.sink; cue.x = W * 0.26; cue.y = H / 2;
   for (let k = 0; k < 40; k++) { let hit = false; for (const b of balls) { if (b === cue || b.potted) continue; if (Math.hypot(b.x - cue.x, b.y - cue.y) < R * 2 + 1) { cue.x -= 6; hit = true; } } if (!hit) break; }
 }
 // Configure the next turn on the ENGINE side and tell the guest about it.
@@ -211,6 +275,7 @@ function grantOutcome(winnerSeat, text) {
   if (_finished) return; _finished = true;
   const youWon = winnerSeat === mySeat;
   if (youWon && window.aqAddCredits) window.aqAddCredits(40);
+  if (youWon && window.aqGameAnnounce) window.aqGameAnnounce(mode === 'bot' ? 'beat the 8-Ball bot 🎱' : 'won an 8-Ball match in the room! 🎱');
   if (window.aqGameXp) window.aqGameXp('intellect', { played: true, won: youWon, mult: youWon ? 1.6 : 0.5 });
   if (window.recordScore) window.recordScore('pool8', youWon ? 1 : 0, youWon ? 'win' : 'loss');
   sfx(youWon ? 'win' : 'lose');
@@ -313,7 +378,19 @@ function onPoolActionLocal(a) {
 }
 
 // ── input (slingshot + ball-in-hand) ─────────────────────────────────────────
-function evpos(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) }; }
+function evpos(e) {
+  const r = cv.getBoundingClientRect();
+  if (_rotated) {
+    // Canvas is shown rotated 90° CW for portrait; invert the rotation to recover
+    // logical table coords. A 90° CW screen rotation maps (dx,dy) → local (dy,-dx),
+    // and the pre-rotation display box is (height × width) of the on-screen AABB.
+    const cxp = r.left + r.width / 2, cyp = r.top + r.height / 2;
+    const dx = e.clientX - cxp, dy = e.clientY - cyp;
+    const lx = dy, ly = -dx, dispW = r.height, dispH = r.width;
+    return { x: (lx / dispW + 0.5) * W, y: (ly / dispH + 0.5) * H };
+  }
+  return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+}
 function myActiveTurn() { return turn === mySeat; }
 function onDown(e) {
   e.preventDefault();
@@ -354,37 +431,101 @@ function placeCue(x, y) {
   cue.x = x; cue.y = y;
 }
 
-// ── rendering ──────────────────────────────────────────────────────────────
+// ── rendering (2000s MSN-Zone skeuomorphism) ─────────────────────────────────
+function drawTable() {
+  // wooden rail surround (beveled walnut)
+  const rail = cx.createLinearGradient(0, 0, 0, H);
+  rail.addColorStop(0, '#6b3f1d'); rail.addColorStop(0.5, '#4d2c12'); rail.addColorStop(1, '#36200d');
+  cx.fillStyle = rail; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = 'rgba(255,255,255,0.10)'; cx.fillRect(0, 0, W, 3);
+  cx.fillStyle = 'rgba(0,0,0,0.35)'; cx.fillRect(0, H - 3, W, 3);
+  // felt: radial gradient as if an overhead lamp lit the top-middle
+  const felt = cx.createRadialGradient(W / 2, TY + 24, 30, W / 2, H / 2, Math.hypot(W, H) / 1.45);
+  felt.addColorStop(0, '#0aa84a'); felt.addColorStop(0.45, '#008f39'); felt.addColorStop(1, '#003311');
+  cx.fillStyle = felt; cx.fillRect(LX, TY, RXn - LX, BY - TY);
+  // inner rail shadow (felt sits in a recess)
+  cx.save(); cx.strokeStyle = 'rgba(0,0,0,0.40)'; cx.lineWidth = 6; cx.strokeRect(LX + 3, TY + 3, RXn - LX - 6, BY - TY - 6); cx.restore();
+  // head string
+  cx.strokeStyle = 'rgba(255,255,255,0.12)'; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(W * 0.26, TY); cx.lineTo(W * 0.26, BY); cx.stroke();
+  for (const p of POCKETS) drawPocket(p);
+}
+function drawPocket(p) {
+  // chrome bevel ring
+  const ring = cx.createLinearGradient(p.x - POCKET_R, p.y - POCKET_R, p.x + POCKET_R, p.y + POCKET_R);
+  ring.addColorStop(0, '#f2f2f6'); ring.addColorStop(0.45, '#9fa0ad'); ring.addColorStop(0.7, '#6c6d7a'); ring.addColorStop(1, '#3a3b45');
+  cx.fillStyle = ring; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R + 4, 0, 7); cx.fill();
+  cx.fillStyle = '#26262d'; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R + 1, 0, 7); cx.fill();
+  // deep black interior
+  const hole = cx.createRadialGradient(p.x - 2, p.y - 2, 1, p.x, p.y, POCKET_R);
+  hole.addColorStop(0, '#000'); hole.addColorStop(0.65, '#040405'); hole.addColorStop(1, '#1b1b22');
+  cx.fillStyle = hole; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R, 0, 7); cx.fill();
+}
+function drawBall(b) {
+  const scale = (b.sink !== undefined ? Math.max(0.06, b.sink) : 1), r = R * scale;
+  const stripe = b.n > 8, base = tintFor(b.n);
+  // soft drop shadow on the felt (offset down-right)
+  cx.fillStyle = 'rgba(0,0,0,0.40)';
+  cx.beginPath(); cx.ellipse(b.x + 2.4, b.y + 3.4, r * 1.02, r * 0.9, 0, 0, 7); cx.fill();
+  // glossy sphere — specular highlight offset to the top-left, dark on bottom-right
+  cx.save();
+  cx.beginPath(); cx.arc(b.x, b.y, r, 0, 7); cx.clip();
+  const bodyCol = b.n === 0 ? '#fafaf2' : (stripe ? '#fbfbf5' : base);
+  const g = cx.createRadialGradient(b.x - r * 0.36, b.y - r * 0.40, r * 0.05, b.x + r * 0.28, b.y + r * 0.34, r * 1.3);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.16, '#ffffff'); g.addColorStop(0.42, bodyCol); g.addColorStop(1, shade(bodyCol, -0.5));
+  cx.fillStyle = g; cx.fillRect(b.x - r, b.y - r, 2 * r, 2 * r);
+  if (stripe) {                      // colored equatorial band, then re-gloss it
+    cx.fillStyle = base; cx.fillRect(b.x - r, b.y - r * 0.46, 2 * r, r * 0.92);
+    const g2 = cx.createRadialGradient(b.x - r * 0.36, b.y - r * 0.40, r * 0.05, b.x + r * 0.28, b.y + r * 0.34, r * 1.3);
+    g2.addColorStop(0, 'rgba(255,255,255,0.9)'); g2.addColorStop(0.22, 'rgba(255,255,255,0.18)');
+    g2.addColorStop(0.55, 'rgba(255,255,255,0)'); g2.addColorStop(1, 'rgba(0,0,0,0.4)');
+    cx.fillStyle = g2; cx.fillRect(b.x - r, b.y - r, 2 * r, 2 * r);
+  }
+  cx.restore();
+  if (b.n !== 0 && scale > 0.5) {     // numbered disc
+    cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(b.x, b.y, r * 0.46, 0, 7); cx.fill();
+    cx.fillStyle = '#111'; cx.font = 'bold ' + Math.max(6, Math.round(r * 0.82)) + 'px sans-serif';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(b.n), b.x, b.y + 0.5);
+  }
+  // tight specular glint
+  cx.fillStyle = 'rgba(255,255,255,0.9)'; cx.beginPath(); cx.arc(b.x - r * 0.34, b.y - r * 0.38, r * 0.16, 0, 7); cx.fill();
+}
+function drawCue(cue, ux, uy, pwr) {
+  // stick sits behind the cue ball along -aim; wood-grain taper + metal joint + ferrule
+  const back = 18 + 70 + pwr * 120, tipX = cue.x - ux * 17, tipY = cue.y - uy * 17;
+  const buttX = cue.x - ux * back, buttY = cue.y - uy * back, px = -uy, py = ux, w0 = 1.7, w1 = 4.4;
+  cx.save();
+  cx.beginPath();
+  cx.moveTo(tipX + px * w0, tipY + py * w0); cx.lineTo(buttX + px * w1, buttY + py * w1);
+  cx.lineTo(buttX - px * w1, buttY - py * w1); cx.lineTo(tipX - px * w0, tipY - py * w0); cx.closePath();
+  const wood = cx.createLinearGradient(tipX, tipY, buttX, buttY);
+  wood.addColorStop(0, '#e9cda0'); wood.addColorStop(0.18, '#b07b46'); wood.addColorStop(0.34, '#8a5a2e');
+  wood.addColorStop(0.5, '#6f4422'); wood.addColorStop(0.7, '#5a3318'); wood.addColorStop(1, '#3f2410');
+  cx.fillStyle = wood; cx.fill();
+  cx.lineWidth = 1; cx.strokeStyle = 'rgba(0,0,0,0.35)'; cx.stroke();
+  // metallic joint band ~30% down the shaft
+  const jx = tipX - ux * (back * 0.26), jy = tipY - uy * (back * 0.26);
+  cx.strokeStyle = '#d9dde6'; cx.lineWidth = w1 * 1.5; cx.lineCap = 'butt';
+  cx.beginPath(); cx.moveTo(jx, jy); cx.lineTo(jx - ux * 4, jy - uy * 4); cx.stroke();
+  // white ferrule + leather tip at the striking end
+  cx.strokeStyle = '#f4f2e8'; cx.lineWidth = w0 * 2.2; cx.beginPath(); cx.moveTo(tipX, tipY); cx.lineTo(tipX - ux * 3, tipY - uy * 3); cx.stroke();
+  cx.strokeStyle = '#2b4f86'; cx.lineWidth = w0 * 2.2; cx.beginPath(); cx.moveTo(tipX + ux * 1.5, tipY + uy * 1.5); cx.lineTo(tipX, tipY); cx.stroke();
+  cx.restore();
+}
 function draw() {
   if (!cx) return;
-  cx.fillStyle = '#5a3a1a'; cx.fillRect(0, 0, W, H);
-  cx.fillStyle = '#1f8a4c'; cx.fillRect(LX, TY, RXn - LX, BY - TY);
-  cx.fillStyle = 'rgba(0,0,0,0.10)'; cx.fillRect(LX, TY, RXn - LX, 5);
-  cx.strokeStyle = 'rgba(255,255,255,0.18)'; cx.beginPath(); cx.moveTo(W * 0.26, TY); cx.lineTo(W * 0.26, BY); cx.stroke();
-  for (const p of POCKETS) { cx.fillStyle = '#0a0a0a'; cx.beginPath(); cx.arc(p.x, p.y, PR - 2, 0, 7); cx.fill(); }
+  drawTable();
   if (state === 'aim' && aiming && aiming.cur) {
     const cue = cueBall();
     const dx = cue.x - aiming.cur.x, dy = cue.y - aiming.cur.y, d = Math.hypot(dx, dy) || 1;
-    const ux = dx / d, uy = dy / d;
-    const pwr = Math.min(MAXPULL, d) / MAXPULL;
+    const ux = dx / d, uy = dy / d, pwr = Math.min(MAXPULL, d) / MAXPULL;
     cx.save(); cx.setLineDash([6, 6]); cx.strokeStyle = 'rgba(255,255,255,0.85)'; cx.lineWidth = 2;
     cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(cue.x + ux * 240, cue.y + uy * 240); cx.stroke(); cx.restore();
-    cx.strokeStyle = '#d9b06a'; cx.lineWidth = 5; cx.beginPath();
-    cx.moveTo(cue.x - ux * 16, cue.y - uy * 16); cx.lineTo(cue.x - ux * (16 + 60 + pwr * 90), cue.y - uy * (16 + 60 + pwr * 90)); cx.stroke();
-    cx.fillStyle = '#0008'; cx.fillRect(LX + 6, BY - 16, 120, 8);
+    drawCue(cue, ux, uy, pwr);
+    // power meter
+    cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(LX + 6, BY - 16, 120, 8);
     cx.fillStyle = pwr > 0.8 ? '#ff5050' : '#ffd21e'; cx.fillRect(LX + 6, BY - 16, 120 * pwr, 8);
   }
-  for (const b of balls) {
-    if (b.potted) continue;
-    cx.fillStyle = 'rgba(0,0,0,0.28)'; cx.beginPath(); cx.arc(b.x + 1.5, b.y + 2, R, 0, 7); cx.fill();
-    cx.fillStyle = tintFor(b.n); cx.beginPath(); cx.arc(b.x, b.y, R, 0, 7); cx.fill();
-    if (b.n > 8) { cx.fillStyle = '#f7f7f2'; cx.save(); cx.beginPath(); cx.arc(b.x, b.y, R, 0, 7); cx.clip(); cx.fillRect(b.x - R, b.y - R * 0.42, R * 2, R * 0.84); cx.restore(); }
-    if (b.n !== 0) {
-      cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(b.x, b.y, R * 0.5, 0, 7); cx.fill();
-      cx.fillStyle = '#111'; cx.font = 'bold 8px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(b.n), b.x, b.y + 0.5);
-    }
-    cx.fillStyle = 'rgba(255,255,255,0.5)'; cx.beginPath(); cx.arc(b.x - R * 0.32, b.y - R * 0.34, R * 0.22, 0, 7); cx.fill();
-  }
+  for (const b of balls) { if (!b.potted) drawBall(b); }
 }
 
 // ── UI scaffolding ───────────────────────────────────────────────────────────
@@ -485,6 +626,26 @@ function tick(t) {
   raf = requestAnimationFrame(tick);
 }
 
+// Portrait phones: rotate the (landscape) table 90° so it fills the screen.
+function updateRotation() {
+  const want = !!(window.matchMedia && window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches);
+  _rotated = want;
+  if (cv) cv.classList.toggle('p8-rot', want);
+  layoutCanvas();
+}
+function layoutCanvas() {
+  if (!cv || !cv.parentElement) return;
+  const stage = cv.parentElement;
+  if (_rotated) {
+    const sw = stage.clientWidth || W, sh = stage.clientHeight || H;
+    // pre-rotation box (pw × ph), aspect W/H; after the 90° turn it occupies (ph × pw)
+    // on screen, so fit ph ≤ stage width and pw ≤ stage height.
+    let ph = sw, pw = ph * (W / H);
+    if (pw > sh) { pw = sh; ph = pw * (H / W); }
+    cv.style.width = pw + 'px'; cv.style.height = ph + 'px';
+  } else { cv.style.width = ''; cv.style.height = ''; }
+}
+
 function build() {
   const area = document.getElementById('pool-area');
   if (!area) return;
@@ -499,10 +660,13 @@ function build() {
   msgEl = document.createElement('div'); msgEl.className = 'p8-status'; area.appendChild(msgEl);
 
   cx = cv.getContext('2d');
-  cv.addEventListener('pointerdown', onDown);
+  cv.addEventListener('pointerdown', onDown, { passive: false });
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  window.addEventListener('resize', updateRotation);
+  window.addEventListener('orientationchange', updateRotation);
   _built = true;
+  updateRotation();
 }
 
 function openPool(show = true) {
@@ -512,6 +676,7 @@ function openPool(show = true) {
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('pool'); window.OS.focus('pool'); }
   if (!_built) build();
+  updateRotation();
   if (state === 'start' || state === 'over') showStart();
   updateHud();
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }

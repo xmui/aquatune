@@ -138,6 +138,7 @@ function gameOver() {
   state = 'over';
   if (window.recordScore) window.recordScore('tetris', score, 'Lv' + (level + 1) + ' · ' + lines + ' lines');
   if (window.aqGameXp) window.aqGameXp('speed', { played: true, won: lines >= 10, mult: Math.min(4, 1 + lines * 0.12) });
+  if (lines >= 20 && window.aqGameAnnounce) window.aqGameAnnounce(`cleared ${lines} lines in Tetris (${score.toLocaleString()} pts, Lv ${level + 1}) 🧱`);
   sfx('over');
   showOverlay('Game Over', 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1), 'Play again', startGame);
 }
@@ -178,16 +179,20 @@ function updateInfo() { if (infoEl) infoEl.innerHTML = `<div class="tt-stat"><sp
 // Bulletproof gravity: compare against the absolute rAF timestamp so a piece always
 // falls on its own (no fragile per-frame delta accumulation).
 function tick(t) {
-  if (!lastGravity) lastGravity = t;
-  if (state === 'play' && cur) {
-    if (t - lastGravity >= dropMs) {
-      lastGravity = t;
-      if (!collides(cur.m, cur.x, cur.y + 1)) cur.y++;
-      else lockPiece();
-    }
-  }
-  draw();
+  // Always re-queue FIRST so a throw inside gravity/draw can never kill the loop
+  // (a dead loop is exactly what makes the piece freeze at the top and ignore input).
   raf = requestAnimationFrame(tick);
+  try {
+    if (!lastGravity) lastGravity = t;
+    if (state === 'play' && cur) {
+      if (t - lastGravity >= dropMs) {
+        lastGravity = t;
+        if (!collides(cur.m, cur.x, cur.y + 1)) cur.y++;
+        else lockPiece();
+      }
+    }
+    draw();
+  } catch (e) { try { console && console.warn && console.warn('tetris tick', e); } catch (_) {} }
 }
 
 function showOverlay(title, sub, btn, fn) {
@@ -227,7 +232,7 @@ function build() {
 
   // On-screen controls — CSS hides these on desktop (mouse there); shown on mobile.
   const pad = document.createElement('div'); pad.className = 'tt-pad';
-  const mk = (label, fn) => { const b = document.createElement('button'); b.className = 'tt-key'; b.textContent = label; b.addEventListener('pointerdown', e => { e.preventDefault(); fn(); }); return b; };
+  const mk = (label, fn) => { const b = document.createElement('button'); b.className = 'tt-key'; b.textContent = label; b.addEventListener('pointerdown', e => { e.preventDefault(); fn(); draw(); }); return b; };
   pad.appendChild(mk('◀', () => move(-1)));
   pad.appendChild(mk('⟳', rotate));
   pad.appendChild(mk('▶', () => move(1)));
@@ -239,19 +244,22 @@ function build() {
   nextCx = nextCv.getContext('2d'); nextCx.imageSmoothingEnabled = false;
 
   // Mouse controls: hover slides the piece, left-click drops, right-click/scroll rotates.
+  // Each handler repaints immediately so input is responsive even if the rAF loop hiccups.
   cv.addEventListener('mousemove', (e) => {
     if (state !== 'play' || !cur) return;
     const rect = cv.getBoundingClientRect();
     const col = Math.floor(((e.clientX - rect.left) / rect.width) * COLS);
     moveToColumn(Math.max(0, Math.min(COLS - 1, col)));
+    draw();
   });
   cv.addEventListener('mousedown', (e) => {
     if (state !== 'play' || !cur) return;
     if (e.button === 2) { e.preventDefault(); rotate(); }   // right-click rotates
     else if (e.button === 0) hardDrop();                    // left-click drops
+    draw();
   });
   cv.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-  cv.addEventListener('wheel', (e) => { if (state === 'play' && cur) { e.preventDefault(); rotate(); } }, { passive: false });
+  cv.addEventListener('wheel', (e) => { if (state === 'play' && cur) { e.preventDefault(); rotate(); draw(); } }, { passive: false });
 
   // Keyboard (secondary): only while Tetris is the focused window and not typing.
   const tetrisHasKeys = () => {
@@ -271,7 +279,7 @@ function build() {
     else if (e.key === 'ArrowDown') softDrop();
     else if (e.key === ' ' || e.key === 'Spacebar') hardDrop();
     else used = false;
-    if (used) e.preventDefault();
+    if (used) { e.preventDefault(); draw(); }
   };
   document.addEventListener('keydown', _keyHandler);
   _built = true;

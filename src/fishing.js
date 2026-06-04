@@ -138,6 +138,78 @@ function pickStyle(rarity) {
 function lvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('fishing')) || 1; }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function sfx(n) { try { if (typeof window !== 'undefined' && window.fishingSfx) window.fishingSfx(n); } catch (e) {} }
+
+// ── Bitcrushed "fish on the line" wave loop ──────────────────────────────────
+// A lo-fi ocean wash that plays ONLY while a fish is hooked (bite + struggle),
+// then stops on every exit path. Reuses the shared AudioContext (window.actx)
+// if one is already running, else lazily makes its own on first gesture.
+let _hookAC = null;        // our own AudioContext (only if no shared one exists)
+let _hookWave = null;      // { src, gain, lfo, lfoG } while playing
+function hookAudioCtx() {
+  // Prefer the app's shared context so we don't fight the autoplay policy.
+  if (typeof window !== 'undefined' && window.actx) return window.actx;
+  try {
+    if (!_hookAC) _hookAC = new (window.AudioContext || window.webkitAudioContext)();
+    if (_hookAC.state === 'suspended') _hookAC.resume();
+    return _hookAC;
+  } catch (e) { return null; }
+}
+// Respect the game volume control (a module-local in index.html, mirrored to localStorage).
+function gameVol() {
+  let v = 1;
+  try { v = parseFloat(localStorage.getItem('aq_game_vol') ?? '1'); } catch (e) {}
+  return isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+}
+// Quantize a noise buffer to a few levels in-place for a bitcrushed (lo-fi) timbre.
+function _crushedNoise(ac, levels = 6) {
+  const len = Math.floor(ac.sampleRate * 1.7);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0), step = 2 / levels;
+  for (let i = 0; i < len; i++) {
+    const x = Math.random() * 2 - 1;
+    d[i] = Math.round(x / step) * step;   // crush to `levels` discrete steps
+  }
+  return buf;
+}
+function startHookWave(intensity = 0) {
+  const V = gameVol();
+  if (V <= 0 || _hookWave) return;        // muted, or already running
+  const ac = hookAudioCtx();
+  if (!ac) return;
+  try {
+    const t = ac.currentTime;
+    const src = ac.createBufferSource(); src.buffer = _crushedNoise(ac); src.loop = true;
+    // lowpass = ocean wash; rarer fish churn a touch brighter/harder
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.value = 480 + intensity * 90; lp.Q.value = 0.7;
+    const g = ac.createGain(); g.gain.value = 0.0001;
+    // slow swell LFO on the gain to mimic wave sets
+    const lfo = ac.createOscillator(); lfo.type = 'sine';
+    lfo.frequency.value = 0.45 + intensity * 0.05;
+    const lfoG = ac.createGain(); lfoG.gain.value = 0.018 * V;
+    lfo.connect(lfoG); lfoG.connect(g.gain);
+    src.connect(lp); lp.connect(g); g.connect(ac.destination);
+    const bed = (0.045 + Math.min(0.025, intensity * 0.005)) * V;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(bed, t + 0.5);
+    src.start(t); lfo.start(t);
+    _hookWave = { ac, src, gain: g, lfo, lfoG };
+  } catch (e) {}
+}
+function stopHookWave() {
+  if (!_hookWave) return;
+  const w = _hookWave; _hookWave = null;
+  try {
+    const ac = w.ac, t = ac.currentTime;
+    w.gain.gain.cancelScheduledValues(t);
+    w.gain.gain.setValueAtTime(Math.max(0.0002, w.gain.gain.value || 0.02), t);
+    w.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    w.src.stop(t + 0.3); w.lfo.stop(t + 0.3);
+    setTimeout(() => { try { w.lfoG.disconnect(); } catch (e) {} }, 400);
+  } catch (e) {
+    try { w.src.stop(); w.lfo.stop(); } catch (e2) {}
+  }
+}
 function rodTier() { return Math.max(0, Math.min(RODS.length - 1, parseInt(localStorage.getItem('aq_fishing_rod') || '0', 10) || 0)); }
 function maxZone() { let m = 0; for (let i = 0; i < ZONES.length; i++) if (lvl() >= ZONES[i].lvl) m = i; return m; }
 
@@ -160,6 +232,7 @@ function pickFish() {
 // ── State transitions ───────────────────────────────────────────────────────
 function startCast() {
   state = 'casting';
+  stopHookWave();   // defensive: nothing should be on the line yet
   msg = 'Casting…';
   fish = null; S = null;
   if (_castCount++ % CONDITION_EVERY === 0) rollCondition();
@@ -193,6 +266,8 @@ function enterBite(now) {
   biteWindowEnd = now + Math.max(260, win);
   msg = monster ? '🐋 MONSTER! REEL!' : '! DING — REEL NOW !';
   sfx(monster ? 'monster' : 'ding');
+  // Fish is now on the line → start the bitcrushed wave loop.
+  startHookWave(fish ? fish.rarity : 0);
 }
 
 function enterStruggle(now) {
@@ -203,13 +278,19 @@ function enterStruggle(now) {
   const jv = 0.8 + Math.random() * 0.45;   // marker speed
   const jz = 0.8 + Math.random() * 0.4;    // zone width
   let need = Math.max(2, Math.min(4, 2 + r + (Math.random() < 0.35 ? 1 : 0) - (Math.random() < 0.25 ? 1 : 0)));
-  let markerV = (1.5 + r * 0.55) * c.speedMult * jv;
-  let zoneW = Math.max(9, (30 - r * 4) * c.zoneMult * jz);
+  // Marker speed scales gentler with rarity than before (was 1.5 + r*0.55) so
+  // the hardest fish stay challenging but actually trackable frame-to-frame.
+  let markerV = (1.5 + r * 0.42) * c.speedMult * jv;
+  let zoneW = Math.max(11, (30 - r * 3.4) * c.zoneMult * jz);   // slightly wider green for rare fish
   let totalMs = Math.max(2600, (STRUGGLE_MS_BASE - r * STRUGGLE_MS_PER) * (0.85 + Math.random() * 0.4));
-  let maxMiss = r >= 3 ? 0 : 1;
+  let maxMiss = r >= 4 ? 0 : 1;        // only the very rarest are sudden-death
   let style = monster ? 'monster' : pickStyle(r);
-  if (monster) { markerV *= 1.45; zoneW = Math.max(10, zoneW * 0.85); need = Math.min(6, need + 2); totalMs *= 1.5; maxMiss = 0; }
-  markerV = Math.min(6.2, markerV);   // keep the marker from skipping past the zone between frames
+  // Monsters: still the toughest fight, but landable. Was a brutal 1.45× speed +
+  // shrinking 0.85 zone + sudden-death; now a milder speed bump, kept zone, and
+  // one allowed miss with more time.
+  if (monster) { markerV *= 1.15; zoneW = Math.max(13, zoneW * 0.95); need = Math.min(5, need + 1); totalMs *= 1.6; maxMiss = 1; }
+  // Cap so the marker can't skip past the zone between frames (lowered 6.2→5.2).
+  markerV = Math.min(5.2, markerV);
   S = {
     need, hits: 0, misses: 0, maxMiss, style, monster,
     markerX: 0, markerV, dir: 1,
@@ -227,13 +308,38 @@ function landFish(now) {
   const f = fish, perfect = S && S.misses === 0;
   const value = Math.round(f.value * (perfect ? 1.25 : 1));
   state = 'caught';
+  stopHookWave();
   msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + `+${value}💰` + (perfect ? ' ✨perfect' : '');
   sfx('wave-stop');
   if (typeof window.playFanfare === 'function') window.playFanfare(f.monster ? 'jackpot' : 'small');
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
-  // XP comes ONLY from landing a fish (never from playing/missing).
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (1.1 + f.rarity * 0.6) * (perfect ? 1.25 : 1) });
+  // XP comes ONLY from landing a fish (never from playing/missing). Moderate
+  // boost over the old (1.1 + rarity*0.6) curve: a bigger base plus steeper —
+  // but CAPPED — rarity scaling so monsters reward proportionally more than
+  // tiddlers without making the grind trivial. (Common ≈ 13 XP, monster ≈ 50.)
+  if (typeof window.aqGameXp === 'function') {
+    const rarityMult = Math.min(6.0, 1.6 + f.rarity * 0.85);   // cap the score-scaled mult
+    window.aqGameXp('fishing', { played: false, won: true, mult: rarityMult * (perfect ? 1.25 : 1) });
+  }
+  // ── Rare money catch: occasionally you reel up something valuable ──────────
+  // Chance rises a little with rarity; monsters always cough up loot. Amount
+  // scales modestly with rarity so it's a fun bonus, not game-breaking.
+  const moneyChance = f.monster ? 1 : Math.min(0.09, 0.035 + f.rarity * 0.012);
+  if (Math.random() < moneyChance) {
+    const base = 25 + f.rarity * 22 + (f.monster ? 220 : 0);
+    const bonus = Math.round(base * (0.7 + Math.random() * 0.8));   // ±variance
+    if (typeof window.aqAddCredits === 'function') window.aqAddCredits(bonus);
+    const lootMsg = f.monster
+      ? `💰 The ${f.name} swallowed a treasure chest! +${bonus} credits`
+      : `💰 You reeled up a waterlogged wallet! +${bonus} credits`;
+    if (typeof window.toast === 'function') window.toast(lootMsg);
+    msg += ` 💰+${bonus}`;
+  }
   if (typeof window.recordScore === 'function') window.recordScore('fishing', value, f.name);
+  // Shout monster / very-rare landings to the global lobby chat.
+  if ((f.monster || f.rarity >= 4) && typeof window.aqGameAnnounce === 'function') {
+    window.aqGameAnnounce(f.monster ? `landed the LEVIATHAN 🐋 (+${value}💰)!` : `reeled in a rare ${f.name} 🎣 (+${value}💰)`);
+  }
   lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster };
   recordCaught(f.name);
   if (dexOpen) renderDex();
@@ -248,6 +354,7 @@ function landFish(now) {
 
 function missFish(reason) {
   state = 'miss';
+  stopHookWave();
   msg = reason || 'It got away…';
   sfx('fail'); sfx('wave-stop');
   // no XP for misses — only catches count
@@ -256,6 +363,7 @@ function missFish(reason) {
 
 function scareFish() {
   state = 'scared';
+  stopHookWave();
   msg = 'You scared it off! Patience…';
   sfx('fail'); sfx('wave-stop');
   fish = null; S = null; nibbles = [];
@@ -268,7 +376,7 @@ function tapStruggle() {
     S.hits++; sfx('tick');
     if (S.hits >= S.need) { landFish(performance.now()); return; }
     rerollZone();
-    S.markerV = Math.min(6.5, S.markerV * 1.12);   // speed up each hit (capped)
+    S.markerV = Math.min(5.6, S.markerV * 1.10);   // speed up each hit (capped)
   } else {
     S.misses++; sfx('buzz');
     if (S.misses > S.maxMiss) { missFish('Line snapped!'); return; }
@@ -307,8 +415,10 @@ function tick(t) {
     const style = S.style, elapsed = now - S.t0;
     let v = S.markerV;
     if (style === 'darter' || style === 'monster') {            // jittery: flicker speed, random flips
-      if (Math.random() < 0.05 * f) S.dir *= (Math.random() < 0.35 ? -1 : 1);
-      v *= 0.65 + Math.random() * 0.95;
+      // Softer than before (was 0.65 + rand*0.95 with 35% double-flips): the
+      // marker still wavers but stays trackable instead of teleporting.
+      if (Math.random() < 0.035 * f) S.dir *= (Math.random() < 0.25 ? -1 : 1);
+      v *= 0.7 + Math.random() * 0.6;
     }
     if (style === 'lunger') v *= 0.6 + Math.max(0, Math.sin(elapsed / 300)) * 1.7;  // speed bursts
     S.markerX += v * S.dir * f;
@@ -321,7 +431,9 @@ function tick(t) {
       if (S.zoneX >= maxX) { S.zoneX = maxX; S.zoneVX = -Math.abs(S.zoneVX); }
     }
     if (style === 'thrasher' || style === 'monster') {          // shrinking green zone
-      S.zoneW = Math.max(9, S.zoneW0 * (1 - Math.min(0.55, elapsed / S.totalMs)));
+      // Shrink less aggressively (cap 0.55→0.40, floor 9→12) so the target
+      // never collapses to an untappable sliver near the end of the fight.
+      S.zoneW = Math.max(12, S.zoneW0 * (1 - Math.min(0.40, elapsed / S.totalMs)));
       if (S.zoneX > 100 - S.zoneW) S.zoneX = Math.max(0, 100 - S.zoneW);
     }
     if (now > S.endAt) missFish('It wore you out…');
@@ -445,6 +557,7 @@ function renderZones() {
     b.addEventListener('click', () => {
       if (!unlocked || i === curZone) return;
       curZone = i; try { localStorage.setItem('aq_fishing_zone', String(i)); window.aqGamePersist && window.aqGamePersist('aq_fishing_zone'); } catch (e) {}
+      stopHookWave();
       state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
       renderZones(); refreshInfo();
     });
@@ -528,8 +641,8 @@ function build() {
 
   cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   const down = (e) => { e.preventDefault(); press(); };
-  cv.addEventListener('pointerdown', down);
-  btn.addEventListener('pointerdown', down);
+  cv.addEventListener('pointerdown', down, { passive: false });
+  btn.addEventListener('pointerdown', down, { passive: false });
   dexBtn.addEventListener('click', () => {
     dexOpen = !dexOpen;
     dexEl.style.display = dexOpen ? 'block' : 'none';
@@ -560,6 +673,7 @@ function openFishing(show = true) {
     w.classList.remove('open'); w.style.display = 'none';
     if (raf) { cancelAnimationFrame(raf); raf = null; }
     clearInterval(window._fishInfoT);
+    stopHookWave();
     sfx('wave-stop');
     return;
   }
@@ -568,6 +682,7 @@ function openFishing(show = true) {
   if (!_built) build();
   curZone = Math.min(maxZone(), parseInt(localStorage.getItem('aq_fishing_zone') || '0', 10) || 0);
   dexOpen = false; if (dexEl) dexEl.style.display = 'none';
+  stopHookWave();
   state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
   rollCondition(); _castCount = 0;
   refreshInfo();

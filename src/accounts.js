@@ -411,14 +411,17 @@ async function aqAdminSetSkill(username, skillId, level) {
   const idSnap = await get(userIdxRef(lo));
   if (!idSnap.exists()) return { ok: false, error: 'No such username.' };
   const accountId = idSnap.val();
+  const ts = Date.now();
   try {
+    // Raise is handled by the max-merge of the xp node; the override node makes the
+    // set authoritative so a LOWER level also sticks (applied once on the target's load).
     await update(ref(db, 'user-skills/' + accountId + '/xp'), { [skillId]: xp });
-    await update(ref(db, 'user-skills/' + accountId), { updatedAt: Date.now() });
+    await update(ref(db, 'user-skills/' + accountId), { updatedAt: ts });
+    await set(ref(db, 'user-skill-overrides/' + accountId + '/' + skillId), { xp, ts });
   } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
-  // If the admin edited their OWN account, apply it to the live session immediately
-  // (so it shows without a reload, and can lower a skill — remote merges by max).
+  // If the admin edited their OWN account, apply it to the live session immediately.
   if (accountId === window._aqAccountId && typeof window.aqForceOwnSkill === 'function') {
-    window.aqForceOwnSkill(skillId, level);
+    window.aqForceOwnSkill(skillId, level, ts);
   }
   return { ok: true, level, xp };
 }

@@ -67,6 +67,25 @@ function levelProgress(xp) {
 // ---------------------------------------------------------------------------
 function userId() { return (typeof window.effectiveUserId === 'function' && window.effectiveUserId()) || window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
 function skillsRef() { return ref(db, `user-skills/${userId()}`); }
+// Admin level-sets land here (separate from the user-skills node, which _saveRemote
+// fully overwrites). Each is { xp, ts }; the client applies it once, authoritatively
+// (so an admin can LOWER a level, not just raise it), keyed by a per-skill ts marker.
+function overridesRef() { return ref(db, `user-skill-overrides/${userId()}`); }
+function _applyOverrides(overrides) {
+  let changed = false;
+  for (const s of SKILLS) {
+    const ov = overrides && overrides[s.id];
+    if (!ov || typeof ov.xp !== 'number' || !ov.ts) continue;
+    const key = 'aq_skill_ovr_' + s.id;
+    const lastTs = +(localStorage.getItem(key) || 0);
+    if (ov.ts > lastTs) {
+      _xp[s.id] = Math.max(0, ov.xp | 0);   // authoritative — overrides the max-merge
+      try { localStorage.setItem(key, String(ov.ts)); } catch {}
+      changed = true;
+    }
+  }
+  return changed;
+}
 // You must be logged into an account to earn XP / have skills (and to appear on
 // the leaderboard). Anonymous play still works — it just doesn't accrue skills.
 function hasAccount() { return typeof window !== 'undefined' && !!window._aqAccountId; }
@@ -116,6 +135,11 @@ async function loadSkills() {
     } else {
       _saveRemote();
     }
+    // Authoritative admin level-sets (applied once, can raise OR lower).
+    try {
+      const ovSnap = await get(overridesRef());
+      if (ovSnap.exists() && _applyOverrides(ovSnap.val() || {})) { _writeLocal(); _saveRemote(); }
+    } catch {}
   } catch {}
   applyResets();
   _loaded = true;
@@ -412,10 +436,13 @@ if (typeof window !== 'undefined') {
   window.aqSkillList = SKILLS.map(s => ({ id: s.id, name: s.name, icon: s.icon }));   // for admin dropdowns
   // Admin: force-set one of the CURRENT user's skills to a level (used when an admin
   // edits their own account so the change shows live, including lowering a skill).
-  window.aqForceOwnSkill = (skillId, level) => {
+  window.aqForceOwnSkill = (skillId, level, ts) => {
     if (!SKILL_BY_ID[skillId]) return false;
     level = Math.max(1, Math.min(MAX_LEVEL, Math.round(Number(level)) || 1));
     _xp[skillId] = xpForLevel(level);
+    // Record the override marker so this same set isn't re-applied on our next load
+    // (which would otherwise clobber XP earned afterwards).
+    if (ts) { try { localStorage.setItem('aq_skill_ovr_' + skillId, String(ts)); } catch {} }
     _writeLocal();
     _saveRemote();
     if (_open) renderSkillsPanel();

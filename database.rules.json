@@ -7,6 +7,9 @@
     "messages":   { ".read": true, ".write": true },
     "globalChat": { ".read": true, ".write": true },
     "leaderboard":{ ".read": true, ".write": true },
+    "user-skills": { ".read": true, ".write": true },
+    "user-skill-overrides": { ".read": true, ".write": true },
+    "user-games": { ".read": true, ".write": true },
 
     "accounts": {
       ".read": true,

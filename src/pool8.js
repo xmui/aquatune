@@ -29,7 +29,7 @@ let balls = [], state = 'start';        // start | aim | shoot | place | ai | ov
 let aiming = null, placing = false;
 let turn = 'you', groups = { you: null, ai: null }, open = true, broke = false;
 let pottedThisShot = [], firstHit = null, cueStruck = false;
-let msgEl = null, hudEl = null, overlayEl = null, _aiTimer = null;
+let msgEl = null, hudEl = null, traysEl = null, overlayEl = null, _aiTimer = null;
 
 function sfx(n) { try { window.poolSfx && window.poolSfx(n); } catch (e) {} }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
@@ -63,7 +63,10 @@ function liveOf(group) { return balls.filter(b => !b.potted && groupOf(b.n) === 
 // ── physics ────────────────────────────────────────────────────────────────
 function anyMoving() { return balls.some(b => !b.potted && (b.vx * b.vx + b.vy * b.vy) > STOP * STOP); }
 function step(dt) {
-  const SUB = 4, sdt = dt / SUB;
+  // Substep count scales with the fastest ball so a hard break never tunnels a
+  // ball straight through another (continuous-ish collision on a cheap budget).
+  let vmax = 0; for (const b of balls) { if (!b.potted) { const v = Math.hypot(b.vx, b.vy); if (v > vmax) vmax = v; } }
+  const SUB = Math.max(4, Math.min(16, Math.ceil(vmax * dt / (R * 0.6)))), sdt = dt / SUB;
   for (let s = 0; s < SUB; s++) {
     for (const b of balls) {
       if (b.potted) continue;
@@ -108,6 +111,7 @@ let _cushAt = 0;
 function cushion(b) { const now = performance.now(); if (now - _cushAt > 40) { _cushAt = now; sfx('wall'); } }
 function potBall(b) {
   b.potted = true; b.vx = b.vy = 0; pottedThisShot.push(b.n); sfx('pocket');
+  updateHud();   // refresh the sunk-balls trays the moment a ball drops
 }
 
 // ── shooting + turn flow ─────────────────────────────────────────────────────
@@ -121,33 +125,43 @@ function resolveShot() {
   const cue = cueBall();
   const scratch = cue.potted;
   const shooter = turn;
+  const opp = shooter === 'you' ? 'ai' : 'you';
   const potted = pottedThisShot.slice();
   const eight = potted.includes(8);
+
+  // Open table: the first legally pocketed solid/stripe assigns the groups.
+  const nonCue = potted.filter(n => n !== 0 && n !== 8);
+  if (!scratch && open && nonCue.length && !eight) {
+    const g = groupOf(nonCue[0]);
+    groups[shooter] = g; groups[opp] = g === 'solid' ? 'stripe' : 'solid';
+    open = false;
+  }
   const myGroup = groups[shooter];
 
-  // 8-ball outcomes first
+  // 8-ball outcomes: you only win by sinking the 8 cleanly AFTER clearing your
+  // group (and not scratching). Anything else loses.
   if (eight) {
-    const clearedGroup = myGroup && liveOf(myGroup).length === 0;
-    // (live count already reflects this shot's pots)
-    if (!myGroup || !clearedGroup || scratch) endGame(shooter === 'you' ? 'ai' : 'you', scratch ? 'Scratch on the 8 — you lose!' : 'Sank the 8 too early!');
-    else endGame(shooter, 'You sank the 8 — you win!');
+    const clearedGroup = myGroup && liveOf(myGroup).length === 0;   // post-shot state
+    if (myGroup && clearedGroup && !scratch) endGame(shooter, 'You sank the 8 — you win!');
+    else endGame(opp, scratch ? 'Scratch on the 8 — you lose!' : 'Sank the 8 too early!');
     return;
   }
-  // open table: assign groups on first legal pot
-  let legalOwn = false;
-  if (scratch) { /* foul */ }
-  else {
-    const nonCue = potted.filter(n => n !== 0 && n !== 8);
-    if (open && nonCue.length) {
-      const g = groupOf(nonCue[0]);
-      groups[shooter] = g; groups[shooter === 'you' ? 'ai' : 'you'] = g === 'solid' ? 'stripe' : 'solid';
-      open = false;
-    }
-    if (groups[shooter]) legalOwn = potted.some(n => groupOf(n) === groups[shooter]);
-  }
 
-  if (scratch) { respotCue(); switchTurn(true); }
-  else if (legalOwn) { keepTurn(); }
+  // Fouls (ball-in-hand to the opponent): scratch, no contact, or hitting the
+  // wrong ball first (opponent's group / the 8 before you're on it).
+  let foul = false, reason = '';
+  if (scratch) { foul = true; reason = 'Scratch! Ball in hand.'; }
+  else if (firstHit == null) { foul = true; reason = 'No ball hit — ball in hand.'; }
+  else if (!open && myGroup) {
+    const onEight = liveOf(myGroup).length === 0;
+    const legalFirst = onEight ? (firstHit === 8) : (groupOf(firstHit) === myGroup);
+    if (!legalFirst) { foul = true; reason = (firstHit === 8 ? 'Hit the 8 too early' : 'Hit the wrong group') + ' — ball in hand.'; }
+  } else if (open && firstHit === 8) { foul = true; reason = 'Hit the 8 first — ball in hand.'; }
+
+  const legalOwn = !foul && myGroup && potted.some(n => groupOf(n) === myGroup);
+
+  if (foul) { if (scratch) respotCue(); switchTurn(true, reason); }
+  else if (legalOwn) keepTurn();
   else switchTurn(false);
 }
 function respotCue() {
@@ -162,12 +176,12 @@ function keepTurn() {
   updateHud();
   setMsg(turn === 'you' ? 'Nice — go again.' : 'Opponent pots and continues…');
 }
-function switchTurn(foul) {
+function switchTurn(foul, reason) {
   broke = true;
   turn = turn === 'you' ? 'ai' : 'you';
   updateHud();
-  if (turn === 'ai') { state = 'ai'; scheduleAi(); }
-  else { state = foul ? 'place' : 'aim'; placing = foul; setMsg(foul ? 'Ball in hand — drag the cue ball to place it.' : 'Your shot.'); }
+  if (turn === 'ai') { state = 'ai'; scheduleAi(); setMsg(reason ? (reason.replace('Ball in hand', 'Opponent gets ball in hand')) : 'Opponent shooting…'); }
+  else { state = foul ? 'place' : 'aim'; placing = foul; setMsg(foul ? (reason || 'Ball in hand') + ' Drag the cue ball to place it.' : 'Your shot.'); }
 }
 function endGame(winner, text) {
   state = 'over';
@@ -303,10 +317,32 @@ function draw() {
 
 // ── UI scaffolding ───────────────────────────────────────────────────────────
 function setMsg(t) { if (msgEl) msgEl.textContent = t; }
+function isPotted(n) { const b = balls.find(x => x.n === n); return !!(b && b.potted); }
+function chip(n) {
+  const stripe = n > 8;
+  const bg = isPotted(n)
+    ? (stripe ? `#fff` : tintFor(n))
+    : 'transparent';
+  const fg = isPotted(n) ? (stripe ? '#111' : '#fff') : 'rgba(255,255,255,0.35)';
+  const ring = isPotted(n) ? tintFor(n) : 'rgba(255,255,255,0.25)';
+  const inner = stripe && isPotted(n) ? `<i style="background:${tintFor(n)}"></i>` : '';
+  return `<span class="p8-chip${isPotted(n) ? ' sunk' : ''}" style="background:${bg};color:${fg};border-color:${ring}">${inner}<b>${n}</b></span>`;
+}
+function tray(group, nums) {
+  const owner = groups.you === group ? 'You' : groups.ai === group ? 'Opp' : '';
+  const made = nums.filter(isPotted).length;
+  const lab = (group === 'solid' ? 'Solids' : 'Stripes') + (owner ? ` · ${owner}` : '');
+  return `<div class="p8-tray${owner === 'You' ? ' mine' : ''}"><span class="p8-tray-lab">${lab} ${made}/7</span><span class="p8-tray-balls">${nums.map(chip).join('')}</span></div>`;
+}
 function updateHud() {
-  if (!hudEl) return;
-  const g = groups.you ? (groups.you === 'solid' ? 'Solids ●' : 'Stripes ◍') : 'Open table';
-  hudEl.innerHTML = `<span class="p8-turn ${turn === 'you' ? 'on' : ''}">${turn === 'you' ? '🟢 Your turn' : '🔴 Opponent'}</span><span class="p8-grp">${g}</span><span class="aq-credits-display">💰 ${credits()}</span>`;
+  if (hudEl) {
+    const g = groups.you ? (groups.you === 'solid' ? 'Solids ●' : 'Stripes ◍') : 'Open table';
+    hudEl.innerHTML = `<span class="p8-turn ${turn === 'you' ? 'on' : ''}">${turn === 'you' ? '🟢 Your turn' : '🔴 Opponent'}</span><span class="p8-grp">${g}</span><span class="aq-credits-display">💰 ${credits()}</span>`;
+  }
+  if (traysEl) {
+    const eightChip = `<span class="p8-chip p8-eight${isPotted(8) ? ' sunk' : ''}" style="background:${isPotted(8) ? '#1a1a1a' : 'transparent'};color:${isPotted(8) ? '#fff' : 'rgba(255,255,255,0.35)'};border-color:${isPotted(8) ? '#1a1a1a' : 'rgba(255,255,255,0.25)'}"><b>8</b></span>`;
+    traysEl.innerHTML = tray('solid', [1, 2, 3, 4, 5, 6, 7]) + `<span class="p8-trays-mid">${eightChip}</span>` + tray('stripe', [9, 10, 11, 12, 13, 14, 15]);
+  }
 }
 function showOverlay(title, sub, btn, fn) {
   if (!overlayEl) return;
@@ -338,6 +374,7 @@ function build() {
   if (!area) return;
   area.innerHTML = '';
   hudEl = document.createElement('div'); hudEl.className = 'p8-hud'; area.appendChild(hudEl);
+  traysEl = document.createElement('div'); traysEl.className = 'p8-trays'; area.appendChild(traysEl);
   const wrap = document.createElement('div'); wrap.className = 'p8-stage';
   cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'p8-canvas';
   wrap.appendChild(cv);

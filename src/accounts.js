@@ -438,8 +438,11 @@ async function aqAdminSetBan(username, gameId, banned) {
   }
   return { ok: true, banned: !!banned };
 }
+// TEMPORARY: all game bans are lifted for this release. Flip back to false to
+// re-enable enforcement (the per-account bans/<game> records are left untouched).
+const BANS_LIFTED = true;
 // Is the CURRENT user banned from a game? (synchronous; reads the cached account)
-function aqIsBanned(gameId) { return !!(_account && _account.bans && _account.bans[gameId]); }
+function aqIsBanned(gameId) { return !BANS_LIFTED && !!(_account && _account.bans && _account.bans[gameId]); }
 // Games an admin can ban a user from (ids match APPS / OS.open ids).
 const BANNABLE_GAMES = [
   { id: 'mining', name: 'Mining' }, { id: 'fishing', name: 'Fishing' },

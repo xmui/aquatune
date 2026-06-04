@@ -668,7 +668,8 @@ function doBuy(id, qty) {
   h.shares = newShares;
   holdings[id] = h;
   savePortfolio();
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('finance', { played: true, mult: 1 + Math.min(2, cost / 4000) });
+  // No XP for buying — finance XP comes only from realized profit on a sell, so
+  // spamming buy↔sell round-trips (no net gain) can't farm it.
   tradeMsg(`Bought ${qty} @ ${fmt(px)} (−${cost} 🪙).`, true);
   renderAll();
 }
@@ -684,7 +685,12 @@ function doSell(id, qty) {
   const profit = Math.round((px - (h.avgCost || px)) * qty);
   if (h.shares <= 0) delete holdings[id];
   savePortfolio();
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('finance', { played: true, won: profit > 0, mult: 1 + Math.min(2, proceeds / 4000) });
+  // Finance XP is granted ONLY on realized profit, scaled by how much you made (and
+  // capped). A flat or losing sell — including a same-price buy→sell round-trip —
+  // grants nothing, so XP can't be farmed without genuinely trading at a gain.
+  if (profit > 0 && typeof window.aqGameXp === 'function') {
+    window.aqGameXp('finance', { played: false, won: true, mult: Math.min(3, profit / 1500) });
+  }
   tradeMsg(`Sold ${qty} @ ${fmt(px)} (+${proceeds} 🪙).`, true);
   renderAll();
 }

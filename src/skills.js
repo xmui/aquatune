@@ -18,7 +18,7 @@ const SKILLS = [
   { id: 'mining',   name: 'Mining',    icon: '⛏️', blurb: 'Crack the rocks' },
   { id: 'gambling', name: 'Gambling',  icon: '🎲', blurb: 'Slots, Blackjack & Hold’em' },
   { id: 'intellect',name: 'Intellect', icon: '🧠', blurb: 'Picross, Mines & Solitaire' },
-  { id: 'speed',    name: 'Speed',     icon: '⚡', blurb: 'Beat Tap & Pinball' },
+  { id: 'speed',    name: 'Speed',     icon: '⚡', blurb: 'Beat Tap & Tetris' },
   { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Watching & making music' },
   { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Earning & trading' },
   { id: 'combat',   name: 'Combat',    icon: '⚔️', blurb: 'Buddy Shoot' },

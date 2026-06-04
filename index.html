@@ -3850,29 +3850,6 @@ body.perf-mode #aqua-gun { display: none !important; }
       .tt-pad { display:flex; }   /* touch controls only on mobile */
     }
 
-    /* ── SPACE PINBALL (native canvas) ─── */
-    #pinball-wrap {
-      position:fixed; top:48px; left:50%; transform:translateX(-50%);
-      width:340px; max-width:96vw;
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
-      z-index:4300; flex-direction:column; overflow:hidden;
-    }
-    #pinball-wrap.open { display:flex; }
-    #pinball-hud { display:flex; gap:14px; align-items:center; justify-content:center; padding:6px 10px;
-      font-size:12px; color:var(--text); font-weight:700; background:var(--panel); border-bottom:1px solid var(--border); }
-    #pinball-hud button { font-size:12px; padding:2px 12px; cursor:pointer; }
-    #pinball-area { position:relative; display:flex; justify-content:center; align-items:center;
-      background:radial-gradient(circle at 50% 15%,#10204a,#04060f); }
-    #pinball-canvas { display:block; touch-action:none; max-width:100%; height:auto; }
-    #pinball-help { font-size:10px; color:var(--text2); text-align:center; padding:4px 8px;
-      background:var(--panel); border-top:1px solid var(--border); }
-    @media (max-width:768px) {
-      #pinball-wrap { top:0; width:100vw; height:100dvh; transform:translateX(-50%); border-radius:0; z-index:9000; }
-      #pinball-area { flex:1; min-height:0; }
-      #pinball-canvas { max-height:100%; width:auto; }
-    }
-
     /* ── THEATER MODE ──────────────────────────────────────── */
     body.theater-mode #hdr,
     body.theater-mode #board-wrap,
@@ -5577,7 +5554,6 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="blackjack" onclick="OS.open('blackjack')"><span class="agb-icon">&#127183;</span><span class="agb-name">Blackjack</span></button>
       <button class="apps-game-btn" data-app="rhythm" onclick="OS.open('rhythm')"><span class="agb-icon">&#127926;</span><span class="agb-name">Beat Tap</span></button>
       <button class="apps-game-btn" data-app="holdem" onclick="OS.open('holdem')"><span class="agb-icon">&#127183;</span><span class="agb-name">Hold'em</span></button>
-      <button class="apps-game-btn" data-app="pinball" onclick="OS.open('pinball')"><span class="agb-icon">&#128377;&#65039;</span><span class="agb-name">Pinball</span></button>
       <button class="apps-game-btn" data-app="stocks" onclick="OS.open('stocks')"><span class="agb-icon">&#128200;</span><span class="agb-name">Exchange</span></button>
       <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
       <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
@@ -8395,7 +8371,6 @@ const APPS = {
   imgview:   { el:'win-imgview',    name:'Image' },
   photos:    { el:'win-photos',     name:'Photos' },
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
-  pinball:   { el:'pinball-wrap',   name:'Space Pinball', tb:'#pinball-titlebar', openFn:()=>openPinball(), closeFn:()=>openPinball(false), nativeDrag:true },
   stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false) },
   stats:     { el:'stats-wrap',     name:'Stats',      tb:'#stats-titlebar',     openFn:()=>window.openStats?.(),   closeFn:()=>{ window.openStats?.(false); window._aqStatsClosed?.(); } },
   fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
@@ -8730,7 +8705,7 @@ const DOCK_META = {
   settings:{icon:'⚙️',label:'Settings'},
   slots:{icon:'🎰',label:'Slots'}, solitaire:{icon:'♠️',label:'Solitaire'}, picross:{icon:'◼',label:'Picross'},
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
-  holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
+  holdem:{icon:'🂡',label:"Texas Hold'em"},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
   stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'},
@@ -8799,7 +8774,6 @@ const LB_GAMES = {
   blackjack:{ label:'Blackjack',    icon:'🃏', unit:'credits', lower:false },
   rhythm:   { label:'Beat Tap',     icon:'🎶', unit:'pts',     lower:false },
   holdem:   { label:"Texas Hold'em",icon:'🂡', unit:'chips',   lower:false },
-  pinball:  { label:'Space Pinball', icon:'🕹️', unit:'pts',     lower:false },
   fishing:  { label:'Fishing',      icon:'🎣', unit:'value',   lower:false },
   mining:   { label:'Mining',       icon:'⛏️', unit:'ore',     lower:false },
   buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
@@ -12161,7 +12135,6 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('tetris')" title="Tetris">🧱<span>Tetris</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
-  <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
   <button class="mob-tool-btn" onclick="OS.open('photos')" title="Photos">📷<span>Photos</span></button>
   <button class="mob-tool-btn" onclick="OS.open('files')" title="Files">📁<span>Files</span></button>
@@ -13692,219 +13665,6 @@ const RHY_KEYS=['d','f','j','k'];
 const RHY_LANE_COLORS=['#ff5a87','#ffc24a','#4ad6ff','#8c6bff'];
 const RHY_APPROACH=1.9, RHY_LEADIN=2.2, RHY_HITWIN=0.22;
 const RHY_LANE_SOUNDS=[ t=>drumKick(t), t=>drumSnare(t), t=>drumHihat(t), t=>drumClap(t) ];
-/* ============================================================
-   SPACE PINBALL — self-contained canvas physics game.
-   Fully native (no external iframe): rotating flippers with proper
-   segment-circle collision + angular-velocity kick, bumpers, 3 balls,
-   keyboard (Z/← left, M/?/→ right, Space launch) and mobile touch
-   (tap left/right half of the table). Feeds credits + leaderboard.
-   ============================================================ */
-const PB_W = 320, PB_H = 460;
-const PB_LP = { x: 92, y: PB_H - 60 };          // left flipper pivot (left of center)
-const PB_RP = { x: PB_W - 92, y: PB_H - 60 };   // right flipper pivot (right of center)
-const PB_FLEN = 62, PB_FTHICK = 9;              // tips leave a ~22px center drain gap
-const PB_L_REST = 0.42, PB_L_UP = -0.42;        // left flipper angles (rad)
-const PB_R_REST = Math.PI - 0.42, PB_R_UP = Math.PI + 0.42;
-let pbCtx = null, pbRaf = null, pbInited = false;
-let pbBall = null, pbScore = 0, pbBallNum = 1, pbState = 'idle';
-let pbLAng = PB_L_REST, pbRAng = PB_R_REST, pbLPrev = PB_L_REST, pbRPrev = PB_R_REST;
-let pbLHold = false, pbRHold = false;
-let pbBumpers = [], pbWalls = [];
-
-function openPinball(show=true){
-  const w=document.getElementById('pinball-wrap'); if(!w) return;
-  if(show===false){ w.classList.remove('open'); w.style.display='none'; pinballStop(); return; }
-  w.classList.toggle('open');
-  if(w.classList.contains('open')){
-    w.style.display='flex';
-    if(!pbInited){
-      pbInited=true;
-      pbCtx=document.getElementById('pinball-canvas').getContext('2d');
-      pbBindInput();
-    }
-    pinballReset();
-  } else { w.style.display='none'; pinballStop(); }
-}
-function pinballStop(){ if(pbRaf){ cancelAnimationFrame(pbRaf); pbRaf=null; } pbState='idle'; }
-
-function pinballReset(){
-  pbScore=0; pbBallNum=1; pbState='ready';
-  pbBumpers=[
-    {x:90,  y:120, r:22}, {x:230, y:120, r:22}, {x:160, y:78, r:24},
-    {x:62,  y:210, r:15}, {x:258, y:210, r:15},
-  ];
-  // angled funnel walls: outer boundaries that deliver the ball onto each flipper
-  // (the only drain is the center gap between the flipper tips) + plunger-lane divider
-  pbWalls=[
-    {ax:0,        ay:PB_H-160, bx:PB_LP.x,  by:PB_H-40},    // left funnel → left pivot
-    {ax:PB_W,     ay:PB_H-160, bx:PB_RP.x,  by:PB_H-40},    // right funnel → right pivot
-    {ax:PB_W-30,  ay:PB_H-30,  bx:PB_W-30,  by:PB_H-150},   // plunger lane wall
-  ];
-  pbLAng=pbLPrev=PB_L_REST; pbRAng=pbRPrev=PB_R_REST;
-  const sc=document.getElementById('pb-score'); if(sc) sc.textContent='0';
-  const bn=document.getElementById('pb-ball'); if(bn) bn.textContent='1';
-  const lb=document.getElementById('pb-launch-btn'); if(lb){ lb.style.display=''; lb.textContent='Launch'; lb.onclick=pinballLaunch; }
-  _pbPlaceBall(); pbDraw();
-  if(!pbRaf) pbLoop();   // run the loop so flippers animate even before launch
-}
-function _pbPlaceBall(){ pbBall={x:PB_W-15, y:PB_H-60, vx:0, vy:0, r:8, launched:false}; }
-
-function pinballLaunch(){
-  if(!pbBall || pbBall.launched || pbState==='over') return;
-  pbBall.launched=true; pbBall.vx=-1.5-Math.random()*1.2; pbBall.vy=-15.5; pbState='play';
-  const lb=document.getElementById('pb-launch-btn'); if(lb) lb.style.display='none';
-  try{ playTone && playTone(180,0.08,'sawtooth',0.18); }catch(_){}
-  if(!pbRaf) pbLoop();
-}
-
-function pbBindInput(){
-  document.addEventListener('keydown',e=>{
-    const w=document.getElementById('pinball-wrap'); if(!w||!w.classList.contains('open')) return;
-    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z'){ pbLHold=true; e.preventDefault(); }
-    else if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'||e.key==='/'){ pbRHold=true; e.preventDefault(); }
-    else if(e.key===' '||e.key==='ArrowUp'){ pinballLaunch(); e.preventDefault(); }
-  });
-  document.addEventListener('keyup',e=>{
-    if(e.key==='ArrowLeft'||e.key==='z'||e.key==='Z') pbLHold=false;
-    else if(e.key==='ArrowRight'||e.key==='m'||e.key==='M'||e.key==='/') pbRHold=false;
-  });
-  // Touch / pointer: tap left or right half of the table to fire that flipper
-  const cv=document.getElementById('pinball-canvas');
-  const side=(clientX)=>{ const r=cv.getBoundingClientRect(); return (clientX-r.left) < r.width/2 ? 'L' : 'R'; };
-  const press=(s,on)=>{ if(s==='L') pbLHold=on; else pbRHold=on; };
-  cv.addEventListener('pointerdown',e=>{ e.preventDefault(); press(side(e.clientX),true); if(pbBall&&!pbBall.launched) pinballLaunch(); });
-  cv.addEventListener('pointerup',  e=>{ e.preventDefault(); press(side(e.clientX),false); });
-  cv.addEventListener('pointercancel',()=>{ pbLHold=false; pbRHold=false; });
-  cv.addEventListener('pointerleave',()=>{ pbLHold=false; pbRHold=false; });
-}
-
-function pbLoop(){ pbStep(); pbDraw(); pbRaf=requestAnimationFrame(pbLoop); }
-
-function _pbStepFlipper(ang, target){
-  const SPD=0.5; // rad/frame
-  if(ang < target) ang=Math.min(target, ang+SPD);
-  else if(ang > target) ang=Math.max(target, ang-SPD);
-  return ang;
-}
-function _pbSegHit(piv, ang, len, thick, omega){
-  if(!pbBall) return;
-  const bx=piv.x+len*Math.cos(ang), by=piv.y+len*Math.sin(ang);
-  const abx=bx-piv.x, aby=by-piv.y, abLen2=abx*abx+aby*aby;
-  const t=Math.max(0,Math.min(1, ((pbBall.x-piv.x)*abx+(pbBall.y-piv.y)*aby)/abLen2));
-  const cx=piv.x+t*abx, cy=piv.y+t*aby;
-  let dx=pbBall.x-cx, dy=pbBall.y-cy, d=Math.hypot(dx,dy)||0.0001;
-  const minD=pbBall.r+thick;
-  if(d<minD){
-    const nx=dx/d, ny=dy/d;
-    pbBall.x=cx+nx*minD; pbBall.y=cy+ny*minD;
-    const dot=pbBall.vx*nx+pbBall.vy*ny;
-    if(dot<0){ pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=0.92; pbBall.vy*=0.92; }
-    // angular-velocity kick: ball sitting on a swinging flipper gets flung along the normal
-    if(omega){ const kick=Math.abs(omega)*(t*len)*0.5; pbBall.vx+=nx*kick; pbBall.vy+=ny*kick; }
-  }
-}
-function _pbWallHit(seg){
-  if(!pbBall) return;
-  const abx=seg.bx-seg.ax, aby=seg.by-seg.ay, abLen2=abx*abx+aby*aby;
-  const t=Math.max(0,Math.min(1, ((pbBall.x-seg.ax)*abx+(pbBall.y-seg.ay)*aby)/abLen2));
-  const cx=seg.ax+t*abx, cy=seg.ay+t*aby;
-  let dx=pbBall.x-cx, dy=pbBall.y-cy, d=Math.hypot(dx,dy)||0.0001;
-  const minD=pbBall.r+3;
-  if(d<minD){
-    const nx=dx/d, ny=dy/d;
-    pbBall.x=cx+nx*minD; pbBall.y=cy+ny*minD;
-    const dot=pbBall.vx*nx+pbBall.vy*ny;
-    if(dot<0){ pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=0.85; pbBall.vy*=0.85; }
-  }
-}
-function pbStep(){
-  // animate flippers regardless of ball state
-  pbLPrev=pbLAng; pbRPrev=pbRAng;
-  pbLAng=_pbStepFlipper(pbLAng, pbLHold?PB_L_UP:PB_L_REST);
-  pbRAng=_pbStepFlipper(pbRAng, pbRHold?PB_R_UP:PB_R_REST);
-  if(!pbBall||!pbBall.launched) return;
-
-  // integrate in substeps to avoid tunneling at high speed
-  const SUB=3;
-  for(let s=0;s<SUB;s++){
-    pbBall.vy+=0.16/SUB;             // gravity (per substep)
-    pbBall.x+=pbBall.vx/SUB; pbBall.y+=pbBall.vy/SUB;
-    // outer walls
-    if(pbBall.x<pbBall.r){ pbBall.x=pbBall.r; pbBall.vx*=-0.7; }
-    if(pbBall.x>PB_W-pbBall.r){ pbBall.x=PB_W-pbBall.r; pbBall.vx*=-0.7; }
-    if(pbBall.y<pbBall.r){ pbBall.y=pbBall.r; pbBall.vy*=-0.7; }
-    // static walls (funnels + plunger lane)
-    for(const seg of pbWalls) _pbWallHit(seg);
-    // bumpers
-    for(const b of pbBumpers){
-      const dx=pbBall.x-b.x, dy=pbBall.y-b.y, d=Math.hypot(dx,dy)||0.0001;
-      if(d<b.r+pbBall.r){
-        const nx=dx/d, ny=dy/d;
-        pbBall.x=b.x+nx*(b.r+pbBall.r); pbBall.y=b.y+ny*(b.r+pbBall.r);
-        const dot=pbBall.vx*nx+pbBall.vy*ny;
-        pbBall.vx-=2*dot*nx; pbBall.vy-=2*dot*ny; pbBall.vx*=1.04; pbBall.vy*=1.04;
-        pbScore+=100; const sc=document.getElementById('pb-score'); if(sc) sc.textContent=pbScore;
-        try{ playTone && playTone(660,0.05,'square',0.15); }catch(_){}
-      }
-    }
-    // flippers
-    _pbSegHit(PB_LP, pbLAng, PB_FLEN, PB_FTHICK, (pbLAng-pbLPrev)/SUB);
-    _pbSegHit(PB_RP, pbRAng, PB_FLEN, PB_FTHICK, (pbRAng-pbRPrev)/SUB);
-  }
-  // clamp speed
-  const sp=Math.hypot(pbBall.vx,pbBall.vy), MAX=22;
-  if(sp>MAX){ pbBall.vx=pbBall.vx/sp*MAX; pbBall.vy=pbBall.vy/sp*MAX; }
-  // drain
-  if(pbBall.y>PB_H+24){
-    pbBallNum++;
-    if(pbBallNum>3){ pbGameOver(); }
-    else {
-      const bn=document.getElementById('pb-ball'); if(bn) bn.textContent=pbBallNum;
-      _pbPlaceBall();
-      const lb=document.getElementById('pb-launch-btn'); if(lb) lb.style.display='';
-      pbState='ready';
-    }
-  }
-}
-function pbGameOver(){
-  pinballStop(); pbState='over';
-  const lb=document.getElementById('pb-launch-btn');
-  if(lb){ lb.style.display=''; lb.textContent='Play Again'; lb.onclick=()=>pinballReset(); }
-  if(typeof recordScore==='function' && pbScore>0) recordScore('pinball', pbScore, '3 balls');
-  if(typeof aqAddCredits==='function'){ const r=Math.floor(pbScore/500); if(r>0){ aqAddCredits(r); toast('🕹️ +'+r+' credits!'); } }
-  if(window.aqGameXp) window.aqGameXp('speed',{played:true,won:pbScore>5000,mult:1+Math.min(3,pbScore/10000)});
-}
-function _pbFlipperPath(c, piv, ang, len, thick){
-  const bx=piv.x+len*Math.cos(ang), by=piv.y+len*Math.sin(ang);
-  c.beginPath(); c.moveTo(piv.x,piv.y); c.lineTo(bx,by);
-  c.lineWidth=thick*2; c.lineCap='round'; c.strokeStyle='#ffd166'; c.stroke();
-  c.beginPath(); c.arc(piv.x,piv.y,4,0,7); c.fillStyle='#c79a2e'; c.fill();
-}
-function pbDraw(){
-  if(!pbCtx) return; const c=pbCtx; c.clearRect(0,0,PB_W,PB_H);
-  // playfield glow
-  const g=c.createRadialGradient(PB_W/2,90,20,PB_W/2,90,PB_H);
-  g.addColorStop(0,'#16306a'); g.addColorStop(1,'#060912'); c.fillStyle=g; c.fillRect(0,0,PB_W,PB_H);
-  // walls
-  c.strokeStyle='rgba(150,190,255,0.5)'; c.lineWidth=3; c.lineCap='round';
-  pbWalls.forEach(s=>{ c.beginPath(); c.moveTo(s.ax,s.ay); c.lineTo(s.bx,s.by); c.stroke(); });
-  // bumpers
-  pbBumpers.forEach(b=>{ c.beginPath(); c.arc(b.x,b.y,b.r,0,7); c.fillStyle='#3aa0ff'; c.fill(); c.lineWidth=3; c.strokeStyle='#bfe6ff'; c.stroke();
-    c.beginPath(); c.arc(b.x,b.y,b.r*0.4,0,7); c.fillStyle='#dff1ff'; c.fill(); });
-  // flippers
-  _pbFlipperPath(c, PB_LP, pbLAng, PB_FLEN, PB_FTHICK);
-  _pbFlipperPath(c, PB_RP, pbRAng, PB_FLEN, PB_FTHICK);
-  // ball
-  if(pbBall){ c.beginPath(); c.arc(pbBall.x,pbBall.y,pbBall.r,0,7);
-    const bg=c.createRadialGradient(pbBall.x-3,pbBall.y-3,1,pbBall.x,pbBall.y,pbBall.r);
-    bg.addColorStop(0,'#fff'); bg.addColorStop(1,'#9fb3c8'); c.fillStyle=bg; c.fill(); }
-  if(pbState==='over'){
-    c.fillStyle='rgba(0,0,0,0.55)'; c.fillRect(0,PB_H/2-30,PB_W,60);
-    c.fillStyle='#ffd166'; c.font='bold 22px sans-serif'; c.textAlign='center';
-    c.fillText('GAME OVER', PB_W/2, PB_H/2+8); c.textAlign='left';
-  }
-}
-
 
 function openRhythm(show=true){
   const w=document.getElementById('rhythm-wrap'); if(!w) return;
@@ -16846,25 +16606,6 @@ function bjUpdateBalance(){
   });
   document.addEventListener('mouseup',function(){if(drag) _aqShieldIframes(false); drag=null;});
 })();
-
-// Draggable Space Pinball window
-(function(){
-  let drag=null;
-  document.addEventListener('mousedown',function(e){
-    if(!e.target.closest('#pinball-titlebar')) return;
-    if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
-    const w=document.getElementById('pinball-wrap');
-    const r=w.getBoundingClientRect();
-    w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';
-    drag={sx:e.clientX-r.left,sy:e.clientY-r.top};
-  });
-  document.addEventListener('mousemove',function(e){
-    if(!drag) return;
-    const w=document.getElementById('pinball-wrap');
-    w.style.left=(e.clientX-drag.sx)+'px';w.style.top=(e.clientY-drag.sy)+'px';
-  });
-  document.addEventListener('mouseup',function(){ drag=null; });
-})();
 </script>
 
 <!-- /aq/ BOARD OVERLAY — Floating AquaChat panel -->
@@ -17536,23 +17277,6 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openStocks(false)">×</button>
   </div>
   <div id="stocks-area"></div>
-</div>
-
-<!-- SPACE PINBALL (native canvas) -->
-<div id="pinball-wrap" style="display:none">
-  <div class="sol-titlebar" id="pinball-titlebar">
-    <span>🕹️ Space Pinball</span>
-    <button class="sol-titlebtn sol-close" onclick="openPinball(false)">×</button>
-  </div>
-  <div id="pinball-hud">
-    <span>Score: <span id="pb-score">0</span></span>
-    <span>Ball: <span id="pb-ball">1</span>/3</span>
-    <button class="win95-btn" id="pb-launch-btn" onclick="pinballLaunch()">Launch</button>
-  </div>
-  <div id="pinball-area">
-    <canvas id="pinball-canvas" width="320" height="460"></canvas>
-  </div>
-  <div id="pinball-help">Z / ← &amp; M / → (or /) flippers · Space launches · tap left/right on mobile</div>
 </div>
 
 <!-- ADMIN PANEL -->

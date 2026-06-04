@@ -450,7 +450,7 @@ const BANNABLE_GAMES = [
   { id: 'picross', name: 'Picross' }, { id: 'mines', name: 'Minesweeper' },
   { id: 'slots', name: 'Slots' }, { id: 'blackjack', name: 'Blackjack' },
   { id: 'holdem', name: "Texas Hold'em" }, { id: 'rhythm', name: 'Beat Tap' },
-  { id: 'pinball', name: 'Space Pinball' }, { id: 'stocks', name: 'Exchange' },
+  { id: 'stocks', name: 'Exchange' },
   { id: 'pool', name: '8-Ball Pool' }, { id: 'tetris', name: 'Tetris' },
 ];
 

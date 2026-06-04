@@ -1,10 +1,12 @@
-// Aquatune Tetris — NES-style falling blocks.
+// Aquatune Tetris — NES-style falling blocks with mouse controls.
 //
-// Faithful-ish to NES Tetris: a 10×20 well, 7-bag spawns, gravity that speeds up
-// every 10 lines on a frame-based table, simple clockwise rotation with a small
-// wall kick, soft drop (+1/cell) and a hard drop for convenience. Line clears
-// score 40/100/300/1200 ×(level+1) and grant Speed XP; the run posts to the
-// leaderboard. Keyboard drives it on desktop; an on-screen pad appears on mobile.
+// A 10×20 well, 7-bag spawns, NES gravity that speeds up every 10 lines, simple
+// clockwise rotation with a small wall kick. Line clears score 40/100/300/1200
+// ×(level+1) and grant Speed XP; the run posts to the leaderboard.
+//
+// Controls (desktop): MOVE THE MOUSE left/right over the board to slide the piece,
+// LEFT-CLICK to hard-drop, RIGHT-CLICK or SCROLL to rotate. Keyboard still works
+// when the window is focused. Mobile gets the on-screen pad.
 
 const COLS = 10, ROWS = 20, CELL = 24;     // logical board 240×480 (CSS-scaled)
 const PREV = 4;                            // next-preview box (cells)
@@ -21,7 +23,6 @@ const COLORS = [
   { c: '#ff9a2b', hi: '#ffd8ab', lo: '#b06317' }, // 7 L orange
 ];
 
-// Piece cell layouts within their rotation box, and box size.
 const PIECES = {
   I: { color: 1, box: 4, cells: [[0, 1], [1, 1], [2, 1], [3, 1]] },
   O: { color: 2, box: 2, cells: [[0, 0], [1, 0], [0, 1], [1, 1]] },
@@ -34,19 +35,17 @@ const PIECES = {
 const TYPES = Object.keys(PIECES);
 const LINE_PTS = [0, 40, 100, 300, 1200];  // ×(level+1) — classic scoring
 
-// NES gravity: frames-per-cell by level (60fps). We convert to ms per drop.
+// NES gravity: frames-per-cell by level (60fps) → ms per drop.
 const GRAVITY_FRAMES = [48, 43, 38, 33, 28, 23, 18, 13, 8, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2];
 function dropMsFor(lvl) { const f = lvl < GRAVITY_FRAMES.length ? GRAVITY_FRAMES[lvl] : (lvl < 29 ? 2 : 1); return f * (1000 / 60); }
 
 let cv = null, cx = null, nextCv = null, nextCx = null, raf = null, _built = false;
 let board = [], cur = null, nextType = null, bag = [];
-let score = 0, lines = 0, level = 0, dropMs = dropMsFor(0), dropAcc = 0, _lastT = 0;
+let score = 0, lines = 0, level = 0, dropMs = dropMsFor(0);
+let lastGravity = 0;                        // absolute rAF timestamp of the last gravity step
 let state = 'start';                        // start | play | over
-let infoEl = null, overlayEl = null, padEl = null;
+let infoEl = null, overlayEl = null;
 let _keyHandler = null;
-// DAS (delayed auto-shift) for held left/right.
-let dasDir = 0, dasTimer = 0;
-const DAS_DELAY = 160, DAS_REPEAT = 50;
 
 function sfx(n) { try { window.tetrisSfx && window.tetrisSfx(n); } catch (e) {} }
 
@@ -61,13 +60,14 @@ function makeMatrix(type) {
   return m;
 }
 function rotateCW(m) { const n = m.length, r = Array.from({ length: n }, () => Array(n).fill(0)); for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) r[x][n - 1 - y] = m[y][x]; return r; }
+// Occupied-column bounds within the matrix (for mouse centering).
+function colBounds(m) { let lo = m.length, hi = -1; for (let y = 0; y < m.length; y++) for (let x = 0; x < m.length; x++) if (m[y][x]) { if (x < lo) lo = x; if (x > hi) hi = x; } return { lo, hi }; }
 
 function spawn() {
   const type = nextType || bagNext();
   nextType = bagNext();
   const m = makeMatrix(type);
   cur = { type, m, x: ((COLS - m.length) / 2) | 0, y: type === 'I' ? -1 : 0 };
-  dropAcc = 0; dasDir = 0;
   if (collides(cur.m, cur.x, cur.y)) { cur = null; gameOver(); return; }
   drawNext();
 }
@@ -99,7 +99,6 @@ function clearLines() {
   const newLevel = Math.floor(lines / 10);
   if (newLevel > level) { level = newLevel; dropMs = dropMsFor(level); sfx('level'); }
   sfx(cleared >= 4 ? 'tetris' : 'clear');
-  // Speed XP per clear (a small grindy trickle, bigger for multi-line clears).
   if (window.aqGameXp) window.aqGameXp('speed', { played: false, won: true, mult: 0.3 * cleared * cleared });
   updateInfo();
 }
@@ -112,14 +111,26 @@ function rotate() {
 }
 function softDrop() {
   if (state !== 'play' || !cur) return;
-  if (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; score += 1; updateInfo(); }
+  if (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; lastGravity = performance.now(); }   // no score (no farming)
   else lockPiece();
-  dropAcc = 0;
 }
 function hardDrop() {
   if (state !== 'play' || !cur) return;
   let d = 0; while (!collides(cur.m, cur.x, cur.y + 1)) { cur.y++; d++; }
-  score += d * 2; sfx('drop'); updateInfo(); lockPiece(); dropAcc = 0;
+  score += d * 2; sfx('drop'); updateInfo(); lockPiece();
+}
+// Slide the piece so its occupied centre lands on a target board column, stepping
+// one cell at a time so it can't pass through walls or the stack.
+function moveToColumn(targetCol) {
+  if (state !== 'play' || !cur) return;
+  const { lo, hi } = colBounds(cur.m);
+  const width = hi - lo + 1;
+  let desiredX = Math.round(targetCol - width / 2) - lo;     // matrix x so centre ≈ targetCol
+  desiredX = Math.max(-lo, Math.min(COLS - 1 - hi, desiredX));
+  let moved = false;
+  while (cur.x < desiredX && !collides(cur.m, cur.x + 1, cur.y)) { cur.x++; moved = true; }
+  while (cur.x > desiredX && !collides(cur.m, cur.x - 1, cur.y)) { cur.x--; moved = true; }
+  if (moved) sfx('move');
 }
 function ghostY() { let gy = cur.y; while (!collides(cur.m, cur.x, gy + 1)) gy++; return gy; }
 
@@ -135,8 +146,8 @@ function gameOver() {
 function cell(g, px, py, ci, sz) {
   const col = COLORS[ci]; sz = sz || CELL;
   g.fillStyle = col.c; g.fillRect(px, py, sz, sz);
-  g.fillStyle = col.hi; g.fillRect(px, py, sz, 3); g.fillRect(px, py, 3, sz);        // top/left bevel
-  g.fillStyle = col.lo; g.fillRect(px, py + sz - 3, sz, 3); g.fillRect(px + sz - 3, py, 3, sz); // bottom/right
+  g.fillStyle = col.hi; g.fillRect(px, py, sz, 3); g.fillRect(px, py, 3, sz);
+  g.fillStyle = col.lo; g.fillRect(px, py + sz - 3, sz, 3); g.fillRect(px + sz - 3, py, 3, sz);
   g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, sz - 1, sz - 1);
 }
 function draw() {
@@ -164,14 +175,16 @@ function drawNext() {
 }
 function updateInfo() { if (infoEl) infoEl.innerHTML = `<div class="tt-stat"><span>SCORE</span><b>${score.toLocaleString()}</b></div><div class="tt-stat"><span>LINES</span><b>${lines}</b></div><div class="tt-stat"><span>LEVEL</span><b>${level + 1}</b></div>`; }
 
+// Bulletproof gravity: compare against the absolute rAF timestamp so a piece always
+// falls on its own (no fragile per-frame delta accumulation).
 function tick(t) {
-  const dt = Math.min(100, t - (_lastT || t)); _lastT = t;
+  if (!lastGravity) lastGravity = t;
   if (state === 'play' && cur) {
-    // DAS auto-shift for a held direction.
-    if (dasDir) { dasTimer -= dt; if (dasTimer <= 0) { if (!move(dasDir)) dasDir = 0; dasTimer = DAS_REPEAT; } }
-    // gravity
-    dropAcc += dt;
-    if (dropAcc >= dropMs) { dropAcc -= dropMs; if (!collides(cur.m, cur.x, cur.y + 1)) cur.y++; else lockPiece(); }
+    if (t - lastGravity >= dropMs) {
+      lastGravity = t;
+      if (!collides(cur.m, cur.x, cur.y + 1)) cur.y++;
+      else lockPiece();
+    }
   }
   draw();
   raf = requestAnimationFrame(tick);
@@ -187,7 +200,7 @@ function hideOverlay() { if (overlayEl) overlayEl.style.display = 'none'; }
 
 function startGame() {
   newBoard(); bag = []; nextType = null; cur = null;
-  score = 0; lines = 0; level = 0; dropMs = dropMsFor(0); dropAcc = 0; dasDir = 0;
+  score = 0; lines = 0; level = 0; dropMs = dropMsFor(0); lastGravity = 0;
   state = 'play'; hideOverlay(); updateInfo(); spawn(); draw();
 }
 
@@ -207,26 +220,40 @@ function build() {
   const nlabel = document.createElement('div'); nlabel.className = 'tt-nlabel'; nlabel.textContent = 'NEXT';
   nextCv = document.createElement('canvas'); nextCv.width = PREV * CELL; nextCv.height = PREV * CELL; nextCv.className = 'tt-next';
   infoEl = document.createElement('div'); infoEl.className = 'tt-info';
-  side.appendChild(nlabel); side.appendChild(nextCv); side.appendChild(infoEl);
+  const hint = document.createElement('div'); hint.className = 'tt-hint'; hint.innerHTML = 'Move mouse to slide<br>Click: drop<br>Right-click / scroll: rotate';
+  side.appendChild(nlabel); side.appendChild(nextCv); side.appendChild(infoEl); side.appendChild(hint);
   main.appendChild(side);
   area.appendChild(main);
 
-  // On-screen controls — CSS hides these on desktop (keyboard there); shown on mobile.
-  padEl = document.createElement('div'); padEl.className = 'tt-pad';
+  // On-screen controls — CSS hides these on desktop (mouse there); shown on mobile.
+  const pad = document.createElement('div'); pad.className = 'tt-pad';
   const mk = (label, fn) => { const b = document.createElement('button'); b.className = 'tt-key'; b.textContent = label; b.addEventListener('pointerdown', e => { e.preventDefault(); fn(); }); return b; };
-  padEl.appendChild(mk('◀', () => move(-1)));
-  padEl.appendChild(mk('⟳', rotate));
-  padEl.appendChild(mk('▶', () => move(1)));
-  padEl.appendChild(mk('▼', softDrop));
-  padEl.appendChild(mk('⬇', hardDrop));
-  area.appendChild(padEl);
+  pad.appendChild(mk('◀', () => move(-1)));
+  pad.appendChild(mk('⟳', rotate));
+  pad.appendChild(mk('▶', () => move(1)));
+  pad.appendChild(mk('▼', softDrop));
+  pad.appendChild(mk('⬇', hardDrop));
+  area.appendChild(pad);
 
   cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   nextCx = nextCv.getContext('2d'); nextCx.imageSmoothingEnabled = false;
 
-  // Only steal the keyboard while Tetris is the OPEN, FOCUSED window and the user
-  // isn't typing in a field — otherwise keys would leak into other apps (e.g. the
-  // spacebar pausing a song) while Tetris sits open in the background.
+  // Mouse controls: hover slides the piece, left-click drops, right-click/scroll rotates.
+  cv.addEventListener('mousemove', (e) => {
+    if (state !== 'play' || !cur) return;
+    const rect = cv.getBoundingClientRect();
+    const col = Math.floor(((e.clientX - rect.left) / rect.width) * COLS);
+    moveToColumn(Math.max(0, Math.min(COLS - 1, col)));
+  });
+  cv.addEventListener('mousedown', (e) => {
+    if (state !== 'play' || !cur) return;
+    if (e.button === 2) { e.preventDefault(); rotate(); }   // right-click rotates
+    else if (e.button === 0) hardDrop();                    // left-click drops
+  });
+  cv.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+  cv.addEventListener('wheel', (e) => { if (state === 'play' && cur) { e.preventDefault(); rotate(); } }, { passive: false });
+
+  // Keyboard (secondary): only while Tetris is the focused window and not typing.
   const tetrisHasKeys = () => {
     const w = document.getElementById('tetris-wrap');
     if (!w || !w.classList.contains('open')) return false;
@@ -237,35 +264,30 @@ function build() {
   };
   _keyHandler = (e) => {
     if (!tetrisHasKeys()) return;
-    if (e.repeat && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); return; } // DAS handles repeat
     let used = true;
-    if (e.key === 'ArrowLeft') { if (move(-1)) { dasDir = -1; dasTimer = DAS_DELAY; } }
-    else if (e.key === 'ArrowRight') { if (move(1)) { dasDir = 1; dasTimer = DAS_DELAY; } }
+    if (e.key === 'ArrowLeft') move(-1);
+    else if (e.key === 'ArrowRight') move(1);
     else if (e.key === 'ArrowUp' || e.key === 'x' || e.key === 'X') rotate();
     else if (e.key === 'ArrowDown') softDrop();
     else if (e.key === ' ' || e.key === 'Spacebar') hardDrop();
     else used = false;
     if (used) e.preventDefault();
   };
-  const _keyUp = (e) => {
-    if (!tetrisHasKeys()) { dasDir = 0; return; }
-    if ((e.key === 'ArrowLeft' && dasDir === -1) || (e.key === 'ArrowRight' && dasDir === 1)) dasDir = 0;
-  };
   document.addEventListener('keydown', _keyHandler);
-  document.addEventListener('keyup', _keyUp);
   _built = true;
 }
 
 function openTetris(show = true) {
   const w = document.getElementById('tetris-wrap');
   if (!w) return;
-  if (show === false) { w.classList.remove('open'); w.style.display = 'none'; dasDir = 0; if (raf) { cancelAnimationFrame(raf); raf = null; } return; }
+  if (show === false) { w.classList.remove('open'); w.style.display = 'none'; if (raf) { cancelAnimationFrame(raf); raf = null; } return; }
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('tetris'); window.OS.focus('tetris'); }
   if (!_built) build();
-  if (state !== 'play') showOverlay('🧱 Tetris', 'Clear lines to score. Faster every 10 lines.', 'Start', startGame);
+  if (state !== 'play') showOverlay('🧱 Tetris', 'Move the mouse to slide · click to drop · right-click or scroll to rotate.', 'Start', startGame);
   updateInfo();
-  if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
+  lastGravity = 0;
+  if (!raf) { raf = requestAnimationFrame(tick); }
 }
 
 if (typeof window !== 'undefined') { window.openTetris = openTetris; }

@@ -323,7 +323,10 @@ function spin() {
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - bet);
     addJackpot(bet * 0.005);
   } else { free--; freeMulti = Math.min(10, freeMulti + 1); }
-  spinning = true; cascade = 1; wonThisSpin = false; spinWin = 0;
+  // spinWin accumulates a whole free-spin session (finish() defers banking until
+  // free runs out), so only zero it on a PAID spin — resetting it every free spin
+  // would wipe all but the last free spin's winnings.
+  spinning = true; cascade = 1; wonThisSpin = false; if (!isFree) spinWin = 0;
   els.spin.disabled = true; flash(''); if (els.win) els.win.textContent = '';
   updateUI(); tone(400, 0.08, 'square', 0.1);
 

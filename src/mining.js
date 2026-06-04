@@ -16,33 +16,52 @@ const PICKS = [
   { name: 'Aquatune', power: 20, cost: 25000 },
 ];
 
-// base = body tone (PAL index), ore = embedded-speck tone, gem = sparkles
+// Stages unlock with Mining level — deeper = harder rocks & richer resources.
+const STAGES = [
+  { name: 'Surface',      lvl: 1 },
+  { name: 'Caverns',      lvl: 8 },
+  { name: 'Deep Mine',    lvl: 20 },
+  { name: 'Magma Vein',   lvl: 38 },
+  { name: 'Crystal Core', lvl: 60 },
+];
+
+// base = body tone (PAL index), ore = embedded-speck tone, gem = sparkles,
+// stage = which stage it spawns in, weight = pick weight within that stage.
 const ROCKS = [
-  { name: 'Stone',    hp: 24,  value: 3,   rarity: 0, base: 1, ore: 0, gem: false },
-  { name: 'Copper',   hp: 48,  value: 7,   rarity: 1, base: 1, ore: 2, gem: false },
-  { name: 'Iron',     hp: 90,  value: 14,  rarity: 1, base: 2, ore: 0, gem: false },
-  { name: 'Gold',     hp: 160, value: 30,  rarity: 2, base: 1, ore: 3, gem: true },
-  { name: 'Emerald',  hp: 260, value: 60,  rarity: 3, base: 2, ore: 3, gem: true },
-  { name: 'Diamond',  hp: 440, value: 140, rarity: 4, base: 2, ore: 3, gem: true },
+  // Surface
+  { name: 'Stone',    stage: 0, hp: 24,   value: 2,   rarity: 0, base: 1, ore: 0, gem: false, weight: 60 },
+  { name: 'Copper',   stage: 0, hp: 55,   value: 5,   rarity: 1, base: 1, ore: 2, gem: false, weight: 40 },
+  // Caverns
+  { name: 'Coal',     stage: 1, hp: 80,   value: 8,   rarity: 1, base: 0, ore: 0, gem: false, weight: 58 },
+  { name: 'Iron',     stage: 1, hp: 120,  value: 13,  rarity: 1, base: 2, ore: 0, gem: false, weight: 42 },
+  // Deep Mine
+  { name: 'Gold',     stage: 2, hp: 200,  value: 26,  rarity: 2, base: 1, ore: 3, gem: true,  weight: 58 },
+  { name: 'Emerald',  stage: 2, hp: 320,  value: 48,  rarity: 3, base: 2, ore: 3, gem: true,  weight: 42 },
+  // Magma Vein
+  { name: 'Ruby',     stage: 3, hp: 480,  value: 90,  rarity: 3, base: 2, ore: 3, gem: true,  weight: 56 },
+  { name: 'Obsidian', stage: 3, hp: 620,  value: 120, rarity: 4, base: 0, ore: 2, gem: false, weight: 44 },
+  // Crystal Core
+  { name: 'Diamond',  stage: 4, hp: 820,  value: 200, rarity: 4, base: 2, ore: 3, gem: true,  weight: 58 },
+  { name: 'Aquatune', stage: 4, hp: 1300, value: 340, rarity: 4, base: 3, ore: 3, gem: true,  weight: 42 },
 ];
 
 // rock geometry
 const CXR = 80, CYR = 72, RW = 30, RH = 24;
 
 // ── spice dials ──────────────────────────────────────────────────────────────
-const CRIT_MULT = 2.2;               // damage × on a crit (a reward for aim, not a one-shot)
-const CRIT_CHANCE = 0.05;            // flat random crit chance on a deliberate (non-spam) hit
-const SPAM_MS = 150;                 // clicks faster than this = mashing → NO crits (timing only)
+const CRIT_MULT = 2.0;               // damage × on a crit (a reward for aim, not a one-shot)
+const SPAM_MS = 200;                 // clicks faster than this = mashing → NO crit (timing too)
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
-const MOTHERLODE_ORE = 3, MOTHERLODE_POWER = 2;
+const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false;
 let rock = null, swing = 0, shake = 0, particles = [];
-let combo = 0, lastHit = 0, breakUntil = 0;
+let combo = 0, lastHit = 0, breakUntil = 0;   // combo = crit streak (consecutive weak-point hits)
 let floaters = [], sweet = null, motherlodeUntil = 0;
-let infoEl = null, shopEl = null;
+let infoEl = null, shopEl = null, stageEl = null;
+let curStage = 0;
 
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
@@ -50,13 +69,13 @@ function pickPower() { return PICKS[pickTier()].power; }
 function mineLvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('mining')) || 1; }
 function sfx(n) { try { if (typeof window !== 'undefined' && window.miningSfx) window.miningSfx(n); } catch (e) {} }
 
+function maxStage() { let m = 0; for (let i = 0; i < STAGES.length; i++) if (mineLvl() >= STAGES[i].lvl) m = i; return m; }
 function spawnRock() {
-  const luck = Math.random() + mineLvl() / 250;
-  let pool;
-  if (luck > 1.2) pool = ROCKS.filter(r => r.rarity >= 3);
-  else if (luck > 0.75) pool = ROCKS.filter(r => r.rarity >= 1 && r.rarity <= 3);
-  else pool = ROCKS.filter(r => r.rarity <= 1);
-  const def = pool[(Math.random() * pool.length) | 0] || ROCKS[0];
+  if (curStage > maxStage()) curStage = maxStage();
+  const pool = ROCKS.filter(r => r.stage === curStage);
+  let total = 0; const w = pool.map(r => { total += r.weight; return r.weight; });
+  let rnd = Math.random() * total, def = pool[0];
+  for (let i = 0; i < pool.length; i++) { rnd -= w[i]; if (rnd <= 0) { def = pool[i]; break; } }
   rock = { def, hp: def.hp, max: def.hp, flash: 0, shape: [], specks: [], cracks: [] };
 
   // stable irregular boulder outline (half-width per row)
@@ -86,15 +105,17 @@ function spawnRock() {
   }
   rerollSweet();   // place the weak-point on the rock
 }
-// A glowing "weak point" somewhere on the rock — click IT for a crit. Smaller on
-// tougher rocks; it relocates over time so it's a moving target (you must aim).
+// A glowing "weak point" that appears ANYWHERE in the mine window — click IT for a
+// crit. Smaller & quicker on tougher rocks, and it relocates often, so you must aim:
+// mashing or tapping random spots won't land it. Crits come ONLY from hitting this.
 function rerollSweet() {
   if (!rock) { sweet = null; return; }
-  const r = Math.max(5, 9 - rock.def.rarity);
-  const ang = Math.random() * 6.2832, rad = Math.sqrt(Math.random()) * 0.78;
+  const r = Math.max(4, 7 - rock.def.rarity);   // smaller target on richer rocks
+  const m = r + 12;
   sweet = {
-    x: CXR + Math.cos(ang) * rad * (RW - r), y: CYR + Math.sin(ang) * rad * (RH - r),
-    r, moveAt: performance.now() + 1100 + Math.random() * 1000,
+    x: m + Math.random() * (W - 2 * m),
+    y: 16 + Math.random() * (H - 32 - 16),       // below the top HUD, above the name bar
+    r, moveAt: performance.now() + 850 + Math.random() * 750,
   };
 }
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
@@ -103,7 +124,8 @@ function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: C
 function breakRock() {
   const r = rock.def, now = performance.now();
   const ml = motherlodeUntil > now;
-  const bonus = (1 + Math.min(combo, 10) * 0.05) * (ml ? MOTHERLODE_ORE : 1);
+  // Modest crit-streak bonus (capped) + motherlode; kept small so income stays earned.
+  const bonus = (1 + Math.min(combo, 8) * 0.03) * (ml ? MOTHERLODE_ORE : 1);
   const ore = Math.round(r.value * bonus);
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
   // Mining gives less XP than other skills: only the "won" trickle, scaled down.
@@ -133,16 +155,14 @@ function hit(px, py) {
   if (!rock) return;
   const now = performance.now();
   const gap = now - lastHit;
-  const spamming = gap < SPAM_MS;           // mashing too fast → no crits, just normal damage
-  combo = (gap < 900) ? combo + 1 : 0;
+  const spamming = gap < SPAM_MS;           // mashing too fast → no crit, just normal damage
   lastHit = now;
   swing = 1; shake = 6; rock.flash = 1;
-  // Crits reward AIM, not mashing: click the glowing weak-point on the rock for a
-  // guaranteed crit (else a small flat chance). Spamming disqualifies both, so you
-  // can spam for normal damage but never crit.
-  const onSpot = sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 1.5;
-  const crit = !spamming && (onSpot || Math.random() < CRIT_CHANCE);
-  const perfect = crit && onSpot;
+  // Crits reward AIM only: you must click the glowing weak-point (which roams the
+  // whole window). No flat random crit — tapping random spots or mashing never crits.
+  // Combo = consecutive weak-point hits (a crit streak); any non-crit hit resets it.
+  const crit = !spamming && sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 2;
+  combo = crit ? combo + 1 : 0;
   let dmg = pickPower();
   if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
   if (crit) dmg *= CRIT_MULT;
@@ -150,8 +170,8 @@ function hit(px, py) {
   rock.hp -= dmg;
   if (crit) {
     shake = 10;
-    addFloater(perfect ? 'PERFECT!' : 'CRIT!', 3);
-    if (perfect) rerollSweet();
+    addFloater(combo > 1 ? 'CRIT x' + combo + '!' : 'CRIT!', 3);
+    rerollSweet();
     for (let i = 0; i < 10; i++) spark(true);
   } else {
     for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
@@ -271,12 +291,14 @@ function draw(t) {
   // particles (sized chunks)
   for (const p of particles) px(p.x, p.y, p.s || 3, p.s || 3, p.c);
 
-  // weak-point reticle on the rock — click it for a guaranteed crit
-  if (rock && sweet && rock.flash <= 0.45) {
+  // weak-point reticle — roams the whole window; click it for a guaranteed crit
+  if (rock && sweet) {
     const rr = Math.max(3, Math.round(sweet.r * (0.7 + 0.3 * Math.sin(t / 140))));
-    const wx = (sweet.x + sx) | 0, wy = sweet.y | 0;
+    const wx = sweet.x | 0, wy = sweet.y | 0;
     px(wx - 1, wy - rr, 2, 2, 3); px(wx - 1, wy + rr - 1, 2, 2, 3);
     px(wx - rr, wy - 1, 2, 2, 3); px(wx + rr - 1, wy - 1, 2, 2, 3);
+    px(wx - rr - 1, wy - rr - 1, 2, 2, 3); px(wx + rr - 1, wy + rr - 1, 2, 2, 3);
+    px(wx + rr - 1, wy - rr - 1, 2, 2, 3); px(wx - rr - 1, wy + rr - 1, 2, 2, 3);
     px(wx - 1, wy - 1, 2, 2, 0);
   }
 
@@ -292,8 +314,8 @@ function draw(t) {
     cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'center';
     cx.fillText('★ MOTHERLODE ' + Math.ceil((motherlodeUntil - t) / 1000) + 's ★', W / 2, 2); cx.textAlign = 'left';
   }
-  // combo
-  else if (combo > 1) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('x' + (combo + 1) + ' combo', 6, 2); }
+  // crit streak
+  else if (combo > 1) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('x' + combo + ' crit streak', 6, 2); }
   // rock name banner
   cx.fillStyle = PAL[0]; cx.fillRect(0, H - 14, W, 14);
   cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
@@ -318,7 +340,28 @@ function tick(t) {
 
 function refreshInfo() {
   if (infoEl) infoEl.textContent = `${PICKS[pickTier()].name} pick (⛏${pickPower()}) · Lv ${mineLvl()} · 💰 ${credits()}`;
+  renderStages();
   renderShop();
+}
+
+function renderStages() {
+  if (!stageEl) return;
+  const lvl = mineLvl();
+  stageEl.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const unlocked = lvl >= s.lvl;
+    const b = document.createElement('button');
+    b.className = 'gbc-btn';
+    b.disabled = !unlocked;
+    b.textContent = unlocked ? s.name : `🔒 ${s.name} · Lv${s.lvl}`;
+    if (i === curStage) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + PAL[3]; }
+    b.addEventListener('click', () => {
+      if (!unlocked || i === curStage) return;
+      curStage = i; try { localStorage.setItem('aq_mining_stage', String(i)); } catch (e) {}
+      rock = null; breakUntil = 0; combo = 0; spawnRock(); refreshInfo();
+    });
+    stageEl.appendChild(b);
+  });
 }
 
 function renderShop() {
@@ -362,6 +405,7 @@ function build() {
   infoEl = document.createElement('div'); infoEl.className = 'gbc-info'; bar.appendChild(infoEl);
   area.appendChild(bar);
 
+  stageEl = document.createElement('div'); stageEl.className = 'gbc-bar'; area.appendChild(stageEl);
   shopEl = document.createElement('div'); shopEl.className = 'gbc-bar'; area.appendChild(shopEl);
 
   cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
@@ -383,6 +427,7 @@ function openMining(show = true) {
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('mining'); window.OS.focus('mining'); }
   if (!_built) build();
+  curStage = Math.min(maxStage(), parseInt(localStorage.getItem('aq_mining_stage') || '0', 10) || 0);
   if (!rock) spawnRock();
   refreshInfo();
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }

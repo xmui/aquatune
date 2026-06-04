@@ -11,14 +11,82 @@ const PAL = ['#0f380f', '#306850', '#7ba672', '#cfe8a0']; // dark → light
 const SKY = '#9bbc0f', WATER = '#306850';
 const WATER_Y = 58;
 
+// Zones unlock as your Fishing level climbs — deeper waters, rarer fish.
+const ZONES = [
+  { name: '🏞️ River', lvl: 1 },
+  { name: '🌊 Ocean', lvl: 12 },
+  { name: '🥬 Swamp', lvl: 30 },
+  { name: '🔥 Hell',  lvl: 55 },
+];
+// Rods are bought with credits; a better rod hooks the rarer fish in each zone.
+const RODS = [
+  { name: 'Bamboo', tier: 0, cost: 0 },
+  { name: 'Fiber',  tier: 1, cost: 400 },
+  { name: 'Carbon', tier: 2, cost: 2200 },
+  { name: 'Mythic', tier: 3, cost: 9500 },
+];
+
+// Pixel-art shapes: chars → o outline · b body · l belly · e eye · . transparent.
+const SHAPES = {
+  classic: [
+    'o.....oooo.....',
+    'oo..ooobbbboo..',
+    'obo.obbbbbbbbo.',
+    'obboobbbbbbbboo',
+    'obbbbbbbbbbbebo',
+    'obboobbbbbbbboo',
+    'obo.obbbbbbbbo.',
+    'oo..ooobbbboo..',
+    'o.....oooo.....',
+  ],
+  long: [
+    '..ooooooooooo...',
+    '.obbbbbbbbbbboo.',
+    'obbbbbbbbbbbbbeo',
+    'obbbbbbbbbbbbbbo',
+    '.obbbbbbbbbbboo.',
+    '..ooooooooooo...',
+  ],
+  round: [
+    '...ooooo...',
+    '..obbbbbo..',
+    '.obbbbbbbo.',
+    'obbbbbbbbbo',
+    'obbbbbbbebo',
+    'obbbbbbbbbo',
+    '.obbbbbbbo.',
+    '..obbbbbo..',
+    '...ooooo...',
+  ],
+};
+
+// zone: which water it lives in · rod: minimum rod tier needed to hook it ·
+// shape/col: its pixel sprite. Catch it and it joins your Fish-o-pedia.
 const FISH = [
-  { name: 'Minnow',    rarity: 0, value: 4,   color: 1 },
-  { name: 'Bass',      rarity: 1, value: 9,   color: 2 },
-  { name: 'Pike',      rarity: 1, value: 14,  color: 2 },
-  { name: 'Catfish',   rarity: 2, value: 22,  color: 1 },
-  { name: 'Pufferfish',rarity: 2, value: 30,  color: 3 },
-  { name: 'Eel',       rarity: 3, value: 45,  color: 0 },
-  { name: 'Legendary', rarity: 4, value: 120, color: 3 },
+  // River (zone 0)
+  { name: 'Minnow',        zone: 0, rarity: 0, value: 4,   rod: 0, shape: 'classic', col: '#bcd0c0' },
+  { name: 'Bass',          zone: 0, rarity: 1, value: 10,  rod: 0, shape: 'classic', col: '#6fae5a' },
+  { name: 'Pike',          zone: 0, rarity: 1, value: 18,  rod: 1, shape: 'long',    col: '#5a8a3a' },
+  { name: 'Rainbow Trout', zone: 0, rarity: 2, value: 30,  rod: 2, shape: 'classic', col: '#d98f5a' },
+  { name: 'Golden Carp',   zone: 0, rarity: 3, value: 75,  rod: 3, shape: 'round',   col: '#e8c000' },
+  // Ocean (zone 1)
+  { name: 'Sardine',       zone: 1, rarity: 0, value: 8,   rod: 0, shape: 'classic', col: '#9fb8c8' },
+  { name: 'Mackerel',      zone: 1, rarity: 1, value: 18,  rod: 0, shape: 'classic', col: '#4a7fa0' },
+  { name: 'Pufferfish',    zone: 1, rarity: 2, value: 36,  rod: 1, shape: 'round',   col: '#d6c25a' },
+  { name: 'Swordfish',     zone: 1, rarity: 3, value: 85,  rod: 2, shape: 'long',    col: '#3a5f8a' },
+  { name: 'Anglerfish',    zone: 1, rarity: 3, value: 130, rod: 3, shape: 'round',   col: '#5a3a6a' },
+  // Swamp (zone 2)
+  { name: 'Mudfish',       zone: 2, rarity: 1, value: 20,  rod: 0, shape: 'classic', col: '#7a6a3a' },
+  { name: 'Catfish',       zone: 2, rarity: 2, value: 42,  rod: 1, shape: 'long',    col: '#6a5a4a' },
+  { name: 'Eel',           zone: 2, rarity: 3, value: 78,  rod: 1, shape: 'long',    col: '#3a4a2a' },
+  { name: 'Snapping Turtle',zone: 2,rarity: 3, value: 115, rod: 2, shape: 'round',   col: '#4a6a3a' },
+  { name: 'Bog Serpent',   zone: 2, rarity: 4, value: 190, rod: 3, shape: 'long',    col: '#2a4a3a' },
+  // Hell (zone 3)
+  { name: 'Lavafish',      zone: 3, rarity: 2, value: 60,  rod: 0, shape: 'classic', col: '#e0662a' },
+  { name: 'Cinder Eel',    zone: 3, rarity: 3, value: 125, rod: 1, shape: 'long',    col: '#8a2a1a' },
+  { name: 'Magma Ray',     zone: 3, rarity: 4, value: 230, rod: 2, shape: 'round',   col: '#c8401a' },
+  { name: 'Demon Koi',     zone: 3, rarity: 4, value: 320, rod: 3, shape: 'classic', col: '#b01a2a' },
+  { name: 'Hellfish',      zone: 3, rarity: 4, value: 420, rod: 3, shape: 'round',   col: '#ff8a2a' },
 ];
 
 // ── Difficulty dials (tune freely) ──────────────────────────────────────────
@@ -34,14 +102,23 @@ const CONDITIONS = {
   choppy: { name: '🌊 Choppy', waitMult: 1.0, nibbleBias: 0,  windowMult: 1.00, speedMult: 1.00, zoneMult: 1.00, monsterMult: 1.0 },
   stormy: { name: '⛈️ Stormy', waitMult: 1.3, nibbleBias: 1,  windowMult: 0.78, speedMult: 1.25, zoneMult: 0.82, monsterMult: 1.8 },
 };
-const MONSTER = { name: 'Leviathan', rarity: 5, value: 400, color: 0, monster: true };
-const STYLE_LABEL = { steady: '', darter: 'darter!', lunger: 'lunger!', drifter: 'drifter!', thrasher: 'thrasher!', monster: 'LEVIATHAN' };
+// One legendary monster per zone (rare, brutal fight, huge payout).
+const MONSTERS = [
+  { name: 'River King',    zone: 0, rarity: 5, value: 300, rod: 0, shape: 'long',  col: '#8fd0a0', monster: true },
+  { name: 'Leviathan',     zone: 1, rarity: 5, value: 500, rod: 0, shape: 'long',  col: '#2a4a6a', monster: true },
+  { name: 'Bog Horror',    zone: 2, rarity: 5, value: 680, rod: 0, shape: 'long',  col: '#2a3a1a', monster: true },
+  { name: 'Cerberus Fish', zone: 3, rarity: 5, value: 950, rod: 0, shape: 'round', col: '#c01a0a', monster: true },
+];
+const STYLE_LABEL = { steady: '', darter: 'darter!', lunger: 'lunger!', drifter: 'drifter!', thrasher: 'thrasher!', monster: 'MONSTER' };
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false, _fishInfo = null;
+let zoneEl = null, rodEl = null, dexEl = null;
 let state = 'idle';   // idle | casting | waiting | bite | struggle | caught | miss | scared
 let msg = 'Press CAST to fish';
 let fish = null;      // the fish currently on the line / being fought
+let lastCatch = null; // {shape, col, name, monster} — drawn on the caught screen
+let curZone = 0, dexOpen = false;
 
 // timing (absolute performance.now() ms)
 let castUntil = 0, biteAt = 0, biteWindowEnd = 0;
@@ -61,14 +138,23 @@ function pickStyle(rarity) {
 function lvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('fishing')) || 1; }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function sfx(n) { try { if (typeof window !== 'undefined' && window.fishingSfx) window.fishingSfx(n); } catch (e) {} }
+function rodTier() { return Math.max(0, Math.min(RODS.length - 1, parseInt(localStorage.getItem('aq_fishing_rod') || '0', 10) || 0)); }
+function maxZone() { let m = 0; for (let i = 0; i < ZONES.length; i++) if (lvl() >= ZONES[i].lvl) m = i; return m; }
+
+// Caught-counts collection (the Fish-o-pedia). { fishName: count }
+function readCaught() { try { return JSON.parse(localStorage.getItem('aq_fishing_caught') || '{}') || {}; } catch { return {}; } }
+function recordCaught(name) { try { const c = readCaught(); c[name] = (c[name] | 0) + 1; localStorage.setItem('aq_fishing_caught', JSON.stringify(c)); } catch (e) {} }
 
 function pickFish() {
-  const luck = Math.random() + lvl() / 300;  // higher level nudges toward rarer fish
-  let pool;
-  if (luck > 1.15) pool = FISH.filter(f => f.rarity >= 3);
-  else if (luck > 0.8) pool = FISH.filter(f => f.rarity >= 1 && f.rarity <= 3);
-  else pool = FISH.filter(f => f.rarity <= 1);
-  return pool[(Math.random() * pool.length) | 0] || FISH[0];
+  // Only fish in the current zone you can hook with your rod tier.
+  const pool = FISH.filter(f => f.zone === curZone && f.rod <= rodTier());
+  if (!pool.length) return FISH[0];
+  const luck = Math.random() + lvl() / 300;   // higher level nudges toward rarer fish
+  let total = 0;
+  const w = pool.map(f => { const x = Math.max(0.15, 1 - f.rarity * 0.16) * (1 + luck * f.rarity * 0.45); total += x; return x; });
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
+  return pool[0];
 }
 
 // ── State transitions ───────────────────────────────────────────────────────
@@ -98,7 +184,7 @@ function enterWaiting(now) {
 
 function enterBite(now) {
   const monster = Math.random() < MONSTER_CHANCE * condition.monsterMult * (1 + lvl() / 200);
-  fish = monster ? MONSTER : pickFish();
+  fish = monster ? (MONSTERS[curZone] || MONSTERS[0]) : pickFish();
   state = 'bite';
   // per-cast reaction-window jitter × water condition
   const jitter = 0.8 + Math.random() * 0.4;
@@ -148,6 +234,9 @@ function landFish(now) {
   // XP comes ONLY from landing a fish (never from playing/missing).
   if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (0.7 + f.rarity * 0.5) * (perfect ? 1.2 : 1) });
   if (typeof window.recordScore === 'function') window.recordScore('fishing', value, f.name);
+  lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster };
+  recordCaught(f.name);
+  if (dexOpen) renderDex();
   try {
     const log = JSON.parse(localStorage.getItem('aq_fishing_log') || '[]');
     log.unshift({ name: f.name, value, ts: Date.now() });
@@ -244,6 +333,28 @@ function tick(t) {
 // ── Drawing ───────────────────────────────────────────────────────────────────
 function px(x, y, w, h, color) { cx.fillStyle = PAL[color] || color; cx.fillRect(x | 0, y | 0, w | 0, h | 0); }
 
+// Draw a fish pixel-sprite (centered horizontally is the caller's job). `silhouette`
+// renders it as an all-dark unknown for not-yet-caught Fish-o-pedia entries.
+function drawSprite(ctx, shape, col, ox, oy, scale, silhouette) {
+  const rows = SHAPES[shape] || SHAPES.classic;
+  for (let y = 0; y < rows.length; y++) {
+    const row = rows[y];
+    for (let x = 0; x < row.length; x++) {
+      const ch = row[x];
+      if (ch === '.' || ch === ' ') continue;
+      let c;
+      if (silhouette) c = (ch === 'o') ? '#1a2a14' : '#2e4226';
+      else if (ch === 'o') c = '#0f380f';
+      else if (ch === 'l') c = '#eaffd0';
+      else if (ch === 'e') c = '#0f380f';
+      else c = col;
+      ctx.fillStyle = c;
+      ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+    }
+  }
+}
+function spriteW(shape) { return (SHAPES[shape] || SHAPES.classic)[0].length; }
+
 function draw(t) {
   if (!cx) return;
   cx.fillStyle = SKY; cx.fillRect(0, 0, W, WATER_Y);
@@ -303,6 +414,14 @@ function draw(t) {
     px(mx, my - 11, mw * tl, 2, 3);
   }
 
+  // caught! — show the fish's pixel sprite leaping above the water
+  if (state === 'caught' && lastCatch) {
+    const sc = lastCatch.monster ? 6 : 5;
+    const sw = spriteW(lastCatch.shape) * sc;
+    const ox = (W - sw) / 2, oy = 20 + Math.sin(t / 160) * 2;
+    drawSprite(cx, lastCatch.shape, lastCatch.col, ox, oy, sc, false);
+  }
+
   // message banner
   cx.fillStyle = PAL[0]; cx.fillRect(0, H - 16, W, 16);
   cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
@@ -310,6 +429,79 @@ function draw(t) {
 }
 
 // ── Boot / window plumbing ────────────────────────────────────────────────────
+// Zone selector — deeper zones unlock with Fishing level.
+function renderZones() {
+  if (!zoneEl) return;
+  const l = lvl();
+  zoneEl.innerHTML = '';
+  ZONES.forEach((z, i) => {
+    const unlocked = l >= z.lvl;
+    const b = document.createElement('button');
+    b.className = 'gbc-btn';
+    b.disabled = !unlocked;
+    b.textContent = unlocked ? z.name : `🔒 ${z.name} · Lv${z.lvl}`;
+    if (i === curZone) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + PAL[3]; }
+    b.addEventListener('click', () => {
+      if (!unlocked || i === curZone) return;
+      curZone = i; try { localStorage.setItem('aq_fishing_zone', String(i)); } catch (e) {}
+      state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
+      renderZones(); refreshInfo();
+    });
+    zoneEl.appendChild(b);
+  });
+}
+
+// Rod shop — buy the next rod to hook rarer fish.
+function renderRodShop() {
+  if (!rodEl) return;
+  const tier = rodTier();
+  rodEl.innerHTML = '';
+  if (tier >= RODS.length - 1) {
+    const d = document.createElement('div'); d.className = 'gbc-info'; d.textContent = 'Best rod: ' + RODS[tier].name + ' 🎣';
+    rodEl.appendChild(d); return;
+  }
+  const next = RODS[tier + 1];
+  const btn = document.createElement('button'); btn.className = 'gbc-btn';
+  btn.disabled = credits() < next.cost;
+  btn.textContent = `Buy ${next.name} rod  💰${next.cost}`;
+  btn.addEventListener('click', () => {
+    if (credits() < next.cost) return;
+    if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
+    localStorage.setItem('aq_fishing_rod', String(tier + 1));
+    sfx('tick'); refreshInfo();
+  });
+  rodEl.appendChild(btn);
+}
+
+// Fish-o-pedia — every fish, its sprite, and how many you've caught.
+function renderDex() {
+  if (!dexEl) return;
+  const caught = readCaught();
+  const total = FISH.length;
+  const got = FISH.filter(f => (caught[f.name] | 0) > 0).length;
+  dexEl.innerHTML = `<div class="fish-dex-head">📖 Fish-o-pedia — ${got}/${total} species</div>`;
+  ZONES.forEach((z, zi) => {
+    const zfish = FISH.filter(f => f.zone === zi);
+    const sec = document.createElement('div'); sec.className = 'fish-dex-zone';
+    sec.innerHTML = `<div class="fish-dex-zname">${z.name}</div>`;
+    const grid = document.createElement('div'); grid.className = 'fish-dex-grid';
+    zfish.forEach(f => {
+      const n = caught[f.name] | 0, seen = n > 0;
+      const cell = document.createElement('div'); cell.className = 'fish-dex-cell';
+      const c = document.createElement('canvas'); c.width = 60; c.height = 38; c.className = 'fish-dex-spr';
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      const sc = 3, sw = spriteW(f.shape) * sc;
+      drawSprite(ctx, f.shape, f.col, (60 - sw) / 2, 4, sc, !seen);
+      cell.appendChild(c);
+      const lab = document.createElement('div'); lab.className = 'fish-dex-lab';
+      lab.innerHTML = seen ? `${f.name}<span>×${n}</span>` : `???<span>—</span>`;
+      cell.appendChild(lab);
+      grid.appendChild(cell);
+    });
+    sec.appendChild(grid); dexEl.appendChild(sec);
+  });
+}
+
 function build() {
   const area = document.getElementById('fishing-area');
   if (!area) return;
@@ -318,16 +510,31 @@ function build() {
   cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'gbc-canvas';
   stage.appendChild(cv); area.appendChild(stage);
 
+  dexEl = document.createElement('div'); dexEl.className = 'fish-dex'; dexEl.style.display = 'none';
+  area.appendChild(dexEl);
+
   const bar = document.createElement('div'); bar.className = 'gbc-bar';
   const btn = document.createElement('button'); btn.className = 'gbc-btn'; btn.textContent = '🎣 CAST / REEL';
   bar.appendChild(btn);
+  const dexBtn = document.createElement('button'); dexBtn.className = 'gbc-btn'; dexBtn.textContent = '📖 Fish';
+  bar.appendChild(dexBtn);
   _fishInfo = document.createElement('div'); _fishInfo.className = 'gbc-info'; bar.appendChild(_fishInfo);
   area.appendChild(bar);
+
+  zoneEl = document.createElement('div'); zoneEl.className = 'gbc-bar'; area.appendChild(zoneEl);
+  rodEl = document.createElement('div'); rodEl.className = 'gbc-bar'; area.appendChild(rodEl);
 
   cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   const down = (e) => { e.preventDefault(); press(); };
   cv.addEventListener('pointerdown', down);
   btn.addEventListener('pointerdown', down);
+  dexBtn.addEventListener('click', () => {
+    dexOpen = !dexOpen;
+    dexEl.style.display = dexOpen ? 'block' : 'none';
+    stage.style.display = dexOpen ? 'none' : '';
+    dexBtn.textContent = dexOpen ? '🎣 Back' : '📖 Fish';
+    if (dexOpen) renderDex();
+  });
   if (!window._fishKeyBound) {
     window._fishKeyBound = true;
     window.addEventListener('keydown', (e) => {
@@ -338,7 +545,11 @@ function build() {
   _built = true;
 }
 
-function refreshInfo() { if (_fishInfo) _fishInfo.textContent = `Lv ${lvl()} · 💰 ${credits()}`; }
+function refreshInfo() {
+  if (_fishInfo) _fishInfo.textContent = `Lv ${lvl()} · ${RODS[rodTier()].name} rod · 💰 ${credits()}`;
+  renderZones();
+  renderRodShop();
+}
 
 function openFishing(show = true) {
   const w = document.getElementById('fishing-wrap');
@@ -353,6 +564,8 @@ function openFishing(show = true) {
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('fishing'); window.OS.focus('fishing'); }
   if (!_built) build();
+  curZone = Math.min(maxZone(), parseInt(localStorage.getItem('aq_fishing_zone') || '0', 10) || 0);
+  dexOpen = false; if (dexEl) dexEl.style.display = 'none';
   state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
   rollCondition(); _castCount = 0;
   refreshInfo();

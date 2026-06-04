@@ -365,10 +365,17 @@ async function loadPortfolio() {
     if (snap.exists()) {
       const v = snap.val();
       holdings = v.holdings || {};
-      // Adopt remote credits if they are newer than our last local sync.
-      const localAt = parseInt(localStorage.getItem('aq_credits_synced_at') || '0', 10);
-      if (typeof v.credits === 'number' && (v.updatedAt || 0) >= localAt) {
-        if (typeof window.aqSetCredits === 'function') window.aqSetCredits(v.credits);
+      // Credits source of truth: for logged-in users the ACCOUNT owns credits
+      // (accounts/<id>/credits, synced live by accounts.js). Only adopt the
+      // portfolio's credits for anonymous users — otherwise a stale portfolios
+      // node (e.g. after an admin credit change, which only writes the account)
+      // could overwrite the real balance and "eat" money.
+      const loggedIn = !!window._aqAccountId;
+      if (!loggedIn) {
+        const localAt = parseInt(localStorage.getItem('aq_credits_synced_at') || '0', 10);
+        if (typeof v.credits === 'number' && (v.updatedAt || 0) >= localAt) {
+          if (typeof window.aqSetCredits === 'function') window.aqSetCredits(v.credits);
+        }
       }
       // Liquidate holdings of stocks that no longer exist (e.g. the old list)
       // back to credits at their cost basis, so credits aren't stranded. Done

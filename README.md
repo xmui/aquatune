@@ -40,7 +40,7 @@ Firebase realtime sync and an optional browser extension that feeds the audio vi
   whatever theme you're running.
 
 ### 🎮 Mini-games & rewards
-- **Slots, Solitaire, Picross, Minesweeper, Blackjack, Beat Tap, Texas Hold'em, and Space Pinball.**
+- **Slots, Solitaire, Picross, Minesweeper, Blackjack, Beat Tap, Texas Hold'em, 8-Ball Pool, Tetris, Fishing, Mining, and Buddy Shoot.**
 - A **global leaderboard** (with an *Anonymous* fallback) and an in-app **credits** economy.
 - **Unlockable themes** earned by playing — e.g. solve a Picross, win Solitaire, or hit a Slots jackpot.
 - Picross supports **click-and-drag fill** and **crosses off clue numbers** as you complete them.

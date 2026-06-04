@@ -154,6 +154,8 @@ async function attachAccount(id, { adoptCredits = true } = {}) {
   watchCredits(id);
   if (typeof window.aqRefreshCreditDisplays === 'function') window.aqRefreshCreditDisplays();
   aqRenderAccountPanel();
+  // Site-banned account restored from a saved session → block the whole app.
+  if (_account && _account.siteBanned) showSiteBanScreen(_account.siteBanReason);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +235,7 @@ async function aqLogin(username, password) {
     if (!acct.passwordHash) return { ok: false, error: 'This account uses Google sign-in.' };
     const h = await hashPassword(password, acct.salt);
     if (h !== acct.passwordHash) return { ok: false, error: 'Wrong password.' };
+    if (acct.siteBanned) return { ok: false, error: '🚫 This account is banned from Aquatune.' };
     // forced reset (admin set a temp password)
     if (acct.mustChangePassword) {
       const np = prompt('Your password was reset. Choose a new password:');
@@ -328,6 +331,8 @@ async function aqLoginWithGoogle() {
     const idx = await get(googleIdxRef(user.uid));
     if (idx.exists()) {
       const accountId = idx.val();
+      const gAcct = (await get(accRef(accountId))).val();
+      if (gAcct && gAcct.siteBanned) return { ok: false, error: '🚫 This account is banned from Aquatune.' };
       await mergeLocalIntoAccount(accountId);
       localStorage.setItem('aq_account_id', accountId);
       location.reload();
@@ -438,9 +443,50 @@ async function aqAdminSetBan(username, gameId, banned) {
   }
   return { ok: true, banned: !!banned };
 }
-// TEMPORARY: all game bans are lifted for this release. Flip back to false to
-// re-enable enforcement (the per-account bans/<game> records are left untouched).
-const BANS_LIFTED = true;
+
+// Admin: ban / unban a username from the ENTIRE site. Stored at accounts/<id>/siteBanned;
+// a banned user is blocked at login and gets a full-screen block on session restore.
+async function aqAdminSetSiteBan(username, banned, reason) {
+  if (!_account || !_account.admin) return { ok: false, error: 'Not an admin.' };
+  const lo = lower(username);
+  const idSnap = await get(userIdxRef(lo));
+  if (!idSnap.exists()) return { ok: false, error: 'No such username.' };
+  const accountId = idSnap.val();
+  if (banned && accountId === window._aqAccountId) return { ok: false, error: "You can't site-ban yourself." };
+  try {
+    await update(accRef(accountId), {
+      siteBanned: banned ? true : null,
+      siteBanReason: banned ? (String(reason || '').trim() || null) : null,
+      updatedAt: Date.now(),
+    });
+  } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
+  if (accountId === window._aqAccountId && _account) { if (banned) _account.siteBanned = true; else delete _account.siteBanned; }
+  return { ok: true, banned: !!banned };
+}
+// Is the CURRENT user banned from the whole site?
+function aqIsSiteBanned() { return !!(_account && _account.siteBanned); }
+// Full-screen block shown to a site-banned user. Captures all input (top z-index)
+// and only offers a log-out, so the rest of the app is unusable.
+function showSiteBanScreen(reason) {
+  const mount = () => {
+    if (document.getElementById('aq-siteban')) return;
+    try { document.querySelectorAll('audio,video').forEach(m => m.pause && m.pause()); } catch (e) {}
+    const ov = document.createElement('div');
+    ov.id = 'aq-siteban';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0a0a12;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif';
+    ov.innerHTML = `<div style="font-size:54px">🚫</div>
+      <div style="font-size:22px;font-weight:800">You are banned from Aquatune</div>
+      <div style="font-size:14px;opacity:.8;max-width:440px;line-height:1.4">${esc(reason || 'Your account has been banned by an administrator.')}</div>
+      <button id="aq-siteban-out" style="margin-top:8px;padding:8px 18px;border:none;border-radius:8px;background:#c0392b;color:#fff;font-weight:700;cursor:pointer">Log out</button>`;
+    document.body.appendChild(ov);
+    const b = ov.querySelector('#aq-siteban-out');
+    if (b) b.onclick = () => { try { aqLogout(); } catch (e) { localStorage.removeItem('aq_account_id'); location.reload(); } };
+  };
+  if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+}
+// Game-ban enforcement is ON. (Set true only to temporarily lift all game bans;
+// the per-account bans/<game> records are left untouched either way.)
+const BANS_LIFTED = false;
 // Is the CURRENT user banned from a game? (synchronous; reads the cached account)
 function aqIsBanned(gameId) { return !BANS_LIFTED && !!(_account && _account.bans && _account.bans[gameId]); }
 // Games an admin can ban a user from (ids match APPS / OS.open ids).
@@ -534,6 +580,7 @@ async function renderAdminBox(box) {
     <div class="aq-acct-row"><input class="aq-admin-cuser" placeholder="username"><input class="aq-admin-camt" type="number" placeholder="±credits" style="width:84px"><button class="win95-btn aq-admin-cgo">Adjust credits</button></div>
     <div class="aq-acct-row"><input class="aq-admin-suser" placeholder="username"><select class="aq-admin-sskill" style="width:120px">${skillOpts}</select><input class="aq-admin-slvl" type="number" min="1" max="100" placeholder="lvl" style="width:60px"><button class="win95-btn aq-admin-sgo">Set skill level</button></div>
     <div class="aq-acct-row"><input class="aq-admin-buser" placeholder="username"><select class="aq-admin-bgame" style="width:120px">${gameOpts}</select><button class="win95-btn aq-admin-bgo">Ban</button><button class="win95-btn aq-admin-ugo">Unban</button></div>
+    <div class="aq-acct-row"><input class="aq-admin-sbuser" placeholder="username"><input class="aq-admin-sbreason" placeholder="reason (optional)" style="flex:1;min-width:80px"><button class="win95-btn aq-admin-sbgo">Ban from site</button><button class="win95-btn aq-admin-sbungo">Unban</button></div>
     <div class="aq-acct-msg aq-admin-msg"></div>`;
   const msg = (t, ok) => { const m = box.querySelector('.aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   const doReset = async (name) => {
@@ -576,13 +623,28 @@ async function renderAdminBox(box) {
   };
   box.querySelector('.aq-admin-bgo').onclick = () => doBan(true);
   box.querySelector('.aq-admin-ugo').onclick = () => doBan(false);
+  const doSiteBan = async (banned) => {
+    const u = box.querySelector('.aq-admin-sbuser').value.trim();
+    const reason = box.querySelector('.aq-admin-sbreason').value.trim();
+    if (!u) { msg('Enter a username.', false); return; }
+    msg(banned ? 'Banning from site…' : 'Unbanning…', true);
+    const r = await aqAdminSetSiteBan(u, banned, reason);
+    if (!r.ok) { msg(r.error, false); return; }
+    let extra = '';
+    if (banned && typeof window.aqPurgeLeaderboard === 'function') {
+      try { const n = await window.aqPurgeLeaderboard(u); extra = n ? ` Removed ${n} leaderboard entr${n === 1 ? 'y' : 'ies'}.` : ''; } catch (e) {}
+    }
+    msg(`${u} ${banned ? 'banned from the site.' : 'unbanned.'}${extra}`, true);
+  };
+  box.querySelector('.aq-admin-sbgo').onclick = () => doSiteBan(true);
+  box.querySelector('.aq-admin-sbungo').onclick = () => doSiteBan(false);
 }
 
 // expose
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
   aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits, aqAdminSetSkill,
-  aqAdminSetBan, aqIsBanned,
+  aqAdminSetBan, aqIsBanned, aqAdminSetSiteBan, aqIsSiteBanned,
 });
 
 // ---------------------------------------------------------------------------

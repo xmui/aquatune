@@ -312,9 +312,19 @@ function renderRankings(area) {
     area.appendChild(back);
     area.appendChild(statsHeader(_rankDetail.name, _rankDetail.total));
     const credLine = el('div', 'sk-credits', 'Credits ');
-    credLine.appendChild(el('span', 'sk-credits-val', `💰 ${(_rankDetail.credits | 0).toLocaleString()}`));
+    const credVal = el('span', 'sk-credits-val', `💰 ${(_rankDetail.credits | 0).toLocaleString()}`);
+    credLine.appendChild(credVal);
     area.appendChild(credLine);
     area.appendChild(skillGrid(_rankDetail.xp));
+    // The synced skills node only carries credits after the user's next XP save, so
+    // older entries read 0. Fetch the live balance straight from their account node.
+    get(ref(db, `accounts/${_rankDetail.uid}/credits`)).then(snap => {
+      if (snap.exists()) {
+        const c = snap.val() | 0;
+        _rankDetail.credits = c;
+        credVal.textContent = `💰 ${c.toLocaleString()}`;
+      }
+    }).catch(() => {});
     return;
   }
   // search box

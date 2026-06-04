@@ -159,6 +159,17 @@
     @keyframes aqUpdIn { from{opacity:0; transform:translate(-50%,12px)} to{opacity:1; transform:translate(-50%,0)} }
     #aq-update-refresh { background:#fff; color:#0c6fae; border:none; border-radius:8px; font-weight:800; font-size:12px; padding:5px 12px; cursor:pointer; }
     #aq-update-refresh:hover { background:#eaf6ff; }
+    /* one-time apology for the lost stock credits */
+    #aq-sorry-banner { position:fixed; left:50%; top:14px; transform:translateX(-50%); z-index:99998;
+      display:flex; align-items:center; gap:10px; max-width:94vw;
+      background:linear-gradient(180deg,#6a4ea8,#4a2f86); color:#fff; font-size:12.5px; font-weight:600;
+      padding:8px 12px; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.22);
+      animation:aqUpdIn .35s ease; }
+    #aq-sorry-banner b { font-weight:800; }
+    #aq-sorry-banner .kao { font-weight:700; opacity:.95; white-space:nowrap; }
+    #aq-sorry-x { background:rgba(255,255,255,0.2); color:#fff; border:none; border-radius:8px; font-weight:800;
+      font-size:13px; line-height:1; padding:4px 9px; cursor:pointer; flex-shrink:0; }
+    #aq-sorry-x:hover { background:rgba(255,255,255,0.34); }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -17600,5 +17611,28 @@ function bjUpdateBalance(){
     <div id="lobby-overlay-list"><div class="sp-lobby-empty">Loading rooms…</div></div>
   </div>
 </div>
+<script>
+  // One-time apology banner for the stock-credit loss. Shows once per browser.
+  (function () {
+    try { if (localStorage.getItem('aq_sorry_stocks_v1')) return; } catch (e) {}
+    function show() {
+      if (document.getElementById('aq-sorry-banner')) return;
+      var b = document.createElement('div');
+      b.id = 'aq-sorry-banner';
+      b.innerHTML = '<span class="kao">(｡•́︵•̀｡)</span>' +
+        '<span>Sorry — a recent update wiped some <b>stock credits &amp; holdings</b>. ' +
+        'It’s fixed now and won’t happen again.</span>' +
+        '<button id="aq-sorry-x" title="Dismiss">Got it</button>';
+      document.body.appendChild(b);
+      b.querySelector('#aq-sorry-x').onclick = function () {
+        try { localStorage.setItem('aq_sorry_stocks_v1', '1'); } catch (e) {}
+        b.style.opacity = '0'; b.style.transition = 'opacity .3s';
+        setTimeout(function () { b.remove(); }, 320);
+      };
+    }
+    if (document.body) setTimeout(show, 1200);
+    else window.addEventListener('DOMContentLoaded', function () { setTimeout(show, 1200); });
+  })();
+</script>
 </body>
 </html>

@@ -400,9 +400,46 @@ async function aqAdminSetSkill(username, skillId, level) {
   try {
     await update(ref(db, 'user-skills/' + accountId + '/xp'), { [skillId]: xp });
     await update(ref(db, 'user-skills/' + accountId), { updatedAt: Date.now() });
-  } catch (e) { return { ok: false, error: 'Update failed.' }; }
+  } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
+  // If the admin edited their OWN account, apply it to the live session immediately
+  // (so it shows without a reload, and can lower a skill — remote merges by max).
+  if (accountId === window._aqAccountId && typeof window.aqForceOwnSkill === 'function') {
+    window.aqForceOwnSkill(skillId, level);
+  }
   return { ok: true, level, xp };
 }
+
+// Admin: ban / unban a username from a specific game. Stored at accounts/<id>/bans/<gameId>;
+// OS.open() checks aqIsBanned(gameId) and blocks the window from opening.
+async function aqAdminSetBan(username, gameId, banned) {
+  if (!_account || !_account.admin) return { ok: false, error: 'Not an admin.' };
+  gameId = String(gameId || '').trim();
+  if (!gameId) return { ok: false, error: 'Pick a game.' };
+  const lo = lower(username);
+  const idSnap = await get(userIdxRef(lo));
+  if (!idSnap.exists()) return { ok: false, error: 'No such username.' };
+  const accountId = idSnap.val();
+  try {
+    await update(accRef(accountId), { ['bans/' + gameId]: banned ? true : null, updatedAt: Date.now() });
+  } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
+  // Reflect on the live session if the admin edited their own bans.
+  if (accountId === window._aqAccountId && _account) {
+    _account.bans = _account.bans || {};
+    if (banned) _account.bans[gameId] = true; else delete _account.bans[gameId];
+  }
+  return { ok: true, banned: !!banned };
+}
+// Is the CURRENT user banned from a game? (synchronous; reads the cached account)
+function aqIsBanned(gameId) { return !!(_account && _account.bans && _account.bans[gameId]); }
+// Games an admin can ban a user from (ids match APPS / OS.open ids).
+const BANNABLE_GAMES = [
+  { id: 'mining', name: 'Mining' }, { id: 'fishing', name: 'Fishing' },
+  { id: 'buddyshoot', name: 'Buddy Shoot' }, { id: 'solitaire', name: 'Solitaire' },
+  { id: 'picross', name: 'Picross' }, { id: 'mines', name: 'Minesweeper' },
+  { id: 'slots', name: 'Slots' }, { id: 'blackjack', name: 'Blackjack' },
+  { id: 'holdem', name: "Texas Hold'em" }, { id: 'rhythm', name: 'Beat Tap' },
+  { id: 'pinball', name: 'Space Pinball' }, { id: 'stocks', name: 'Exchange' },
+];
 
 // ---------------------------------------------------------------------------
 // UI — rendered into every .aq-account-panel mount (Settings + splash).
@@ -476,10 +513,14 @@ async function renderAdminBox(box) {
   const list = keys.length
     ? keys.map(k => `<div class="aq-admin-req"><span>${esc(resets[k].username || k)}</span><button class="win95-btn aq-admin-reset" data-u="${esc(resets[k].username || k)}">Reset</button></div>`).join('')
     : '<div class="aq-acct-note">No pending requests.</div>';
+  const skillOpts = (window.aqSkillList || [{ id: 'music', name: 'Music' }])
+    .map(s => `<option value="${esc(s.id)}">${esc((s.icon ? s.icon + ' ' : '') + s.name)}</option>`).join('');
+  const gameOpts = BANNABLE_GAMES.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');
   box.innerHTML = `${list}
     <div class="aq-acct-row"><input class="aq-admin-user" placeholder="username to reset"><button class="win95-btn aq-admin-go">Reset password</button></div>
     <div class="aq-acct-row"><input class="aq-admin-cuser" placeholder="username"><input class="aq-admin-camt" type="number" placeholder="±credits" style="width:84px"><button class="win95-btn aq-admin-cgo">Adjust credits</button></div>
-    <div class="aq-acct-row"><input class="aq-admin-suser" placeholder="username"><input class="aq-admin-sskill" placeholder="skill (e.g. music)" style="width:120px"><input class="aq-admin-slvl" type="number" placeholder="lvl" style="width:60px"><button class="win95-btn aq-admin-sgo">Set skill level</button></div>
+    <div class="aq-acct-row"><input class="aq-admin-suser" placeholder="username"><select class="aq-admin-sskill" style="width:120px">${skillOpts}</select><input class="aq-admin-slvl" type="number" min="1" max="100" placeholder="lvl" style="width:60px"><button class="win95-btn aq-admin-sgo">Set skill level</button></div>
+    <div class="aq-acct-row"><input class="aq-admin-buser" placeholder="username"><select class="aq-admin-bgame" style="width:120px">${gameOpts}</select><button class="win95-btn aq-admin-bgo">Ban</button><button class="win95-btn aq-admin-ugo">Unban</button></div>
     <div class="aq-acct-msg aq-admin-msg"></div>`;
   const msg = (t, ok) => { const m = box.querySelector('.aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   const doReset = async (name) => {
@@ -498,18 +539,31 @@ async function renderAdminBox(box) {
   };
   box.querySelector('.aq-admin-sgo').onclick = async () => {
     const u = box.querySelector('.aq-admin-suser').value.trim();
-    const skill = box.querySelector('.aq-admin-sskill').value.trim();
+    const skill = box.querySelector('.aq-admin-sskill').value;
     const lvl = box.querySelector('.aq-admin-slvl').value;
-    if (!u || !skill) return;
+    if (!u || !skill) { msg('Enter a username and pick a skill.', false); return; }
+    msg('Setting…', true);
     const r = await aqAdminSetSkill(u, skill, lvl);
     msg(r.ok ? `${u} ${skill} set to level ${r.level}.` : r.error, r.ok);
   };
+  const doBan = async (banned) => {
+    const u = box.querySelector('.aq-admin-buser').value.trim();
+    const game = box.querySelector('.aq-admin-bgame').value;
+    const label = (BANNABLE_GAMES.find(g => g.id === game) || {}).name || game;
+    if (!u || !game) { msg('Enter a username and pick a game.', false); return; }
+    msg(banned ? 'Banning…' : 'Unbanning…', true);
+    const r = await aqAdminSetBan(u, game, banned);
+    msg(r.ok ? `${u} ${banned ? 'banned from' : 'unbanned from'} ${label}.` : r.error, r.ok);
+  };
+  box.querySelector('.aq-admin-bgo').onclick = () => doBan(true);
+  box.querySelector('.aq-admin-ugo').onclick = () => doBan(false);
 }
 
 // expose
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
   aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits, aqAdminSetSkill,
+  aqAdminSetBan, aqIsBanned,
 });
 
 // ---------------------------------------------------------------------------

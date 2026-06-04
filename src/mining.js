@@ -49,8 +49,12 @@ const ROCKS = [
 const CXR = 80, CYR = 72, RW = 30, RH = 24;
 
 // ── spice dials ──────────────────────────────────────────────────────────────
-const CRIT_MULT = 2.0;               // damage × on a crit (a reward for aim, not a one-shot)
-const SPAM_MS = 200;                 // clicks faster than this = mashing → NO crit (timing too)
+// Crits are rare, high-value events: a weak-point flashes onto the screen now and
+// then; click it for a big hit. The rest of the time you just mine the rock. A
+// well-aimed crit beats steady spamming (unless you're a spam god who tags it fast).
+const CRIT_MULT = 6;                 // a crit hits HARD (rare, so it can afford to)
+const CRIT_WINDOW_MS = 1600;         // how long the weak-point stays clickable
+const CRIT_GAP_MIN = 2600, CRIT_GAP_RAND = 3800;   // random delay between appearances
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
@@ -58,8 +62,8 @@ const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
 
 let cv = null, cx = null, raf = null, _built = false;
 let rock = null, swing = 0, shake = 0, particles = [];
-let combo = 0, lastHit = 0, breakUntil = 0;   // combo = crit streak (consecutive weak-point hits)
-let floaters = [], sweet = null, motherlodeUntil = 0;
+let breakUntil = 0;
+let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
 
@@ -103,19 +107,20 @@ function spawnRock() {
     for (let s = 0; s < 5; s++) { x += Math.cos(ang) * 5 + (Math.random() * 4 - 2); y += Math.sin(ang) * 5 + (Math.random() * 4 - 2); pts.push({ x: Math.round(x), y: Math.round(y) }); }
     rock.cracks.push(pts);
   }
-  rerollSweet();   // place the weak-point on the rock
+  scheduleSweet(performance.now());   // first weak-point will flash in after a delay
 }
-// A glowing "weak point" that appears ANYWHERE in the mine window — click IT for a
-// crit. Smaller & quicker on tougher rocks, and it relocates often, so you must aim:
-// mashing or tapping random spots won't land it. Crits come ONLY from hitting this.
-function rerollSweet() {
+// A glowing "weak point" flashes onto the screen at random intervals — click it in
+// time for a big crit, then it's gone until the next one. The rest of the time you
+// just mine. Random tapping rarely lands it (small target, brief window).
+function scheduleSweet(now) { sweet = null; sweetNextAt = now + CRIT_GAP_MIN + Math.random() * CRIT_GAP_RAND; }
+function spawnSweet(now) {
   if (!rock) { sweet = null; return; }
-  const r = Math.max(4, 7 - rock.def.rarity);   // smaller target on richer rocks
+  const r = Math.max(5, 8 - rock.def.rarity);    // smaller target on richer rocks
   const m = r + 12;
   sweet = {
     x: m + Math.random() * (W - 2 * m),
-    y: 16 + Math.random() * (H - 32 - 16),       // below the top HUD, above the name bar
-    r, moveAt: performance.now() + 850 + Math.random() * 750,
+    y: 16 + Math.random() * (H - 32 - 16),        // below the top HUD, above the name bar
+    r, born: now, expireAt: now + CRIT_WINDOW_MS,
   };
 }
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
@@ -124,9 +129,7 @@ function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: C
 function breakRock() {
   const r = rock.def, now = performance.now();
   const ml = motherlodeUntil > now;
-  // Modest crit-streak bonus (capped) + motherlode; kept small so income stays earned.
-  const bonus = (1 + Math.min(combo, 8) * 0.03) * (ml ? MOTHERLODE_ORE : 1);
-  const ore = Math.round(r.value * bonus);
+  const ore = Math.round(r.value * (ml ? MOTHERLODE_ORE : 1));
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
   // Mining gives less XP than other skills: only the "won" trickle, scaled down.
   // (Motherlode boosts ore credits + speed, NOT the XP mult — keeps the economy sane.)
@@ -154,25 +157,20 @@ function breakRock() {
 function hit(px, py) {
   if (!rock) return;
   const now = performance.now();
-  const gap = now - lastHit;
-  const spamming = gap < SPAM_MS;           // mashing too fast → no crit, just normal damage
-  lastHit = now;
   swing = 1; shake = 6; rock.flash = 1;
-  // Crits reward AIM only: you must click the glowing weak-point (which roams the
-  // whole window). No flat random crit — tapping random spots or mashing never crits.
-  // Combo = consecutive weak-point hits (a crit streak); any non-crit hit resets it.
-  const crit = !spamming && sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 2;
-  combo = crit ? combo + 1 : 0;
+  // Crit ONLY if a weak-point is currently flashing and you click it. It's a rare,
+  // high-damage event — the rest of your clicks are just normal mining.
+  const crit = sweet && px != null && Math.hypot(px - sweet.x, py - sweet.y) <= sweet.r + 3;
   let dmg = pickPower();
   if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
   if (crit) dmg *= CRIT_MULT;
   sfx(crit ? 'crit' : 'hit');
   rock.hp -= dmg;
   if (crit) {
-    shake = 10;
-    addFloater(combo > 1 ? 'CRIT x' + combo + '!' : 'CRIT!', 3);
-    rerollSweet();
-    for (let i = 0; i < 10; i++) spark(true);
+    shake = 12;
+    addFloater('CRIT!', 3);
+    scheduleSweet(now);   // consume the weak-point; next one flashes in later
+    for (let i = 0; i < 12; i++) spark(true);
   } else {
     for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
   }
@@ -314,8 +312,8 @@ function draw(t) {
     cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'center';
     cx.fillText('★ MOTHERLODE ' + Math.ceil((motherlodeUntil - t) / 1000) + 's ★', W / 2, 2); cx.textAlign = 'left';
   }
-  // crit streak
-  else if (combo > 1) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('x' + combo + ' crit streak', 6, 2); }
+  // weak-point hint
+  else if (sweet) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('★ weak point!', 6, 2); }
   // rock name banner
   cx.fillStyle = PAL[0]; cx.fillRect(0, H - 14, W, 14);
   cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
@@ -331,7 +329,11 @@ function tick(t) {
   if (!rock && breakUntil && t >= breakUntil) { breakUntil = 0; spawnRock(); }
   for (const p of particles) { p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= dt / 16; }
   particles = particles.filter(p => p.life > 0);
-  if (rock && sweet && t >= sweet.moveAt) rerollSweet();   // weak-point relocates → moving target
+  // Weak-point lifecycle: flash in after a random delay, linger briefly, then vanish.
+  if (rock) {
+    if (sweet) { if (t >= sweet.expireAt) scheduleSweet(t); }
+    else if (t >= sweetNextAt) spawnSweet(t);
+  }
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
   floaters = floaters.filter(f => f.life > 0);
   draw(t);
@@ -358,7 +360,7 @@ function renderStages() {
     b.addEventListener('click', () => {
       if (!unlocked || i === curStage) return;
       curStage = i; try { localStorage.setItem('aq_mining_stage', String(i)); } catch (e) {}
-      rock = null; breakUntil = 0; combo = 0; spawnRock(); refreshInfo();
+      rock = null; breakUntil = 0; spawnRock(); refreshInfo();
     });
     stageEl.appendChild(b);
   });

@@ -232,7 +232,7 @@ function landFish(now) {
   if (typeof window.playFanfare === 'function') window.playFanfare(f.monster ? 'jackpot' : 'small');
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
   // XP comes ONLY from landing a fish (never from playing/missing).
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (0.7 + f.rarity * 0.5) * (perfect ? 1.2 : 1) });
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('fishing', { played: false, won: true, mult: (1.1 + f.rarity * 0.6) * (perfect ? 1.25 : 1) });
   if (typeof window.recordScore === 'function') window.recordScore('fishing', value, f.name);
   lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster };
   recordCaught(f.name);

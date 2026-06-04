@@ -91,7 +91,9 @@ function _saveRemote() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
-    set(skillsRef(), { xp: _xp, name, updatedAt: Date.now() }).catch(() => {});
+    const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
+    // Store credits alongside skills so rankings can show how rich a player is.
+    set(skillsRef(), { xp: _xp, name, credits, updatedAt: Date.now() }).catch(() => {});
   }, 800);
 }
 
@@ -309,6 +311,9 @@ function renderRankings(area) {
     back.onclick = () => { _rankDetail = null; renderSkillsPanel(); };
     area.appendChild(back);
     area.appendChild(statsHeader(_rankDetail.name, _rankDetail.total));
+    const credLine = el('div', 'sk-credits', 'Credits ');
+    credLine.appendChild(el('span', 'sk-credits-val', `💰 ${(_rankDetail.credits | 0).toLocaleString()}`));
+    area.appendChild(credLine);
     area.appendChild(skillGrid(_rankDetail.xp));
     return;
   }
@@ -347,8 +352,11 @@ function renderRankings(area) {
       const arr = [];
       for (const uid of Object.keys(v || {})) {
         const node = v[uid]; if (!node || typeof node !== 'object') continue;
+        const name = (node.name || '').trim();
+        // Skip anonymous / nameless entries — only real accounts show in global stats.
+        if (!name || name.toLowerCase() === 'anonymous') continue;
         const xp = node.xp || {};
-        arr.push({ uid, name: (node.name || 'Anonymous'), xp, total: totalLevelOf(xp) });
+        arr.push({ uid, name, xp, credits: node.credits | 0, total: totalLevelOf(xp) });
       }
       arr.sort((a, b) => b.total - a.total);
       arr.forEach((r, i) => r.rank = i + 1);
@@ -390,6 +398,7 @@ if (typeof window !== 'undefined') {
   window.aqGameXp = gameXp;
   window.aqGetSkills = getSkills;
   window.aqSkillLevel = skillLevel;
+  window.aqXpForLevel = xpForLevel;   // admin tools compute XP for a target level
   window.openStats = openStats;
   window._aqStatsClosed = () => { _open = false; };
   hookEarnXp();

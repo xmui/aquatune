@@ -56,6 +56,10 @@ const resetRef = lo => ref(db, 'passwordResets/' + lo);
 let _account = null; // cached current account record
 function aqCurrentAccount() { return _account ? { accountId: window._aqAccountId, ..._account } : null; }
 window.aqCurrentAccount = aqCurrentAccount;
+// Single source of truth for "is the signed-in user an admin?" — used by the
+// account panel, AquaChat moderation, and any other admin-gated feature.
+function aqIsAdmin() { return !!(_account && _account.admin); }
+window.aqIsAdmin = aqIsAdmin;
 
 // ---------------------------------------------------------------------------
 // Daily bonus cooldown — enforced on the ACCOUNT (Firebase), not localStorage,
@@ -380,6 +384,25 @@ async function aqAdminAdjustCredits(username, delta) {
   await update(accRef(accountId), { updatedAt: Date.now() }).catch(() => {});
   return { ok: true, credits: after };
 }
+// Admin: set a user's skill to a given level (writes the XP for that level into
+// their synced skills node, user-skills/<id>/xp/<skill>). Skills merge by max on
+// load, so this raises a skill up to the target level (it won't lower a higher one).
+async function aqAdminSetSkill(username, skillId, level) {
+  if (!_account || !_account.admin) return { ok: false, error: 'Not an admin.' };
+  skillId = String(skillId || '').trim().toLowerCase();
+  level = Math.max(1, Math.min(100, Math.round(Number(level))));
+  if (!skillId || !isFinite(level)) return { ok: false, error: 'Pick a skill and level.' };
+  const xp = (typeof window.aqXpForLevel === 'function') ? window.aqXpForLevel(level) : Math.round(15 * (level - 1) * (level - 1));
+  const lo = lower(username);
+  const idSnap = await get(userIdxRef(lo));
+  if (!idSnap.exists()) return { ok: false, error: 'No such username.' };
+  const accountId = idSnap.val();
+  try {
+    await update(ref(db, 'user-skills/' + accountId + '/xp'), { [skillId]: xp });
+    await update(ref(db, 'user-skills/' + accountId), { updatedAt: Date.now() });
+  } catch (e) { return { ok: false, error: 'Update failed.' }; }
+  return { ok: true, level, xp };
+}
 
 // ---------------------------------------------------------------------------
 // UI — rendered into every .aq-account-panel mount (Settings + splash).
@@ -410,7 +433,6 @@ function renderAccountInto(box) {
         <button class="win95-btn aq-acct-signup">Create account</button>
       </div>
       <div class="aq-acct-row">
-        <button class="win95-btn aq-acct-google">Log in with Google</button>
         <button class="aq-link aq-acct-forgot">Forgot password?</button>
       </div>
       <div class="aq-acct-msg"></div>
@@ -418,7 +440,8 @@ function renderAccountInto(box) {
     const u = () => $('.aq-acct-user').value, p = () => $('.aq-acct-pass').value;
     $('.aq-acct-login').onclick = async () => { msg('Logging in…', true); const r = await aqLogin(u(), p()); if (!r.ok) msg(r.error, false); };
     $('.aq-acct-signup').onclick = async () => { msg('Creating…', true); const r = await aqSignup(u(), p()); if (!r.ok) msg(r.error, false); };
-    $('.aq-acct-google').onclick = async () => { msg('Opening Google…', true); const r = await aqLoginWithGoogle(); if (!r.ok) msg(r.error, false); };
+    // Aquatune-account Google sign-in temporarily disabled (button removed above).
+    // The YouTube/Google sign-in for video features is separate and unaffected.
     $('.aq-acct-forgot').onclick = async () => {
       const name = prompt('Enter your username to request a password reset:'); if (!name) return;
       const r = await aqRequestReset(name); msg(r.ok ? 'Reset request sent to the admin.' : r.error, r.ok);
@@ -432,8 +455,7 @@ function renderAccountInto(box) {
     <div class="aq-acct-row">
       <button class="win95-btn aq-acct-logout">Log out</button>
       <button class="win95-btn aq-acct-rename">Change username</button>
-      ${splash ? '' : `<button class="win95-btn aq-acct-changepw">Change password</button>
-      <button class="win95-btn aq-acct-link" ${linked ? 'disabled' : ''}>${linked ? 'Google linked ✓' : 'Connect Google'}</button>`}
+      ${splash ? '' : `<button class="win95-btn aq-acct-changepw">Change password</button>`}
     </div>
     <div class="aq-acct-msg"></div>
     ${(!splash && acct.admin) ? '<div class="aq-acct-row"><button class="win95-btn aq-acct-admin">Admin: password resets</button></div><div class="aq-admin-box"></div>' : ''}`;
@@ -441,8 +463,7 @@ function renderAccountInto(box) {
   $('.aq-acct-rename').onclick = async () => { const nn = prompt('New username:', acct.username); if (!nn) return; msg('Renaming…', true); const r = await aqChangeUsername(nn); msg(r.ok ? 'Username changed.' : r.error, r.ok); };
   if (!splash) {
     $('.aq-acct-changepw').onclick = async () => { const np = prompt('New password:'); if (!np) return; const r = await aqChangePassword(np); msg(r.ok ? 'Password changed.' : r.error, r.ok); };
-    const linkBtn = $('.aq-acct-link');
-    if (linkBtn && !linked) linkBtn.onclick = async () => { msg('Opening Google…', true); const r = await aqLinkGoogle(); msg(r.ok ? 'Google linked.' : r.error, r.ok); };
+    // "Connect Google" temporarily removed; aqLinkGoogle remains for re-enabling later.
     if (acct.admin) $('.aq-acct-admin').onclick = () => renderAdminBox(box.querySelector('.aq-admin-box'));
   }
 }
@@ -458,6 +479,7 @@ async function renderAdminBox(box) {
   box.innerHTML = `${list}
     <div class="aq-acct-row"><input class="aq-admin-user" placeholder="username to reset"><button class="win95-btn aq-admin-go">Reset password</button></div>
     <div class="aq-acct-row"><input class="aq-admin-cuser" placeholder="username"><input class="aq-admin-camt" type="number" placeholder="±credits" style="width:84px"><button class="win95-btn aq-admin-cgo">Adjust credits</button></div>
+    <div class="aq-acct-row"><input class="aq-admin-suser" placeholder="username"><input class="aq-admin-sskill" placeholder="skill (e.g. music)" style="width:120px"><input class="aq-admin-slvl" type="number" placeholder="lvl" style="width:60px"><button class="win95-btn aq-admin-sgo">Set skill level</button></div>
     <div class="aq-acct-msg aq-admin-msg"></div>`;
   const msg = (t, ok) => { const m = box.querySelector('.aq-admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? '#5ad17a' : '#ff8f8f'; } };
   const doReset = async (name) => {
@@ -474,12 +496,20 @@ async function renderAdminBox(box) {
     const r = await aqAdminAdjustCredits(u, amt);
     msg(r.ok ? `${u} now has ${r.credits} credits.` : r.error, r.ok);
   };
+  box.querySelector('.aq-admin-sgo').onclick = async () => {
+    const u = box.querySelector('.aq-admin-suser').value.trim();
+    const skill = box.querySelector('.aq-admin-sskill').value.trim();
+    const lvl = box.querySelector('.aq-admin-slvl').value;
+    if (!u || !skill) return;
+    const r = await aqAdminSetSkill(u, skill, lvl);
+    msg(r.ok ? `${u} ${skill} set to level ${r.level}.` : r.error, r.ok);
+  };
 }
 
 // expose
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
-  aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits,
+  aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits, aqAdminSetSkill,
 });
 
 // ---------------------------------------------------------------------------

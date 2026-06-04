@@ -12627,6 +12627,9 @@ function boardClearAll() {
 /* ── ADMIN PANEL ── */
 let _adminUnlocked = false;
 function openAdmin() {
+  // Tie AquaChat moderation to the account admin system: anyone signed in with an
+  // admin account is unlocked automatically (no password needed).
+  if (typeof window.aqIsAdmin === 'function' && window.aqIsAdmin()) _adminUnlocked = true;
   document.getElementById('admin-overlay').classList.add('show');
   document.getElementById('admin-login').style.display = _adminUnlocked ? 'none' : 'block';
   document.getElementById('admin-posts').style.display = _adminUnlocked ? 'block' : 'none';

@@ -178,10 +178,15 @@ async function mergeLocalIntoAccount(id) {
   const anonId = localStorage.getItem('aq_user_id');
   let acct = {};
   try { acct = (await get(accRef(id))).val() || {}; } catch {}
+  // The account's stocks live in portfolios/<id>, NOT in the account node — read
+  // them from there so a fresh-device login UNIONS with the existing cloud
+  // portfolio instead of overwriting it with empty holdings.
+  let acctHoldings = {}, acctPortCredits = 0;
+  try { const ap = await get(ref(db, 'portfolios/' + id)); if (ap.exists()) { const pv = ap.val() || {}; acctHoldings = pv.holdings || {}; acctPortCredits = pv.credits || 0; } } catch {}
   let localHoldings = {};
-  if (anonId) { try { const ps = await get(ref(db, 'portfolios/' + anonId)); if (ps.exists()) localHoldings = ps.val().holdings || {}; } catch {} }
-  const mergedCredits = Math.max(localCredits, acct.credits || 0);
-  const mergedHoldings = unionHoldings(localHoldings, acct.holdings || {});
+  if (anonId && anonId !== id) { try { const ps = await get(ref(db, 'portfolios/' + anonId)); if (ps.exists()) localHoldings = ps.val().holdings || {}; } catch {} }
+  const mergedCredits = Math.max(localCredits, acct.credits || 0, acctPortCredits);
+  const mergedHoldings = unionHoldings(localHoldings, acctHoldings);
   const at = Date.now();
   await update(accRef(id), { credits: mergedCredits, holdings: mergedHoldings, updatedAt: at }).catch(() => {});
   await set(ref(db, 'portfolios/' + id), { holdings: mergedHoldings, credits: mergedCredits, updatedAt: at }).catch(() => {});

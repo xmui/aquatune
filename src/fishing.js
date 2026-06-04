@@ -143,7 +143,7 @@ function maxZone() { let m = 0; for (let i = 0; i < ZONES.length; i++) if (lvl()
 
 // Caught-counts collection (the Fish-o-pedia). { fishName: count }
 function readCaught() { try { return JSON.parse(localStorage.getItem('aq_fishing_caught') || '{}') || {}; } catch { return {}; } }
-function recordCaught(name) { try { const c = readCaught(); c[name] = (c[name] | 0) + 1; localStorage.setItem('aq_fishing_caught', JSON.stringify(c)); } catch (e) {} }
+function recordCaught(name) { try { const c = readCaught(); c[name] = (c[name] | 0) + 1; localStorage.setItem('aq_fishing_caught', JSON.stringify(c)); window.aqGamePersist && window.aqGamePersist('aq_fishing_caught'); } catch (e) {} }
 
 function pickFish() {
   // Only fish in the current zone you can hook with your rod tier.
@@ -241,6 +241,7 @@ function landFish(now) {
     const log = JSON.parse(localStorage.getItem('aq_fishing_log') || '[]');
     log.unshift({ name: f.name, value, ts: Date.now() });
     localStorage.setItem('aq_fishing_log', JSON.stringify(log.slice(0, 50)));
+    window.aqGamePersist && window.aqGamePersist('aq_fishing_log');
   } catch (e) {}
   fish = null; S = null;
 }
@@ -443,7 +444,7 @@ function renderZones() {
     if (i === curZone) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + PAL[3]; }
     b.addEventListener('click', () => {
       if (!unlocked || i === curZone) return;
-      curZone = i; try { localStorage.setItem('aq_fishing_zone', String(i)); } catch (e) {}
+      curZone = i; try { localStorage.setItem('aq_fishing_zone', String(i)); window.aqGamePersist && window.aqGamePersist('aq_fishing_zone'); } catch (e) {}
       state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
       renderZones(); refreshInfo();
     });
@@ -468,6 +469,7 @@ function renderRodShop() {
     if (credits() < next.cost) return;
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
     localStorage.setItem('aq_fishing_rod', String(tier + 1));
+    if (window.aqGamePersist) window.aqGamePersist('aq_fishing_rod');
     sfx('tick'); refreshInfo();
   });
   rodEl.appendChild(btn);
@@ -574,4 +576,13 @@ function openFishing(show = true) {
   window._fishInfoT = setInterval(refreshInfo, 1000);
 }
 
-if (typeof window !== 'undefined') { window.openFishing = openFishing; }
+if (typeof window !== 'undefined') {
+  window.openFishing = openFishing;
+  // Cloud game-save may resolve after the window is open — re-read restored rod/zone.
+  window.addEventListener('aq-gamedata-synced', () => {
+    const w = document.getElementById('fishing-wrap');
+    if (!w || !w.classList.contains('open')) return;
+    curZone = Math.min(maxZone(), parseInt(localStorage.getItem('aq_fishing_zone') || '0', 10) || 0);
+    refreshInfo();
+  });
+}

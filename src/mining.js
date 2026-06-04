@@ -443,7 +443,7 @@ function renderStages() {
     if (i === curStage) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + PAL[3]; }
     b.addEventListener('click', () => {
       if (!unlocked || i === curStage) return;
-      curStage = i; try { localStorage.setItem('aq_mining_stage', String(i)); } catch (e) {}
+      curStage = i; try { localStorage.setItem('aq_mining_stage', String(i)); window.aqGamePersist && window.aqGamePersist('aq_mining_stage'); } catch (e) {}
       rock = null; breakUntil = 0; spawnRock(); refreshInfo();
     });
     stageEl.appendChild(b);
@@ -469,6 +469,7 @@ function renderShop() {
     if (credits() < next.cost) return;
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
     localStorage.setItem('aq_mining_pick', String(tier + 1));
+    if (window.aqGamePersist) window.aqGamePersist('aq_mining_pick');
     sfx('upgrade');
     refreshInfo();
   });
@@ -522,4 +523,14 @@ function openMining(show = true) {
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
 }
 
-if (typeof window !== 'undefined') { window.openMining = openMining; }
+if (typeof window !== 'undefined') {
+  window.openMining = openMining;
+  // Cloud game-save merge can land after the window is already open — re-read the
+  // restored pickaxe/stage and refresh the shop so a synced upgrade shows up.
+  window.addEventListener('aq-gamedata-synced', () => {
+    const w = document.getElementById('mining-wrap');
+    if (!w || !w.classList.contains('open')) return;
+    curStage = Math.min(maxStage(), parseInt(localStorage.getItem('aq_mining_stage') || '0', 10) || 0);
+    refreshInfo();
+  });
+}

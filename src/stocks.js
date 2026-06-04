@@ -356,6 +356,11 @@ function maybeWriteSnapshot(tick) {
 function userId() { return (typeof window.effectiveUserId === 'function' && window.effectiveUserId()) || window._myUserId || localStorage.getItem('aq_user_id') || 'anon'; }
 let holdings = {};        // id -> { shares, avgCost }
 let _creditSyncTimer = null;
+// Guard against clobbering the cloud portfolio before we've loaded it. A credit
+// change (e.g. the live cross-device watcher firing during load) would otherwise
+// schedule a savePortfolio that writes the still-empty `holdings` over the real
+// ones — silently wiping a user's stocks. Saves are no-ops until load completes.
+let _portfolioLoaded = false;
 
 function portfolioRef() { return ref(db, `portfolios/${userId()}`); }
 
@@ -389,12 +394,15 @@ async function loadPortfolio() {
         }
       }
       if (refund > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(refund);
+      _portfolioLoaded = true;   // mark loaded BEFORE the refund-save so it isn't dropped
       if (changed) savePortfolio();
     }
-  } catch {}
+    _portfolioLoaded = true;     // a successful read (even an empty/new portfolio) — safe to save now
+  } catch {}                     // network error: stay un-loaded so we never overwrite holdings with {}
 }
 
 function savePortfolio() {
+  if (!_portfolioLoaded) return;   // never write holdings before we've loaded them (anti-wipe)
   const credits = typeof window.aqGetCredits === 'function' ? window.aqGetCredits() : 0;
   const at = Date.now();
   localStorage.setItem('aq_credits_synced_at', String(at));

@@ -8806,6 +8806,29 @@ function recordScore(game, score, detail) {
   if (document.getElementById('win-leaderboard')?.classList.contains('open')) renderLeaderboard();
 }
 
+// Admin: wipe every global-leaderboard entry posted under a username (used when a
+// user is site-banned). Entries store only the display name, and only logged-in
+// accounts post, so matching by username is exact. Returns how many were removed.
+window.aqPurgeLeaderboard = async function (username) {
+  const target = String(username || '').trim().toLowerCase();
+  if (!target) return 0;
+  const { ref: fbRef, get: fbGet, remove: fbRemove } = window._fbFns || {};
+  if (!window._aqDb || !fbRef || !fbGet || !fbRemove) return 0;
+  let removed = 0;
+  for (const game of Object.keys(LB_GAMES)) {
+    try {
+      const snap = await fbGet(fbRef(window._aqDb, `${LB_PATH}/${game}`));
+      if (!snap.exists()) continue;
+      const obj = snap.val() || {};
+      const dels = Object.keys(obj).filter(k => String(obj[k] && obj[k].name || '').trim().toLowerCase() === target);
+      for (const key of dels) { await fbRemove(fbRef(window._aqDb, `${LB_PATH}/${game}/${key}`)); removed++; }
+      if (dels.length) _lbGlobalCache[game] = _lbSort(game, Object.values(obj).filter(e => String(e.name || '').trim().toLowerCase() !== target)).slice(0, 10);
+    } catch (e) {}
+  }
+  if (document.getElementById('win-leaderboard')?.classList.contains('open')) _lbRenderRows();
+  return removed;
+};
+
 // Subscribe (once per game) to the global board so the panel live-updates
 function _lbSubscribe(game) {
   if (_lbListeners[game]) return;

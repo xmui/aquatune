@@ -40,4 +40,16 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - Pixel games (Fishing/Mining) use the Game Boy Color 4-tone palette on a small
   nearest-neighbor canvas; SFX synthesized via `window.*Sfx` defined near `pokerSfx`
   in `index.html` (uses `initActx()` + `_gameVol`).
+- **Persist bought game items to the cloud.** Anything a user buys/unlocks (pickaxe,
+  rod, stage/zone, dex…) must sync per-account or it "resets" on update/new device.
+  Write the localStorage key as before, then call `window.aqGamePersist('<key>')`;
+  register the key in `src/gamesave.js` (`TIER_KEYS` = max-merge, `COUNT_KEYS` =
+  per-name max, `BLOB_KEYS` = newest-wins). It mirrors to `user-games/<uid>`.
+- **Credits = the account is the single source of truth.** `accounts/<id>/credits`
+  is authoritative; `portfolios/<id>.credits` is only a mirror. Never write holdings
+  before `loadPortfolio()` finishes (the `_portfolioLoaded` guard) or you wipe stocks.
+- Room multiplayer is host-authoritative (poker/pool): the host runs the engine and
+  streams state via `window.{poker,pool}Broadcast`; guests render it and queue shots
+  via `window.{poker,pool}SendAction` that only the host drains. Pool uses absolute
+  A/B seats (host=A, guest=B); solo bot play is the same engine with the AI on seat B.
 - Development branch for this work: `claude/music-games-features-FhhAz`.

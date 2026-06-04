@@ -3771,12 +3771,28 @@ body.perf-mode #aqua-gun { display: none !important; }
     .p8-stage { position:relative; padding:6px; background:#ece9d8; }
     .p8-canvas { width:100%; height:auto; display:block; border-radius:4px; touch-action:none; cursor:crosshair; }
     .p8-status { padding:4px 10px; font-size:11px; color:#1a2a4a; background:#d9d6c3; border-top:1px solid #b6b39c; min-height:18px; }
+    /* sunk-balls trays — solids on the left, the 8 in the middle, stripes on the right */
+    .p8-trays { display:flex; align-items:center; gap:8px; padding:5px 10px; background:linear-gradient(180deg,#0e2a18,#0a1f12); }
+    .p8-tray { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding:3px 6px; border-radius:6px; border:1px solid transparent; }
+    .p8-tray.mine { border-color:#7dffb0; background:rgba(40,120,70,0.25); }
+    .p8-tray-lab { font-size:9px; font-weight:800; letter-spacing:.5px; color:#bfe8c8; }
+    .p8-tray-balls { display:flex; flex-wrap:wrap; gap:3px; }
+    .p8-trays-mid { flex:0 0 auto; }
+    .p8-chip { position:relative; display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:50%;
+      font-size:9px; font-weight:800; border:1.5px solid; box-sizing:border-box; overflow:hidden; transition:transform .15s; }
+    .p8-chip.sunk { transform:scale(1.04); box-shadow:0 0 5px rgba(255,255,255,0.4); }
+    .p8-chip b { position:relative; z-index:1; }
+    .p8-chip i { position:absolute; left:0; right:0; top:50%; height:58%; transform:translateY(-50%); z-index:0; }   /* stripe band */
+    .p8-eight { width:19px; height:19px; }
     .p8-overlay { position:absolute; inset:6px; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
       text-align:center; padding:16px; background:rgba(10,20,40,0.82); color:#fff; border-radius:4px; }
     .p8-ov-title { font-size:22px; font-weight:900; } .p8-ov-sub { font-size:12px; opacity:0.9; max-width:340px; line-height:1.4; }
     .p8-btn, .tt-btn { font-size:13px; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer; color:#04121f;
       background:linear-gradient(180deg,#9ad0ff,#3a8ee0); border:1px solid #0a246a; }
     .p8-btn:hover, .tt-btn:hover { filter:brightness(1.08); }
+    .p8-btn:disabled { opacity:0.45; cursor:default; filter:none; }
+    .p8-startbtns { display:flex; flex-direction:column; gap:8px; align-items:stretch; min-width:220px; }
+    .p8-ov-note { font-size:10px; opacity:0.75; max-width:300px; line-height:1.4; }
 
     /* ── TETRIS (SNES style) ─── */
     #tetris-wrap {
@@ -3798,13 +3814,14 @@ body.perf-mode #aqua-gun { display: none !important; }
     .tt-overlay { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
       text-align:center; padding:14px; background:rgba(20,13,51,0.9); color:#fff; border-radius:4px; }
     .tt-ov-title { font-size:20px; font-weight:900; } .tt-ov-sub { font-size:11px; opacity:0.9; max-width:200px; line-height:1.4; }
-    .tt-pad { display:flex; gap:6px; justify-content:center; }
+    .tt-pad { display:none; gap:6px; justify-content:center; }   /* keyboard on desktop; pad shown on mobile only */
     .tt-key { flex:1; max-width:64px; font-size:18px; padding:10px 0; border-radius:8px; cursor:pointer; color:#fff; touch-action:none; user-select:none;
       background:linear-gradient(180deg,#6a4ed8,#3f2aa0); border:1px solid #8a6fff; box-shadow:0 2px 0 #2a1a70; }
     .tt-key:active { transform:translateY(2px); box-shadow:none; }
     @media (max-width:768px) {
       #pool-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
       #tetris-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
+      .tt-pad { display:flex; }   /* touch controls only on mobile */
     }
 
     /* ── SPACE PINBALL (native canvas) ─── */
@@ -17207,6 +17224,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/aquasynth-studio.js"></script>
 <script type="module" src="/src/chat-firebase.js"></script>
 <script type="module" src="/src/accounts.js"></script>
+<script type="module" src="/src/gamesave.js"></script>
 <script type="module" src="/src/room-sync.js"></script>
 <script type="module" src="/src/skills.js"></script>
 <script type="module" src="/src/slots.js"></script>

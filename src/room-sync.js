@@ -446,6 +446,20 @@ window.initRoom = async function(roomId, isHost, opts) {
     window.onPokerHole?.(snap.val());
   });
 
+  // 8-Ball pool (host-authoritative): the host streams ball/turn state; guests
+  // render it and push shot actions that only the host drains + applies.
+  onValue(ref(db, `rooms/${roomId}/pool/state`), snap => {
+    const s = snap.val();
+    if (!s || s.updatedBy === myUserId) return;
+    window.onPoolState?.(s);
+  });
+  onChildAdded(ref(db, `rooms/${roomId}/pool/actions`), snap => {
+    if (!window._isRoomHost) return;            // only the host applies + clears
+    const a = snap.val(), key = snap.key;
+    try { window.onPoolAction?.(a); }
+    finally { remove(ref(db, `rooms/${roomId}/pool/actions/${key}`)); }
+  });
+
   // Instant sync on join: read the current state immediately and apply it, so a guest who joins
   // mid-song snaps to the right position without waiting for the host's next heartbeat.
   if (!isHost) {
@@ -617,6 +631,16 @@ window.pokerSendAction = function(a) {
 window.pokerSetHoles = function(map) {
   if (!window._currentRoomId) return;
   set(ref(db, `rooms/${window._currentRoomId}/poker/hole`), _pkClean(map || {})).catch(() => {});
+};
+
+// Pool bridges — host streams table state; the guest queues shot actions.
+window.poolBroadcast = function(state) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/pool/state`), _pkClean({ ...state, updatedBy: myUserId, ts: Date.now() })).catch(() => {});
+};
+window.poolSendAction = function(a) {
+  if (!window._currentRoomId) return;
+  push(ref(db, `rooms/${window._currentRoomId}/pool/actions`), _pkClean({ ...a, userId: myUserId, ts: Date.now() })).catch(() => {});
 };
 
 window.leaveRoom = function() {

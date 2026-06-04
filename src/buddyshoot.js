@@ -118,6 +118,7 @@ function gameOver() {
   if (reward > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);   // also feeds Finance XP
   if (typeof window.aqGameXp === 'function') window.aqGameXp('combat', { played: true, won: roundsCleared >= 1, mult: Math.max(1, Math.min(8, 1 + roundsCleared * 0.6 + score / 500)) });
   if (typeof window.recordScore === 'function') window.recordScore('buddyshoot', score, 'round ' + round + ' · ' + diff.label);
+  if (roundsCleared >= 4 && typeof window.aqGameAnnounce === 'function') window.aqGameAnnounce(`survived ${roundsCleared} rounds of Buddy Shoot (${score} pts) 🦆🔫`);
   showOverlay('Game Over', `Score ${score} · reached round ${round}<br>+${reward} 💰`, 'Play again', () => showStart());
 }
 
@@ -276,7 +277,7 @@ function build() {
   hud = el('div', 'bs-hud'); area.appendChild(hud);
   stage = el('div', 'bs-stage'); area.appendChild(stage);
   stage.appendChild(el('div', 'bs-hill'));   // foreground hill (occludes low buddies)
-  stage.addEventListener('pointerdown', fire);
+  stage.addEventListener('pointerdown', fire, { passive: false });
   _built = true;
 }
 

@@ -384,9 +384,12 @@ window.initRoom = async function(roomId, isHost, opts) {
     if (_prevPresenceKeys.size > 0) {
       for (const uid of newKeys) {
         if (!_prevPresenceKeys.has(uid) && uid !== myUserId) {
-          window.playJoinChime?.();
-          // Post a join message to room chat
           const username = newMap[uid]?.username || 'Someone';
+          window.playJoinChime?.();
+          // Visual notification to go with the chime — themed popup if available,
+          // otherwise a toast — plus the existing room-chat system line.
+          if (typeof window.aqNotify === 'function') window.aqNotify({ name: '🚪 Room', text: `${username} joined the room` });
+          else if (typeof window.toast === 'function') window.toast(`🚪 ${username} joined the room`);
           window.appendRoomChatMsg?.({ username: '🔔 System', text: `${username} joined the room`, ts: Date.now(), system: true });
           break;
         }

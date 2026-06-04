@@ -468,6 +468,22 @@ async function aqAdminSetSiteBan(username, banned, reason) {
 }
 // Is the CURRENT user banned from the whole site?
 function aqIsSiteBanned() { return !!(_account && _account.siteBanned); }
+// Anti-cheat auto-ban: the current account bans ITSELF (writes its own siteBanned —
+// the rules allow self-writes), wipes its leaderboard, and shows the block screen.
+async function aqAutoBan(reason) {
+  const id = window._aqAccountId;
+  if (!id) return;                                   // only accounts have XP/bans
+  const r = String(reason || 'Auto-banned by anti-cheat.');
+  if (!(_account && _account.siteBanned)) {
+    try { await update(accRef(id), { siteBanned: true, siteBanReason: r, autoBanned: true, updatedAt: Date.now() }); } catch (e) {}
+    if (_account) { _account.siteBanned = true; _account.siteBanReason = r; }
+    try {
+      const name = (_account && _account.username) || localStorage.getItem('aq_username');
+      if (name && typeof window.aqPurgeLeaderboard === 'function') await window.aqPurgeLeaderboard(name);
+    } catch (e) {}
+  }
+  showSiteBanScreen((_account && _account.siteBanReason) || r);
+}
 // Full-screen block shown to a site-banned user. Captures all input (top z-index)
 // and only offers a log-out, so the rest of the app is unusable.
 function showSiteBanScreen(reason) {
@@ -647,7 +663,7 @@ async function renderAdminBox(box) {
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
   aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits, aqAdminSetSkill,
-  aqAdminSetBan, aqIsBanned, aqAdminSetSiteBan, aqIsSiteBanned,
+  aqAdminSetBan, aqIsBanned, aqAdminSetSiteBan, aqIsSiteBanned, aqAutoBan,
 });
 
 // ---------------------------------------------------------------------------

@@ -170,6 +170,44 @@ function applyResets() {
 }
 
 // ---------------------------------------------------------------------------
+// Anti-cheat: flag implausibly fast XP and auto-ban
+// ---------------------------------------------------------------------------
+// The curve is quadratic FROM ZERO, so "5 levels" is cheap early (L1→L5 = 240 XP)
+// and a fair new player blows through it in minutes — a raw level delta would
+// false-positive them. Instead we cap the XP RATE. Fair play tops out at a few
+// hundred XP/min for one skill (music ~20/min passive; the densest games grant tens
+// per action, rarely ×lucky). These ceilings sit ~10× above that, so a real player
+// never trips them, but an exploit or console-injected dump of thousands does. A
+// trip auto-(site-)bans the account.
+const _xpLog = [];                       // { ts, skill, amt } within the last RATE_LONG
+const RATE_SHORT = 60 * 1000, RATE_LONG = 5 * 60 * 1000;
+const SHORT_SKILL = 3500, LONG_SKILL = 9000;    // per-skill ceilings (1 min / 5 min)
+const SHORT_TOTAL = 6000, LONG_TOTAL = 15000;   // all-skills ceilings (1 min / 5 min)
+let _cheatFlagged = false;
+function _antiCheat(skillId, amount) {
+  const now = Date.now();
+  _xpLog.push({ ts: now, skill: skillId, amt: amount });
+  while (_xpLog.length && now - _xpLog[0].ts > RATE_LONG) _xpLog.shift();
+  if (_cheatFlagged) return;
+  let sShort = 0, sLong = 0, tShort = 0, tLong = 0;
+  for (const e of _xpLog) {
+    const recent = now - e.ts <= RATE_SHORT;
+    tLong += e.amt; if (recent) tShort += e.amt;
+    if (e.skill === skillId) { sLong += e.amt; if (recent) sShort += e.amt; }
+  }
+  const name = SKILL_BY_ID[skillId] ? SKILL_BY_ID[skillId].name : skillId;
+  let reason = '';
+  if (sShort > SHORT_SKILL) reason = `${name} +${sShort} XP in under a minute`;
+  else if (sLong > LONG_SKILL) reason = `${name} +${sLong} XP in 5 minutes`;
+  else if (tShort > SHORT_TOTAL) reason = `+${tShort} XP across skills in under a minute`;
+  else if (tLong > LONG_TOTAL) reason = `+${tLong} XP across skills in 5 minutes`;
+  if (reason) {
+    _cheatFlagged = true;
+    if (typeof window.aqAutoBan === 'function') window.aqAutoBan('Auto-banned for an impossible XP rate (' + reason + ').');
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API (on window so inline games + modules can grant XP)
 // ---------------------------------------------------------------------------
 function addXp(skillId, amount) {
@@ -182,6 +220,7 @@ function addXp(skillId, amount) {
   const after = levelForXp(_xp[skillId]);
   _writeLocal();
   _saveRemote();
+  _antiCheat(skillId, amount);   // flag + auto-ban implausibly fast XP
   // Always pop: a "+N XP" chip on every gain, plus a level-up chip when it ticks.
   showXpPopup(skillId, amount, after > before ? after : 0);
   if (_open) renderSkillsPanel();

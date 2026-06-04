@@ -62,6 +62,14 @@ const CRIT_GAP_MIN = 2600, CRIT_GAP_RAND = 3800;   // random delay between chain
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
+// ── auto-clicker guard ───────────────────────────────────────────────────────
+// Auto-clickers fire at a machine-regular cadence no human can match: fast AND
+// with almost no timing jitter. If the last several clicks look robotic, lock the
+// player out of mining for 10 minutes (persisted, so a reload doesn't dodge it).
+const LOCK_MS = 10 * 60 * 1000;      // 10-minute lockout
+const LOCK_KEY = 'aq_mining_lock_until';
+const CLK_WINDOW = 18;               // clicks examined for cadence
+const CLK_MIN = 14;                  // need this many before judging
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false;
@@ -71,12 +79,58 @@ let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
 let seq = null, seqHits = 0;         // active crit chain + how many points tapped so far
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
+let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0;
 
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
 function pickPower() { return PICKS[pickTier()].power; }
 function mineLvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('mining')) || 1; }
 function sfx(n) { try { if (typeof window !== 'undefined' && window.miningSfx) window.miningSfx(n); } catch (e) {} }
+
+// ── auto-clicker detection + lockout ─────────────────────────────────────────
+function lockedUntil() { return parseInt(localStorage.getItem(LOCK_KEY) || '0', 10) || 0; }
+function isLocked() { return Date.now() < lockedUntil(); }
+// Record a click time and decide if the recent cadence is robotic (auto-clicker).
+function registerClick(now) {
+  _clkT.push(now);
+  if (_clkT.length > CLK_WINDOW) _clkT.shift();
+  if (_clkT.length < CLK_MIN) return false;
+  const iv = [];
+  for (let i = 1; i < _clkT.length; i++) iv.push(_clkT[i] - _clkT[i - 1]);
+  const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
+  // Superhuman sustained rate (>~22 clicks/sec across the whole window): impossible by hand.
+  if (mean < 45) return true;
+  // Fast AND machine-regular: low coefficient of variation = no human jitter.
+  if (mean < 150) {
+    let v = 0; for (const x of iv) v += (x - mean) * (x - mean);
+    const cv2 = Math.sqrt(v / iv.length) / mean;
+    if (cv2 < 0.09) return true;
+  }
+  return false;
+}
+function lockOut() {
+  try { localStorage.setItem(LOCK_KEY, String(Date.now() + LOCK_MS)); } catch (e) {}
+  _clkT = [];
+  sfx('break');
+  showLock();
+}
+function showLock() {
+  if (!stageWrap) return;
+  if (!lockEl) { lockEl = document.createElement('div'); lockEl.className = 'gbc-lock'; stageWrap.appendChild(lockEl); }
+  lockEl.style.display = 'flex';
+  _lockUpdAt = 0;
+  updateLock();
+}
+function hideLock() { if (lockEl) lockEl.style.display = 'none'; }
+function updateLock() {
+  if (!lockEl) return;
+  const left = lockedUntil() - Date.now();
+  if (left <= 0) { hideLock(); return; }
+  const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+  lockEl.innerHTML = '<div><div class="gbc-lock-t">⛔ Auto-clicker detected</div>' +
+    '<div class="gbc-lock-sub">Mining locked for cheating.<br>Mine by hand to keep playing.</div>' +
+    '<div class="gbc-lock-time">' + m + ':' + String(s).padStart(2, '0') + '</div></div>';
+}
 
 function maxStage() { let m = 0; for (let i = 0; i < STAGES.length; i++) if (mineLvl() >= STAGES[i].lvl) m = i; return m; }
 function spawnRock() {
@@ -174,8 +228,10 @@ function breakRock() {
 }
 
 function hit(px, py) {
-  if (!rock) return;
   const now = performance.now();
+  if (isLocked()) { showLock(); return; }
+  if (registerClick(now)) { lockOut(); return; }
+  if (!rock) return;
   swing = 1; shake = 6; rock.flash = 1;
   // Crit if a chain point is showing and you tap it: deal a big hit and chain to the
   // next point around the circle. (XP for the chain is paid when the chain ends.)
@@ -357,6 +413,9 @@ function tick(t) {
   }
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
   floaters = floaters.filter(f => f.life > 0);
+  // lockout overlay: tick the countdown ~2×/s, auto-clear when it expires
+  if (isLocked()) { if (!lockEl || lockEl.style.display === 'none') showLock(); else if (t - _lockUpdAt > 500) { _lockUpdAt = t; updateLock(); } }
+  else if (lockEl && lockEl.style.display !== 'none') hideLock();
   draw(t);
   raf = requestAnimationFrame(tick);
 }
@@ -421,6 +480,7 @@ function build() {
   cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'gbc-canvas';
   stage.appendChild(cv);
   area.appendChild(stage);
+  stageWrap = stage; lockEl = null;
 
   const bar = document.createElement('div'); bar.className = 'gbc-bar';
   const mine = document.createElement('button'); mine.className = 'gbc-btn'; mine.textContent = '⛏️ MINE';
@@ -453,6 +513,8 @@ function openMining(show = true) {
   curStage = Math.min(maxStage(), parseInt(localStorage.getItem('aq_mining_stage') || '0', 10) || 0);
   if (!rock) spawnRock();
   refreshInfo();
+  _clkT = [];
+  if (isLocked()) showLock(); else hideLock();
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
 }
 

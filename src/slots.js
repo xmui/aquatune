@@ -136,6 +136,15 @@ function bestPaySymbol() {
   const j = machine().jackpot;
   return pool().reduce((a, s) => (s.sym !== j && s.pay > (a ? a.pay : 0) ? s : a), null) || pool()[0];
 }
+// A mid-tier regular symbol (excludes wild/scatter/bonus + the jackpot symbol). Used
+// to score all-wild lines DURING FREE SPINS: sticky/expanding wilds make lines go
+// all-wild routinely, so paying the absolute top symbol × free multiplier on every
+// line at once is wildly overpowered — a mid symbol keeps it rewarding but bounded.
+function midPaySymbol() {
+  const j = machine().jackpot;
+  const paying = pool().filter(s => s.pay > 0 && s.sym !== j).sort((a, b) => a.pay - b.pay);
+  return paying.length ? paying[Math.floor(paying.length / 2)] : bestPaySymbol();
+}
 
 // ── Runtime state ────────────────────────────────────────────────────────────
 let _built = false, spinning = false;
@@ -388,8 +397,9 @@ function evaluate() {
   for (const line of lines) {
     const cells = line.map((row, reel) => grid[reel][row]);
     let base = null; for (const c of cells) { if (!isWild(c)) { base = c; break; } }
-    // All-wild line: wilds count as the best-paying symbol (top combo), not a loss.
-    if (!base) base = bestPaySymbol();
+    // All-wild line: pays the top symbol on a (rare) paid spin, but only a mid-tier
+    // symbol during free spins where stacked sticky wilds make all-wild routine.
+    if (!base) base = free > 0 ? midPaySymbol() : bestPaySymbol();
     if (base.pay <= 0 && base.sym !== m.jackpot) continue;
     let count = 0; for (const c of cells) { if (c.sym === base.sym || isWild(c)) count++; else break; }
     if (count < 3) continue;

@@ -18,9 +18,10 @@ const M = 30;                           // cushion margin
 const R = 10.5;                         // ball radius
 const PR = 17;                          // pocket capture radius
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
-const MAXPULL = 150, MAXSPEED = 1150;   // slingshot pull → launch speed
-const DECEL = 430, REST = 0.92;         // rolling friction (px/s²), cushion restitution
-const STOP = 6;                         // speed below which a ball is "stopped"
+const MAXPULL = 150, MAXSPEED = 1020;   // slingshot pull → launch speed
+const DECEL = 520, REST = 0.62;         // rolling friction (px/s²), cushion restitution
+const BALL_REST = 0.95;                 // ball-ball energy retained (real ivory ~0.95)
+const STOP = 7;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
 const POCKETS = [
@@ -112,8 +113,10 @@ function step(dt) {
         if (d > 0 && d < R * 2) {
           const nx = dx / d, ny = dy / d, overlap = R * 2 - d;
           a.x -= nx * overlap / 2; a.y -= ny * overlap / 2; c.x += nx * overlap / 2; c.y += ny * overlap / 2;
-          const av = a.vx * nx + a.vy * ny, cvv = c.vx * nx + c.vy * ny, p = av - cvv;
-          if (p > 0) {
+          const av = a.vx * nx + a.vy * ny, cvv = c.vx * nx + c.vy * ny, rel = av - cvv;
+          if (rel > 0) {
+            // equal masses, restitution e: exchanged normal impulse = (1+e)/2 · rel
+            const p = rel * (1 + BALL_REST) / 2;
             a.vx -= p * nx; a.vy -= p * ny; c.vx += p * nx; c.vy += p * ny;
             if (!firstHit && (a.n === 0 || c.n === 0)) firstHit = (a.n === 0 ? c.n : a.n);
             if (p > 60) sfx(p > 400 ? 'break' : 'hit');

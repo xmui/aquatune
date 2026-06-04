@@ -3285,6 +3285,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     .pc-cell.marked { background:rgba(220,50,50,0.12); position:relative; }
     .pc-cell.marked::after { content:'✕'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#c00; font-weight:800; }
     .pc-cell.wrong { background:#f44 !important; }
+    .pc-cell.pc-treasure { background:#ffd700 !important; border-color:#ffae00 !important; animation:pc-treasure-pop 0.6s ease; box-shadow:0 0 8px 2px rgba(255,215,0,0.8); z-index:2; }
+    @keyframes pc-treasure-pop { 0%{transform:scale(1)} 40%{transform:scale(1.5)} 100%{transform:scale(1)} }
     /* hover crosshair: tint the hovered row+column, ring the exact cell */
     .pc-cell.pc-hl { background-image:linear-gradient(rgba(120,170,255,0.16),rgba(120,170,255,0.16)); }
     [data-scheme=dark] .pc-cell.pc-hl { background-image:linear-gradient(rgba(120,170,255,0.20),rgba(120,170,255,0.20)); }
@@ -14893,6 +14895,7 @@ let _pcSeconds = 0, _pcTimerInt = null;
 let _pcMistakes = 0;                                  // cumulative wrong placements (auto-check)
 let _pcWrongCells = new Set();                        // indices currently flagged wrong
 let _pcAutoCheck = localStorage.getItem('aq_pc_autocheck') !== '0'; // default ON
+let _pcTreasure = -1, _pcTreasureClaimed = false;     // rare hidden bonus cell (money/XP)
 let _pcDrag = null;            // { val, axis:null|'row'|'col', row0, col0 } during a drag-stroke
 let _pcCellsBound = false;     // delegated pointer handlers bound once
 let _pcRowClues = [], _pcColClues = []; // cached solution clues for cross-off matching
@@ -14921,6 +14924,11 @@ function pcApplyCell(i, val){
   if (_pcUserGrid[i] === val) return;
   _pcUserGrid[i] = val;
   if (val === 1) {
+    // Treasure pixel! Correctly filling the hidden cell pays a rare bonus.
+    if (i === _pcTreasure && !_pcTreasureClaimed && _pcSolution[i] === 1) {
+      _pcTreasureClaimed = true;
+      pcClaimTreasure();
+    }
     if (_pcAutoCheck) {
       if (_pcSolution[i] !== 1) { _pcWrongCells.add(i); pcPenalize(i); }
       else _pcWrongCells.delete(i);
@@ -14931,6 +14939,21 @@ function pcApplyCell(i, val){
   }
   pcSetCellDom(i);
   pcUpdateClues();
+}
+// Pay out the rare treasure pixel: a chunk of credits or Intellect XP, with a flourish.
+function pcClaimTreasure(){
+  try { playFanfare && playFanfare('small'); } catch(e){}
+  const el = document.querySelector(`.pc-cell[data-idx="${_pcTreasure}"]`);
+  if (el) { el.classList.add('pc-treasure'); setTimeout(()=>el.classList.remove('pc-treasure'), 1200); }
+  if (Math.random() < 0.5) {
+    const amt = 20 + ((Math.random() * 40) | 0);
+    if (window.aqAddCredits) window.aqAddCredits(amt);
+    if (window.toast) window.toast('💎 Treasure pixel! +' + amt + ' credits');
+  } else {
+    const xp = 15 + ((Math.random() * 20) | 0);
+    if (window.aqAddXp) window.aqAddXp('intellect', xp);
+    if (window.toast) window.toast('💎 Treasure pixel! +' + xp + ' Intellect XP');
+  }
 }
 // Update a single cell's classes in place (avoids a full grid re-render during drags)
 function pcSetCellDom(i){
@@ -15135,6 +15158,14 @@ function loadPicrossPuzzle(puzzle) {
   _pcSize = puzzle.size;
   _pcSolution = puzzle.grid.slice();
   _pcUserGrid = new Array(_pcSize * _pcSize).fill(0);
+  // Rarely, hide a treasure pixel in one of the filled cells — fill it correctly
+  // for a surprise money/XP bonus. ~22% of puzzles have one (so it stays rare).
+  _pcTreasure = -1; _pcTreasureClaimed = false;
+  if (Math.random() < 0.22) {
+    const filled = [];
+    for (let i = 0; i < _pcSolution.length; i++) if (_pcSolution[i] === 1) filled.push(i);
+    if (filled.length) _pcTreasure = filled[(Math.random() * filled.length) | 0];
+  }
   pcResetMistakes();
   renderPicrossGrid();
   document.getElementById('picross-status').textContent = 'Left-click: fill  |  Right-click: mark  |  wrong square = +' + PC_PENALTY + 's';
@@ -15306,6 +15337,7 @@ let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
 let solDragState=null, solUndoStack=[], solFlipSet=new Set();
 let _solitaireInited=false;
 let solSeconds=0, solTimerInt=null;
+let _solXpLastMoves=0, _solXpLastSec=0;   // anti-idle XP gate (needs BOTH moves & time)
 function solTimerFmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
 function solStartTimer(){
   if(solTimerInt) return;
@@ -15313,6 +15345,12 @@ function solStartTimer(){
     solSeconds++;
     const el=document.getElementById('sol-timer');
     if(el) el.textContent=solTimerFmt(solSeconds);
+    // Award a little Intellect XP for ACTIVE play: requires both fresh moves and
+    // elapsed time, so a board left open (no moves) or mashing (no time) earns ~nothing.
+    if(solMoves - _solXpLastMoves >= 6 && solSeconds - _solXpLastSec >= 12){
+      _solXpLastMoves=solMoves; _solXpLastSec=solSeconds;
+      if(window.aqAddXp) window.aqAddXp('intellect', 1);
+    }
   },1000);
 }
 function solStopTimer(){clearInterval(solTimerInt);solTimerInt=null;}
@@ -15383,7 +15421,7 @@ function newSolitaireGame(){
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
   solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
-  solStopTimer(); solSeconds=0;
+  solStopTimer(); solSeconds=0; _solXpLastMoves=0; _solXpLastSec=0;
   const timerEl=document.getElementById('sol-timer'); if(timerEl) timerEl.textContent='0:00';
   solRender();
 }

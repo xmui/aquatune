@@ -3747,6 +3747,56 @@ body.perf-mode #aqua-gun { display: none !important; }
       #buddyshoot-area { flex:1; min-height:0; } .bs-stage { flex:1; height:auto; }
     }
 
+    /* ── 8-BALL POOL ─── */
+    #pool-wrap {
+      position:fixed; top:48px; left:50%; transform:translateX(-50%);
+      width:720px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
+      background:#ece9d8; border:1px solid #0a246a; box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--font-ui); overflow:hidden;
+    }
+    #pool-wrap.open { display:flex; }
+    #pool-area { display:flex; flex-direction:column; background:#ece9d8; }
+    .p8-hud { display:flex; gap:10px; justify-content:space-between; align-items:center; padding:5px 10px; font-size:12px; font-weight:800;
+      color:#fff; background:linear-gradient(180deg,#3a6ea5,#0a246a); }
+    .p8-hud .p8-turn { opacity:0.7; } .p8-hud .p8-turn.on { opacity:1; }
+    .p8-stage { position:relative; padding:6px; background:#ece9d8; }
+    .p8-canvas { width:100%; height:auto; display:block; border-radius:4px; touch-action:none; cursor:crosshair; }
+    .p8-status { padding:4px 10px; font-size:11px; color:#1a2a4a; background:#d9d6c3; border-top:1px solid #b6b39c; min-height:18px; }
+    .p8-overlay { position:absolute; inset:6px; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+      text-align:center; padding:16px; background:rgba(10,20,40,0.82); color:#fff; border-radius:4px; }
+    .p8-ov-title { font-size:22px; font-weight:900; } .p8-ov-sub { font-size:12px; opacity:0.9; max-width:340px; line-height:1.4; }
+    .p8-btn, .tt-btn { font-size:13px; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer; color:#04121f;
+      background:linear-gradient(180deg,#9ad0ff,#3a8ee0); border:1px solid #0a246a; }
+    .p8-btn:hover, .tt-btn:hover { filter:brightness(1.08); }
+
+    /* ── TETRIS (SNES style) ─── */
+    #tetris-wrap {
+      position:fixed; top:40px; left:50%; transform:translateX(-50%);
+      width:420px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
+      background:#1a1140; border:2px solid #5a3fc0; box-shadow:0 18px 50px rgba(0,0,0,0.5); font-family:var(--font-ui); overflow:hidden;
+    }
+    #tetris-wrap.open { display:flex; }
+    #tetris-area { display:flex; flex-direction:column; gap:8px; padding:10px; background:linear-gradient(180deg,#241a55,#140d33); }
+    .tt-main { display:flex; gap:10px; justify-content:center; }
+    .tt-board-wrap { position:relative; }
+    .tt-board { height:min(60vh,460px); width:auto; image-rendering:pixelated; border:3px solid #5a3fc0; border-radius:4px; box-shadow:inset 0 0 18px rgba(0,0,0,0.6); }
+    .tt-side { display:flex; flex-direction:column; gap:10px; min-width:96px; }
+    .tt-nlabel { color:#c9b6ff; font-size:11px; font-weight:800; letter-spacing:1px; }
+    .tt-next { width:88px; height:88px; image-rendering:pixelated; border:2px solid #5a3fc0; border-radius:4px; }
+    .tt-info { display:flex; flex-direction:column; gap:6px; }
+    .tt-stat { display:flex; flex-direction:column; background:rgba(90,63,192,0.25); border:1px solid #5a3fc0; border-radius:4px; padding:4px 6px; }
+    .tt-stat span { font-size:9px; color:#b6a6ff; letter-spacing:1px; } .tt-stat b { font-size:15px; color:#fff; }
+    .tt-overlay { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+      text-align:center; padding:14px; background:rgba(20,13,51,0.9); color:#fff; border-radius:4px; }
+    .tt-ov-title { font-size:20px; font-weight:900; } .tt-ov-sub { font-size:11px; opacity:0.9; max-width:200px; line-height:1.4; }
+    .tt-pad { display:flex; gap:6px; justify-content:center; }
+    .tt-key { flex:1; max-width:64px; font-size:18px; padding:10px 0; border-radius:8px; cursor:pointer; color:#fff; touch-action:none; user-select:none;
+      background:linear-gradient(180deg,#6a4ed8,#3f2aa0); border:1px solid #8a6fff; box-shadow:0 2px 0 #2a1a70; }
+    .tt-key:active { transform:translateY(2px); box-shadow:none; }
+    @media (max-width:768px) {
+      #pool-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
+      #tetris-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
+    }
+
     /* ── SPACE PINBALL (native canvas) ─── */
     #pinball-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
@@ -5479,6 +5529,8 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
       <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
       <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
+      <button class="apps-game-btn" data-app="pool" onclick="OS.open('pool')"><span class="agb-icon">&#127921;</span><span class="agb-name">8-Ball Pool</span></button>
+      <button class="apps-game-btn" data-app="tetris" onclick="OS.open('tetris')"><span class="agb-icon">&#129521;</span><span class="agb-name">Tetris</span></button>
       <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
@@ -8296,6 +8348,8 @@ const APPS = {
   fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
   mining:    { el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
   buddyshoot:{ el:'buddyshoot-wrap',name:'Buddy Shoot',tb:'#buddyshoot-titlebar',openFn:()=>window.openBuddyShoot?.(), closeFn:()=>window.openBuddyShoot?.(false) },
+  pool:      { el:'pool-wrap',      name:'8-Ball Pool', tb:'#pool-titlebar',     openFn:()=>window.openPool?.(),       closeFn:()=>window.openPool?.(false) },
+  tetris:    { el:'tetris-wrap',    name:'Tetris',      tb:'#tetris-titlebar',   openFn:()=>window.openTetris?.(),     closeFn:()=>window.openTetris?.(false) },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8626,6 +8680,7 @@ const DOCK_META = {
   holdem:{icon:'🂡',label:"Texas Hold'em"}, pinball:{icon:'🕹️',label:'Space Pinball'},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
   stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'},
+  pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
@@ -8695,6 +8750,8 @@ const LB_GAMES = {
   fishing:  { label:'Fishing',      icon:'🎣', unit:'value',   lower:false },
   mining:   { label:'Mining',       icon:'⛏️', unit:'ore',     lower:false },
   buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
+  pool8:    { label:'8-Ball Pool',  icon:'🎱', unit:'wins',    lower:false },
+  tetris:   { label:'Tetris',       icon:'🧱', unit:'pts',     lower:false },
 };
 const LB_PATH = 'leaderboard';
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
@@ -12047,6 +12104,8 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('fishing')" title="Fishing">🎣<span>Fishing</span></button>
   <button class="mob-tool-btn" onclick="OS.open('mining')" title="Mining">⛏️<span>Mining</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('pool')" title="8-Ball Pool">🎱<span>Pool</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('tetris')" title="Tetris">🧱<span>Tetris</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="openPinball()" title="Space Cadet Pinball">🕹️<span>Pinball</span></button>
@@ -14521,6 +14580,73 @@ function buddySfx(name) {
   } catch (e) {}
 }
 window.buddySfx = buddySfx;
+
+/* ── 8-BALL POOL SFX — clacks, cushion, pocket drop, win/lose ── */
+function poolSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const noise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 1.4;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'hit':   blip(520, 0, 0.045, 'square', 0.12, 360); noise(0, 3200, 0.03, 0.10); break;    // click
+      case 'break': noise(0, 1800, 0.14, 0.30); blip(300, 0, 0.1, 'square', 0.16, 120); break;      // rack smash
+      case 'wall':  blip(180, 0, 0.05, 'sine', 0.10, 110); break;                                   // soft thud
+      case 'pocket':blip(220, 0, 0.16, 'sine', 0.18, 70); noise(0.02, 500, 0.18, 0.14, true); break;// drop
+      case 'win':   [523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.09, 0.2, 'triangle', 0.16)); break;
+      case 'lose':  blip(330, 0, 0.4, 'sawtooth', 0.16, 90); blip(160, 0.14, 0.4, 'sawtooth', 0.14, 70); break;
+    }
+  } catch (e) {}
+}
+window.poolSfx = poolSfx;
+
+/* ── TETRIS SFX — SNES-flavored moves / lock / line clears ── */
+function tetrisSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'move':  blip(330, 0, 0.03, 'square', 0.07); break;
+      case 'rotate':blip(520, 0, 0.04, 'square', 0.09, 660); break;
+      case 'lock':  blip(180, 0, 0.05, 'triangle', 0.12, 120); break;
+      case 'drop':  blip(140, 0, 0.07, 'square', 0.12, 80); break;
+      case 'clear': [523, 784].forEach((f, i) => blip(f, i * 0.05, 0.1, 'square', 0.13)); break;
+      case 'tetris':[523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.06, 0.16, 'square', 0.15)); break;
+      case 'level': [659, 988, 1319].forEach((f, i) => blip(f, i * 0.07, 0.15, 'triangle', 0.14)); break;
+      case 'over':  blip(440, 0, 0.4, 'sawtooth', 0.16, 110); blip(220, 0.16, 0.45, 'sawtooth', 0.14, 70); break;
+    }
+  } catch (e) {}
+}
+window.tetrisSfx = tetrisSfx;
 
 /* ── CHAT MESSAGE RENDERING ── */
 function playChatTone() {
@@ -17027,6 +17153,8 @@ function bjUpdateBalance(){
 <script type="module" src="/src/fishing.js"></script>
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
+<script type="module" src="/src/pool8.js"></script>
+<script type="module" src="/src/tetris.js"></script>
 <script type="module" src="/src/version-check.js"></script>
 
 <!-- SLOT MACHINE -->
@@ -17244,6 +17372,25 @@ function bjUpdateBalance(){
   </div>
   <div id="buddyshoot-area"></div>
 </div>
+
+<!-- 8-BALL POOL (native canvas) -->
+<div id="pool-wrap" style="display:none">
+  <div class="sol-titlebar" id="pool-titlebar">
+    <span>🎱 8-Ball Pool</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openPool(false)">×</button>
+  </div>
+  <div id="pool-area"></div>
+</div>
+
+<!-- TETRIS (native canvas) -->
+<div id="tetris-wrap" style="display:none">
+  <div class="sol-titlebar" id="tetris-titlebar">
+    <span>🧱 Tetris</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openTetris(false)">×</button>
+  </div>
+  <div id="tetris-area"></div>
+</div>
+
 
 <!-- AQUATUNE EXCHANGE (stock market) -->
 <div id="stocks-wrap" style="display:none">

@@ -439,6 +439,7 @@ const BANNABLE_GAMES = [
   { id: 'slots', name: 'Slots' }, { id: 'blackjack', name: 'Blackjack' },
   { id: 'holdem', name: "Texas Hold'em" }, { id: 'rhythm', name: 'Beat Tap' },
   { id: 'pinball', name: 'Space Pinball' }, { id: 'stocks', name: 'Exchange' },
+  { id: 'pool', name: '8-Ball Pool' }, { id: 'tetris', name: 'Tetris' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -36,8 +36,8 @@ const STOP = 9;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
 const POCKETS = [
-  { x: LX, y: TY }, { x: W / 2, y: TY - 3 }, { x: RXn, y: TY },
-  { x: LX, y: BY }, { x: W / 2, y: BY + 3 }, { x: RXn, y: BY },
+  { x: LX, y: TY }, { x: W / 2, y: TY - 3, mid: 'top' }, { x: RXn, y: TY },
+  { x: LX, y: BY }, { x: W / 2, y: BY + 3, mid: 'bot' }, { x: RXn, y: BY },
 ];
 // ball tints (1..7 solids; 9..15 are the striped versions of 1..7; 8 black; 0 cue)
 const TINT = { 1: '#f4c20d', 2: '#1f57d6', 3: '#d62828', 4: '#7b2fb5', 5: '#e87a17', 6: '#1f8a4c', 7: '#7a1f2b', 8: '#1a1a1a' };
@@ -161,7 +161,13 @@ function step(dt) {
     for (const b of balls) {
       if (b.potted || b.sink !== undefined) continue;
       for (const p of POCKETS) {
-        if (Math.hypot(b.x - p.x, b.y - p.y) < CAPTURE_R) { b.sink = 1; b.sx = p.x; b.sy = p.y; break; }
+        const dxp = b.x - p.x, dyp = b.y - p.y;
+        if (dxp * dxp + dyp * dyp >= CAPTURE_R * CAPTURE_R) continue;
+        // Side pockets only swallow a ball that has crossed the rail line INTO the
+        // throat — not one skimming straight along the rail edge past the pocket.
+        if (p.mid === 'top' && b.y > TY) continue;
+        if (p.mid === 'bot' && b.y < BY) continue;
+        b.sink = 1; b.sx = p.x; b.sy = p.y; break;
       }
     }
     // cushions (restitution < 1 — balls bleed speed off the rails). A ball inside a
@@ -551,6 +557,10 @@ function rayFirstBall(x0, y0, ux, uy, ignore) {
 function rayFirstPocket(x0, y0, ux, uy) {
   let best = null;
   for (const p of POCKETS) {
+    // Side pockets only accept a ball heading INTO the throat (across the rail), not
+    // one skimming along the rail — matches the physics so the preview stays truthful.
+    if (p.mid === 'top' && uy > -0.2) continue;
+    if (p.mid === 'bot' && uy < 0.2) continue;
     const fx = p.x - x0, fy = p.y - y0, proj = fx * ux + fy * uy;
     if (proj <= 0) continue;
     const perp = Math.abs(fx * -uy + fy * ux);

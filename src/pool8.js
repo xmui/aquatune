@@ -26,8 +26,8 @@ const MAXPULL = 150, MAXSPEED = 1150;   // slingshot pull → launch speed
 const SLIDE_DECEL = 1500;               // kinetic (sliding) friction
 const ROLL_DECEL = 250;                 // rolling resistance
 const SPINUP = 2.5;                     // a solid sphere spins up at 2.5× the linear decel
-const CUSHION_REST = 0.60;              // cushion coefficient of restitution (<1, lossy)
-const BALL_REST = 0.94;                 // ball-ball restitution
+const CUSHION_REST = 0.68;              // cushion coefficient of restitution (<1, lossy)
+const BALL_REST = 0.96;                 // ball-ball restitution
 const STOP = 9;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
@@ -184,9 +184,11 @@ function step(dt) {
             const cn2 = ((1 + e) * an + (1 - e) * cn) / 2;
             a.vx = an2 * nx + at * tx; a.vy = an2 * ny + at * ty;
             c.vx = cn2 * nx + ct * tx; c.vy = cn2 * ny + ct * ty;
-            // a ball launched from (near) rest skids before it rolls — reset its roll
-            if (Math.hypot(a.rvx, a.rvy) < 6) { a.rvx = a.rvy = 0; }
-            if (Math.hypot(c.rvx, c.rvy) < 6) { c.rvx = c.rvy = 0; }
+            // No-spin (GamePigeon) model: a collision kills the rolling contact, so
+            // both balls skid-then-roll from their POST-impact velocity. The cue thus
+            // stops on a full hit and deflects ~90° along the tangent on a cut, instead
+            // of carrying its old forward roll into an unwanted follow.
+            a.rvx = a.rvy = 0; c.rvx = c.rvy = 0;
             if (!firstHit && (a.n === 0 || c.n === 0)) firstHit = (a.n === 0 ? c.n : a.n);
             const impact = an - cn;
             if (impact > 60) sfx(impact > 420 ? 'break' : 'hit');
@@ -518,6 +520,40 @@ function drawCue(cue, ux, uy, pwr) {
   cx.strokeStyle = '#2b4f86'; cx.lineWidth = w0 * 2.2; cx.beginPath(); cx.moveTo(tipX + ux * 1.5, tipY + uy * 1.5); cx.lineTo(tipX, tipY); cx.stroke();
   cx.restore();
 }
+// GamePigeon-style aim preview: trace the cue's path to the first ball (or rail) it
+// hits, then where the OBJECT ball would head (line of centres) and how the cue would
+// deflect (tangent). Returns geometry for draw() to render.
+function aimTrajectory(x0, y0, ux, uy) {
+  let best = null;
+  for (const b of balls) {
+    if (b.potted || b.sink !== undefined || b.n === 0) continue;
+    const fx = b.x - x0, fy = b.y - y0;
+    const proj = fx * ux + fy * uy;
+    if (proj <= 0) continue;                       // ball is behind the aim
+    const c = fx * fx + fy * fy - (2 * R) * (2 * R);
+    const disc = proj * proj - c;
+    if (disc < 0) continue;                        // ray misses this ball
+    const t = proj - Math.sqrt(disc);              // distance to the contact (ghost) point
+    if (t < 0) continue;
+    if (!best || t < best.t) best = { t, obj: b };
+  }
+  // nearest cushion the cue centre would reach (kept R off the rail)
+  let tw = Infinity, nx = 0, ny = 0;
+  if (ux > 0) { const t = (RXn - R - x0) / ux; if (t < tw) { tw = t; nx = 1; ny = 0; } }
+  else if (ux < 0) { const t = (LX + R - x0) / ux; if (t < tw) { tw = t; nx = 1; ny = 0; } }
+  if (uy > 0) { const t = (BY - R - y0) / uy; if (t < tw) { tw = t; nx = 0; ny = 1; } }
+  else if (uy < 0) { const t = (TY + R - y0) / uy; if (t < tw) { tw = t; nx = 0; ny = 1; } }
+  if (best && best.t < tw) {
+    const gx = x0 + ux * best.t, gy = y0 + uy * best.t;          // ghost-ball centre
+    let ndx = best.obj.x - gx, ndy = best.obj.y - gy; const nd = Math.hypot(ndx, ndy) || 1; ndx /= nd; ndy /= nd;
+    const dot = ux * ndx + uy * ndy;                              // object goes along the line of centres
+    let cdx = ux - dot * ndx, cdy = uy - dot * ndy; const cl = Math.hypot(cdx, cdy) || 1; cdx /= cl; cdy /= cl;
+    return { hit: true, ex: gx, ey: gy, obj: best.obj, odx: ndx, ody: ndy, cdx, cdy, cut: dot };
+  }
+  // no ball: stop at the rail and show one reflection
+  const ex = x0 + ux * tw, ey = y0 + uy * tw;
+  return { hit: false, ex, ey, rx: nx ? -ux : ux, ry: ny ? -uy : uy };
+}
 function draw() {
   if (!cx) return;
   drawTable();
@@ -525,8 +561,29 @@ function draw() {
     const cue = cueBall();
     const dx = cue.x - aiming.cur.x, dy = cue.y - aiming.cur.y, d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d, pwr = Math.min(MAXPULL, d) / MAXPULL;
-    cx.save(); cx.setLineDash([6, 6]); cx.strokeStyle = 'rgba(255,255,255,0.85)'; cx.lineWidth = 2;
-    cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(cue.x + ux * 240, cue.y + uy * 240); cx.stroke(); cx.restore();
+    const tr = aimTrajectory(cue.x, cue.y, ux, uy);
+    cx.save();
+    // cue path → contact/rail
+    cx.setLineDash([6, 6]); cx.lineWidth = 2; cx.strokeStyle = 'rgba(255,255,255,0.9)';
+    cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(tr.ex, tr.ey); cx.stroke();
+    if (tr.hit) {
+      // ghost-ball outline at the contact point
+      cx.setLineDash([]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.6)';
+      cx.beginPath(); cx.arc(tr.ex, tr.ey, R, 0, 7); cx.stroke();
+      // object-ball trajectory (line of centres)
+      cx.setLineDash([5, 5]); cx.lineWidth = 2.5; cx.strokeStyle = 'rgba(255,228,90,0.95)';
+      cx.beginPath(); cx.moveTo(tr.obj.x, tr.obj.y); cx.lineTo(tr.obj.x + tr.odx * 170, tr.obj.y + tr.ody * 170); cx.stroke();
+      // cue deflection (tangent) — fainter; only meaningful on a cut
+      if (tr.cut < 0.985) {
+        cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(150,205,255,0.8)';
+        cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.cdx * 95, tr.ey + tr.cdy * 95); cx.stroke();
+      }
+    } else {
+      // rail reflection preview
+      cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.45)';
+      cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.rx * 130, tr.ey + tr.ry * 130); cx.stroke();
+    }
+    cx.restore();
     drawCue(cue, ux, uy, pwr);
     // power meter
     cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(LX + 6, BY - 16, 120, 8);

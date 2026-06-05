@@ -7,7 +7,7 @@
 // to Firebase (mirroring the stocks/portfolio pattern) so stats follow an account
 // across devices.
 
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set, update, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from './firebase.js';
 
 // ---------------------------------------------------------------------------
@@ -422,12 +422,20 @@ function renderRankings(area) {
   // fetch once (cached); refresh on each Rankings open is fine
   if (!_rankData && !_rankBusy) {
     _rankBusy = true;
-    get(ref(db, 'user-skills')).then(snap => {
+    // Authoritative ban list: pull the accounts whose siteBanned === true (returns
+    // only banned accounts, so the payload stays small) and skip them — this catches
+    // users banned BEFORE the per-skills `banned` flag existed, not just new ones.
+    Promise.all([
+      get(ref(db, 'user-skills')),
+      get(query(ref(db, 'accounts'), orderByChild('siteBanned'), equalTo(true))).catch(() => null),
+    ]).then(([snap, banSnap]) => {
+      const banned = new Set();
+      if (banSnap && banSnap.exists()) for (const id of Object.keys(banSnap.val() || {})) banned.add(id);
       const v = snap.exists() ? snap.val() : {};
       const arr = [];
       for (const uid of Object.keys(v || {})) {
         const node = v[uid]; if (!node || typeof node !== 'object') continue;
-        if (node.banned) continue;   // site-banned users don't appear in rankings
+        if (node.banned || banned.has(uid)) continue;   // site-banned users don't appear in rankings
         const name = (node.name || '').trim();
         // Skip anonymous / nameless entries — only real accounts show in global stats.
         if (!name || name.toLowerCase() === 'anonymous') continue;

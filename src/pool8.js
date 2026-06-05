@@ -580,8 +580,9 @@ function rayRail(x0, y0, ux, uy) {
   else if (uy < 0) { const k = (TY + R - y0) / uy; if (k < t) { t = k; nx = 0; ny = 1; } }
   return { t, nx, ny };
 }
-// GamePigeon-style aim preview: cue path → first ball/pocket/rail, then the OBJECT
-// ball's line (line of centres, flagged if it heads into a pocket) + cue deflection.
+// GamePigeon-style aim preview: cue path → first ball/rail, then the OBJECT ball's
+// line (line of centres) + the cue's deflection. Deliberately does NOT predict whether
+// the shot pots — judging that is the skill — but still warns on a cue scratch.
 function aimTrajectory(x0, y0, ux, uy) {
   const cue = cueBall();
   const ball = rayFirstBall(x0, y0, ux, uy, cue);
@@ -595,13 +596,9 @@ function aimTrajectory(x0, y0, ux, uy) {
     let ndx = ball.obj.x - gx, ndy = ball.obj.y - gy; const nd = Math.hypot(ndx, ndy) || 1; ndx /= nd; ndy /= nd;
     const dot = ux * ndx + uy * ndy;                               // object goes along the line of centres
     let cdx = ux - dot * ndx, cdy = uy - dot * ndy; const cl = Math.hypot(cdx, cdy) || 1; cdx /= cl; cdy /= cl;
-    // where does the OBJECT ball go — a pocket, another ball, or a rail?
-    const oPocket = rayFirstPocket(ball.obj.x, ball.obj.y, ndx, ndy);
-    const oStop = Math.min((rayFirstBall(ball.obj.x, ball.obj.y, ndx, ndy, ball.obj) || { t: Infinity }).t, rayRail(ball.obj.x, ball.obj.y, ndx, ndy).t);
-    let oLen, pots = false, opx = 0, opy = 0;
-    if (oPocket && oPocket.t < oStop) { pots = true; oLen = oPocket.t; opx = oPocket.p.x; opy = oPocket.p.y; }
-    else oLen = Math.min(oStop, 185);
-    return { hit: true, ex: gx, ey: gy, obj: ball.obj, odx: ndx, ody: ndy, cdx, cdy, cut: dot, oLen, pots, opx, opy };
+    // object line stops at the next ball/rail (no pocket prediction)
+    const oLen = Math.min((rayFirstBall(ball.obj.x, ball.obj.y, ndx, ndy, ball.obj) || { t: Infinity }).t, rayRail(ball.obj.x, ball.obj.y, ndx, ndy).t, 185);
+    return { hit: true, ex: gx, ey: gy, obj: ball.obj, odx: ndx, ody: ndy, cdx, cdy, cut: dot, oLen };
   }
   const ex = x0 + ux * rail.t, ey = y0 + uy * rail.t;
   return { hit: false, ex, ey, rx: rail.nx ? -ux : ux, ry: rail.ny ? -uy : uy };
@@ -629,11 +626,9 @@ function draw() {
         // ghost-ball outline at the contact point
         cx.setLineDash([]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.6)';
         cx.beginPath(); cx.arc(tr.ex, tr.ey, R, 0, 7); cx.stroke();
-        // object-ball line — green when it heads into a pocket, yellow otherwise
-        cx.setLineDash([5, 5]); cx.lineWidth = 2.5;
-        cx.strokeStyle = tr.pots ? 'rgba(95,235,125,0.97)' : 'rgba(255,228,90,0.95)';
+        // object-ball line (direction only — it's on you to judge whether it pots)
+        cx.setLineDash([5, 5]); cx.lineWidth = 2.5; cx.strokeStyle = 'rgba(255,228,90,0.95)';
         cx.beginPath(); cx.moveTo(tr.obj.x, tr.obj.y); cx.lineTo(tr.obj.x + tr.odx * tr.oLen, tr.obj.y + tr.ody * tr.oLen); cx.stroke();
-        if (tr.pots) { cx.setLineDash([]); cx.fillStyle = 'rgba(95,235,125,0.95)'; cx.beginPath(); cx.arc(tr.opx, tr.opy, 5, 0, 7); cx.fill(); }
         // cue deflection (tangent) — fainter; only meaningful on a cut
         if (tr.cut < 0.985) {
           cx.setLineDash([5, 5]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(150,205,255,0.8)';

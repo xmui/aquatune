@@ -13,6 +13,7 @@
 
     "accounts": {
       ".read": true,
+      ".indexOn": ["siteBanned"],
       "$id": { ".write": true }
     },
     "usernames": {

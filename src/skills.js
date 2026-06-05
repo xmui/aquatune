@@ -7,7 +7,7 @@
 // to Firebase (mirroring the stocks/portfolio pattern) so stats follow an account
 // across devices.
 
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import { db } from './firebase.js';
 
 // ---------------------------------------------------------------------------
@@ -112,7 +112,9 @@ function _saveRemote() {
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
     const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
     // Store credits alongside skills so rankings can show how rich a player is.
-    set(skillsRef(), { xp: _xp, name, credits, updatedAt: Date.now() }).catch(() => {});
+    // update() (not set()) so a sibling `banned` flag written by the ban flow isn't
+    // wiped when the user's own client next saves.
+    update(skillsRef(), { xp: _xp, name, credits, updatedAt: Date.now() }).catch(() => {});
   }, 800);
 }
 
@@ -425,6 +427,7 @@ function renderRankings(area) {
       const arr = [];
       for (const uid of Object.keys(v || {})) {
         const node = v[uid]; if (!node || typeof node !== 'object') continue;
+        if (node.banned) continue;   // site-banned users don't appear in rankings
         const name = (node.name || '').trim();
         // Skip anonymous / nameless entries — only real accounts show in global stats.
         if (!name || name.toLowerCase() === 'anonymous') continue;

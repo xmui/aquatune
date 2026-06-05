@@ -462,6 +462,8 @@ async function aqAdminSetSiteBan(username, banned, reason) {
       siteBanReason: banned ? (String(reason || '').trim() || null) : null,
       updatedAt: Date.now(),
     });
+    // Flag (or clear) the rankings entry so banned users drop off the Stats board.
+    await update(ref(db, 'user-skills/' + accountId), { banned: banned ? true : null });
   } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
   if (accountId === window._aqAccountId && _account) { if (banned) _account.siteBanned = true; else delete _account.siteBanned; }
   return { ok: true, banned: !!banned };
@@ -476,6 +478,7 @@ async function aqAutoBan(reason) {
   const r = String(reason || 'Auto-banned by anti-cheat.');
   if (!(_account && _account.siteBanned)) {
     try { await update(accRef(id), { siteBanned: true, siteBanReason: r, autoBanned: true, updatedAt: Date.now() }); } catch (e) {}
+    try { await update(ref(db, 'user-skills/' + id), { banned: true }); } catch (e) {}   // drop off rankings
     if (_account) { _account.siteBanned = true; _account.siteBanReason = r; }
     try {
       const name = (_account && _account.username) || localStorage.getItem('aq_username');

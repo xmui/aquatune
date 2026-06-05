@@ -18,13 +18,15 @@ const M = 30;                           // cushion margin
 const R = 10.5;                         // ball radius
 const POCKET_R = 16;                    // pocket geometric/capture radius
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
-const MAXPULL = 150, MAXSPEED = 1150;   // slingshot pull → launch speed
+const MAXPULL = 150, MAXSPEED = 1550;   // slingshot pull → launch speed
 // Two-phase felt friction (px/s²): a struck ball SLIDES (kinetic) until its roll
-// speed catches up (v = r·ω), then ROLLS to a stop. The ROLLING figure is what kills
-// the "ice rink" glide — a rolling ball must die within ~1-2 table lengths, not coast
-// forever. (ROLL_DECEL was far too low before, hence the slippery feel.)
-const SLIDE_DECEL = 1500;               // kinetic (sliding) friction
-const ROLL_DECEL = 250;                 // rolling resistance
+// speed catches up (v = r·ω), then ROLLS to a stop. Real pool balls roll FAR (low
+// rolling friction) — the old "ice" was the overshoot bug, not low friction, so the
+// earlier over-corrected values (1500/250) killed the break. These give a powerful
+// break (cue reaches the rack at ~86% of launch) and lively shots while still
+// settling in a few seconds (verified by sim: full shot ~6.6 table-widths).
+const SLIDE_DECEL = 900;                // kinetic (sliding) friction
+const ROLL_DECEL = 170;                 // rolling resistance
 const SPINUP = 2.5;                     // a solid sphere spins up at 2.5× the linear decel
 const CUSHION_REST = 0.68;              // cushion coefficient of restitution (<1, lossy)
 const BALL_REST = 0.96;                 // ball-ball restitution

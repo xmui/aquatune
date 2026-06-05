@@ -5109,11 +5109,17 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
   body.osmode #dock { left:0; right:0; bottom:0; transform:none; width:100%;
     border-radius:0; justify-content:space-around; padding:4px; }
   body.osmode #desktop-icons { display:none; }
-  /* let OS-only (win-std) apps (Photos/Files/Scores/image viewer) open full-screen on phones */
+  /* let OS-only (win-std) apps (Photos/Files/Scores/Notes/image viewer) open full-screen on
+     phones — and give them the chrome the osmode rule provides: a SOLID background (they
+     were rendering transparent) and a column layout (default `row` broke titlebar/body). */
   body:not(.osmode) .os-window.win-std.open {
-    display:flex !important; position:fixed !important; inset:0 !important; left:0 !important; top:0 !important;
+    display:flex !important; flex-direction:column; overflow:hidden;
+    background:var(--panel); color:var(--text);
+    position:fixed !important; inset:0 !important; left:0 !important; top:0 !important;
     width:auto !important; height:auto !important; transform:none !important; z-index:9000 !important;
     border-radius:0 !important; }
+  body:not(.osmode) .os-window.win-std .win-body-scroll { -webkit-overflow-scrolling:touch; }
+  body:not(.osmode) #win-texteditor .te-area { flex:1; min-height:0; }
   body:not(.osmode) .os-window.win-std .os-titlebar { cursor:default; height:40px; padding:0 10px; }
   /* on phones the tiny desktop "traffic light" is hard to tap — make the close a real button,
      hide minimize/maximize (no windowing on mobile) */

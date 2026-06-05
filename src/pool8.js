@@ -17,6 +17,8 @@ const W = 700, H = 380;                 // logical canvas (CSS-scaled)
 const M = 30;                           // cushion margin
 const R = 10.5;                         // ball radius
 const POCKET_R = 16;                    // pocket geometric/capture radius
+const CAPTURE_R = 23;                   // a ball whose CENTRE is within this of a pocket drops
+const MOUTH_R = POCKET_R + R + 4;       // near a pocket mouth the rail shouldn't deflect a ball
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
 const MAXPULL = 150, MAXSPEED = 1550;   // slingshot pull → launch speed
 // Two-phase felt friction (px/s²): a struck ball SLIDES (kinetic) until its roll
@@ -34,8 +36,8 @@ const STOP = 9;                         // speed below which a ball is "stopped"
 const STREAM_MS = 90;                   // host → guest state stream throttle
 
 const POCKETS = [
-  { x: LX, y: TY }, { x: W / 2, y: TY - 3 }, { x: RXn, y: TY },
-  { x: LX, y: BY }, { x: W / 2, y: BY + 3 }, { x: RXn, y: BY },
+  { x: LX, y: TY }, { x: W / 2, y: TY - 3, mid: 'top' }, { x: RXn, y: TY },
+  { x: LX, y: BY }, { x: W / 2, y: BY + 3, mid: 'bot' }, { x: RXn, y: BY },
 ];
 // ball tints (1..7 solids; 9..15 are the striped versions of 1..7; 8 black; 0 cue)
 const TINT = { 1: '#f4c20d', 2: '#1f57d6', 3: '#d62828', 4: '#7b2fb5', 5: '#e87a17', 6: '#1f8a4c', 7: '#7a1f2b', 8: '#1a1a1a' };
@@ -102,6 +104,11 @@ function liveOf(group) { return balls.filter(b => !b.potted && groupOf(b.n) === 
 function anyMoving() {
   return balls.some(b => !b.potted && (b.sink !== undefined || (b.vx * b.vx + b.vy * b.vy) > STOP * STOP || (b.rvx * b.rvx + b.rvy * b.rvy) > STOP * STOP));
 }
+// True when a ball is in a pocket's mouth — used to suppress the rail bounce there.
+function nearPocketMouth(b) {
+  for (const p of POCKETS) if (Math.hypot(b.x - p.x, b.y - p.y) < MOUTH_R) return true;
+  return false;
+}
 
 // Two-phase friction: kinetic while the ball SLIDES (contact point slips), then
 // rolling once linear velocity matches the roll velocity rv (= r·ω). This is what
@@ -154,12 +161,20 @@ function step(dt) {
     for (const b of balls) {
       if (b.potted || b.sink !== undefined) continue;
       for (const p of POCKETS) {
-        if (Math.hypot(b.x - p.x, b.y - p.y) < POCKET_R * 1.4) { b.sink = 1; b.sx = p.x; b.sy = p.y; break; }
+        const dxp = b.x - p.x, dyp = b.y - p.y;
+        if (dxp * dxp + dyp * dyp >= CAPTURE_R * CAPTURE_R) continue;
+        // Side pockets only swallow a ball that has crossed the rail line INTO the
+        // throat — not one skimming straight along the rail edge past the pocket.
+        if (p.mid === 'top' && b.y > TY) continue;
+        if (p.mid === 'bot' && b.y < BY) continue;
+        b.sink = 1; b.sx = p.x; b.sy = p.y; break;
       }
     }
-    // cushions (restitution < 1 — balls bleed speed off the rails)
+    // cushions (restitution < 1 — balls bleed speed off the rails). A ball inside a
+    // pocket's mouth is NOT clamped, so it rolls into the jaws and drops instead of
+    // bouncing off the rail right next to the hole — that's what made pockets feel off.
     for (const b of balls) {
-      if (b.potted || b.sink !== undefined) continue;
+      if (b.potted || b.sink !== undefined || nearPocketMouth(b)) continue;
       if (b.x < LX + R) { b.x = LX + R; b.vx = Math.abs(b.vx) * CUSHION_REST; b.rvx *= CUSHION_REST; cushion(b); }
       else if (b.x > RXn - R) { b.x = RXn - R; b.vx = -Math.abs(b.vx) * CUSHION_REST; b.rvx *= CUSHION_REST; cushion(b); }
       if (b.y < TY + R) { b.y = TY + R; b.vy = Math.abs(b.vy) * CUSHION_REST; b.rvy *= CUSHION_REST; cushion(b); }
@@ -522,39 +537,74 @@ function drawCue(cue, ux, uy, pwr) {
   cx.strokeStyle = '#2b4f86'; cx.lineWidth = w0 * 2.2; cx.beginPath(); cx.moveTo(tipX + ux * 1.5, tipY + uy * 1.5); cx.lineTo(tipX, tipY); cx.stroke();
   cx.restore();
 }
-// GamePigeon-style aim preview: trace the cue's path to the first ball (or rail) it
-// hits, then where the OBJECT ball would head (line of centres) and how the cue would
-// deflect (tangent). Returns geometry for draw() to render.
-function aimTrajectory(x0, y0, ux, uy) {
+// ── aim-preview ray helpers ──────────────────────────────────────────────────
+// First ball the ray (from x0,y0 along u) would contact, via the ghost-ball method.
+function rayFirstBall(x0, y0, ux, uy, ignore) {
   let best = null;
   for (const b of balls) {
-    if (b.potted || b.sink !== undefined || b.n === 0) continue;
-    const fx = b.x - x0, fy = b.y - y0;
-    const proj = fx * ux + fy * uy;
-    if (proj <= 0) continue;                       // ball is behind the aim
-    const c = fx * fx + fy * fy - (2 * R) * (2 * R);
-    const disc = proj * proj - c;
-    if (disc < 0) continue;                        // ray misses this ball
-    const t = proj - Math.sqrt(disc);              // distance to the contact (ghost) point
+    if (b.potted || b.sink !== undefined || b === ignore) continue;
+    const fx = b.x - x0, fy = b.y - y0, proj = fx * ux + fy * uy;
+    if (proj <= 0) continue;
+    const disc = proj * proj - (fx * fx + fy * fy - 4 * R * R);
+    if (disc < 0) continue;
+    const t = proj - Math.sqrt(disc);
     if (t < 0) continue;
     if (!best || t < best.t) best = { t, obj: b };
   }
-  // nearest cushion the cue centre would reach (kept R off the rail)
-  let tw = Infinity, nx = 0, ny = 0;
-  if (ux > 0) { const t = (RXn - R - x0) / ux; if (t < tw) { tw = t; nx = 1; ny = 0; } }
-  else if (ux < 0) { const t = (LX + R - x0) / ux; if (t < tw) { tw = t; nx = 1; ny = 0; } }
-  if (uy > 0) { const t = (BY - R - y0) / uy; if (t < tw) { tw = t; nx = 0; ny = 1; } }
-  else if (uy < 0) { const t = (TY + R - y0) / uy; if (t < tw) { tw = t; nx = 0; ny = 1; } }
-  if (best && best.t < tw) {
-    const gx = x0 + ux * best.t, gy = y0 + uy * best.t;          // ghost-ball centre
-    let ndx = best.obj.x - gx, ndy = best.obj.y - gy; const nd = Math.hypot(ndx, ndy) || 1; ndx /= nd; ndy /= nd;
-    const dot = ux * ndx + uy * ndy;                              // object goes along the line of centres
-    let cdx = ux - dot * ndx, cdy = uy - dot * ndy; const cl = Math.hypot(cdx, cdy) || 1; cdx /= cl; cdy /= cl;
-    return { hit: true, ex: gx, ey: gy, obj: best.obj, odx: ndx, ody: ndy, cdx, cdy, cut: dot };
+  return best;
+}
+// First pocket the ray's centre-path would drop into (closest approach < CAPTURE_R).
+function rayFirstPocket(x0, y0, ux, uy) {
+  let best = null;
+  for (const p of POCKETS) {
+    // Side pockets only accept a ball heading INTO the throat (across the rail), not
+    // one skimming along the rail — matches the physics so the preview stays truthful.
+    if (p.mid === 'top' && uy > -0.2) continue;
+    if (p.mid === 'bot' && uy < 0.2) continue;
+    const fx = p.x - x0, fy = p.y - y0, proj = fx * ux + fy * uy;
+    if (proj <= 0) continue;
+    const perp = Math.abs(fx * -uy + fy * ux);
+    if (perp > CAPTURE_R) continue;
+    const t = proj - Math.sqrt(Math.max(0, CAPTURE_R * CAPTURE_R - perp * perp));
+    if (t < 0) continue;
+    if (!best || t < best.t) best = { t, p };
   }
-  // no ball: stop at the rail and show one reflection
-  const ex = x0 + ux * tw, ey = y0 + uy * tw;
-  return { hit: false, ex, ey, rx: nx ? -ux : ux, ry: ny ? -uy : uy };
+  return best;
+}
+// Distance along the ray to the first cushion the ball centre reaches.
+function rayRail(x0, y0, ux, uy) {
+  let t = Infinity, nx = 0, ny = 0;
+  if (ux > 0) { const k = (RXn - R - x0) / ux; if (k < t) { t = k; nx = 1; ny = 0; } }
+  else if (ux < 0) { const k = (LX + R - x0) / ux; if (k < t) { t = k; nx = 1; ny = 0; } }
+  if (uy > 0) { const k = (BY - R - y0) / uy; if (k < t) { t = k; nx = 0; ny = 1; } }
+  else if (uy < 0) { const k = (TY + R - y0) / uy; if (k < t) { t = k; nx = 0; ny = 1; } }
+  return { t, nx, ny };
+}
+// GamePigeon-style aim preview: cue path → first ball/pocket/rail, then the OBJECT
+// ball's line (line of centres, flagged if it heads into a pocket) + cue deflection.
+function aimTrajectory(x0, y0, ux, uy) {
+  const cue = cueBall();
+  const ball = rayFirstBall(x0, y0, ux, uy, cue);
+  const rail = rayRail(x0, y0, ux, uy);
+  const pocket = rayFirstPocket(x0, y0, ux, uy);
+  const tBall = ball ? ball.t : Infinity, tPocket = pocket ? pocket.t : Infinity;
+  // cue reaches a pocket before any ball/rail → it would scratch
+  if (tPocket < tBall && tPocket < rail.t) return { scratch: true, ex: pocket.p.x, ey: pocket.p.y };
+  if (ball && tBall < rail.t) {
+    const gx = x0 + ux * ball.t, gy = y0 + uy * ball.t;            // ghost-ball centre
+    let ndx = ball.obj.x - gx, ndy = ball.obj.y - gy; const nd = Math.hypot(ndx, ndy) || 1; ndx /= nd; ndy /= nd;
+    const dot = ux * ndx + uy * ndy;                               // object goes along the line of centres
+    let cdx = ux - dot * ndx, cdy = uy - dot * ndy; const cl = Math.hypot(cdx, cdy) || 1; cdx /= cl; cdy /= cl;
+    // where does the OBJECT ball go — a pocket, another ball, or a rail?
+    const oPocket = rayFirstPocket(ball.obj.x, ball.obj.y, ndx, ndy);
+    const oStop = Math.min((rayFirstBall(ball.obj.x, ball.obj.y, ndx, ndy, ball.obj) || { t: Infinity }).t, rayRail(ball.obj.x, ball.obj.y, ndx, ndy).t);
+    let oLen, pots = false, opx = 0, opy = 0;
+    if (oPocket && oPocket.t < oStop) { pots = true; oLen = oPocket.t; opx = oPocket.p.x; opy = oPocket.p.y; }
+    else oLen = Math.min(oStop, 185);
+    return { hit: true, ex: gx, ey: gy, obj: ball.obj, odx: ndx, ody: ndy, cdx, cdy, cut: dot, oLen, pots, opx, opy };
+  }
+  const ex = x0 + ux * rail.t, ey = y0 + uy * rail.t;
+  return { hit: false, ex, ey, rx: rail.nx ? -ux : ux, ry: rail.ny ? -uy : uy };
 }
 function draw() {
   if (!cx) return;
@@ -565,25 +615,35 @@ function draw() {
     const ux = dx / d, uy = dy / d, pwr = Math.min(MAXPULL, d) / MAXPULL;
     const tr = aimTrajectory(cue.x, cue.y, ux, uy);
     cx.save();
-    // cue path → contact/rail
-    cx.setLineDash([6, 6]); cx.lineWidth = 2; cx.strokeStyle = 'rgba(255,255,255,0.9)';
-    cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(tr.ex, tr.ey); cx.stroke();
-    if (tr.hit) {
-      // ghost-ball outline at the contact point
-      cx.setLineDash([]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.6)';
-      cx.beginPath(); cx.arc(tr.ex, tr.ey, R, 0, 7); cx.stroke();
-      // object-ball trajectory (line of centres)
-      cx.setLineDash([5, 5]); cx.lineWidth = 2.5; cx.strokeStyle = 'rgba(255,228,90,0.95)';
-      cx.beginPath(); cx.moveTo(tr.obj.x, tr.obj.y); cx.lineTo(tr.obj.x + tr.odx * 170, tr.obj.y + tr.ody * 170); cx.stroke();
-      // cue deflection (tangent) — fainter; only meaningful on a cut
-      if (tr.cut < 0.985) {
-        cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(150,205,255,0.8)';
-        cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.cdx * 95, tr.ey + tr.cdy * 95); cx.stroke();
-      }
+    if (tr.scratch) {
+      // cue would drop in a pocket — red scratch warning
+      cx.setLineDash([6, 6]); cx.lineWidth = 2; cx.strokeStyle = 'rgba(255,85,85,0.95)';
+      cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(tr.ex, tr.ey); cx.stroke();
+      cx.setLineDash([]); cx.fillStyle = 'rgba(255,85,85,0.9)';
+      cx.beginPath(); cx.arc(tr.ex, tr.ey, 4.5, 0, 7); cx.fill();
     } else {
-      // rail reflection preview
-      cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.45)';
-      cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.rx * 130, tr.ey + tr.ry * 130); cx.stroke();
+      // cue path → contact / rail
+      cx.setLineDash([6, 6]); cx.lineWidth = 2; cx.strokeStyle = 'rgba(255,255,255,0.9)';
+      cx.beginPath(); cx.moveTo(cue.x, cue.y); cx.lineTo(tr.ex, tr.ey); cx.stroke();
+      if (tr.hit) {
+        // ghost-ball outline at the contact point
+        cx.setLineDash([]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.6)';
+        cx.beginPath(); cx.arc(tr.ex, tr.ey, R, 0, 7); cx.stroke();
+        // object-ball line — green when it heads into a pocket, yellow otherwise
+        cx.setLineDash([5, 5]); cx.lineWidth = 2.5;
+        cx.strokeStyle = tr.pots ? 'rgba(95,235,125,0.97)' : 'rgba(255,228,90,0.95)';
+        cx.beginPath(); cx.moveTo(tr.obj.x, tr.obj.y); cx.lineTo(tr.obj.x + tr.odx * tr.oLen, tr.obj.y + tr.ody * tr.oLen); cx.stroke();
+        if (tr.pots) { cx.setLineDash([]); cx.fillStyle = 'rgba(95,235,125,0.95)'; cx.beginPath(); cx.arc(tr.opx, tr.opy, 5, 0, 7); cx.fill(); }
+        // cue deflection (tangent) — fainter; only meaningful on a cut
+        if (tr.cut < 0.985) {
+          cx.setLineDash([5, 5]); cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(150,205,255,0.8)';
+          cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.cdx * 95, tr.ey + tr.cdy * 95); cx.stroke();
+        }
+      } else {
+        // rail reflection preview
+        cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(255,255,255,0.45)';
+        cx.beginPath(); cx.moveTo(tr.ex, tr.ey); cx.lineTo(tr.ex + tr.rx * 130, tr.ey + tr.ry * 130); cx.stroke();
+      }
     }
     cx.restore();
     drawCue(cue, ux, uy, pwr);

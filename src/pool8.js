@@ -20,7 +20,7 @@ const POCKET_R = 16;                    // pocket geometric/capture radius
 const CAPTURE_R = 23;                   // a ball whose CENTRE is within this of a pocket drops
 const MOUTH_R = POCKET_R + R + 4;       // near a pocket mouth the rail shouldn't deflect a ball
 const LX = M, RXn = W - M, TY = M, BY = H - M;   // playfield bounds
-const MAXPULL = 150, MAXSPEED = 1550;   // slingshot pull → launch speed
+const MAXSPEED = 1550;   // full-power launch speed (power slider scales 0..1 of this)
 // Two-phase felt friction (px/s²): a struck ball SLIDES (kinetic) until its roll
 // speed catches up (v = r·ω), then ROLLS to a stop. Real pool balls roll FAR (low
 // rolling friction) — the old "ice" was the overshoot bug, not low friction, so the
@@ -56,6 +56,11 @@ function other(seat) { return seat === 'A' ? 'B' : 'A'; }
 let cv = null, cx = null, raf = null, _built = false, _lastT = 0, _rotated = false;
 let balls = [], state = 'start';        // start | aim | shoot | place | ai | remote | watch | over
 let aiming = null, placing = false;
+let aimDir = { x: 1, y: 0 };            // current aim direction (the cue ball will travel this way)
+let power = 0.5;                        // 0..1 shot power, set by the side slider
+let powerEl = null, _powerDragging = false;
+let _strikeT = 0, _pendingFire = null, striking = false;   // cue-stick strike animation → fire
+const STRIKE_MS = 130;
 let turn = 'A', groups = { A: null, B: null }, open = true, broke = false;
 let pottedThisShot = [], firstHit = null, cueStruck = false, pendingInhand = false;
 let msgEl = null, hudEl = null, traysEl = null, overlayEl = null, _aiTimer = null;
@@ -418,28 +423,28 @@ function evpos(e) {
   return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
 }
 function myActiveTurn() { return turn === mySeat; }
+// Point the aim at the pointer (the cue ball travels toward where you drag). Power is
+// set separately by the side slider; releasing the slider fires.
+function aimAt(p) {
+  const cue = cueBall(); if (!cue) return;
+  const dx = p.x - cue.x, dy = p.y - cue.y, d = Math.hypot(dx, dy);
+  if (d > 4) { aimDir = { x: dx / d, y: dy / d }; }
+}
 function onDown(e) {
   e.preventDefault();
-  if (!myActiveTurn()) return;
+  if (!myActiveTurn() || striking) return;
   if (state === 'place') { const p = evpos(e); placeCue(p.x, p.y); placing = 'drag'; return; }
   if (state !== 'aim') return;
-  aiming = { ...evpos(e) };
+  aiming = true; aimAt(evpos(e));
 }
 function onMove(e) {
   if (state === 'place' && placing === 'drag') { const p = evpos(e); placeCue(p.x, p.y); return; }
   if (state !== 'aim' || !aiming) return;
-  aiming.cx = e.clientX; aiming.cy = e.clientY; aiming.cur = evpos(e);
+  aimAt(evpos(e));
 }
 function onUp(e) {
-  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; setMsg('Drag back from the cue ball to shoot.'); return; }
-  if (state !== 'aim' || !aiming) return;
-  const cur = evpos(e), cue = cueBall();
-  const pull = Math.hypot(cur.x - cue.x, cur.y - cue.y);
-  const pwr = Math.min(MAXPULL, pull);
-  aiming = null;
-  if (pwr < 8) return;
-  const dx = cue.x - cur.x, dy = cue.y - cur.y, d = Math.hypot(dx, dy) || 1;
-  fireShot(dx / d, dy / d, (pwr / MAXPULL) * MAXSPEED);
+  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; setMsg('Aim by dragging the table, then drag the power slider and release to shoot.'); return; }
+  aiming = false;   // releasing the table just locks the aim — the slider fires the shot
 }
 function fireShot(dirx, diry, speed) {
   if (iAmEngine()) { doShoot(dirx, diry, speed); return; }
@@ -455,6 +460,41 @@ function placeCue(x, y) {
   x = Math.max(LX + R, Math.min(RXn - R, x)); y = Math.max(TY + R, Math.min(BY - R, y));
   for (const b of balls) { if (b === cue || b.potted) continue; if (Math.hypot(b.x - x, b.y - y) < R * 2) return; }
   cue.x = x; cue.y = y;
+}
+
+// ── power slider → cue-stick strike → fire ───────────────────────────────────
+function canShoot() { return myActiveTurn() && state === 'aim' && !striking; }
+function setPowerFromClientX(clientX) {
+  const track = powerEl && powerEl.querySelector('.p8-power-track'); if (!track) return;
+  const r = track.getBoundingClientRect();
+  power = Math.max(0, Math.min(1, (clientX - r.left) / (r.width || 1)));
+  updatePowerUI();
+}
+function updatePowerUI() {
+  if (!powerEl) return;
+  const on = canShoot() || _powerDragging;
+  powerEl.classList.toggle('disabled', !on);
+  const fill = powerEl.querySelector('.p8-power-fill'), knob = powerEl.querySelector('.p8-power-knob'), val = powerEl.querySelector('.p8-power-val');
+  if (fill) fill.style.width = (power * 100) + '%';
+  if (knob) knob.style.left = (power * 100) + '%';
+  if (val) val.textContent = Math.round(power * 100) + '%';
+}
+function onPowerDown(e) {
+  if (!canShoot()) return;
+  e.preventDefault(); _powerDragging = true; setPowerFromClientX(e.clientX);
+}
+function onPowerMove(e) { if (_powerDragging) setPowerFromClientX(e.clientX); }
+function onPowerUp() {
+  if (!_powerDragging) return;
+  _powerDragging = false;
+  if (canShoot() && power >= 0.06) triggerStrike();   // release the slider → strike the cue ball
+  else updatePowerUI();
+}
+// Animate the cue stick lunging into the ball, then fire at the slider's power.
+function triggerStrike() {
+  striking = true; _strikeT = performance.now();
+  _pendingFire = { x: aimDir.x, y: aimDir.y, speed: power * MAXSPEED };
+  setMsg(''); updatePowerUI();
 }
 
 // ── rendering (2000s MSN-Zone skeuomorphism) ─────────────────────────────────
@@ -515,9 +555,12 @@ function drawBall(b) {
   // tight specular glint
   cx.fillStyle = 'rgba(255,255,255,0.9)'; cx.beginPath(); cx.arc(b.x - r * 0.34, b.y - r * 0.38, r * 0.16, 0, 7); cx.fill();
 }
-function drawCue(cue, ux, uy, pwr) {
-  // stick sits behind the cue ball along -aim; wood-grain taper + metal joint + ferrule
-  const back = 18 + 70 + pwr * 120, tipX = cue.x - ux * 17, tipY = cue.y - uy * 17;
+function drawCue(cue, ux, uy, pwr, lunge) {
+  // stick sits behind the cue ball along -aim; wood-grain taper + metal joint + ferrule.
+  // `lunge` (px) slides the whole stick toward the ball for the strike animation.
+  lunge = lunge || 0;
+  const gap = 17 - lunge;
+  const back = 18 + 70 + pwr * 120 - lunge, tipX = cue.x - ux * gap, tipY = cue.y - uy * gap;
   const buttX = cue.x - ux * back, buttY = cue.y - uy * back, px = -uy, py = ux, w0 = 1.7, w1 = 4.4;
   cx.save();
   cx.beginPath();
@@ -606,10 +649,9 @@ function aimTrajectory(x0, y0, ux, uy) {
 function draw() {
   if (!cx) return;
   drawTable();
-  if (state === 'aim' && aiming && aiming.cur) {
+  if ((state === 'aim' || striking) && myActiveTurn()) {
     const cue = cueBall();
-    const dx = cue.x - aiming.cur.x, dy = cue.y - aiming.cur.y, d = Math.hypot(dx, dy) || 1;
-    const ux = dx / d, uy = dy / d, pwr = Math.min(MAXPULL, d) / MAXPULL;
+    const ux = aimDir.x, uy = aimDir.y, pwr = power;
     const tr = aimTrajectory(cue.x, cue.y, ux, uy);
     cx.save();
     if (tr.scratch) {
@@ -641,10 +683,9 @@ function draw() {
       }
     }
     cx.restore();
-    drawCue(cue, ux, uy, pwr);
-    // power meter
-    cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(LX + 6, BY - 16, 120, 8);
-    cx.fillStyle = pwr > 0.8 ? '#ff5050' : '#ffd21e'; cx.fillRect(LX + 6, BY - 16, 120 * pwr, 8);
+    // cue stick — lunges into the ball during the strike animation
+    const lunge = striking ? Math.min(1, (performance.now() - _strikeT) / STRIKE_MS) * 24 : 0;
+    drawCue(cue, ux, uy, pwr, lunge);
   }
   for (const b of balls) { if (!b.potted) drawBall(b); }
 }
@@ -677,6 +718,7 @@ function updateHud() {
     const eightChip = `<span class="p8-chip p8-eight${isPotted(8) ? ' sunk' : ''}" style="background:${isPotted(8) ? '#1a1a1a' : 'transparent'};color:${isPotted(8) ? '#fff' : 'rgba(255,255,255,0.35)'};border-color:${isPotted(8) ? '#1a1a1a' : 'rgba(255,255,255,0.25)'}"><b>8</b></span>`;
     traysEl.innerHTML = tray('solid', [1, 2, 3, 4, 5, 6, 7]) + `<span class="p8-trays-mid">${eightChip}</span>` + tray('stripe', [9, 10, 11, 12, 13, 14, 15]);
   }
+  updatePowerUI();
 }
 function showOverlay(title, sub, btn, fn) {
   if (!overlayEl) return;
@@ -696,7 +738,7 @@ function showStart() {
       : 'Joins the room host’s table.')
     : 'Join or create a music room first to play someone.';
   overlayEl.innerHTML = `<div class="p8-ov-title">🎱 8-Ball</div>`
-    + `<div class="p8-ov-sub">Drag back from the cue ball to aim, release to shoot. Pot your group, then the 8 to win.</div>`
+    + `<div class="p8-ov-sub">Drag the table to aim, then drag the Power slider and release to strike. Pot your group, then the 8 to win.</div>`
     + `<div class="p8-startbtns"><button class="p8-btn" id="p8-bot">🤖 Play a bot</button>`
     + `<button class="p8-btn" id="p8-room"${haveRoom ? '' : ' disabled'}>👥 Play someone in the room</button></div>`
     + `<div class="p8-ov-note">${roomNote}</div>`;
@@ -704,13 +746,13 @@ function showStart() {
   overlayEl.querySelector('#p8-bot').onclick = startBot;
   const rb = overlayEl.querySelector('#p8-room'); if (rb && haveRoom) rb.onclick = startRoom;
 }
-function resetCommon() { pottedThisShot = []; firstHit = null; placing = false; aiming = null; _overInfo = null; _finished = false; opponentPresent = false; guestInhand = false; _guestAnnounced = false; }
+function resetCommon() { pottedThisShot = []; firstHit = null; placing = false; aiming = false; striking = false; _pendingFire = null; _powerDragging = false; _overInfo = null; _finished = false; opponentPresent = false; guestInhand = false; _guestAnnounced = false; }
 
 function startBot() {
   mode = 'bot'; mySeat = 'A'; resetCommon();
   rack(); turn = 'A'; groups = { A: null, B: null }; open = true; broke = false;
   state = 'aim'; hideOverlay(); updateHud();
-  setMsg('Break! Drag back from the cue ball and release.');
+  setMsg('Break! Aim by dragging the table, then drag the Power slider and release.');
 }
 function startRoom() {
   if (!window._currentRoomId) { showStart(); return; }
@@ -731,6 +773,11 @@ function hideOverlay() { if (overlayEl) overlayEl.style.display = 'none'; }
 
 function tick(t) {
   const dt = Math.min(0.05, (t - (_lastT || t)) / 1000); _lastT = t;
+  // cue-stick strike: once the lunge animation finishes, launch the shot
+  if (_pendingFire && performance.now() - _strikeT >= STRIKE_MS) {
+    const pf = _pendingFire; _pendingFire = null; striking = false;
+    fireShot(pf.x, pf.y, pf.speed); updatePowerUI();
+  }
   if (iAmEngine()) {
     if (state === 'shoot') {
       if (dt > 0) step(dt);
@@ -778,16 +825,25 @@ function build() {
   wrap.appendChild(cv);
   overlayEl = document.createElement('div'); overlayEl.className = 'p8-overlay'; wrap.appendChild(overlayEl);
   area.appendChild(wrap);
+  // power slider — drag to set power, release to strike the cue ball
+  powerEl = document.createElement('div'); powerEl.className = 'p8-power';
+  powerEl.innerHTML = '<span class="p8-power-lab">Power</span>'
+    + '<div class="p8-power-track"><div class="p8-power-fill"></div><div class="p8-power-knob"></div></div>'
+    + '<span class="p8-power-val">50%</span>';
+  area.appendChild(powerEl);
   msgEl = document.createElement('div'); msgEl.className = 'p8-status'; area.appendChild(msgEl);
 
   cx = cv.getContext('2d');
   cv.addEventListener('pointerdown', onDown, { passive: false });
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  powerEl.querySelector('.p8-power-track').addEventListener('pointerdown', onPowerDown, { passive: false });
+  window.addEventListener('pointermove', onPowerMove);
+  window.addEventListener('pointerup', onPowerUp);
   window.addEventListener('resize', updateRotation);
   window.addEventListener('orientationchange', updateRotation);
   _built = true;
-  updateRotation();
+  updateRotation(); updatePowerUI();
 }
 
 function openPool(show = true) {

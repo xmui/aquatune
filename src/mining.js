@@ -68,8 +68,9 @@ const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
 // player out of mining for 10 minutes (persisted, so a reload doesn't dodge it).
 const LOCK_MS = 10 * 60 * 1000;      // 10-minute lockout
 const LOCK_KEY = 'aq_mining_lock_until';
-const CLK_WINDOW = 30;               // clicks examined for cadence
+const CLK_WINDOW = 40;               // clicks examined for cadence
 const CLK_MIN = 24;                  // need a long sustained run before judging (fast human bursts are short)
+const CLK_MIN_TOUCH = 36;            // touch taps are rhythmic — require an even longer run before judging
 // ────────────────────────────────────────────────────────────────────────────
 
 let cv = null, cx = null, raf = null, _built = false;
@@ -79,10 +80,11 @@ let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
 let seq = null, seqHits = 0;         // active crit chain + how many points tapped so far
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
-let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0;
+let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0, _lastTouch = false;
 // One-time: the auto-clicker check used to be too sensitive (it could flag fast
-// manual clicking). Clear any lockout it left behind so those players are freed.
-try { if (!localStorage.getItem('aq_mining_lock_reset_v1')) { localStorage.setItem('aq_mining_lock_reset_v1', '1'); localStorage.removeItem(LOCK_KEY); } } catch (e) {}
+// manual / rhythmic touch tapping). Clear any lockout it left behind so those
+// players are freed. (Bumped to v2 to also free mobile users the touch tweak frees.)
+try { if (!localStorage.getItem('aq_mining_lock_reset_v2')) { localStorage.setItem('aq_mining_lock_reset_v2', '1'); localStorage.removeItem(LOCK_KEY); } } catch (e) {}
 
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
 function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
@@ -95,21 +97,26 @@ function lockedUntil() { return parseInt(localStorage.getItem(LOCK_KEY) || '0', 
 function isLocked() { return Date.now() < lockedUntil(); }
 // Record a click time and decide if the recent cadence is robotic (auto-clicker).
 function registerClick(now) {
+  // Touch is far harder to trip: a finger taps more rhythmically than a mouse, so
+  // mobile mashers were getting flagged. Require a longer run, a faster rate, and an
+  // even more machine-perfect cadence before locking a touch user out — while still
+  // catching an actual mobile auto-tapper. Desktop thresholds are unchanged.
+  const touch = _lastTouch;
   _clkT.push(now);
   if (_clkT.length > CLK_WINDOW) _clkT.shift();
-  if (_clkT.length < CLK_MIN) return false;
+  if (_clkT.length < (touch ? CLK_MIN_TOUCH : CLK_MIN)) return false;
   const iv = [];
   for (let i = 1; i < _clkT.length; i++) iv.push(_clkT[i] - _clkT[i - 1]);
   const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
-  // Truly superhuman sustained rate (>~30 clicks/sec over the whole window): no human
-  // hits that by hand. (Fast manual mashing tops out around 10–15 cps.)
-  if (mean < 33) return true;
+  // Truly superhuman sustained rate: no human hits this by hand (mouse ~>30 cps,
+  // finger ~>50 cps). Fast manual mashing tops out far below.
+  if (mean < (touch ? 20 : 33)) return true;
   // Machine-regular cadence is the real tell: an auto-clicker's intervals are nearly
-  // identical (coefficient of variation ≈ 0), while even very fast human clicking has
-  // plenty of jitter. Require an extremely low CV over a long run so fast clicking is safe.
+  // identical (coefficient of variation ≈ 0), while even very fast human input has
+  // plenty of jitter. Require an extremely low CV over a long run so fast input is safe.
   let v = 0; for (const x of iv) v += (x - mean) * (x - mean);
   const cv2 = Math.sqrt(v / iv.length) / mean;
-  if (cv2 < 0.045 && mean < 240) return true;
+  if (cv2 < (touch ? 0.022 : 0.045) && mean < (touch ? 150 : 240)) return true;
   return false;
 }
 function lockOut() {
@@ -501,10 +508,11 @@ function build() {
   // the MINE button is a no-aim fallback (normal hits, can't crit).
   cv.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    _lastTouch = (e.pointerType === 'touch');
     const r = cv.getBoundingClientRect();
     hit((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height));
   });
-  mine.addEventListener('pointerdown', (e) => { e.preventDefault(); hit(); });
+  mine.addEventListener('pointerdown', (e) => { e.preventDefault(); _lastTouch = (e.pointerType === 'touch'); hit(); });
   _built = true;
 }
 

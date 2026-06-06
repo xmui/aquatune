@@ -150,13 +150,20 @@ function persFor(s) {
       { period: Math.round(lerp(MAXT * 0.3, MAXT, r())),  phase: r() * 6.2832, w: 0.7 },
       { period: Math.round(lerp(MINT, MAXT * 0.15, r())), phase: r() * 6.2832, w: 0.3 },
     ],
+    // A long SECULAR trend (months-long bull/bear cycle) with its OWN amplitude so the
+    // fair value actually drifts up or down over days/weeks instead of oscillating around
+    // basePrice — that's what lets a stock "stay" trending. Deterministic per seed+id, so
+    // every ticker trends independently (some long-term winners, some losers) and reverses
+    // only over months. Bounded by exp(sine), so prices never run away.
+    secular: { period: Math.round(lerp(MAXT * 4, MAXT * 12, r())), phase: r() * 6.2832, amp: lerp(0.30, 0.85, r()) * (0.5 + prof.trendAmp) },
   };
   return (_persCache[s.id] = pers);
 }
 function trendLog(s, tick) {
   const p = persFor(s); let v = 0;
   for (const w of p.waves) v += w.w * Math.sin((tick / w.period) * 6.2832 + w.phase);
-  return p.trendAmp * v;
+  const sec = p.secular;
+  return p.trendAmp * v + sec.amp * Math.sin((tick / sec.period) * 6.2832 + sec.phase);
 }
 function fairValue(s, tick) { return s.basePrice * Math.exp(trendLog(s, tick)); }
 
@@ -276,7 +283,7 @@ function rebuildSeries(ids) {
       const sk = _mix(mk, STOCK_IDX[id] + 1);
       let r = s.beta * mktR + (_u(sk) * 2 - 1) * (vol * s.vol);
       if (_u(sk ^ 1) < 0.008 + 0.04 * regime) r += (_u(sk ^ 2) * 2 - 1) * (0.10 + 0.45 * regime);
-      const revert = MEAN_REVERT * Math.log(s.basePrice / p);
+      const revert = MEAN_REVERT * Math.log(fairValue(s, t) / p);   // revert toward the drifting anchor
       p = p * (1 + r + revert);
       if (!isFinite(p) || p < PRICE_FLOOR) p = PRICE_FLOOR;
       price[id] = p;

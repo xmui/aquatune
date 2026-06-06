@@ -423,11 +423,11 @@ function evpos(e) {
   return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
 }
 function myActiveTurn() { return turn === mySeat; }
-// Point the aim at the pointer (the cue ball travels toward where you drag). Power is
-// set separately by the side slider; releasing the slider fires.
+// Aim by dragging the cue STICK around the ball (circle it to set the angle): the ball
+// travels OPPOSITE your drag, like pulling the stick back behind it. Power is the slider.
 function aimAt(p) {
   const cue = cueBall(); if (!cue) return;
-  const dx = p.x - cue.x, dy = p.y - cue.y, d = Math.hypot(dx, dy);
+  const dx = cue.x - p.x, dy = cue.y - p.y, d = Math.hypot(dx, dy);
   if (d > 4) { aimDir = { x: dx / d, y: dy / d }; }
 }
 function onDown(e) {
@@ -443,7 +443,7 @@ function onMove(e) {
   aimAt(evpos(e));
 }
 function onUp(e) {
-  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; setMsg('Aim by dragging the table, then drag the power slider and release to shoot.'); return; }
+  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; setMsg('Drag the stick around the cue ball to aim, then drag the Power slider and release to shoot.'); return; }
   aiming = false;   // releasing the table just locks the aim — the slider fires the shot
 }
 function fireShot(dirx, diry, speed) {
@@ -738,7 +738,7 @@ function showStart() {
       : 'Joins the room host’s table.')
     : 'Join or create a music room first to play someone.';
   overlayEl.innerHTML = `<div class="p8-ov-title">🎱 8-Ball</div>`
-    + `<div class="p8-ov-sub">Drag the table to aim, then drag the Power slider and release to strike. Pot your group, then the 8 to win.</div>`
+    + `<div class="p8-ov-sub">Drag the stick around the cue ball to aim, then drag the Power slider and release to strike. Pot your group, then the 8 to win.</div>`
     + `<div class="p8-startbtns"><button class="p8-btn" id="p8-bot">🤖 Play a bot</button>`
     + `<button class="p8-btn" id="p8-room"${haveRoom ? '' : ' disabled'}>👥 Play someone in the room</button></div>`
     + `<div class="p8-ov-note">${roomNote}</div>`;
@@ -752,7 +752,7 @@ function startBot() {
   mode = 'bot'; mySeat = 'A'; resetCommon();
   rack(); turn = 'A'; groups = { A: null, B: null }; open = true; broke = false;
   state = 'aim'; hideOverlay(); updateHud();
-  setMsg('Break! Aim by dragging the table, then drag the Power slider and release.');
+  setMsg('Break! Drag the stick around the cue ball to aim, then drag the Power slider and release.');
 }
 function startRoom() {
   if (!window._currentRoomId) { showStart(); return; }

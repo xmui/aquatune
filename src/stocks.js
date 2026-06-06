@@ -150,12 +150,12 @@ function persFor(s) {
       { period: Math.round(lerp(MAXT * 0.3, MAXT, r())),  phase: r() * 6.2832, w: 0.7 },
       { period: Math.round(lerp(MINT, MAXT * 0.15, r())), phase: r() * 6.2832, w: 0.3 },
     ],
-    // A long SECULAR trend (months-long bull/bear cycle) with its OWN amplitude so the
-    // fair value actually drifts up or down over days/weeks instead of oscillating around
+    // A SECULAR trend (multi-week bull/bear cycle) with its OWN amplitude so the fair
+    // value actually drifts up or down over days/weeks instead of oscillating around
     // basePrice — that's what lets a stock "stay" trending. Deterministic per seed+id, so
-    // every ticker trends independently (some long-term winners, some losers) and reverses
-    // only over months. Bounded by exp(sine), so prices never run away.
-    secular: { period: Math.round(lerp(MAXT * 4, MAXT * 12, r())), phase: r() * 6.2832, amp: lerp(0.30, 0.85, r()) * (0.5 + prof.trendAmp) },
+    // every ticker trends independently (some winners, some losers) and reverses only over
+    // weeks. Amplitude scales with the stock's personality; bounded by exp(sine).
+    secular: { period: Math.round(lerp(MAXT * 1.5, MAXT * 4, r())), phase: r() * 6.2832, amp: lerp(0.30, 0.85, r()) * (0.5 + prof.trendAmp) },
   };
   return (_persCache[s.id] = pers);
 }

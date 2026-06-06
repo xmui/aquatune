@@ -3788,6 +3788,18 @@ body.perf-mode #aqua-gun { display: none !important; }
       .p8-canvas.p8-rot { width:auto; height:auto; transform:rotate(90deg); transform-origin:center; }
     }
     .p8-status { padding:4px 10px; font-size:11px; color:#1a2a4a; background:#d9d6c3; border-top:1px solid #b6b39c; min-height:18px; }
+    /* shot-power slider — drag to set power, release to strike */
+    .p8-power { display:flex; align-items:center; gap:10px; padding:7px 12px; background:linear-gradient(180deg,#0e2a18,#0a1f12);
+      border-top:1px solid #1a3a26; user-select:none; touch-action:none; }
+    .p8-power-lab { font-size:11px; font-weight:800; color:#cfe8a0; letter-spacing:.04em; text-transform:uppercase; flex-shrink:0; }
+    .p8-power-val { font-size:12px; font-weight:800; color:#fff; min-width:38px; text-align:right; flex-shrink:0; }
+    .p8-power-track { position:relative; flex:1; height:16px; border-radius:9px; cursor:pointer;
+      background:#0a1510; border:1px solid #25402e; box-shadow:inset 0 2px 5px rgba(0,0,0,0.55); }
+    .p8-power-fill { position:absolute; left:0; top:0; bottom:0; width:50%; border-radius:9px;
+      background:linear-gradient(90deg,#3ad17a,#ffd21e 70%,#ff5050); }
+    .p8-power-knob { position:absolute; top:50%; left:50%; width:20px; height:20px; border-radius:50%; transform:translate(-50%,-50%);
+      background:radial-gradient(circle at 35% 30%,#fff,#cfd6cf 60%,#8a948a); border:1px solid #5a635a; box-shadow:0 2px 5px rgba(0,0,0,0.5); }
+    .p8-power.disabled { opacity:0.45; pointer-events:none; }
     /* sunk-balls trays — solids on the left, the 8 in the middle, stripes on the right */
     .p8-trays { display:flex; align-items:center; gap:8px; padding:5px 10px; background:linear-gradient(180deg,#0e2a18,#0a1f12); }
     .p8-tray { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding:3px 6px; border-radius:6px; border:1px solid transparent; }

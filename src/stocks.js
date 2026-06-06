@@ -147,8 +147,9 @@ function persFor(s) {
   const pers = {
     ...prof,
     waves: [
-      { period: Math.round(lerp(MAXT * 0.3, MAXT, r())),  phase: r() * 6.2832, w: 0.7 },
-      { period: Math.round(lerp(MINT, MAXT * 0.15, r())), phase: r() * 6.2832, w: 0.3 },
+      { period: Math.round(lerp(MAXT * 0.3, MAXT, r())),         phase: r() * 6.2832, w: 0.5 },   // medium: ~4 days–2 weeks
+      { period: Math.round(lerp(MAXT * 0.04, MAXT * 0.18, r())), phase: r() * 6.2832, w: 0.32 },  // daily: ~13h–2.5 days
+      { period: Math.round(lerp(MINT, MAXT * 0.03, r())),        phase: r() * 6.2832, w: 0.26 },  // short: 1h–~10h
     ],
     // A SECULAR trend (multi-week bull/bear cycle) with its OWN amplitude so the fair
     // value actually drifts up or down over days/weeks instead of oscillating around

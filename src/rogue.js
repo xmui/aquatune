@@ -421,6 +421,10 @@ function wirePad() {
   const onUp = e => { const p = pointers.get(e.pointerId); if (!p) return; if (p.dir) held[p.dir] = false; pointers.delete(e.pointerId); };
   _pad.addEventListener('pointerdown', onDown, { passive: false });
   _pad.addEventListener('pointerup', onUp); _pad.addEventListener('pointercancel', onUp); _pad.addEventListener('lostpointercapture', onUp);
+  // iOS fires its own long-press selection/magnify on touchstart regardless of pointer
+  // events — preventing it here (plus the user-select CSS) kills the text-select box.
+  _pad.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+  _pad.addEventListener('contextmenu', e => e.preventDefault());
 }
 function bindKeys() {
   if (_keyHandler) return;

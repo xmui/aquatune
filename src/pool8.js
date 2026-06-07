@@ -293,6 +293,8 @@ function beginTurn(inhand) {
   } else {                                            // room: waiting for the guest's shot
     state = 'remote'; placing = false; setMsg(opponentPresent ? "Opponent's turn…" : 'Waiting for an opponent…');
   }
+  if (state === 'aim') power = 0.5;   // every fresh shot starts at mid power
+  updatePowerUI();                    // refresh AFTER state is set (resolveShot's updateHud ran too early)
   broadcastState(true);
 }
 function endGame(winnerSeat, text) {
@@ -397,8 +399,9 @@ function adoptState(s) {
   // A fresh (non-over) state after a finished game = host started a rematch; clear our end card.
   if (_finished) { _finished = false; hideOverlay(); }
   if (moving) { state = 'watch'; setMsg('Balls rolling…'); }
-  else if (turn === mySeat) { state = inhand ? 'place' : 'aim'; placing = inhand; setMsg(inhand ? 'Ball in hand — drag the cue ball to place it.' : 'Your shot.'); }
+  else if (turn === mySeat) { state = inhand ? 'place' : 'aim'; placing = inhand; if (state === 'aim') power = 0.5; setMsg(inhand ? 'Ball in hand — drag the cue ball to place it.' : 'Your shot.'); }
   else { state = 'watch'; setMsg("Opponent's turn…"); }
+  updatePowerUI();   // reflect the freshly-set turn state on the slider
 }
 // Host handles a guest's queued action.
 function onPoolActionLocal(a) {
@@ -447,7 +450,7 @@ function onMove(e) {
   aimAt(evpos(e));
 }
 function onUp(e) {
-  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; setMsg('Drag the stick around the cue ball to aim, then drag the Power slider and release to shoot.'); return; }
+  if (state === 'place' && placing === 'drag') { placing = false; state = 'aim'; power = 0.5; updatePowerUI(); setMsg('Drag the stick around the cue ball to aim, then drag the Power slider and release to shoot.'); return; }
   aiming = false;   // releasing the table just locks the aim — the slider fires the shot
 }
 function fireShot(dirx, diry, speed) {

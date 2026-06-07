@@ -3884,8 +3884,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     .rogue-abtn.b { background:radial-gradient(circle at 35% 30%,#9fe9ff,#2aa6d8); width:46px; height:46px; }
     .rogue-dbtn:active, .rogue-abtn:active { transform:translateY(2px); box-shadow:none; }
     /* stop iOS long-press text-selection / magnify loupe when holding a button */
-    .rogue-pad, .rogue-dpad, .rogue-dbtn, .rogue-ab, .rogue-abtn, .rogue-canvas {
-      -webkit-touch-callout:none; -webkit-user-select:none; -moz-user-select:none; user-select:none;
+    #rogue-wrap, #rogue-wrap * {
+      -webkit-touch-callout:none !important; -webkit-user-select:none !important; -moz-user-select:none !important; user-select:none !important;
       -webkit-tap-highlight-color:transparent; }
     @media (max-width:768px) {
       #pool-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }

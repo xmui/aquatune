@@ -92,7 +92,10 @@ let depthPts = parseFloat(localStorage.getItem('aq_mining_depth') || '0') || 0;
 let prestige = parseInt(localStorage.getItem('aq_mining_prestige') || '0', 10) || 0;
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
-function stageMult() { return 1 + curStage * 0.4; }      // deeper zones reward more
+// Deeper zones reward more — but the low end is deliberately small so you WORK for early
+// XP, and the big multipliers only arrive at the deep stages (which are level-gated:
+// Caverns L8 … Crystal Core L60). Combined with prestige, that's the "huge" payoff.
+function stageMult() { return 0.5 + curStage * 0.5; }
 function prestigeMult() { return 1 + prestige * 0.05; }  // +5% per Delve Deeper rank
 function veinActive() { return performance.now() < veinUntil; }
 function addDepth(n) { depthPts = Math.min(DEPTH_MAX, depthPts + n); try { localStorage.setItem('aq_mining_depth', String(Math.round(depthPts))); } catch (e) {} }
@@ -201,7 +204,7 @@ function scheduleSweet(now) { sweet = null; seq = null; seqHits = 0; sweetNextAt
 function awardChainXp() {
   if (seqHits > 0) {
     // The main XP source — scales with how many points you chained AND the zone/prestige.
-    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.25 + seqHits * 0.22) * stageMult() * prestigeMult()) });
+    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + seqHits * 0.18) * stageMult() * prestigeMult()) });
     addFloater('+chain XP ×' + seqHits, 3);
   }
   seqHits = 0;

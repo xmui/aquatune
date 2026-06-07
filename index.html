@@ -3699,18 +3699,24 @@ body.perf-mode #aqua-gun { display: none !important; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
-    /* ── XP gain / level-up popups — MMORPG-style numbers flowing up the side ─── */
-    #aq-xp-popups { position:fixed; right:14px; bottom:32%; display:flex; flex-direction:column; gap:6px; align-items:flex-end; z-index:3000; pointer-events:none; }
-    .aq-xp-pop { display:flex; align-items:center; gap:7px; background:linear-gradient(90deg,rgba(8,16,28,0.92),rgba(12,28,44,0.92));
-      color:#eaf6ff; border:1px solid rgba(0,180,220,0.35); border-radius:10px; padding:5px 12px; font-size:15px; font-weight:800; letter-spacing:.3px;
-      box-shadow:0 4px 16px rgba(0,0,0,0.4), 0 0 14px rgba(0,180,220,0.12); white-space:nowrap; font-variant-numeric:tabular-nums;
-      text-shadow:0 1px 2px rgba(0,0,0,0.6); animation:aqXpRise 1.9s cubic-bezier(.2,.7,.2,1) forwards; }
-    .aq-xp-ico { font-size:18px; line-height:1; }
-    .aq-xp-pop span { color:var(--text2); font-weight:600; font-size:11px; letter-spacing:0; }
-    .aq-xp-pop.lvl { background:linear-gradient(90deg,#ffd45a,#ff9e3d); color:#2a1500; border-color:#ffd45a; font-size:14px; text-shadow:none; box-shadow:0 4px 16px rgba(255,160,40,0.35); }
-    .aq-xp-pop.lvl span { color:#5a3300; }
-    @keyframes aqXpRise { 0%{opacity:0; transform:translateY(14px) scale(.82);} 14%{opacity:1; transform:translateY(0) scale(1);} 70%{opacity:1; transform:translateY(-10px);} 100%{opacity:0; transform:translateY(-30px) scale(.98);} }
-    @media (max-width:768px) { #aq-xp-popups { bottom:38%; right:8px; } }
+    /* ── XP gain / level-up popups — FFXIV-style numbers drifting up like smoke ─── */
+    #aq-xp-popups { position:fixed; right:18px; bottom:96px; display:flex; flex-direction:column; gap:2px; align-items:flex-end; z-index:3000; pointer-events:none; }
+    .aq-xp-pop { display:flex; align-items:baseline; gap:6px; background:none; border:none; box-shadow:none; padding:0;
+      color:#e8f6ff; font-size:17px; font-weight:800; letter-spacing:.4px; white-space:nowrap; font-variant-numeric:tabular-nums;
+      text-shadow:0 0 7px rgba(120,205,255,0.75), 0 0 2px rgba(120,205,255,0.9), 0 1px 3px rgba(0,0,0,0.85);
+      animation:aqXpRise 2.3s ease-out forwards; }
+    .aq-xp-ico { font-size:18px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+    .aq-xp-pop span { color:#bfe0f5; font-weight:600; font-size:11px; letter-spacing:0; }
+    .aq-xp-pop.lvl { color:#ffe18a; font-size:18px; text-shadow:0 0 9px rgba(255,200,90,0.85), 0 0 2px rgba(255,210,110,0.9), 0 1px 3px rgba(0,0,0,0.85); }
+    .aq-xp-pop.lvl span { color:#ffcf6a; }
+    /* gentle smoke-like rise: fade in, drift up + slight sway, fade out and soften */
+    @keyframes aqXpRise {
+      0%   { opacity:0; transform:translate(0,10px) scale(.86); }
+      14%  { opacity:1; transform:translate(0,0) scale(1); }
+      55%  { opacity:0.95; transform:translate(-3px,-22px); }
+      100% { opacity:0; transform:translate(-7px,-48px) scale(1.05); filter:blur(1.4px); }
+    }
+    @media (max-width:768px) { #aq-xp-popups { bottom:calc(120px + env(safe-area-inset-bottom,0px)); right:12px; } }
 
     /* ── OSRS-style minimal skill HUD (opt-in, bottom of screen) ─── */
     #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:2960;
@@ -3954,6 +3960,15 @@ body.perf-mode #aqua-gun { display: none !important; }
       border:2px solid rgba(255,255,255,0.55); box-shadow:0 3px 0 rgba(0,0,0,0.4); touch-action:none;
       background:radial-gradient(circle at 35% 30%,#ffd27a,#e8902a); }
     .arc-fire:active { transform:translateY(2px); box-shadow:none; }
+    .ah-overlay { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+      background:rgba(6,18,28,0.82); border-radius:4px; text-align:center; padding:18px; }
+    .ah-ov-title { font-size:26px; font-weight:800; color:#fff; }
+    .ah-ov-sub { font-size:12px; color:#bfe6ff; }
+    .ah-ov-btns { display:flex; flex-direction:column; gap:8px; width:min(240px,80%); margin-top:4px; }
+    .ah-btn { font-size:14px; font-weight:700; padding:10px 14px; border-radius:9px; cursor:pointer; color:#04121f;
+      background:linear-gradient(90deg,#5ad1ff,#43c6e8); border:1px solid #43c6e8; }
+    .ah-btn:disabled { opacity:0.45; cursor:default; background:#2a3a44; color:#9fb6c8; border-color:#2a3a44; }
+    .ah-ov-note { font-size:11px; color:rgba(255,255,255,0.6); max-width:240px; line-height:1.4; }
     #tanks-wrap, #airhockey-wrap, #tanks-wrap *, #airhockey-wrap * {
       -webkit-touch-callout:none !important; -webkit-user-select:none !important; user-select:none !important; -webkit-tap-highlight-color:transparent; }
     @media (max-width:768px) {

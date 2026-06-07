@@ -463,6 +463,20 @@ window.initRoom = async function(roomId, isHost, opts) {
     finally { remove(ref(db, `rooms/${roomId}/pool/actions/${key}`)); }
   });
 
+  // Air Hockey (host-authoritative real-time): the host streams the table state;
+  // the guest renders it and continuously overwrites a single `input` node with its
+  // paddle target (one node, not a queue, so the high-frequency stream stays cheap).
+  onValue(ref(db, `rooms/${roomId}/airhockey/state`), snap => {
+    const s = snap.val();
+    if (!s || s.updatedBy === myUserId) return;
+    window.onAirHockeyState?.(s);
+  });
+  onValue(ref(db, `rooms/${roomId}/airhockey/input`), snap => {
+    const p = snap.val();
+    if (!p || p.updatedBy === myUserId || !window._isRoomHost) return;
+    window.onAirHockeyInput?.(p);
+  });
+
   // Instant sync on join: read the current state immediately and apply it, so a guest who joins
   // mid-song snaps to the right position without waiting for the host's next heartbeat.
   if (!isHost) {
@@ -644,6 +658,16 @@ window.poolBroadcast = function(state) {
 window.poolSendAction = function(a) {
   if (!window._currentRoomId) return;
   push(ref(db, `rooms/${window._currentRoomId}/pool/actions`), _pkClean({ ...a, userId: myUserId, ts: Date.now() })).catch(() => {});
+};
+
+// Air Hockey bridges — host streams the whole table; guest overwrites its paddle input.
+window.airhockeyBroadcast = function(state) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/airhockey/state`), _pkClean({ ...state, updatedBy: myUserId, ts: Date.now() })).catch(() => {});
+};
+window.airhockeySendInput = function(p) {
+  if (!window._currentRoomId) return;
+  set(ref(db, `rooms/${window._currentRoomId}/airhockey/input`), _pkClean({ ...p, updatedBy: myUserId, ts: Date.now() })).catch(() => {});
 };
 
 window.leaveRoom = function() {

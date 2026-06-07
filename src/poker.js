@@ -265,7 +265,13 @@ function settleYou() {
   if (typeof window.aqGameXp === 'function') {
     const myIdx = G.seats.findIndex(s => s && s.isYou);
     const iWon = myIdx >= 0 && Array.isArray(G.winners) && G.winners.some(w => w.idx === myIdx);
-    if (myIdx >= 0) window.aqGameXp('gambling', { played: true, won: iWon, luck: 0.4 });
+    // Balanced toward ~40/min: you only win ~1/N hands, so winners pay well (scaled by the
+    // pot you took, capped) while every hand still grants a small played trickle.
+    if (myIdx >= 0) {
+      const myWin = ((Array.isArray(G.winners) && G.winners.find(w => w.idx === myIdx)) || {}).amt || 0;
+      const mult = iWon ? Math.min(16, 8 + myWin / (BB * 2)) : 3;
+      window.aqGameXp('gambling', { played: true, won: iWon, luck: 0.4, mult });
+    }
   }
 }
 

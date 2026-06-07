@@ -70,7 +70,7 @@ const VEIN_NEED = 14;                // weak-point hits to charge a vein
 const VEIN_MS = 7000;                // vein frenzy duration
 const VEIN_POINT_MS = 620;           // faster targets during a vein
 const DEPTH_MAX = 600;               // skill points to fill the depth bar (then prestige)
-const XP_CAP = 5;                    // cap on any single mining XP grant's mult
+const XP_CAP = 2.5;                  // cap on any single mining XP grant's mult
 // ── auto-clicker guard ───────────────────────────────────────────────────────
 // Auto-clickers fire at a machine-regular cadence no human can match: fast AND
 // with almost no timing jitter. If the last several clicks look robotic, lock the
@@ -95,7 +95,7 @@ let curStage = 0;
 // Deeper zones reward more — but the low end is deliberately small so you WORK for early
 // XP, and the big multipliers only arrive at the deep stages (which are level-gated:
 // Caverns L8 … Crystal Core L60). Combined with prestige, that's the "huge" payoff.
-function stageMult() { return 0.5 + curStage * 0.5; }
+function stageMult() { return 0.6 + curStage * 0.12; }
 function prestigeMult() { return 1 + prestige * 0.05; }  // +5% per Delve Deeper rank
 function veinActive() { return performance.now() < veinUntil; }
 function addDepth(n) { depthPts = Math.min(DEPTH_MAX, depthPts + n); try { localStorage.setItem('aq_mining_depth', String(Math.round(depthPts))); } catch (e) {} }
@@ -204,7 +204,7 @@ function scheduleSweet(now) { sweet = null; seq = null; seqHits = 0; sweetNextAt
 function awardChainXp() {
   if (seqHits > 0) {
     // The main XP source — scales with how many points you chained AND the zone/prestige.
-    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + seqHits * 0.18) * stageMult() * prestigeMult()) });
+    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.05 + seqHits * 0.05) * stageMult() * prestigeMult()) });
     addFloater('+chain XP ×' + seqHits, 3);
   }
   seqHits = 0;
@@ -244,7 +244,7 @@ function breakRock() {
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
   // The break itself is a SMALL trickle now (most XP comes from chaining weak-points),
   // but it scales with the zone + prestige so deeper digging is clearly worth more.
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + r.rarity * 0.1) * stageMult() * prestigeMult()) });
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.05 + r.rarity * 0.05) * stageMult() * prestigeMult()) });
   addDepth(4 + r.rarity * 2);
   if (typeof window.recordScore === 'function') window.recordScore('mining', ore, r.name);
   addFloater('+' + ore, 2);

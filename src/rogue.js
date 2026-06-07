@@ -290,8 +290,9 @@ function die() { if (state === 'over') return; sfx('die'); state = 'over'; endRu
 function endRun(won) {
   if (_finished) return; _finished = true;
   runScore = depth * 100 + runKills * 5;
-  const mult = Math.min(4, 0.6 + depth * 0.25 + runKills * 0.02);
-  if (window.aqGameXp) window.aqGameXp('combat', { played: true, won: depth >= 3, mult });
+  // Balanced to ~55/min for a multi-minute run: reward scales with depth reached (skill) and
+  // kills, capped. aqAddXp (no luck roll) keeps a big end-grant under the anti-cheat cap.
+  if (window.aqAddXp) window.aqAddXp('combat', Math.round(Math.min(600, 50 + depth * 70 + runKills * 3)));
   runPayout = Math.round(Math.min(150, depth * 12 + runKills * 1.5));
   if (runPayout > 0 && window.aqAddCredits) window.aqAddCredits(runPayout);
   if (window.recordScore) window.recordScore('rogue', runScore, 'Reached F' + depth + ' · ' + runKills + ' kills');

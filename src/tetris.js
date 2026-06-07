@@ -113,7 +113,8 @@ function clearLines() {
   const newLevel = levelFor(lines);                 // start level + natural progression
   if (newLevel > level) { level = newLevel; dropMs = dropMsFor(level); sfx('level'); }
   sfx(cleared >= 4 ? 'tetris' : (cleared === 3 ? 'triple' : (cleared === 2 ? 'double' : 'single')));
-  if (window.aqGameXp) window.aqGameXp('speed', { played: false, won: true, mult: 0.3 * cleared * cleared });
+  // Line clears are the main earner (balanced to ~55/min); bigger clears reward steeply.
+  if (window.aqGameXp) window.aqGameXp('speed', { played: false, won: true, mult: 1.1 * cleared * cleared });
   updateInfo();
 }
 
@@ -158,7 +159,7 @@ function gameOver() {
   const payout = Math.round(Math.min(180, lines * 2.5 * diffMult));
   if (payout > 0 && window.aqAddCredits) window.aqAddCredits(payout);   // also feeds Finance XP
   if (window.recordScore) window.recordScore('tetris', score, diffName + ' · Lv' + (level + 1) + ' · ' + lines + ' lines');
-  if (window.aqGameXp) window.aqGameXp('speed', { played: true, won: lines >= 10, mult: Math.min(4, 1 + lines * 0.12) });
+  if (window.aqGameXp) window.aqGameXp('speed', { played: true, won: lines >= 10, mult: Math.min(5, 1 + lines * 0.13) });
   if (lines >= 20 && window.aqGameAnnounce) window.aqGameAnnounce(`cleared ${lines} lines in Tetris on ${diffName} (${score.toLocaleString()} pts, Lv ${level + 1}) 🧱`);
   sfx('over');
   const sub = 'Score ' + score.toLocaleString() + ' · ' + lines + ' lines · Lv ' + (level + 1) + (payout > 0 ? ' · +' + payout + ' 💰' : '');

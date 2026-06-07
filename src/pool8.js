@@ -476,12 +476,11 @@ function setPowerFromClientY(clientY) {
 }
 function updatePowerUI() {
   if (!powerEl) return;
-  const on = canShoot() || _powerDragging;
+  const on = canShoot() || _powerDragging || striking;   // only visible on your shot
   powerEl.classList.toggle('disabled', !on);
-  const fill = powerEl.querySelector('.p8-power-fill'), knob = powerEl.querySelector('.p8-power-knob'), val = powerEl.querySelector('.p8-power-val');
+  const fill = powerEl.querySelector('.p8-power-fill'), knob = powerEl.querySelector('.p8-power-knob');
   if (fill) fill.style.height = (power * 100) + '%';     // fills from the top down as you charge
   if (knob) knob.style.top = (power * 100) + '%';
-  if (val) val.textContent = Math.round(power * 100) + '%';
 }
 function onPowerDown(e) {
   if (!canShoot()) return;
@@ -827,15 +826,14 @@ function build() {
   const wrap = document.createElement('div'); wrap.className = 'p8-stage';
   cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'p8-canvas';
   wrap.appendChild(cv);
-  // power slider — floats bottom-right over the table; slide DOWN to charge, release to strike
-  powerEl = document.createElement('div'); powerEl.className = 'p8-power';
-  powerEl.innerHTML = '<span class="p8-power-val">50%</span>'
-    + '<div class="p8-power-track"><div class="p8-power-fill"></div><div class="p8-power-knob"></div></div>'
-    + '<span class="p8-power-lab">PWR</span>';
-  wrap.appendChild(powerEl);
   overlayEl = document.createElement('div'); overlayEl.className = 'p8-overlay'; wrap.appendChild(overlayEl);
   area.appendChild(wrap);
   msgEl = document.createElement('div'); msgEl.className = 'p8-status'; area.appendChild(msgEl);
+  // power bar — left-side vertical slider, anchored to #pool-area (outside the rotated
+  // stage) so it stays tappable on mobile. Slide the knob down to charge, release to strike.
+  powerEl = document.createElement('div'); powerEl.className = 'p8-power';
+  powerEl.innerHTML = '<div class="p8-power-track"><div class="p8-power-fill"></div><div class="p8-power-knob"></div></div>';
+  area.appendChild(powerEl);
 
   cx = cv.getContext('2d');
   cv.addEventListener('pointerdown', onDown, { passive: false });

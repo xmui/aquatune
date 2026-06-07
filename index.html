@@ -3775,7 +3775,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       background:#ece9d8; border:1px solid #0a246a; box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--font-ui); overflow:hidden;
     }
     #pool-wrap.open { display:flex; }
-    #pool-area { display:flex; flex-direction:column; background:#ece9d8; }
+    #pool-area { display:flex; flex-direction:column; background:#ece9d8; position:relative; }
     .p8-hud { display:flex; gap:10px; justify-content:space-between; align-items:center; padding:5px 10px; font-size:12px; font-weight:800;
       color:#fff; background:linear-gradient(180deg,#3a6ea5,#0a246a); }
     .p8-hud .p8-turn { opacity:0.7; } .p8-hud .p8-turn.on { opacity:1; }
@@ -3788,20 +3788,22 @@ body.perf-mode #aqua-gun { display: none !important; }
       .p8-canvas.p8-rot { width:auto; height:auto; transform:rotate(90deg); transform-origin:center; }
     }
     .p8-status { padding:4px 10px; font-size:11px; color:#1a2a4a; background:#d9d6c3; border-top:1px solid #b6b39c; min-height:18px; }
-    /* shot-power slider — floats bottom-right over the table; slide DOWN to charge, release to strike */
-    .p8-power { position:absolute; right:12px; bottom:12px; z-index:6;
-      display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 7px; border-radius:13px;
-      background:rgba(8,22,14,0.80); border:1px solid #1d3d28; box-shadow:0 6px 18px rgba(0,0,0,0.4);
-      user-select:none; touch-action:none; }
-    .p8-power-lab { font-size:9px; font-weight:800; color:#cfe8a0; letter-spacing:.06em; }
-    .p8-power-val { font-size:11px; font-weight:800; color:#fff; }
-    .p8-power-track { position:relative; width:17px; height:34vh; max-height:150px; min-height:90px; border-radius:9px; cursor:pointer;
-      background:#0a1510; border:1px solid #25402e; box-shadow:inset 0 2px 5px rgba(0,0,0,0.55); overflow:hidden; }
+    /* shot-power bar — GamePigeon-style green segmented slider on the LEFT. Slide the knob
+       DOWN to charge (the further down, the more power), release to strike. Anchored to
+       #pool-area (NOT the rotated/clipped canvas stage) so it stays tappable on mobile. */
+    .p8-power { position:absolute; left:7px; top:50%; transform:translateY(-50%); z-index:50;
+      padding:5px; user-select:none; touch-action:none; }
+    .p8-power-track { position:relative; width:30px; height:min(62vh,330px); min-height:170px; border-radius:16px; cursor:pointer;
+      background:linear-gradient(180deg,#14331d,#0a1c11); border:2px solid #07140c; box-shadow:inset 0 2px 7px rgba(0,0,0,0.65); overflow:hidden; }
     .p8-power-fill { position:absolute; left:0; right:0; top:0; height:50%;
-      background:linear-gradient(180deg,#3ad17a,#ffd21e 70%,#ff5050); }
-    .p8-power-knob { position:absolute; left:50%; top:50%; width:23px; height:23px; border-radius:50%; transform:translate(-50%,-50%);
-      background:radial-gradient(circle at 35% 30%,#fff,#cfd6cf 60%,#8a948a); border:1px solid #5a635a; box-shadow:0 2px 5px rgba(0,0,0,0.5); }
-    .p8-power.disabled { opacity:0.4; pointer-events:none; }
+      background:
+        repeating-linear-gradient(180deg, rgba(0,0,0,0.22) 0 2px, transparent 2px 26px),
+        linear-gradient(180deg,#bdf58a,#5fdd5a 45%,#26a23f); }
+    .p8-power-knob { position:absolute; left:50%; top:50%; width:40px; height:20px; border-radius:7px; transform:translate(-50%,-50%);
+      background:linear-gradient(180deg,#ffffff,#cdd6cd 55%,#aab4aa); border:1px solid #5a635a; box-shadow:0 2px 6px rgba(0,0,0,0.55); }
+    .p8-power-knob::after { content:''; position:absolute; left:50%; top:50%; width:18px; height:3px; transform:translate(-50%,-50%);
+      border-top:1px solid #8a948a; border-bottom:1px solid #8a948a; }
+    .p8-power.disabled { opacity:0; pointer-events:none; }
     /* sunk-balls trays — solids on the left, the 8 in the middle, stripes on the right */
     .p8-trays { display:flex; align-items:center; gap:8px; padding:5px 10px; background:linear-gradient(180deg,#0e2a18,#0a1f12); }
     .p8-tray { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; padding:3px 6px; border-radius:6px; border:1px solid transparent; }

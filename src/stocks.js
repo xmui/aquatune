@@ -433,6 +433,7 @@ function hookCreditSync() {
 // UI
 // ---------------------------------------------------------------------------
 let _selected = STOCKS[0].id;
+let _qty = 1, _tradeBuiltFor = null;   // chosen trade quantity persists across price-tick re-renders
 let _compareMode = false;
 let _compareSet = new Set([STOCKS[0].id, STOCKS[1].id, STOCKS[2].id]);
 let _tickTimer = null;
@@ -610,29 +611,37 @@ function drawChart() {
 
 function renderTrade() {
   const box = document.getElementById('stk-trade');
-  if (!box || _compareMode) { if (box) box.innerHTML = _compareMode ? '<div class="stk-hint">Tap stocks on the left to add/remove from the comparison.</div>' : ''; return; }
+  if (!box || _compareMode) { if (box) box.innerHTML = _compareMode ? '<div class="stk-hint">Tap stocks on the left to add/remove from the comparison.</div>' : ''; _tradeBuiltFor = null; return; }
   const s = STOCKS.find(x => x.id === _selected);
   const px = priceOf(s.id);
   const h = holdings[s.id] || { shares: 0, avgCost: 0 };
   const credits = typeof window.aqGetCredits === 'function' ? window.aqGetCredits() : 0;
-  const posVal = h.shares * px;
-  const posPL = h.shares ? (px - h.avgCost) * h.shares : 0;
-  box.innerHTML = `
-    <div class="stk-trade-row">
-      <input id="stk-qty" type="number" min="1" value="1" />
-      <button class="stk-btn buy" id="stk-buy">Buy</button>
-      <button class="stk-btn sell" id="stk-sell">Sell</button>
-      <button class="stk-btn" id="stk-max">Max</button>
-    </div>
-    <div class="stk-pos">
-      Holding: <b>${h.shares}</b> @ ${fmt(h.avgCost)} &nbsp;·&nbsp; Value: <b>${Math.round(posVal)}</b> 🪙
-      &nbsp;·&nbsp; P/L: <b style="color:${posPL >= 0 ? '#5ad17a' : '#ff5d5d'}">${posPL >= 0 ? '+' : ''}${Math.round(posPL)}</b>
-    </div>
-    <div id="stk-trade-msg" class="stk-hint"></div>`;
-  const qty = () => Math.max(1, Math.floor(+document.getElementById('stk-qty').value || 1));
-  document.getElementById('stk-buy').onclick = () => doBuy(s.id, qty());
-  document.getElementById('stk-sell').onclick = () => doSell(s.id, qty());
-  document.getElementById('stk-max').onclick = () => { document.getElementById('stk-qty').value = Math.max(1, Math.floor(credits / px)); };
+  // Build the controls only when the SELECTED STOCK changes — never on a price tick —
+  // so the qty input (and its focus) survives the ~4s re-renders. Switching stocks
+  // resets the quantity to 1.
+  if (_tradeBuiltFor !== s.id) {
+    _qty = 1;
+    box.innerHTML = `
+      <div class="stk-trade-row">
+        <input id="stk-qty" type="number" min="1" value="1" />
+        <button class="stk-btn buy" id="stk-buy">Buy</button>
+        <button class="stk-btn sell" id="stk-sell">Sell</button>
+        <button class="stk-btn" id="stk-max">Max</button>
+      </div>
+      <div class="stk-pos" id="stk-pos"></div>
+      <div id="stk-trade-msg" class="stk-hint"></div>`;
+    const qtyEl = document.getElementById('stk-qty');
+    qtyEl.value = _qty;
+    qtyEl.oninput = () => { _qty = Math.max(1, Math.floor(+qtyEl.value || 1)); };
+    document.getElementById('stk-buy').onclick = () => doBuy(s.id, _qty);
+    document.getElementById('stk-sell').onclick = () => doSell(s.id, _qty);
+    document.getElementById('stk-max').onclick = () => { _qty = Math.max(1, Math.floor((typeof window.aqGetCredits === 'function' ? window.aqGetCredits() : 0) / priceOf(s.id))); const q = document.getElementById('stk-qty'); if (q) q.value = _qty; };
+    _tradeBuiltFor = s.id;
+  }
+  // Refresh only the dynamic numbers each call (price tick) — leave the input alone.
+  const posVal = h.shares * px, posPL = h.shares ? (px - h.avgCost) * h.shares : 0;
+  const pos = document.getElementById('stk-pos');
+  if (pos) pos.innerHTML = `Holding: <b>${h.shares}</b> @ ${fmt(h.avgCost)} &nbsp;·&nbsp; Value: <b>${Math.round(posVal)}</b> 🪙 &nbsp;·&nbsp; P/L: <b style="color:${posPL >= 0 ? '#5ad17a' : '#ff5d5d'}">${posPL >= 0 ? '+' : ''}${Math.round(posPL)}</b>`;
 }
 
 function renderPortfolio() {

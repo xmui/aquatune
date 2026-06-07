@@ -3860,10 +3860,35 @@ body.perf-mode #aqua-gun { display: none !important; }
     .tt-key { flex:1; max-width:64px; font-size:18px; padding:10px 0; border-radius:8px; cursor:pointer; color:#fff; touch-action:none; user-select:none;
       background:linear-gradient(180deg,#6a4ed8,#3f2aa0); border:1px solid #8a6fff; box-shadow:0 2px 0 #2a1a70; }
     .tt-key:active { transform:translateY(2px); box-shadow:none; }
+    /* ── NEON RUNNER (cyberpunk roguelike) ── */
+    #rogue-wrap { position:fixed; top:40px; left:50%; transform:translateX(-50%); width:380px; max-width:96vw;
+      z-index:540; flex-direction:column; background:#0a0e1f; border:2px solid #2de0ff; border-radius:10px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.55); font-family:var(--font-ui); overflow:hidden; }
+    #rogue-wrap.open { display:flex; }
+    #rogue-area { display:flex; flex-direction:column; gap:8px; padding:10px; background:#0a0e1f; min-height:0; }
+    .rogue-canvas { width:100%; image-rendering:pixelated; image-rendering:crisp-edges; display:block;
+      border:3px solid #2de0ff; border-radius:4px; background:#0a0e1f; touch-action:none; box-shadow:0 0 16px rgba(45,224,255,0.25); }
+    .rogue-pad { display:none; justify-content:space-between; align-items:flex-end; gap:10px; touch-action:none; user-select:none; }
+    .rogue-dpad { display:grid; grid-template-columns:repeat(3,40px); grid-template-rows:repeat(3,40px);
+      grid-template-areas:'. u .' 'l . r' '. d .'; gap:4px; }
+    .rogue-dbtn { font-size:18px; color:#cfe8ff; background:linear-gradient(180deg,#16306a,#0c1a3e);
+      border:1px solid #2de0ff; border-radius:7px; box-shadow:0 2px 0 #061634; touch-action:none; cursor:pointer; }
+    .rogue-dbtn.ru { grid-area:u; } .rogue-dbtn.rl { grid-area:l; } .rogue-dbtn.rr { grid-area:r; } .rogue-dbtn.rd { grid-area:d; }
+    .rogue-ab { display:flex; align-items:flex-end; gap:14px; }
+    .rogue-abtn { width:54px; height:54px; border-radius:50%; font-size:20px; font-weight:800; color:#06121f; cursor:pointer;
+      border:2px solid rgba(255,255,255,0.5); box-shadow:0 3px 0 rgba(0,0,0,0.4); touch-action:none; }
+    .rogue-abtn.a { background:radial-gradient(circle at 35% 30%,#bdf58a,#46c24a); }
+    .rogue-abtn.b { background:radial-gradient(circle at 35% 30%,#9fe9ff,#2aa6d8); width:46px; height:46px; }
+    .rogue-dbtn:active, .rogue-abtn:active { transform:translateY(2px); box-shadow:none; }
     @media (max-width:768px) {
       #pool-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
       #tetris-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0; }
       .tt-pad { display:flex; }   /* touch controls only on mobile */
+      #rogue-wrap { width:100vw; top:0; left:0; transform:none; border-radius:0;
+        height:calc(100dvh - 94px - env(safe-area-inset-bottom,0px)); }
+      #rogue-area { flex:1; min-height:0; }
+      .rogue-canvas { flex:1; min-height:0; height:auto; object-fit:contain; }
+      .rogue-pad { display:flex; flex:0 0 auto; padding:4px 14px env(safe-area-inset-bottom,6px); }
     }
 
     /* ── THEATER MODE ──────────────────────────────────────── */
@@ -5582,6 +5607,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
       <button class="apps-game-btn" data-app="pool" onclick="OS.open('pool')"><span class="agb-icon">&#127921;</span><span class="agb-name">8-Ball Pool</span></button>
       <button class="apps-game-btn" data-app="tetris" onclick="OS.open('tetris')"><span class="agb-icon">&#129521;</span><span class="agb-name">Tetris</span></button>
+      <button class="apps-game-btn" data-app="rogue" onclick="OS.open('rogue')"><span class="agb-icon">&#129302;</span><span class="agb-name">Neon Runner</span></button>
       <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
@@ -8400,6 +8426,7 @@ const APPS = {
   buddyshoot:{ el:'buddyshoot-wrap',name:'Buddy Shoot',tb:'#buddyshoot-titlebar',openFn:()=>window.openBuddyShoot?.(), closeFn:()=>window.openBuddyShoot?.(false) },
   pool:      { el:'pool-wrap',      name:'8-Ball Pool', tb:'#pool-titlebar',     openFn:()=>window.openPool?.(),       closeFn:()=>window.openPool?.(false) },
   tetris:    { el:'tetris-wrap',    name:'Tetris',      tb:'#tetris-titlebar',   openFn:()=>window.openTetris?.(),     closeFn:()=>window.openTetris?.(false) },
+  rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
   chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8730,7 +8757,7 @@ const DOCK_META = {
   holdem:{icon:'🂡',label:"Texas Hold'em"},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
   stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'},
-  pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'},
+  pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
@@ -8801,6 +8828,7 @@ const LB_GAMES = {
   buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
   pool8:    { label:'8-Ball Pool',  icon:'🎱', unit:'wins',    lower:false },
   tetris:   { label:'Tetris',       icon:'🧱', unit:'pts',     lower:false },
+  rogue:    { label:'Neon Runner',  icon:'🤖', unit:'depth',   lower:false },
 };
 const LB_PATH = 'leaderboard';
 function _lbRead() { try { return JSON.parse(localStorage.getItem('aq_scores') || '{}'); } catch { return {}; } }
@@ -12178,6 +12206,7 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
   <button class="mob-tool-btn" onclick="OS.open('pool')" title="8-Ball Pool">🎱<span>Pool</span></button>
   <button class="mob-tool-btn" onclick="OS.open('tetris')" title="Tetris">🧱<span>Tetris</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('rogue')" title="Neon Runner">🤖<span>Runner</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
@@ -14441,6 +14470,44 @@ function miningSfx(name) {
   } catch (e) {}
 }
 window.miningSfx = miningSfx;
+
+// Neon Runner — chiptune-cyberpunk blips/noise.
+function rogueSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination); o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const noise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 1.1;
+    const g = cx.createGain(); g.gain.setValueAtTime(vol * V, t + start); g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination); src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'attack':  blip(620, 0, 0.07, 'square', 0.12, 1100); noise(0, 2600, 0.04, 0.08); break;
+      case 'hit':     blip(300, 0, 0.05, 'sawtooth', 0.16, 150); noise(0, 1800, 0.05, 0.12); break;
+      case 'hurt':    blip(260, 0, 0.22, 'square', 0.18, 70); noise(0, 700, 0.12, 0.14, true); break;
+      case 'pickup':  blip(523, 0, 0.08, 'square', 0.14); blip(784, 0.07, 0.1, 'square', 0.14); break;
+      case 'coin':    blip(988, 0, 0.06, 'triangle', 0.16); blip(1319, 0.05, 0.1, 'triangle', 0.12); break;
+      case 'door':    blip(180, 0, 0.1, 'square', 0.14, 90); blip(360, 0.08, 0.12, 'square', 0.1); break;
+      case 'descend': blip(660, 0, 0.5, 'sawtooth', 0.16, 120); [262, 330, 392].forEach((f, i) => blip(f, 0.1 + i * 0.06, 0.3, 'triangle', 0.1)); break;
+      case 'powerup': [392, 523, 659, 880].forEach((f, i) => blip(f, i * 0.05, 0.1, 'square', 0.12)); break;
+      case 'boss':    blip(90, 0, 0.6, 'sawtooth', 0.2, 70); noise(0, 400, 0.5, 0.16, true); blip(140, 0.1, 0.4, 'square', 0.08); break;
+      case 'die':     [440, 392, 330, 247, 165].forEach((f, i) => blip(f, i * 0.1, 0.18, 'square', 0.16)); break;
+      case 'start':   [330, 494, 659].forEach((f, i) => blip(f, i * 0.06, 0.16, 'square', 0.13)); break;
+    }
+  } catch (e) {}
+}
+window.rogueSfx = rogueSfx;
 
 /* ── BUDDY SHOOT SFX — gunshot / hit / empty ── */
 function buddySfx(name) {
@@ -17078,6 +17145,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/buddyshoot.js"></script>
 <script type="module" src="/src/pool8.js"></script>
 <script type="module" src="/src/tetris.js"></script>
+<script type="module" src="/src/rogue.js"></script>
 <script type="module" src="/src/version-check.js"></script>
 
 <!-- SLOT MACHINE -->
@@ -17312,6 +17380,15 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openTetris(false)">×</button>
   </div>
   <div id="tetris-area"></div>
+</div>
+
+<!-- NEON RUNNER (native canvas roguelike) -->
+<div id="rogue-wrap" style="display:none">
+  <div class="sol-titlebar" id="rogue-titlebar">
+    <span>🤖 Neon Runner</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openRogue(false)">×</button>
+  </div>
+  <div id="rogue-area"></div>
 </div>
 
 

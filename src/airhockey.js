@@ -1,6 +1,7 @@
-// Aquatune Air Hockey — a Wii-Play-style table. You're the bottom paddle (drag to
-// move, on mouse or touch); the AI defends the top. Puck bounces off the rails;
-// knock it into the far goal. First to GOALS_TO_WIN wins. Grants Speed XP.
+// Aquatune Air Hockey — a Wii-Play-style table. Solo vs an AI, or a real-time
+// match against a roommate (host-authoritative, mirroring the pool/poker pattern):
+// the host runs the physics and streams the table; the guest renders it (rotated so
+// it sits at the bottom too) and streams back its paddle position. Grants Speed XP.
 
 const TW = 300, TH = 460;
 const GOAL_W = TW * 0.44;
@@ -8,22 +9,33 @@ const GOALS_TO_WIN = 7;
 const PADDLE_R = 26, PUCK_R = 13;
 const PUCK_MAX = 11;          // px per step cap
 const PADDLE_MAX = 12;        // AI move speed cap (lower = easier to beat)
+const BROADCAST_MS = 50;      // host state stream interval
+const INPUT_MS = 45;          // guest paddle input interval
 
-let cv = null, cx = null, raf = null, _built = false;
-let state = 'start';         // start | play | over
+let cv = null, cx = null, raf = null, _built = false, overlayEl = null;
+let state = 'start';          // start | play | over
+let mode = null;             // 'solo' | 'room'
 let scoreYou = 0, scoreAI = 0, msg = '';
-let paddle, ai, puck, target;
-let _last = 0, _flashGoal = 0;
+let paddle, ai, puck, target, guestTarget;
+let _last = 0, _flashGoal = 0, _bcAt = 0, _inAt = 0, _lastInX = 0, _lastInY = 0, _guestGranted = false;
 
 function sfx(n) { try { window.airhockeySfx && window.airhockeySfx(n); } catch (e) {} }
+function inRoom() { return mode === 'room' && !!window._currentRoomId; }
+function iAmHost() { return inRoom() && !!window._isRoomHost; }
+function isGuest() { return inRoom() && !window._isRoomHost; }
+
 function reset(toYou) {
-  paddle = { x: TW / 2, y: TH - 60, px: TW / 2, py: TH - 60, r: PADDLE_R };
+  paddle = { x: TW / 2, y: TH - 60, r: PADDLE_R };
   ai = { x: TW / 2, y: 60, r: PADDLE_R };
-  // serve toward whoever was just scored on
   puck = { x: TW / 2, y: TH / 2, vx: (Math.random() - 0.5) * 4, vy: toYou ? 5 : -5, r: PUCK_R };
   target = { x: paddle.x, y: paddle.y };
+  guestTarget = { x: TW / 2, y: 60 };
 }
-function newGame() { scoreYou = 0; scoreAI = 0; state = 'play'; msg = ''; reset(Math.random() < 0.5); sfx('start'); }
+function newGame(m) {
+  mode = m; scoreYou = 0; scoreAI = 0; state = 'play'; msg = ''; _guestGranted = false;
+  reset(Math.random() < 0.5); hideOverlay(); sfx('start');
+  if (iAmHost()) broadcast();
+}
 
 function clampPaddle(p, topHalf) {
   const minY = topHalf ? p.r + 2 : TH / 2 + p.r;
@@ -31,18 +43,15 @@ function clampPaddle(p, topHalf) {
   p.x = Math.max(p.r + 2, Math.min(TW - p.r - 2, p.x));
   p.y = Math.max(minY, Math.min(maxY, p.y));
 }
-
 function collide(p, pvx, pvy) {
   const dx = puck.x - p.x, dy = puck.y - p.y;
   const d = Math.hypot(dx, dy), min = p.r + puck.r;
   if (d >= min || d === 0) return;
   const nx = dx / d, ny = dy / d;
-  // push puck out of the paddle, then reflect + add the paddle's own velocity
   puck.x = p.x + nx * (min + 0.5); puck.y = p.y + ny * (min + 0.5);
   const dot = puck.vx * nx + puck.vy * ny;
   puck.vx += (-2 * dot) * nx + (pvx || 0) * 0.6;
   puck.vy += (-2 * dot) * ny + (pvy || 0) * 0.6;
-  // ensure it travels away with some pace
   const sp = Math.hypot(puck.vx, puck.vy);
   if (sp < 5) { puck.vx = nx * 6; puck.vy = ny * 6; }
   sfx('hitpaddle');
@@ -50,22 +59,23 @@ function collide(p, pvx, pvy) {
 
 function step() {
   if (state !== 'play') return;
-  // your paddle follows the pointer target (record velocity for puck impulse)
+  // bottom (you / host) paddle follows the local pointer target
   const oldx = paddle.x, oldy = paddle.y;
-  paddle.x = target.x; paddle.y = target.y;
-  clampPaddle(paddle, false);
+  paddle.x = target.x; paddle.y = target.y; clampPaddle(paddle, false);
   const pvx = paddle.x - oldx, pvy = paddle.y - oldy;
 
-  // AI: only commits to a hit when the puck is in its half and coming toward it;
-  // otherwise it sits back near the goal. Eases toward the target (laggy → beatable).
-  let tx, ty;
-  if (puck.y < TH / 2 && puck.vy < 0.5) { tx = puck.x + puck.vx * 2; ty = Math.max(54, puck.y - 6); }
-  else { tx = TW / 2 + (puck.x - TW / 2) * 0.3; ty = 60; }
-  const adx = tx - ai.x, ady = ty - ai.y, ad = Math.hypot(adx, ady) || 1;
-  const aspd = Math.min(PADDLE_MAX, ad * 0.5);
+  // top paddle: a roommate's paddle (room host) or the AI (solo)
   const aox = ai.x, aoy = ai.y;
-  ai.x += adx / ad * aspd; ai.y += ady / ad * aspd;
-  clampPaddle(ai, true);
+  if (mode === 'room') { ai.x = guestTarget.x; ai.y = guestTarget.y; clampPaddle(ai, true); }
+  else {
+    let tx, ty;
+    if (puck.y < TH / 2 && puck.vy < 0.5) { tx = puck.x + puck.vx * 2; ty = Math.max(54, puck.y - 6); }
+    else { tx = TW / 2 + (puck.x - TW / 2) * 0.3; ty = 60; }
+    const adx = tx - ai.x, ady = ty - ai.y, ad = Math.hypot(adx, ady) || 1;
+    const aspd = Math.min(PADDLE_MAX, ad * 0.5);
+    ai.x += adx / ad * aspd; ai.y += ady / ad * aspd; clampPaddle(ai, true);
+  }
+  const avx = ai.x - aox, avy = ai.y - aoy;
 
   // puck physics
   puck.vx *= 0.995; puck.vy *= 0.995;
@@ -73,40 +83,67 @@ function step() {
   if (sp > PUCK_MAX) { puck.vx = puck.vx / sp * PUCK_MAX; puck.vy = puck.vy / sp * PUCK_MAX; }
   puck.x += puck.vx; puck.y += puck.vy;
 
-  // side rails
   if (puck.x < puck.r) { puck.x = puck.r; puck.vx = Math.abs(puck.vx); sfx('wall'); }
   if (puck.x > TW - puck.r) { puck.x = TW - puck.r; puck.vx = -Math.abs(puck.vx); sfx('wall'); }
-  // top/bottom rails — unless inside the goal mouth
   const inGoalX = Math.abs(puck.x - TW / 2) < GOAL_W / 2;
-  if (puck.y < puck.r) {
-    if (inGoalX) { scoreYou++; goal(true); return; }
-    puck.y = puck.r; puck.vy = Math.abs(puck.vy); sfx('wall');
-  }
-  if (puck.y > TH - puck.r) {
-    if (inGoalX) { scoreAI++; goal(false); return; }
-    puck.y = TH - puck.r; puck.vy = -Math.abs(puck.vy); sfx('wall');
-  }
+  if (puck.y < puck.r) { if (inGoalX) { scoreYou++; goal(true); return; } puck.y = puck.r; puck.vy = Math.abs(puck.vy); sfx('wall'); }
+  if (puck.y > TH - puck.r) { if (inGoalX) { scoreAI++; goal(false); return; } puck.y = TH - puck.r; puck.vy = -Math.abs(puck.vy); sfx('wall'); }
 
   collide(paddle, pvx, pvy);
-  collide(ai, ai.x - aox, ai.y - aoy);
+  collide(ai, avx, avy);
 }
 
 function goal(youScored) {
   _flashGoal = youScored ? 1 : -1;
   sfx(youScored ? 'goal' : 'goalagainst');
-  if (scoreYou >= GOALS_TO_WIN || scoreAI >= GOALS_TO_WIN) { endGame(); return; }
+  if (scoreYou >= GOALS_TO_WIN || scoreAI >= GOALS_TO_WIN) { endGame(); if (iAmHost()) broadcast(); return; }
   reset(!youScored);
+  if (iAmHost()) broadcast();
 }
-
+function grantResult(won, myScore) {
+  if (typeof window.aqAddXp === 'function') window.aqAddXp('speed', Math.round(Math.min(300, 60 + myScore * 20 + (won ? 120 : 0))));
+  if (won && typeof window.aqAddCredits === 'function') window.aqAddCredits(40 + myScore * 6);
+  if (typeof window.recordScore === 'function') window.recordScore('airhockey', myScore, myScore + ' goals');
+}
 function endGame() {
   state = 'over';
   const won = scoreYou > scoreAI;
   msg = won ? 'YOU WIN!' : 'YOU LOSE';
   sfx(won ? 'win' : 'lose');
-  // Speed XP (capped well under the anti-cheat ceiling) + a credit prize on a win.
-  if (typeof window.aqAddXp === 'function') window.aqAddXp('speed', Math.round(Math.min(300, 60 + scoreYou * 20 + (won ? 120 : 0))));
-  if (won && typeof window.aqAddCredits === 'function') window.aqAddCredits(40 + scoreYou * 6);
-  if (typeof window.recordScore === 'function') window.recordScore('airhockey', scoreYou, scoreYou + '–' + scoreAI);
+  grantResult(won, scoreYou);   // host (or solo) grants for itself; the guest grants from the broadcast
+  if (inRoom() && won && typeof window.aqGameAnnounce === 'function') window.aqGameAnnounce('won an Air Hockey match in the room! 🏒');
+  showOverlay();
+}
+
+// ── room netcode ────────────────────────────────────────────────────────────
+function broadcast() {
+  if (typeof window.airhockeyBroadcast !== 'function') return;
+  window.airhockeyBroadcast({ puck: { x: puck.x, y: puck.y }, ph: { x: paddle.x, y: paddle.y },
+    pg: { x: ai.x, y: ai.y }, sh: scoreYou, sg: scoreAI, st: state });
+}
+// Guest applies host state, rotated 180° so the guest also sits at the bottom. Its
+// OWN paddle is predicted locally (from its pointer) for responsiveness; only the
+// opponent + puck come from the host.
+function onState(s) {
+  if (!isGuest()) return;
+  if (!puck) reset(true);
+  puck.x = TW - s.puck.x; puck.y = TH - s.puck.y;
+  ai.x = TW - s.ph.x; ai.y = TH - s.ph.y;           // host paddle = opponent at the top
+  scoreYou = s.sg; scoreAI = s.sh;
+  if (s.st === 'play') { if (state !== 'play') { state = 'play'; _guestGranted = false; hideOverlay(); } }
+  else if (s.st === 'over') {
+    state = 'over'; msg = s.sg > s.sh ? 'YOU WIN!' : 'YOU LOSE';
+    if (!_guestGranted) { _guestGranted = true; grantResult(s.sg > s.sh, s.sg); }
+    showOverlay();
+  }
+}
+function onInput(p) { if (iAmHost()) guestTarget = { x: TW - p.x, y: TH - p.y }; }   // rotate guest paddle into the host's top half
+function sendGuestInput() {
+  const now = performance.now();
+  if (now - _inAt < INPUT_MS) return;
+  if (Math.abs(target.x - _lastInX) < 0.5 && Math.abs(target.y - _lastInY) < 0.5) return;
+  _inAt = now; _lastInX = target.x; _lastInY = target.y;
+  if (typeof window.airhockeySendInput === 'function') window.airhockeySendInput({ x: target.x, y: target.y });
 }
 
 // ── render ──────────────────────────────────────────────────────────────────
@@ -117,44 +154,64 @@ function disc(x, y, r, col, ring) {
 function draw() {
   if (!cx) return;
   cx.clearRect(0, 0, TW, TH);
-  // table markings
   cx.strokeStyle = 'rgba(67,198,232,0.45)'; cx.lineWidth = 2;
   cx.beginPath(); cx.moveTo(0, TH / 2); cx.lineTo(TW, TH / 2); cx.stroke();
   cx.beginPath(); cx.arc(TW / 2, TH / 2, 46, 0, 6.2832); cx.stroke();
-  // goals
   cx.fillStyle = _flashGoal > 0 ? 'rgba(120,255,150,0.5)' : 'rgba(67,198,232,0.3)';
   cx.fillRect(TW / 2 - GOAL_W / 2, 0, GOAL_W, 6);
   cx.fillStyle = _flashGoal < 0 ? 'rgba(255,120,120,0.5)' : 'rgba(67,198,232,0.3)';
   cx.fillRect(TW / 2 - GOAL_W / 2, TH - 6, GOAL_W, 6);
-  // puck + paddles
-  disc(puck.x, puck.y, puck.r, '#ffe27a', '#7a5a00');
-  disc(ai.x, ai.y, ai.r, '#ff6b6b', '#7a1010');
-  disc(paddle.x, paddle.y, paddle.r, '#5ad1ff', '#0a4a6a');
-  disc(paddle.x, paddle.y, paddle.r * 0.45, '#bfeeff');
-  // score
-  cx.fillStyle = '#e8f4ff'; cx.font = 'bold 26px system-ui,Arial'; cx.textAlign = 'center';
-  cx.globalAlpha = 0.5; cx.fillText(String(scoreAI), TW - 26, TH / 2 - 16);
-  cx.fillText(String(scoreYou), TW - 26, TH / 2 + 38); cx.globalAlpha = 1;
-  if (state !== 'play') {
-    cx.fillStyle = 'rgba(4,12,20,0.74)'; cx.fillRect(0, 0, TW, TH);
-    cx.fillStyle = '#fff'; cx.textAlign = 'center';
-    cx.font = 'bold 30px system-ui,Arial';
-    cx.fillText(state === 'over' ? msg : '🏒 Air Hockey', TW / 2, TH / 2 - 18);
-    cx.font = '15px system-ui,Arial'; cx.fillStyle = '#bfe6ff';
-    cx.fillText(state === 'over' ? 'Tap to play again' : 'Tap to start', TW / 2, TH / 2 + 16);
-    cx.font = '12px system-ui,Arial'; cx.fillStyle = 'rgba(255,255,255,0.6)';
-    cx.fillText('Drag your paddle · first to ' + GOALS_TO_WIN, TW / 2, TH / 2 + 42);
+  if (puck) {
+    disc(puck.x, puck.y, puck.r, '#ffe27a', '#7a5a00');
+    disc(ai.x, ai.y, ai.r, '#ff6b6b', '#7a1010');
+    disc(paddle.x, paddle.y, paddle.r, '#5ad1ff', '#0a4a6a');
+    disc(paddle.x, paddle.y, paddle.r * 0.45, '#bfeeff');
   }
-  cx.textAlign = 'left';
+  cx.fillStyle = '#e8f4ff'; cx.font = 'bold 26px system-ui,Arial'; cx.textAlign = 'center'; cx.globalAlpha = 0.5;
+  cx.fillText(String(scoreAI), TW - 26, TH / 2 - 16);
+  cx.fillText(String(scoreYou), TW - 26, TH / 2 + 38); cx.globalAlpha = 1; cx.textAlign = 'left';
 }
 
 function tick(t) {
   if (!raf) return;
   const dt = Math.min(40, t - (_last || t)); _last = t;
-  if (_flashGoal) _flashGoal *= 0.86, Math.abs(_flashGoal) < 0.05 && (_flashGoal = 0);
-  if (state === 'play') { const steps = Math.max(1, Math.round(dt / 16)); for (let i = 0; i < steps; i++) step(); }
+  if (_flashGoal) { _flashGoal *= 0.86; if (Math.abs(_flashGoal) < 0.05) _flashGoal = 0; }
+  if (isGuest()) {
+    if (puck) { paddle.x = target.x; paddle.y = target.y; clampPaddle(paddle, false); }   // client-side prediction of own paddle
+    if (state === 'play') sendGuestInput();
+  } else if (state === 'play') {
+    const steps = Math.max(1, Math.round(dt / 16)); for (let i = 0; i < steps; i++) step();
+    if (iAmHost() && t - _bcAt >= BROADCAST_MS) { _bcAt = t; broadcast(); }
+  }
   draw();
   raf = requestAnimationFrame(tick);
+}
+
+// ── overlay (mode select / rematch / waiting) ────────────────────────────────
+function hideOverlay() { if (overlayEl) overlayEl.style.display = 'none'; }
+function showOverlay() {
+  if (!overlayEl) return;
+  const haveRoom = !!window._currentRoomId;
+  const title = state === 'over' ? (msg || 'Game Over') : '🏒 Air Hockey';
+  let body;
+  if (isGuest() && state !== 'over') {
+    body = `<div class="ah-ov-note">Waiting for the host to start the match…</div>`;
+  } else {
+    const roomLbl = state === 'over' ? '👥 Rematch in room' : '👥 Play someone in the room';
+    body = `<div class="ah-ov-btns">`
+      + `<button class="ah-btn" id="ah-solo">🤖 ${state === 'over' ? 'Play again' : 'Play the computer'}</button>`
+      + `<button class="ah-btn" id="ah-room"${haveRoom ? '' : ' disabled'}>${roomLbl}</button></div>`
+      + `<div class="ah-ov-note">${haveRoom ? (window._isRoomHost ? "You'll host — a roommate can join by opening Air Hockey." : "Join the host's table (open it while they host).") : 'Join or create a room first to play someone.'}</div>`;
+  }
+  overlayEl.innerHTML = `<div class="ah-ov-title">${title}</div><div class="ah-ov-sub">First to ${GOALS_TO_WIN} · drag your paddle</div>${body}`;
+  overlayEl.style.display = 'flex';
+  const sb = overlayEl.querySelector('#ah-solo'); if (sb) sb.onclick = () => newGame('solo');
+  const rb = overlayEl.querySelector('#ah-room'); if (rb && haveRoom) rb.onclick = startRoom;
+}
+function startRoom() {
+  mode = 'room'; _guestGranted = false;
+  if (window._isRoomHost) { newGame('room'); }
+  else { reset(true); scoreYou = 0; scoreAI = 0; state = 'start'; showOverlay(); }   // guest waits for host's stream
 }
 
 // ── input ───────────────────────────────────────────────────────────────────
@@ -166,19 +223,17 @@ function pointTo(e) {
 function build() {
   const area = document.getElementById('airhockey-area'); if (!area) return;
   area.innerHTML = '';
-  const hud = document.createElement('div'); hud.className = 'arc-hint';
-  hud.textContent = 'Drag your paddle to block and strike the puck';
+  const stage = document.createElement('div'); stage.style.cssText = 'position:relative;width:100%;display:flex;justify-content:center;flex:1;min-height:0;';
   cv = document.createElement('canvas'); cv.width = TW; cv.height = TH; cv.className = 'arc-canvas';
-  area.appendChild(cv); area.appendChild(hud);
+  stage.appendChild(cv);
+  overlayEl = document.createElement('div'); overlayEl.className = 'ah-overlay'; stage.appendChild(overlayEl);
+  area.appendChild(stage);
+  const hint = document.createElement('div'); hint.className = 'arc-hint'; hint.textContent = 'Drag your paddle to block and strike the puck';
+  area.appendChild(hint);
   cx = cv.getContext('2d');
   reset(true);
-  const onDown = (e) => {
-    e.preventDefault();
-    if (state !== 'play') { newGame(); return; }
-    pointTo(e);
-  };
-  const onMove = (e) => { if (state === 'play') { e.preventDefault(); pointTo(e); } };
-  cv.addEventListener('pointerdown', onDown, { passive: false });
+  const onMove = (e) => { if (state === 'play' || isGuest()) { e.preventDefault(); pointTo(e); } };
+  cv.addEventListener('pointerdown', (e) => { e.preventDefault(); pointTo(e); }, { passive: false });
   cv.addEventListener('pointermove', onMove, { passive: false });
   _built = true;
 }
@@ -189,8 +244,13 @@ function openAirHockey(show = true) {
   w.classList.add('open'); w.style.display = 'flex';
   if (window.OS && window.OS.register) { window.OS.register('airhockey'); window.OS.focus('airhockey'); }
   if (!_built) build();
-  if (state === 'play') state = 'start';   // show the start overlay on (re)open
+  if (state === 'play') { state = 'start'; }   // show the menu on (re)open
+  showOverlay();
   if (!raf) { _last = 0; raf = requestAnimationFrame(tick); }
 }
 
-if (typeof window !== 'undefined') window.openAirHockey = openAirHockey;
+if (typeof window !== 'undefined') {
+  window.openAirHockey = openAirHockey;
+  window.onAirHockeyState = onState;
+  window.onAirHockeyInput = onInput;
+}

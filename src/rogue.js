@@ -101,9 +101,21 @@ function doorsConnected(T, room) {
   for (const dd in room.doors) { let dx = mc, dy = mr; if (dd === 'up') dy = 0; else if (dd === 'down') dy = ROWS - 1; else if (dd === 'left') dx = 0; else dx = COLS - 1; if (!seen.has(dx + ',' + dy)) return false; }
   return true;
 }
-function randFloorTile(room) {
-  for (let i = 0; i < 40; i++) { const tx = 1 + ri(COLS - 2), ty = 1 + ri(ROWS - 2); if (room.tiles[ty][tx] === 0) return { x: tx * TS + TS / 2, y: ty * TS + TS / 2 }; }
-  return null;
+// Pick a random floor tile. With `avoid` ({x,y,min}) it keeps enemies from
+// materialising on top of the player as they walk into a room — it returns the
+// first sampled tile outside the min radius, else the farthest one it saw.
+function randFloorTile(room, avoid) {
+  let best = null, bestD = -1;
+  for (let i = 0; i < 40; i++) {
+    const tx = 1 + ri(COLS - 2), ty = 1 + ri(ROWS - 2);
+    if (room.tiles[ty][tx] !== 0) continue;
+    const x = tx * TS + TS / 2, y = ty * TS + TS / 2;
+    if (!avoid) return { x, y };
+    const d2 = (x - avoid.x) * (x - avoid.x) + (y - avoid.y) * (y - avoid.y);
+    if (d2 >= avoid.min * avoid.min) return { x, y };
+    if (d2 > bestD) { bestD = d2; best = { x, y }; }
+  }
+  return best;
 }
 
 // ── entities ─────────────────────────────────────────────────────────────────
@@ -132,7 +144,11 @@ function spawnRoom(room, d) {
   if (room.spawned) return; room.spawned = true;
   if (room.kind === 'boss') { room.enemies.push(makeBoss(d, W / 2, H / 2 - TS)); sfx('boss'); spawnPickups(room, d, false); return; }
   const n = clamp(Math.round(1 + d * 0.6 + rng()), 0, 5);
-  for (let i = 0; i < n; i++) { const p = randFloorTile(room); if (!p) break; room.enemies.push(makeEnemy(pickType(d), p.x, p.y)); }
+  // Keep a safe bubble around where the player just entered — bigger on early
+  // floors so newcomers aren't ambushed the instant they step through a door.
+  const safe = d <= 1 ? 66 : d <= 2 ? 54 : d <= 3 ? 46 : 40;
+  const avoid = { x: player ? player.x : W / 2, y: player ? player.y : H / 2, min: safe };
+  for (let i = 0; i < n; i++) { const p = randFloorTile(room, avoid); if (!p) break; room.enemies.push(makeEnemy(pickType(d), p.x, p.y)); }
   spawnPickups(room, d, false);
 }
 function spawnPickups(room, d, isStart) {
@@ -411,16 +427,46 @@ function rogueHasKeys() {
 }
 function clearInputs() { held.up = held.down = held.left = held.right = false; pointers.clear(); }
 function wirePad() {
+  const stick = _pad.querySelector('[data-stick]');
+  const knob = stick && stick.querySelector('.rogue-knob');
+  // Analog stick → 8-way movement. A drag from the stick centre sets the held
+  // direction flags (the movement code already normalises diagonals), so a thumb
+  // can move freely instead of stabbing four separate d-pad buttons.
+  const setFromVec = (dx, dy) => {
+    const R = (stick ? stick.clientWidth : 96) / 2;
+    const mag = Math.hypot(dx, dy);
+    if (mag > R) { dx = dx / mag * R; dy = dy / mag * R; }
+    if (knob) knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    const dead = R * 0.34;
+    held.left = dx < -dead; held.right = dx > dead;
+    held.up = dy < -dead; held.down = dy > dead;
+  };
+  const recenter = () => { if (knob) knob.style.transform = 'translate(0,0)'; held.up = held.down = held.left = held.right = false; };
+  const onStickMove = e => {
+    const p = pointers.get(e.pointerId); if (!p || !p.stick) return;
+    e.preventDefault();
+    setFromVec(e.clientX - p.cx, e.clientY - p.cy);
+  };
   const onDown = e => {
-    const btn = e.target.closest('[data-dir],[data-act]'); if (!btn) return;
-    e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    const st = e.target.closest('[data-stick]');
+    const btn = e.target.closest('[data-act]');
+    if (!st && !btn) return;
+    e.preventDefault();
+    if (st) {
+      const r = st.getBoundingClientRect();
+      try { st.setPointerCapture(e.pointerId); } catch (_) {}
+      pointers.set(e.pointerId, { stick: true, cx: r.left + r.width / 2, cy: r.top + r.height / 2 });
+      if (state !== 'start' && state !== 'over') setFromVec(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+      return;
+    }
+    try { btn.setPointerCapture(e.pointerId); } catch (_) {}
     if (state === 'start' || state === 'over') { if (btn.dataset.act === 'A') startRun(); pointers.set(e.pointerId, {}); return; }
-    if (btn.dataset.dir) { held[btn.dataset.dir] = true; pointers.set(e.pointerId, { dir: btn.dataset.dir }); }
-    else if (btn.dataset.act === 'A') { doAttack(); pointers.set(e.pointerId, {}); }
+    if (btn.dataset.act === 'A') { doAttack(); pointers.set(e.pointerId, {}); }
     else if (btn.dataset.act === 'B') { doDash(); pointers.set(e.pointerId, {}); }
   };
-  const onUp = e => { const p = pointers.get(e.pointerId); if (!p) return; if (p.dir) held[p.dir] = false; pointers.delete(e.pointerId); };
+  const onUp = e => { const p = pointers.get(e.pointerId); if (!p) return; if (p.stick) recenter(); pointers.delete(e.pointerId); };
   _pad.addEventListener('pointerdown', onDown, { passive: false });
+  _pad.addEventListener('pointermove', onStickMove, { passive: false });
   _pad.addEventListener('pointerup', onUp); _pad.addEventListener('pointercancel', onUp); _pad.addEventListener('lostpointercapture', onUp);
   // iOS fires its own long-press selection/magnify on touchstart regardless of pointer
   // events — preventing it here (plus the user-select CSS) kills the text-select box.
@@ -459,11 +505,7 @@ function build() {
   area.appendChild(cv); cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   _pad = document.createElement('div'); _pad.className = 'rogue-pad';
   _pad.innerHTML =
-    '<div class="rogue-dpad">'
-    + '<button class="rogue-dbtn ru" data-dir="up">▲</button>'
-    + '<button class="rogue-dbtn rl" data-dir="left">◀</button>'
-    + '<button class="rogue-dbtn rr" data-dir="right">▶</button>'
-    + '<button class="rogue-dbtn rd" data-dir="down">▼</button></div>'
+    '<div class="rogue-stick" data-stick><div class="rogue-knob"></div></div>'
     + '<div class="rogue-ab">'
     + '<button class="rogue-abtn b" data-act="B">B</button>'
     + '<button class="rogue-abtn a" data-act="A">A</button></div>';

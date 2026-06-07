@@ -3678,18 +3678,51 @@ body.perf-mode #aqua-gun { display: none !important; }
     .sk-credits { font-size:13px; color:var(--text2); display:flex; align-items:center; gap:6px; }
     .sk-credits-val { color:#ffcd50; font-size:16px; font-weight:800; font-variant-numeric:tabular-nums; }
     .sk-wip { align-self:center; font-size:10px; font-weight:700; letter-spacing:0.5px; color:var(--text2); text-transform:uppercase; opacity:0.75; }
+    .sk-hud-toggle { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text2); cursor:pointer; user-select:none; }
+    .sk-hud-toggle input { accent-color:var(--accent); width:15px; height:15px; }
+    /* Daily streak + challenges card (rendered into the Stats "My Skills" tab) */
+    .sk-daily { background:rgba(0,180,220,0.05); border:1px solid var(--border); border-radius:12px; padding:11px 12px; display:flex; flex-direction:column; gap:9px; }
+    .sk-daily-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .sk-daily-title { font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:6px; }
+    .sk-streak { font-size:12px; font-weight:800; color:#ff9e3d; background:rgba(255,158,61,0.12); border:1px solid rgba(255,158,61,0.35); border-radius:20px; padding:2px 9px; white-space:nowrap; }
+    .sk-chal { display:flex; flex-direction:column; gap:4px; }
+    .sk-chal-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .sk-chal-label { font-size:12px; color:var(--text); }
+    .sk-chal.done .sk-chal-label { color:var(--accent2); }
+    .sk-chal-reward { font-size:10px; color:var(--text2); white-space:nowrap; }
+    .sk-chal-bar { height:6px; background:rgba(0,90,130,0.18); border-radius:4px; overflow:hidden; }
+    .sk-chal-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:4px; transition:width .3s; }
+    .sk-chal.done .sk-chal-fill { background:linear-gradient(90deg,#46c24a,#bdf58a); }
+    .sk-daily-note { font-size:10px; color:var(--text2); text-align:center; }
     @media (max-width:768px) {
       #stats-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
-    /* ── XP gain / level-up popups (always shown on XP gain) ─── */
-    #aq-xp-popups { position:fixed; right:16px; bottom:84px; display:flex; flex-direction:column; gap:5px; align-items:flex-end; z-index:3000; pointer-events:none; }
-    .aq-xp-pop { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:14px; padding:4px 11px; font-size:12px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,0.25); white-space:nowrap; font-variant-numeric:tabular-nums; animation:aqXpRise 1.75s ease-out forwards; }
-    .aq-xp-pop span { color:var(--text2); font-weight:600; }
-    .aq-xp-pop.lvl { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); font-size:13px; font-weight:800; }
-    @keyframes aqXpRise { 0%{opacity:0; transform:translateY(10px) scale(.9);} 12%{opacity:1; transform:translateY(0) scale(1);} 72%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-16px);} }
-    @media (max-width:768px) { #aq-xp-popups { bottom:calc(108px + env(safe-area-inset-bottom,0px)); right:8px; } }
+    /* ── XP gain / level-up popups — MMORPG-style numbers flowing up the side ─── */
+    #aq-xp-popups { position:fixed; right:14px; bottom:32%; display:flex; flex-direction:column; gap:6px; align-items:flex-end; z-index:3000; pointer-events:none; }
+    .aq-xp-pop { display:flex; align-items:center; gap:7px; background:linear-gradient(90deg,rgba(8,16,28,0.92),rgba(12,28,44,0.92));
+      color:#eaf6ff; border:1px solid rgba(0,180,220,0.35); border-radius:10px; padding:5px 12px; font-size:15px; font-weight:800; letter-spacing:.3px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.4), 0 0 14px rgba(0,180,220,0.12); white-space:nowrap; font-variant-numeric:tabular-nums;
+      text-shadow:0 1px 2px rgba(0,0,0,0.6); animation:aqXpRise 1.9s cubic-bezier(.2,.7,.2,1) forwards; }
+    .aq-xp-ico { font-size:18px; line-height:1; }
+    .aq-xp-pop span { color:var(--text2); font-weight:600; font-size:11px; letter-spacing:0; }
+    .aq-xp-pop.lvl { background:linear-gradient(90deg,#ffd45a,#ff9e3d); color:#2a1500; border-color:#ffd45a; font-size:14px; text-shadow:none; box-shadow:0 4px 16px rgba(255,160,40,0.35); }
+    .aq-xp-pop.lvl span { color:#5a3300; }
+    @keyframes aqXpRise { 0%{opacity:0; transform:translateY(14px) scale(.82);} 14%{opacity:1; transform:translateY(0) scale(1);} 70%{opacity:1; transform:translateY(-10px);} 100%{opacity:0; transform:translateY(-30px) scale(.98);} }
+    @media (max-width:768px) { #aq-xp-popups { bottom:38%; right:8px; } }
+
+    /* ── OSRS-style minimal skill HUD (opt-in, bottom of screen) ─── */
+    #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:2960;
+      pointer-events:none; max-width:96vw; flex-wrap:wrap; justify-content:center; }
+    #aq-skill-hud.on { display:flex; }
+    .aq-hud-pill { display:flex; align-items:center; gap:7px; background:rgba(8,16,26,0.82); border:1px solid var(--border);
+      border-radius:9px; padding:4px 9px; box-shadow:0 3px 12px rgba(0,0,0,0.35); }
+    .aq-hud-ico { font-size:15px; line-height:1; }
+    .aq-hud-lvl { font-size:13px; font-weight:800; color:var(--accent2); font-variant-numeric:tabular-nums; min-width:18px; text-align:center; }
+    .aq-hud-bar { width:58px; height:5px; background:rgba(255,255,255,0.14); border-radius:3px; overflow:hidden; }
+    .aq-hud-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:3px; transition:width .35s; }
+    @media (max-width:768px) { #aq-skill-hud { bottom:calc(98px + env(safe-area-inset-bottom,0px)); } }
 
     /* ── GAME BOY COLOR mini-games (Fishing / Mining) ─── */
     #fishing-wrap, #mining-wrap {
@@ -3871,18 +3904,19 @@ body.perf-mode #aqua-gun { display: none !important; }
     #rogue-area { display:flex; flex-direction:column; gap:8px; padding:10px; background:#0a0e1f; min-height:0; }
     .rogue-canvas { width:100%; image-rendering:pixelated; image-rendering:crisp-edges; display:block;
       border:3px solid #2de0ff; border-radius:4px; background:#0a0e1f; touch-action:none; box-shadow:0 0 16px rgba(45,224,255,0.25); }
-    .rogue-pad { display:none; justify-content:space-between; align-items:flex-end; gap:10px; touch-action:none; user-select:none; }
-    .rogue-dpad { display:grid; grid-template-columns:repeat(3,40px); grid-template-rows:repeat(3,40px);
-      grid-template-areas:'. u .' 'l . r' '. d .'; gap:4px; }
-    .rogue-dbtn { font-size:18px; color:#cfe8ff; background:linear-gradient(180deg,#16306a,#0c1a3e);
-      border:1px solid #2de0ff; border-radius:7px; box-shadow:0 2px 0 #061634; touch-action:none; cursor:pointer; }
-    .rogue-dbtn.ru { grid-area:u; } .rogue-dbtn.rl { grid-area:l; } .rogue-dbtn.rr { grid-area:r; } .rogue-dbtn.rd { grid-area:d; }
+    .rogue-pad { display:none; justify-content:space-between; align-items:center; gap:10px; touch-action:none; user-select:none; }
+    .rogue-stick { position:relative; width:104px; height:104px; flex:0 0 auto; border-radius:50%; touch-action:none; cursor:pointer;
+      background:radial-gradient(circle at 50% 42%, rgba(45,224,255,0.14), rgba(8,18,40,0.65)); border:2px solid rgba(45,224,255,0.45);
+      box-shadow:inset 0 0 18px rgba(45,224,255,0.18); }
+    .rogue-knob { position:absolute; left:50%; top:50%; width:46px; height:46px; margin:-23px 0 0 -23px; border-radius:50%;
+      background:radial-gradient(circle at 40% 32%,#bdf3ff,#2aa6d8); border:2px solid rgba(255,255,255,0.7);
+      box-shadow:0 3px 8px rgba(0,0,0,0.5); will-change:transform; }
     .rogue-ab { display:flex; align-items:flex-end; gap:14px; }
-    .rogue-abtn { width:54px; height:54px; border-radius:50%; font-size:20px; font-weight:800; color:#06121f; cursor:pointer;
+    .rogue-abtn { width:60px; height:60px; border-radius:50%; font-size:21px; font-weight:800; color:#06121f; cursor:pointer;
       border:2px solid rgba(255,255,255,0.5); box-shadow:0 3px 0 rgba(0,0,0,0.4); touch-action:none; }
     .rogue-abtn.a { background:radial-gradient(circle at 35% 30%,#bdf58a,#46c24a); }
-    .rogue-abtn.b { background:radial-gradient(circle at 35% 30%,#9fe9ff,#2aa6d8); width:46px; height:46px; }
-    .rogue-dbtn:active, .rogue-abtn:active { transform:translateY(2px); box-shadow:none; }
+    .rogue-abtn.b { background:radial-gradient(circle at 35% 30%,#9fe9ff,#2aa6d8); width:50px; height:50px; }
+    .rogue-abtn:active { transform:translateY(2px); box-shadow:none; }
     /* stop iOS long-press text-selection / magnify loupe when holding a button */
     #rogue-wrap, #rogue-wrap * {
       -webkit-touch-callout:none !important; -webkit-user-select:none !important; -moz-user-select:none !important; user-select:none !important;
@@ -17155,6 +17189,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/pool8.js"></script>
 <script type="module" src="/src/tetris.js"></script>
 <script type="module" src="/src/rogue.js"></script>
+<script type="module" src="/src/daily.js"></script>
 <script type="module" src="/src/version-check.js"></script>
 
 <!-- SLOT MACHINE -->

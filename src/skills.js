@@ -146,6 +146,7 @@ async function loadSkills() {
   applyResets();
   _loaded = true;
   if (_open) renderSkillsPanel();
+  try { updateHud(); } catch {}
 }
 
 // One-time, per-user data resets. The XP economy was badly over-tuned (huge
@@ -225,6 +226,9 @@ function addXp(skillId, amount) {
   _antiCheat(skillId, amount);   // flag + auto-ban implausibly fast XP
   // Always pop: a "+N XP" chip on every gain, plus a level-up chip when it ticks.
   showXpPopup(skillId, amount, after > before ? after : 0);
+  refreshHudFills();
+  // Feed daily challenges that track XP gained (skill-specific + any-skill).
+  if (typeof window.aqDailyProgress === 'function') window.aqDailyProgress('xp', amount, skillId);
   if (_open) renderSkillsPanel();
 }
 
@@ -241,9 +245,62 @@ function showXpPopup(skillId, amount, leveledTo) {
     host.appendChild(chip);
     setTimeout(() => chip.remove(), 1750);
   };
-  add(`+${Math.round(amount).toLocaleString()} XP <span>${s.icon} ${esc(s.name)}</span>`);
-  if (leveledTo) add(`${s.icon} ${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
+  add(`<span class="aq-xp-ico">${s.icon}</span>+${Math.round(amount).toLocaleString()} XP <span>${esc(s.name)}</span>`);
+  if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
   while (host.children.length > 7) host.firstChild.remove();
+}
+
+// ---------------------------------------------------------------------------
+// Opt-in OSRS-style HUD — tiny level bars pinned to the bottom of the screen,
+// showing only the skills tied to the game you're currently looking at.
+// ---------------------------------------------------------------------------
+const GAME_SKILLS = {
+  slots: ['gambling'], blackjack: ['gambling'], holdem: ['gambling'],
+  picross: ['intellect'], mines: ['intellect'], solitaire: ['intellect'], pool: ['intellect'],
+  tetris: ['speed'], rhythm: ['speed'],
+  fishing: ['fishing'], mining: ['mining'],
+  buddyshoot: ['combat'], rogue: ['combat'],
+  stocks: ['finance'], player: ['music'], studio: ['music'], synth: ['music'],
+};
+function hudEnabled() { try { return localStorage.getItem('aq_hud_on') === '1'; } catch { return false; } }
+function setHud(on) {
+  try { localStorage.setItem('aq_hud_on', on ? '1' : '0'); } catch {}
+  updateHud();
+}
+let _hudSkills = [];   // skill ids currently shown (so XP gains can refresh fills)
+function updateHud(forId) {
+  if (typeof document === 'undefined') return;
+  let hud = document.getElementById('aq-skill-hud');
+  const id = forId || (window.OS && window.OS._activeId);
+  const ids = (hudEnabled() && hasAccount() && id && GAME_SKILLS[id]) ? GAME_SKILLS[id] : [];
+  _hudSkills = ids;
+  if (!ids.length) { if (hud) hud.classList.remove('on'); return; }
+  if (!hud) { hud = document.createElement('div'); hud.id = 'aq-skill-hud'; document.body.appendChild(hud); }
+  hud.innerHTML = '';
+  for (const sid of ids) {
+    const s = SKILL_BY_ID[sid]; if (!s) continue;
+    const p = levelProgress(_xp[sid] | 0);
+    const pill = el('div', 'aq-hud-pill');
+    pill.appendChild(el('span', 'aq-hud-ico', s.icon));
+    pill.appendChild(el('span', 'aq-hud-lvl', String(p.level)));
+    const bar = el('div', 'aq-hud-bar');
+    const fill = el('div', 'aq-hud-fill'); fill.style.width = (p.level >= MAX_LEVEL ? 100 : p.pct) + '%';
+    fill.dataset.skill = sid; bar.appendChild(fill); pill.appendChild(bar);
+    hud.appendChild(pill);
+  }
+  hud.classList.add('on');
+}
+// Cheap refresh of just the bar fills (called on every XP gain so the HUD fills live).
+function refreshHudFills() {
+  if (!_hudSkills.length) return;
+  const hud = document.getElementById('aq-skill-hud'); if (!hud || !hud.classList.contains('on')) return;
+  hud.querySelectorAll('.aq-hud-fill').forEach(fill => {
+    const sid = fill.dataset.skill; if (!sid) return;
+    const p = levelProgress(_xp[sid] | 0);
+    fill.style.width = (p.level >= MAX_LEVEL ? 100 : p.pct) + '%';
+    const lvlEl = fill.closest('.aq-hud-pill')?.querySelector('.aq-hud-lvl');
+    if (lvlEl) lvlEl.textContent = String(p.level);
+  });
 }
 
 // Single call games use: grants a "played" amount + a "won" bonus. `mult`
@@ -363,7 +420,15 @@ function renderSkillsPanel() {
     // `.aq-credits-display` makes aqRefreshCreditDisplays() keep this live.
     credLine.appendChild(el('span', 'aq-credits-display sk-credits-val', `💰 ${credits.toLocaleString()}`));
     area.appendChild(credLine);
+    // Daily streak + challenges (rendered by daily.js if loaded).
+    if (typeof window.aqRenderDailyInto === 'function') { try { window.aqRenderDailyInto(area); } catch {} }
     area.appendChild(skillGrid(_xp));
+    // Opt-in on-screen HUD toggle.
+    const hudRow = el('label', 'sk-hud-toggle');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = hudEnabled();
+    cb.onchange = () => setHud(cb.checked);
+    hudRow.appendChild(cb); hudRow.appendChild(el('span', null, 'Show skill HUD on screen while playing'));
+    area.appendChild(hudRow);
   } else {
     renderRankings(area);
   }
@@ -500,6 +565,20 @@ if (typeof window !== 'undefined') {
   };
   window.openStats = openStats;
   window._aqStatsClosed = () => { _open = false; };
+  window.aqHudEnabled = hudEnabled;
+  window.aqHudToggle = setHud;
+  window.aqRefreshStats = () => { if (_open) renderSkillsPanel(); };
+  // Mirror the OSRS-style HUD to whatever game window is focused / closed.
+  if (window.OS && typeof window.OS.focus === 'function') {
+    const _focus = window.OS.focus.bind(window.OS);
+    window.OS.focus = (id) => { _focus(id); try { updateHud(id); } catch {} };
+  }
+  if (window.OS && typeof window.OS.close === 'function') {
+    const _close = window.OS.close.bind(window.OS);
+    // Closing a tracked game hides the HUD (focus doesn't auto-move to another
+    // window); '__none__' has no GAME_SKILLS entry, so updateHud just hides it.
+    window.OS.close = (id) => { _close(id); try { if (GAME_SKILLS[id]) updateHud('__none__'); } catch {} };
+  }
   hookEarnXp();
   // Load early so XP grants during the session persist + sync.
   loadSkills();

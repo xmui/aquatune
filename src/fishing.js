@@ -318,7 +318,9 @@ function landFish(now) {
   // but CAPPED — rarity scaling so monsters reward proportionally more than
   // tiddlers without making the grind trivial. (Common ≈ 13 XP, monster ≈ 50.)
   if (typeof window.aqGameXp === 'function') {
-    const rarityMult = Math.min(6.0, 1.6 + f.rarity * 0.85);   // cap the score-scaled mult
+    // Balanced to ~55/min given the slow cast→bite→struggle cadence. Capped rarity curve so
+    // monsters still pay proportionally more without trivialising the grind.
+    const rarityMult = Math.min(15, 4 + f.rarity * 2.2);   // cap the score-scaled mult
     window.aqGameXp('fishing', { played: false, won: true, mult: rarityMult * (perfect ? 1.25 : 1) });
   }
   // ── Rare money catch: occasionally you reel up something valuable ──────────

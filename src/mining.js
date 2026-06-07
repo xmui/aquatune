@@ -70,7 +70,16 @@ const VEIN_NEED = 14;                // weak-point hits to charge a vein
 const VEIN_MS = 7000;                // vein frenzy duration
 const VEIN_POINT_MS = 620;           // faster targets during a vein
 const DEPTH_MAX = 600;               // skill points to fill the depth bar (then prestige)
-const XP_CAP = 5;                    // cap on any single mining XP grant's mult
+const XP_CAP = 2.5;                  // cap on any single mining XP grant's mult
+// ── dungeon creatures ──────────────────────────────────────────────────────────
+// The deeper stages are a "dungeon": cave creatures occasionally crawl out onto the
+// rock face. Tap to damage them; if you don't whittle their HP down before their
+// timer runs out they STEAL credits (less the more you hurt them — kill it and it
+// drops loot instead). Surface is safe; they start in the Caverns (MON_MIN_STAGE).
+const MON_GAP_MIN = 22000, MON_GAP_RAND = 26000;   // 22–48s between creatures
+const MON_REACT_MS = 6500;            // grace period before it steals
+const MON_MIN_STAGE = 1;              // first appears in the Caverns and below
+const MON_STEAL_CAP = 90;             // hard cap on credits a single creature can take
 // ── auto-clicker guard ───────────────────────────────────────────────────────
 // Auto-clickers fire at a machine-regular cadence no human can match: fast AND
 // with almost no timing jitter. If the last several clicks look robotic, lock the
@@ -87,6 +96,7 @@ let rock = null, swing = 0, shake = 0, particles = [];
 let breakUntil = 0;
 let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
 let seq = null, seqHits = 0;         // active crit chain + how many points tapped so far
+let monster = null, monsterNextAt = 0;   // dungeon creature + next spawn time
 let veinPts = 0, veinUntil = 0;      // vein meter / active-vein timer
 let depthPts = parseFloat(localStorage.getItem('aq_mining_depth') || '0') || 0;
 let prestige = parseInt(localStorage.getItem('aq_mining_prestige') || '0', 10) || 0;
@@ -95,7 +105,7 @@ let curStage = 0;
 // Deeper zones reward more — but the low end is deliberately small so you WORK for early
 // XP, and the big multipliers only arrive at the deep stages (which are level-gated:
 // Caverns L8 … Crystal Core L60). Combined with prestige, that's the "huge" payoff.
-function stageMult() { return 0.5 + curStage * 0.5; }
+function stageMult() { return 0.6 + curStage * 0.12; }
 function prestigeMult() { return 1 + prestige * 0.05; }  // +5% per Delve Deeper rank
 function veinActive() { return performance.now() < veinUntil; }
 function addDepth(n) { depthPts = Math.min(DEPTH_MAX, depthPts + n); try { localStorage.setItem('aq_mining_depth', String(Math.round(depthPts))); } catch (e) {} }
@@ -204,7 +214,7 @@ function scheduleSweet(now) { sweet = null; seq = null; seqHits = 0; sweetNextAt
 function awardChainXp() {
   if (seqHits > 0) {
     // The main XP source — scales with how many points you chained AND the zone/prestige.
-    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + seqHits * 0.18) * stageMult() * prestigeMult()) });
+    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.05 + seqHits * 0.05) * stageMult() * prestigeMult()) });
     addFloater('+chain XP ×' + seqHits, 3);
   }
   seqHits = 0;
@@ -237,6 +247,43 @@ function startVein(now) {
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
 function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: CYR - 8 + (Math.random() - 0.5) * 26, vx: (Math.random() - 0.5) * (big ? 6 : 3), vy: -Math.random() * (big ? 5 : 3) - 1, life: big ? 24 : 16, c: 3, s: big ? 3 : 2 }); }
 
+// ── dungeon creatures ──────────────────────────────────────────────────────────
+function scheduleMonster(now) { monster = null; monsterNextAt = now + MON_GAP_MIN + Math.random() * MON_GAP_RAND; }
+function spawnMonster(now) {
+  const r = 9;
+  // Tougher (more taps) the deeper you are, but always scaled to your pick so it
+  // stays a few hits — never an unwinnable wall.
+  const hp = Math.max(6, Math.round(pickPower() * (3 + curStage)));
+  monster = {
+    x: (r + 6) + Math.random() * (W - 2 * (r + 6)), y: 24 + Math.random() * (H - 64),
+    r, hp, max: hp, vx: (Math.random() - 0.5) * 0.7, vy: (Math.random() - 0.5) * 0.45,
+    born: now, stealAt: now + MON_REACT_MS, flash: 0, bob: Math.random() * 6.28,
+  };
+  addFloater('👹 CREATURE!', 1);
+  sfx('door');
+}
+// Time ran out: steal credits, scaled DOWN by however much HP you knocked off, capped.
+function stealMonster(now) {
+  const have = credits();
+  const frac = Math.max(0, Math.min(1, monster.hp / monster.max));   // 1 = untouched, 0 = nearly dead
+  let amt = Math.round((6 + curStage * 9 + have * 0.03) * frac);
+  amt = Math.min(amt, MON_STEAL_CAP + curStage * 20, have);
+  if (amt > 0 && typeof window.aqSetCredits === 'function') {
+    window.aqSetCredits(have - amt);
+    addFloater('-' + amt + ' stolen!', 1); shake = 8; sfx('break');
+  } else { addFloater('it fled!', 1); }
+  monster = null; scheduleMonster(now); refreshInfo();
+}
+function killMonster(now) {
+  const reward = Math.round((8 + curStage * 10) * prestigeMult());
+  if (typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);
+  // Small, capped Combat-of-the-mines XP for the kill (well under the anti-cheat ceiling).
+  if (typeof window.aqAddXp === 'function') window.aqAddXp('mining', Math.round(Math.min(60, 6 + curStage * 5)));
+  addFloater('SLAIN! +' + reward, 3); sfx('crit');
+  for (let i = 0; i < 10; i++) spark(true);
+  monster = null; scheduleMonster(now); refreshInfo();
+}
+
 function breakRock() {
   const r = rock.def, now = performance.now();
   const ml = motherlodeUntil > now;
@@ -244,7 +291,7 @@ function breakRock() {
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
   // The break itself is a SMALL trickle now (most XP comes from chaining weak-points),
   // but it scales with the zone + prestige so deeper digging is clearly worth more.
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + r.rarity * 0.1) * stageMult() * prestigeMult()) });
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.05 + r.rarity * 0.05) * stageMult() * prestigeMult()) });
   addDepth(4 + r.rarity * 2);
   if (typeof window.recordScore === 'function') window.recordScore('mining', ore, r.name);
   addFloater('+' + ore, 2);
@@ -270,6 +317,16 @@ function hit(px, py) {
   const now = performance.now();
   if (isLocked()) { showLock(); return; }
   if (registerClick(now)) { lockOut(); return; }
+  // A creature is on the field and you tapped it → strike it instead of the rock.
+  if (monster && px != null && Math.hypot(px - monster.x, py - monster.y) <= monster.r + 4) {
+    swing = 1; shake = 6; monster.flash = 1;
+    let dmg = pickPower();
+    if (motherlodeUntil > now) dmg *= MOTHERLODE_POWER;
+    monster.hp -= dmg; sfx('hit');
+    for (let i = 0; i < 5; i++) spark(false);
+    if (monster.hp <= 0) killMonster(now);
+    return;
+  }
   if (!rock) return;
   swing = 1; shake = 6; rock.flash = 1;
   // Crit if a chain point is showing and you tap it: deal a big hit and chain to the
@@ -422,6 +479,25 @@ function draw(t) {
     px(wx - 1, wy - 1, 2, 2, 0);
   }
 
+  // dungeon creature — a little cave gremlin that drifts and bobs
+  if (monster) {
+    const r = monster.r, mx = monster.x | 0, my = (monster.y + Math.sin(monster.bob) * 2) | 0;
+    const body = monster.flash > 0.4 ? 3 : 0;            // flashes white when struck
+    px(mx - r + 1, my - r + 2, 2 * r - 2, 2 * r - 3, body);   // hunched body
+    px(mx - r, my - r + 3, 2 * r, 2 * r - 5, body);
+    px(mx - r, my - r, 3, 4, body); px(mx + r - 3, my - r, 3, 4, body);   // pointed ears
+    px(mx - r - 2, my - 1, 3, 4, body); px(mx + r - 1, my - 1, 3, 4, body); // claws
+    if (monster.flash <= 0.4) {                          // glowing eyes + fangs
+      px(mx - 4, my - 1, 2, 2, 1); px(mx + 2, my - 1, 2, 2, 1);
+      px(mx - 4, my - 1, 1, 1, 3); px(mx + 3, my - 1, 1, 1, 3);
+      px(mx - 2, my + r - 4, 1, 2, 3); px(mx + 1, my + r - 4, 1, 2, 3);
+    }
+    // HP bar (top) + steal countdown (bottom) so the threat reads at a glance
+    px(mx - r, my - r - 4, 2 * r, 2, 0); px(mx - r, my - r - 4, Math.max(0, 2 * r * (monster.hp / monster.max)), 1, 2);
+    const left = Math.max(0, (monster.stealAt - t) / MON_REACT_MS);
+    px(mx - r, my + r + 1, 2 * r, 1, 0); px(mx - r, my + r + 1, 2 * r * left, 1, left < 0.34 ? 3 : 1);
+  }
+
   // floaters (CRIT! / PERFECT! / +ore)
   if (floaters.length) {
     cx.font = '8px monospace'; cx.textBaseline = 'middle'; cx.textAlign = 'center';
@@ -461,6 +537,19 @@ function tick(t) {
     if (veinUntil && t >= veinUntil) { veinUntil = 0; endSeq(t); }   // vein ended → pay it out
     else if (sweet) { if (t >= sweet.expireAt) { if (veinActive()) spawnNextPoint(t); else endSeq(t); } }
     else if (t >= sweetNextAt) startSeq(t);
+  }
+  // dungeon creature lifecycle: drift around the cave, then steal if its timer runs out
+  if (monster) {
+    monster.flash = Math.max(0, monster.flash - dt / 90);
+    monster.x += monster.vx * dt / 16; monster.y += monster.vy * dt / 16;
+    if (monster.x < monster.r + 4 || monster.x > W - monster.r - 4) monster.vx *= -1;
+    if (monster.y < 20 || monster.y > H - 30) monster.vy *= -1;
+    monster.x = Math.max(monster.r + 4, Math.min(W - monster.r - 4, monster.x));
+    monster.y = Math.max(20, Math.min(H - 30, monster.y));
+    monster.bob += dt / 200;
+    if (t >= monster.stealAt) stealMonster(t);
+  } else if (rock && curStage >= MON_MIN_STAGE && t >= monsterNextAt && !isLocked()) {
+    spawnMonster(t);
   }
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
   floaters = floaters.filter(f => f.life > 0);
@@ -583,6 +672,7 @@ function openMining(show = true) {
   if (!_built) build();
   curStage = Math.min(maxStage(), parseInt(localStorage.getItem('aq_mining_stage') || '0', 10) || 0);
   if (!rock) spawnRock();
+  scheduleMonster(performance.now());   // don't ambush the instant the mine opens
   refreshInfo();
   _clkT = [];
   if (isLocked()) showLock(); else hideLock();

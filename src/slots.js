@@ -441,7 +441,13 @@ function evaluate() {
 
 function finish() {
   spinning = false; els.spin.disabled = false;
-  if (window.aqGameXp) window.aqGameXp('gambling', { played: true, won: wonThisSpin, luck: 0.4 });
+  // Balanced toward ~50/min: a winning spin's XP scales modestly with how big the win was
+  // relative to the bet (capped); losing spins stay at the small played trickle.
+  if (window.aqGameXp) {
+    const betT = (typeof betTotal === 'function' ? betTotal() : 0);
+    const mult = wonThisSpin && betT > 0 ? Math.min(2.5, 1 + (spinWin / betT) * 0.1) : 1;
+    window.aqGameXp('gambling', { played: true, won: wonThisSpin, luck: 0.4, mult });
+  }
   // free spins continue automatically
   if (free > 0) { updateUI(); setTimeout(() => { if (!spinning) spin(); }, 700); return; }
   // offer gamble on a real win (skipped during autospin / when broke handled)

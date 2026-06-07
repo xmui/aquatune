@@ -116,7 +116,9 @@ function gameOver() {
   const reward = Math.round(score * diff.reward * 0.4);
   sfx('fail'); try { window.playFanfare && window.playFanfare(roundsCleared >= 3 ? 'win' : 'small'); } catch (e) {}
   if (reward > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);   // also feeds Finance XP
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('combat', { played: true, won: roundsCleared >= 1, mult: Math.max(1, Math.min(8, 1 + roundsCleared * 0.6 + score / 500)) });
+  // Balanced to ~55/min for a multi-minute game: reward scales with rounds survived (skill)
+  // and score, capped. aqAddXp (no luck roll) keeps a big end-grant under the anti-cheat cap.
+  if (typeof window.aqAddXp === 'function') window.aqAddXp('combat', Math.round(Math.min(600, 40 + roundsCleared * 60 + score * 0.05)));
   if (typeof window.recordScore === 'function') window.recordScore('buddyshoot', score, 'round ' + round + ' · ' + diff.label);
   if (roundsCleared >= 4 && typeof window.aqGameAnnounce === 'function') window.aqGameAnnounce(`survived ${roundsCleared} rounds of Buddy Shoot (${score} pts) 🦆🔫`);
   showOverlay('Game Over', `Score ${score} · reached round ${round}<br>+${reward} 💰`, 'Play again', () => showStart());

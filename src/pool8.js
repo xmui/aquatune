@@ -309,7 +309,12 @@ function grantOutcome(winnerSeat, text) {
   const youWon = winnerSeat === mySeat;
   if (youWon && window.aqAddCredits) window.aqAddCredits(40);
   if (youWon && window.aqGameAnnounce) window.aqGameAnnounce(mode === 'bot' ? 'beat the 8-Ball bot 🎱' : 'won an 8-Ball match in the room! 🎱');
-  if (window.aqGameXp) window.aqGameXp('intellect', { played: true, won: youWon, mult: youWon ? 1.6 : 0.5 });
+  // XP balanced to ~55/min: pool matches run several minutes, so reward scales with how
+  // many of YOUR balls you sank (skill + time) plus a win bonus. Use aqAddXp (no luck
+  // roll) on a grant this large so a 5% lucky spike can't trip the per-min anti-cheat cap.
+  const myG = groups[mySeat];
+  const myPots = myG ? balls.filter(b => groupOf(b.n) === myG && b.potted).length : 0;
+  if (window.aqAddXp) window.aqAddXp('intellect', Math.round(45 + myPots * 42 + (youWon ? 130 : 0)));
   if (window.recordScore) window.recordScore('pool8', youWon ? 1 : 0, youWon ? 'win' : 'loss');
   sfx(youWon ? 'win' : 'lose');
   showOverlay(youWon ? '🎱 You win!' : '🎱 You lose', text + (youWon ? '  +40💰' : ''), 'Rematch', showStart);

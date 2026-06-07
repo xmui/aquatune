@@ -706,7 +706,7 @@ function doSell(id, qty) {
   // capped). A flat or losing sell — including a same-price buy→sell round-trip —
   // grants nothing, so XP can't be farmed without genuinely trading at a gain.
   if (profit > 0 && typeof window.aqGameXp === 'function') {
-    window.aqGameXp('finance', { played: false, won: true, mult: Math.min(3, profit / 1500) });
+    window.aqGameXp('finance', { played: false, won: true, mult: Math.min(6, profit / 800) });
   }
   tradeMsg(`Sold ${qty} @ ${fmt(px)} (+${proceeds} 🪙).`, true);
   renderAll();

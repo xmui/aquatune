@@ -213,11 +213,17 @@ function _antiCheat(skillId, amount) {
 // ---------------------------------------------------------------------------
 // Public API (on window so inline games + modules can grant XP)
 // ---------------------------------------------------------------------------
+// Global down-scale on every XP grant. Leveling was far too fast (a level per game,
+// combat worst), so all grants — both gameXp() and raw aqAddXp() — are multiplied by
+// this single factor, making the climb ~2.5× grindier without touching the curve or
+// any per-game formula. Music is exempt (it's already the slow, intentional outlier).
+const XP_SCALE = 0.4;
 function addXp(skillId, amount) {
   if (!hasAccount()) return;   // no account → no XP
   if (!SKILL_BY_ID[skillId]) return;
   amount = Math.round(amount);
   if (!isFinite(amount) || amount <= 0) return;
+  if (skillId !== 'music') amount = Math.max(1, Math.round(amount * XP_SCALE));   // grindier; keep ≥1 so the popup still shows
   const before = levelForXp(_xp[skillId] | 0);
   _xp[skillId] = Math.min(xpForLevel(MAX_LEVEL), (_xp[skillId] | 0) + amount);
   const after = levelForXp(_xp[skillId]);

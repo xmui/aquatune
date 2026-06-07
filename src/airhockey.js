@@ -6,8 +6,8 @@ const TW = 300, TH = 460;
 const GOAL_W = TW * 0.44;
 const GOALS_TO_WIN = 7;
 const PADDLE_R = 26, PUCK_R = 13;
-const PUCK_MAX = 13;          // px per step cap
-const PADDLE_MAX = 22;        // AI move speed cap
+const PUCK_MAX = 11;          // px per step cap
+const PADDLE_MAX = 12;        // AI move speed cap (lower = easier to beat)
 
 let cv = null, cx = null, raf = null, _built = false;
 let state = 'start';         // start | play | over
@@ -56,12 +56,13 @@ function step() {
   clampPaddle(paddle, false);
   const pvx = paddle.x - oldx, pvy = paddle.y - oldy;
 
-  // AI: chase the puck when it's in its half, otherwise drift back to guard the goal
+  // AI: only commits to a hit when the puck is in its half and coming toward it;
+  // otherwise it sits back near the goal. Eases toward the target (laggy → beatable).
   let tx, ty;
-  if (puck.y < TH / 2 + 40) { tx = puck.x; ty = puck.y - 4; }
-  else { tx = TW / 2 + (puck.x - TW / 2) * 0.4; ty = 64; }
+  if (puck.y < TH / 2 && puck.vy < 0.5) { tx = puck.x + puck.vx * 2; ty = Math.max(54, puck.y - 6); }
+  else { tx = TW / 2 + (puck.x - TW / 2) * 0.3; ty = 60; }
   const adx = tx - ai.x, ady = ty - ai.y, ad = Math.hypot(adx, ady) || 1;
-  const aspd = Math.min(PADDLE_MAX, ad);
+  const aspd = Math.min(PADDLE_MAX, ad * 0.5);
   const aox = ai.x, aoy = ai.y;
   ai.x += adx / ad * aspd; ai.y += ady / ad * aspd;
   clampPaddle(ai, true);

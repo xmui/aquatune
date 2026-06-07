@@ -7,7 +7,8 @@ const AW = 360, AH = 360;
 const TANK_R = 11, BULLET_R = 3.2;
 const BULLET_SPEED = 3.4, BULLET_BOUNCES = 2, BULLET_LIFE = 4000;
 const FIRE_CD = 360, MAX_SHOTS = 5;
-const LIVES = 3, INVULN_MS = 1600;
+const LIVES = 3, INVULN_MS = 2000;
+const ENEMY_BULLET_SPEED = 2.5;   // enemy shells are slower than yours → dodgeable
 
 let cv = null, cx = null, raf = null, _built = false, _pad = null;
 let state = 'start';        // start | play | over
@@ -61,16 +62,18 @@ function freeSpot(awayFrom, minDist) {
 
 // ── entities ────────────────────────────────────────────────────────────────
 function makeEnemy(kind) {
-  const s = freeSpot(player, 130);
-  const spd = kind === 'fast' ? 0.9 : 0.5;
+  const s = freeSpot(player, 140);
+  const spd = kind === 'fast' ? 0.6 : 0.38;
   return { x: s.x, y: s.y, r: TANK_R, aim: rnd(0, 6.28), vx: 0, vy: 0, kind, speed: spd,
-    fireCd: rnd(700, 1500), wanderCd: 0, wx: 0, wy: 0, flash: 0 };
+    fireCd: rnd(1500, 2800), wanderCd: 0, wx: 0, wy: 0, flash: 0 };
 }
 function nextWave() {
   wave++;
-  const n = Math.min(7, 1 + wave);
+  // Gentle ramp, capped low: wave 1 = 1 tank, +1 every other wave, max 4; "fast"
+  // tanks only show up from wave 4 on.
+  const n = Math.min(4, 1 + Math.floor(wave * 0.6));
   enemies = [];
-  for (let i = 0; i < n; i++) enemies.push(makeEnemy(wave >= 3 && i % 2 === 0 ? 'fast' : 'slow'));
+  for (let i = 0; i < n; i++) enemies.push(makeEnemy(wave >= 4 && i % 2 === 0 ? 'fast' : 'slow'));
   _waveAt = 0;
 }
 function startGame() {
@@ -81,8 +84,9 @@ function startGame() {
 }
 
 function fire(tank, ang, fromEnemy) {
+  const sp = fromEnemy ? ENEMY_BULLET_SPEED : BULLET_SPEED;
   bullets.push({ x: tank.x + Math.cos(ang) * (tank.r + 5), y: tank.y + Math.sin(ang) * (tank.r + 5),
-    vx: Math.cos(ang) * BULLET_SPEED, vy: Math.sin(ang) * BULLET_SPEED, r: BULLET_R,
+    vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: BULLET_R,
     bounces: BULLET_BOUNCES, life: BULLET_LIFE, enemy: !!fromEnemy });
   sfx('fire');
 }
@@ -138,7 +142,7 @@ function update(dt) {
     moveTank(e, e.wx * e.speed * dt / 16, e.wy * e.speed * dt / 16);
     e.aim = Math.atan2(player.y - e.y, player.x - e.x);
     e.fireCd -= dt;
-    if (e.fireCd <= 0) { e.fireCd = rnd(1100, 2200); fire(e, e.aim + rnd(-0.12, 0.12), true); }
+    if (e.fireCd <= 0) { e.fireCd = rnd(2000, 3400); fire(e, e.aim + rnd(-0.22, 0.22), true); }
   }
   enemies = enemies.filter(e => !e.dead);
 

@@ -54,14 +54,23 @@ const CXR = 80, CYR = 72, RW = 30, RH = 24;
 // length is random (it doesn't always complete the circle) — the more points you
 // tap, the more damage AND the more Mining XP you get at the end of the chain.
 const CRIT_POINT_MULT = 2.5;         // damage per tap-point hit (× pick power)
-const POINT_MS = 1050;               // time to tap each point before the chain breaks
-const SEQ_MIN = 2, SEQ_RAND = 6;     // chain length 2..8 points (not always the whole circle)
-const CIRCLE_STEPS = 8;              // tap positions around the circle (45° apart)
-const CIRCLE_R = 38;                 // radius of the invisible circle around the rock
-const CRIT_GAP_MIN = 2600, CRIT_GAP_RAND = 3800;   // random delay between chains
+const POINT_MS = 1100;               // time to tap each point before the chain breaks
+const SEQ_MIN = 2, SEQ_RAND = 6;     // chain length 2..8 points
+// Weak-points now appear OFTEN and at random spots across the rock face. Most of your
+// XP/credits come from chaining them — so skilled, aimed tapping vastly out-earns
+// mindless spamming (and a fixed-position auto-clicker can't catch a roaming target).
+const CRIT_GAP_MIN = 650, CRIT_GAP_RAND = 850;     // short random delay between chains
 const MOTHERLODE_CHANCE = 0.03;      // per rock break (when not already active)
 const MOTHERLODE_MS = 10000;         // frenzy duration
 const MOTHERLODE_ORE = 2, MOTHERLODE_POWER = 2;
+// Ore-vein event: chained weak-point hits fill a meter; when full a ~7s frenzy of
+// rapid random targets pays out big. Depth meter fills from skill (not raw clicks);
+// fill it to Delve Deeper (prestige) for a permanent bonus.
+const VEIN_NEED = 14;                // weak-point hits to charge a vein
+const VEIN_MS = 7000;                // vein frenzy duration
+const VEIN_POINT_MS = 620;           // faster targets during a vein
+const DEPTH_MAX = 600;               // skill points to fill the depth bar (then prestige)
+const XP_CAP = 5;                    // cap on any single mining XP grant's mult
 // ── auto-clicker guard ───────────────────────────────────────────────────────
 // Auto-clickers fire at a machine-regular cadence no human can match: fast AND
 // with almost no timing jitter. If the last several clicks look robotic, lock the
@@ -78,8 +87,15 @@ let rock = null, swing = 0, shake = 0, particles = [];
 let breakUntil = 0;
 let floaters = [], sweet = null, sweetNextAt = 0, motherlodeUntil = 0;
 let seq = null, seqHits = 0;         // active crit chain + how many points tapped so far
+let veinPts = 0, veinUntil = 0;      // vein meter / active-vein timer
+let depthPts = parseFloat(localStorage.getItem('aq_mining_depth') || '0') || 0;
+let prestige = parseInt(localStorage.getItem('aq_mining_prestige') || '0', 10) || 0;
 let infoEl = null, shopEl = null, stageEl = null;
 let curStage = 0;
+function stageMult() { return 1 + curStage * 0.4; }      // deeper zones reward more
+function prestigeMult() { return 1 + prestige * 0.05; }  // +5% per Delve Deeper rank
+function veinActive() { return performance.now() < veinUntil; }
+function addDepth(n) { depthPts = Math.min(DEPTH_MAX, depthPts + n); try { localStorage.setItem('aq_mining_depth', String(Math.round(depthPts))); } catch (e) {} }
 let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0, _lastTouch = false;
 // One-time: the auto-clicker check used to be too sensitive (it could flag fast
 // manual / rhythmic touch tapping). Clear any lockout it left behind so those
@@ -184,7 +200,8 @@ function scheduleSweet(now) { sweet = null; seq = null; seqHits = 0; sweetNextAt
 // Grant the chain's Mining XP (scaled by points tapped) — paid at the END of a chain.
 function awardChainXp() {
   if (seqHits > 0) {
-    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: 0.4 + seqHits * 0.45 });
+    // The main XP source — scales with how many points you chained AND the zone/prestige.
+    if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.25 + seqHits * 0.22) * stageMult() * prestigeMult()) });
     addFloater('+chain XP ×' + seqHits, 3);
   }
   seqHits = 0;
@@ -193,19 +210,26 @@ function endSeq(now) { awardChainXp(); scheduleSweet(now); }
 function startSeq(now) {
   if (!rock) { scheduleSweet(now); return; }
   const total = SEQ_MIN + ((Math.random() * (SEQ_RAND + 1)) | 0);   // 2..8 points
-  seq = { remaining: total, total, angle: Math.random() * 6.2832, step: (Math.random() < 0.5 ? -1 : 1) * (6.2832 / CIRCLE_STEPS) };
+  seq = { remaining: total, total };
   seqHits = 0;
   spawnNextPoint(now);
 }
+// Spawn the next weak-point at a RANDOM spot on the rock face (not a fixed ring), so a
+// stationary tapper/auto-clicker can't farm crits — you have to aim each one.
 function spawnNextPoint(now) {
-  if (!seq || seq.remaining <= 0 || !rock) { endSeq(now); return; }
-  const r = Math.max(5, 8 - rock.def.rarity);    // smaller target on richer rocks
-  let x = CXR + Math.cos(seq.angle) * CIRCLE_R;
-  let y = CYR + Math.sin(seq.angle) * CIRCLE_R;
-  x = Math.max(r + 2, Math.min(W - r - 2, x));
-  y = Math.max(16, Math.min(H - 30, y));
-  sweet = { x, y, r, born: now, expireAt: now + POINT_MS };
-  seq.angle += seq.step; seq.remaining--;
+  if (!seq || (!veinActive() && seq.remaining <= 0) || !rock) { endSeq(now); return; }
+  const r = Math.max(5, 8 - rock.def.rarity);
+  const x = (r + 4) + Math.random() * (W - 2 * (r + 4));
+  const y = 20 + Math.random() * (H - 50);        // avoid the top + bottom banners
+  const life = veinActive() ? VEIN_POINT_MS : POINT_MS;
+  sweet = { x, y, r, born: now, expireAt: now + life };
+  if (!veinActive()) seq.remaining--;
+}
+function startVein(now) {
+  veinUntil = now + VEIN_MS; veinPts = 0;
+  seq = { remaining: 999, total: 999 }; seqHits = 0;
+  addFloater('⚡ ORE VEIN! ⚡', 3); try { window.playFanfare?.('jackpot'); } catch (e) {} sfx('upgrade');
+  spawnNextPoint(now);
 }
 function addFloater(text, c) { floaters.push({ x: CXR, y: CYR - 26, text, c, life: 34 }); }
 function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: CYR - 8 + (Math.random() - 0.5) * 26, vx: (Math.random() - 0.5) * (big ? 6 : 3), vy: -Math.random() * (big ? 5 : 3) - 1, life: big ? 24 : 16, c: 3, s: big ? 3 : 2 }); }
@@ -213,11 +237,12 @@ function spark(big) { particles.push({ x: CXR + (Math.random() - 0.5) * 34, y: C
 function breakRock() {
   const r = rock.def, now = performance.now();
   const ml = motherlodeUntil > now;
-  const ore = Math.round(r.value * (ml ? MOTHERLODE_ORE : 1));
+  const ore = Math.round(r.value * (ml ? MOTHERLODE_ORE : 1) * prestigeMult());
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(ore);
-  // Mining gives less XP than other skills: only the "won" trickle, scaled down.
-  // (Motherlode boosts ore credits + speed, NOT the XP mult — keeps the economy sane.)
-  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: 0.4 + r.rarity * 0.25 });
+  // The break itself is a SMALL trickle now (most XP comes from chaining weak-points),
+  // but it scales with the zone + prestige so deeper digging is clearly worth more.
+  if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: false, won: true, mult: Math.min(XP_CAP, (0.2 + r.rarity * 0.1) * stageMult() * prestigeMult()) });
+  addDepth(4 + r.rarity * 2);
   if (typeof window.recordScore === 'function') window.recordScore('mining', ore, r.name);
   addFloater('+' + ore, 2);
   // shatter burst: chunky fragments in the rock's tones
@@ -233,7 +258,7 @@ function breakRock() {
     addFloater('★ MOTHERLODE! ★', 3);
     try { window.playFanfare?.('jackpot'); } catch (e) {}
   }
-  rock = null; sweet = null; seq = null;
+  rock = null; sweet = null; seq = null; seqHits = 0; veinUntil = 0;
   breakUntil = now + 280;  // brief empty crater before respawn
   refreshInfo();
 }
@@ -254,10 +279,17 @@ function hit(px, py) {
   rock.hp -= dmg;
   if (crit) {
     shake = 12; seqHits++;
-    addFloater('CRIT!', 3);
+    const vein = veinActive();
+    // each hit pays a little credit + depth immediately; chain XP is paid at the end
+    const chip = Math.round((1 + curStage * 1.2) * prestigeMult() * (vein ? 2.5 : 1));
+    if (typeof window.aqAddCredits === 'function') window.aqAddCredits(chip);
+    addDepth(vein ? 3 : 1);
+    addFloater(vein ? '+' + chip + '⚡' : 'CRIT!', 3);
     for (let i = 0; i < 12; i++) spark(true);
-    if (rock.hp <= 0) { awardChainXp(); breakRock(); return; }   // rock died mid-chain: pay XP now
-    spawnNextPoint(now);   // chain to the next point (ends + pays XP when done)
+    // charge the vein meter from normal (non-vein) crit hits
+    if (!vein) { veinPts++; if (veinPts >= VEIN_NEED) { startVein(now); if (rock.hp <= 0) { awardChainXp(); breakRock(); } return; } }
+    if (rock.hp <= 0) { awardChainXp(); breakRock(); return; }
+    spawnNextPoint(now);   // chain to the next point
     return;
   }
   for (let i = 0; i < 5; i++) particles.push({ x: CXR + (Math.random() - 0.5) * 30, y: CYR - 6 + (Math.random() - 0.5) * 22, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, life: 16, c: rock.def.ore, s: 2 });
@@ -394,17 +426,21 @@ function draw(t) {
     cx.textAlign = 'left';
   }
 
-  // motherlode banner
-  if (ml) {
-    cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'center';
-    cx.fillText('★ MOTHERLODE ' + Math.ceil((motherlodeUntil - t) / 1000) + 's ★', W / 2, 2); cx.textAlign = 'left';
-  }
-  // crit-chain hint
-  else if (sweet) { cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('★ tap! ×' + seqHits, 6, 2); }
-  // rock name banner
+  // top banner: vein / motherlode / tap hint
+  cx.font = '8px monospace'; cx.textBaseline = 'top';
+  if (veinActive()) { cx.fillStyle = PAL[0]; cx.textAlign = 'center'; cx.fillText('⚡ ORE VEIN ' + Math.ceil((veinUntil - t) / 1000) + 's ⚡', W / 2, 2); cx.textAlign = 'left'; }
+  else if (ml) { cx.fillStyle = PAL[0]; cx.textAlign = 'center'; cx.fillText('★ MOTHERLODE ' + Math.ceil((motherlodeUntil - t) / 1000) + 's ★', W / 2, 2); cx.textAlign = 'left'; }
+  else if (sweet) { cx.fillStyle = PAL[0]; cx.fillText('★ tap! ×' + seqHits, 6, 2); }
+  // depth bar (skill progress → Delve Deeper) on the left of the bottom banner; rank on the right
   cx.fillStyle = PAL[0]; cx.fillRect(0, H - 14, W, 14);
   cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
   cx.fillText(rock ? `${rock.def.name} rock` : 'Mining…', 4, H - 7);
+  // depth meter (thin, above the name banner)
+  const full = depthPts >= DEPTH_MAX;
+  px(2, H - 18, W - 4, 3, 0); px(3, H - 17, (W - 6) * Math.min(1, depthPts / DEPTH_MAX), 1, full ? 3 : 2);
+  cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle'; cx.textAlign = 'right';
+  cx.fillText((prestige ? '◆' + prestige + ' ' : '') + (full ? 'DELVE!' : 'depth'), W - 4, H - 7);
+  cx.textAlign = 'left';
 }
 
 let _lastT = 0;
@@ -419,7 +455,8 @@ function tick(t) {
   // Crit-chain lifecycle: start after a random delay; if a point isn't tapped in
   // time the chain breaks (and pays out XP for whatever was tapped).
   if (rock) {
-    if (sweet) { if (t >= sweet.expireAt) endSeq(t); }
+    if (veinUntil && t >= veinUntil) { veinUntil = 0; endSeq(t); }   // vein ended → pay it out
+    else if (sweet) { if (t >= sweet.expireAt) { if (veinActive()) spawnNextPoint(t); else endSeq(t); } }
     else if (t >= sweetNextAt) startSeq(t);
   }
   for (const fl of floaters) { fl.y -= dt / 22; fl.life -= dt / 16; }
@@ -432,7 +469,7 @@ function tick(t) {
 }
 
 function refreshInfo() {
-  if (infoEl) infoEl.textContent = `${PICKS[pickTier()].name} pick (⛏${pickPower()}) · Lv ${mineLvl()} · 💰 ${credits()}`;
+  if (infoEl) infoEl.textContent = `${PICKS[pickTier()].name} pick (⛏${pickPower()})${prestige ? ' ◆' + prestige : ''} · Lv ${mineLvl()} · 💰 ${credits()}`;
   renderStages();
   renderShop();
 }
@@ -455,6 +492,24 @@ function renderStages() {
     });
     stageEl.appendChild(b);
   });
+  // Delve Deeper (prestige): enabled once the depth bar is full
+  const pb = document.createElement('button');
+  pb.className = 'gbc-btn';
+  const ready = depthPts >= DEPTH_MAX;
+  pb.disabled = !ready;
+  pb.textContent = ready ? '⛏️🔥 Delve Deeper' : `Depth ${Math.floor(depthPts / DEPTH_MAX * 100)}%`;
+  if (prestige) pb.title = 'Rank ' + prestige + ' · +' + (prestige * 5) + '% mining';
+  pb.addEventListener('click', doPrestige);
+  stageEl.appendChild(pb);
+}
+function doPrestige() {
+  if (depthPts < DEPTH_MAX) return;
+  prestige++; depthPts = 0;
+  try { localStorage.setItem('aq_mining_prestige', String(prestige)); localStorage.setItem('aq_mining_depth', '0'); } catch (e) {}
+  if (window.aqGamePersist) window.aqGamePersist('aq_mining_prestige');
+  addFloater('◆ DELVED DEEPER! Rank ' + prestige, 3);
+  try { window.playFanfare?.('jackpot'); } catch (e) {} sfx('upgrade');
+  refreshInfo();
 }
 
 function renderShop() {
@@ -539,6 +594,7 @@ if (typeof window !== 'undefined') {
     const w = document.getElementById('mining-wrap');
     if (!w || !w.classList.contains('open')) return;
     curStage = Math.min(maxStage(), parseInt(localStorage.getItem('aq_mining_stage') || '0', 10) || 0);
+    prestige = Math.max(prestige, parseInt(localStorage.getItem('aq_mining_prestige') || '0', 10) || 0);
     refreshInfo();
   });
 }

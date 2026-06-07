@@ -19,7 +19,7 @@ function hasAccount() { return typeof window !== 'undefined' && !!window._aqAcco
 function gamesRef() { return ref(db, `user-games/${userId()}`); }
 
 // Numeric "progress" keys — never downgrade (a higher value is more progress).
-const TIER_KEYS = ['aq_mining_pick', 'aq_fishing_rod', 'aq_mining_stage', 'aq_fishing_zone', 'aq_rogue_depth'];
+const TIER_KEYS = ['aq_mining_pick', 'aq_fishing_rod', 'aq_mining_stage', 'aq_fishing_zone', 'aq_rogue_depth', 'aq_mining_prestige'];
 // Per-name counters (JSON {name:count}) — merge by max so neither side loses a catch.
 const COUNT_KEYS = ['aq_fishing_caught'];
 // Free-form JSON/string blobs — newest writer wins (kept for completeness).

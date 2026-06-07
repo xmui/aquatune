@@ -334,30 +334,34 @@ function aiShoot() {
   else targets = balls.filter(b => !b.potted && b.n !== 0 && b.n !== 8);
   if (groups.B && targets.length === 0) targets = balls.filter(b => !b.potted && b.n === 8);
   if (!targets.length) targets = balls.filter(b => !b.potted && b.n !== 0);
+  if (!targets.length) return;
 
+  // Score EVERY ball→pocket attempt and take the best one — penalising thin cuts and
+  // blocked paths rather than discarding them. This means the bot always aims a real
+  // ball at a real pocket (its best available pot) instead of falling back to a
+  // direction-less centre hit, which looked like a random shot.
   let best = null;
   for (const ball of targets) {
     for (const p of POCKETS) {
-      const bp = Math.hypot(p.x - ball.x, p.y - ball.y);
+      const bp = Math.hypot(p.x - ball.x, p.y - ball.y) || 1;
       const toP = { x: (p.x - ball.x) / bp, y: (p.y - ball.y) / bp };
       const ghost = { x: ball.x - toP.x * R * 2, y: ball.y - toP.y * R * 2 };
-      const cg = Math.hypot(ghost.x - cue.x, ghost.y - cue.y);
+      const cg = Math.hypot(ghost.x - cue.x, ghost.y - cue.y) || 1;
       const aim = { x: (ghost.x - cue.x) / cg, y: (ghost.y - cue.y) / cg };
-      const cut = aim.x * toP.x + aim.y * toP.y;
-      if (cut < 0.25) continue;
-      if (!pathClear(cue.x, cue.y, ghost.x, ghost.y, [ball]) || !pathClear(ball.x, ball.y, p.x, p.y, [])) continue;
-      const score = cut * 2 - (cg + bp) / 900;
+      const cut = aim.x * toP.x + aim.y * toP.y;                 // 1 = dead straight, <0 = behind
+      let score = cut * 2 - (cg + bp) / 900;
+      if (cut < 0.2) score -= 6;                                 // near-impossible cut angle
+      if (!pathClear(cue.x, cue.y, ghost.x, ghost.y, [ball])) score -= 4;   // cue path blocked
+      if (!pathClear(ball.x, ball.y, p.x, p.y, [])) score -= 3;             // pocket path blocked
       if (!best || score > best.score) best = { score, aim, dist: cg + bp };
     }
   }
-  if (!best) {
-    const t = targets[0]; const d = Math.hypot(t.x - cue.x, t.y - cue.y);
-    best = { aim: { x: (t.x - cue.x) / d, y: (t.y - cue.y) / d }, dist: d };
-  }
-  const err = (Math.random() - 0.5) * 0.09;
+  if (!best) return;
+  // a confident pot is aimed accurately; a desperate one wobbles a bit more
+  const err = (Math.random() - 0.5) * (best.score > 0 ? 0.05 : 0.09);
   const ca = Math.cos(err), sa = Math.sin(err);
   const ax = best.aim.x * ca - best.aim.y * sa, ay = best.aim.x * sa + best.aim.y * ca;
-  const speed = Math.min(MAXSPEED, 440 + best.dist * 1.6);
+  const speed = Math.min(MAXSPEED, 430 + best.dist * 1.5);
   doShoot(ax, ay, speed);
 }
 
@@ -464,10 +468,10 @@ function placeCue(x, y) {
 
 // ── power slider → cue-stick strike → fire ───────────────────────────────────
 function canShoot() { return myActiveTurn() && state === 'aim' && !striking; }
-function setPowerFromClientX(clientX) {
+function setPowerFromClientY(clientY) {
   const track = powerEl && powerEl.querySelector('.p8-power-track'); if (!track) return;
   const r = track.getBoundingClientRect();
-  power = Math.max(0, Math.min(1, (clientX - r.left) / (r.width || 1)));
+  power = Math.max(0, Math.min(1, (clientY - r.top) / (r.height || 1)));   // slide DOWN → more power
   updatePowerUI();
 }
 function updatePowerUI() {
@@ -475,15 +479,15 @@ function updatePowerUI() {
   const on = canShoot() || _powerDragging;
   powerEl.classList.toggle('disabled', !on);
   const fill = powerEl.querySelector('.p8-power-fill'), knob = powerEl.querySelector('.p8-power-knob'), val = powerEl.querySelector('.p8-power-val');
-  if (fill) fill.style.width = (power * 100) + '%';
-  if (knob) knob.style.left = (power * 100) + '%';
+  if (fill) fill.style.height = (power * 100) + '%';     // fills from the top down as you charge
+  if (knob) knob.style.top = (power * 100) + '%';
   if (val) val.textContent = Math.round(power * 100) + '%';
 }
 function onPowerDown(e) {
   if (!canShoot()) return;
-  e.preventDefault(); _powerDragging = true; setPowerFromClientX(e.clientX);
+  e.preventDefault(); _powerDragging = true; setPowerFromClientY(e.clientY);
 }
-function onPowerMove(e) { if (_powerDragging) setPowerFromClientX(e.clientX); }
+function onPowerMove(e) { if (_powerDragging) setPowerFromClientY(e.clientY); }
 function onPowerUp() {
   if (!_powerDragging) return;
   _powerDragging = false;
@@ -823,14 +827,14 @@ function build() {
   const wrap = document.createElement('div'); wrap.className = 'p8-stage';
   cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'p8-canvas';
   wrap.appendChild(cv);
+  // power slider — floats bottom-right over the table; slide DOWN to charge, release to strike
+  powerEl = document.createElement('div'); powerEl.className = 'p8-power';
+  powerEl.innerHTML = '<span class="p8-power-val">50%</span>'
+    + '<div class="p8-power-track"><div class="p8-power-fill"></div><div class="p8-power-knob"></div></div>'
+    + '<span class="p8-power-lab">PWR</span>';
+  wrap.appendChild(powerEl);
   overlayEl = document.createElement('div'); overlayEl.className = 'p8-overlay'; wrap.appendChild(overlayEl);
   area.appendChild(wrap);
-  // power slider — drag to set power, release to strike the cue ball
-  powerEl = document.createElement('div'); powerEl.className = 'p8-power';
-  powerEl.innerHTML = '<span class="p8-power-lab">Power</span>'
-    + '<div class="p8-power-track"><div class="p8-power-fill"></div><div class="p8-power-knob"></div></div>'
-    + '<span class="p8-power-val">50%</span>';
-  area.appendChild(powerEl);
   msgEl = document.createElement('div'); msgEl.className = 'p8-status'; area.appendChild(msgEl);
 
   cx = cv.getContext('2d');

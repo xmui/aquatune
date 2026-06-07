@@ -519,15 +519,16 @@ function drawTable() {
   for (const p of POCKETS) drawPocket(p);
 }
 function drawPocket(p) {
-  // chrome bevel ring
-  const ring = cx.createLinearGradient(p.x - POCKET_R, p.y - POCKET_R, p.x + POCKET_R, p.y + POCKET_R);
+  // Corner pockets are round; SIDE pockets are a wider, flatter mouth cut into the rail
+  // (like a real table / GamePigeon) rather than a full circle.
+  const rx = p.mid ? POCKET_R + 5 : POCKET_R, ry = p.mid ? POCKET_R - 4 : POCKET_R;
+  const ring = cx.createLinearGradient(p.x - rx, p.y - ry, p.x + rx, p.y + ry);
   ring.addColorStop(0, '#f2f2f6'); ring.addColorStop(0.45, '#9fa0ad'); ring.addColorStop(0.7, '#6c6d7a'); ring.addColorStop(1, '#3a3b45');
-  cx.fillStyle = ring; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R + 4, 0, 7); cx.fill();
-  cx.fillStyle = '#26262d'; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R + 1, 0, 7); cx.fill();
-  // deep black interior
-  const hole = cx.createRadialGradient(p.x - 2, p.y - 2, 1, p.x, p.y, POCKET_R);
+  cx.fillStyle = ring; cx.beginPath(); cx.ellipse(p.x, p.y, rx + 4, ry + 4, 0, 0, 7); cx.fill();
+  cx.fillStyle = '#26262d'; cx.beginPath(); cx.ellipse(p.x, p.y, rx + 1, ry + 1, 0, 0, 7); cx.fill();
+  const hole = cx.createRadialGradient(p.x - 2, p.y - 2, 1, p.x, p.y, Math.max(rx, ry));
   hole.addColorStop(0, '#000'); hole.addColorStop(0.65, '#040405'); hole.addColorStop(1, '#1b1b22');
-  cx.fillStyle = hole; cx.beginPath(); cx.arc(p.x, p.y, POCKET_R, 0, 7); cx.fill();
+  cx.fillStyle = hole; cx.beginPath(); cx.ellipse(p.x, p.y, rx, ry, 0, 0, 7); cx.fill();
 }
 function drawBall(b) {
   const scale = (b.sink !== undefined ? Math.max(0.06, b.sink) : 1), r = R * scale;

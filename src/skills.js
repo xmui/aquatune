@@ -259,7 +259,7 @@ const GAME_SKILLS = {
   picross: ['intellect'], mines: ['intellect'], solitaire: ['intellect'], pool: ['intellect'],
   tetris: ['speed'], rhythm: ['speed'],
   fishing: ['fishing'], mining: ['mining'],
-  buddyshoot: ['combat'], rogue: ['combat'],
+  buddyshoot: ['combat'], rogue: ['combat'], tanks: ['combat'], airhockey: ['speed'],
   stocks: ['finance'], player: ['music'], studio: ['music'], synth: ['music'],
 };
 function hudEnabled() { try { return localStorage.getItem('aq_hud_on') === '1'; } catch { return false; } }

@@ -9,8 +9,18 @@ const GOALS_TO_WIN = 7;
 const PADDLE_R = 26, PUCK_R = 13;
 const PUCK_MAX = 14;          // top puck speed (px/step)
 const MALLET_MAX = 20;        // your/host mallet max speed — bounded so hits are consistent & it can't tunnel past the puck
-const AI_MAX = 9;             // AI mallet speed (slower → beatable)
 const FRICTION = 0.998;       // near-frictionless air table
+// AI difficulty profiles (solo only). maxSpeed < player's 20 so every level stays
+// beatable on raw speed; reactMs is the decision lag (lower = snappier); predict is
+// how well it reads incoming shots; aimError is shot spread; aggression = how readily
+// it goes on offense.
+const AI_LEVELS = {
+  easy: { maxSpeed: 7,  reactMs: 180, predict: 'none',     aimError: 34, aggression: 0.35, label: 'Easy' },
+  med:  { maxSpeed: 11, reactMs: 90,  predict: 'straight', aimError: 16, aggression: 0.60, label: 'Medium' },
+  hard: { maxSpeed: 16, reactMs: 40,  predict: 'bounce',   aimError: 6,  aggression: 0.85, label: 'Hard' },
+};
+let aiDiff = (() => { try { const d = localStorage.getItem('aq_ah_diff'); return AI_LEVELS[d] ? d : 'med'; } catch { return 'med'; } })();
+let _aiDecideAt = 0, _aiAim = { x: 0, y: 0 }, _aiSpd = 9;
 const REST = 0.9;             // puck restitution off a mallet
 const BROADCAST_MS = 50;      // host state stream interval
 const INPUT_MS = 45;          // guest paddle input interval
@@ -33,6 +43,7 @@ function reset(toYou) {
   puck = { x: TW / 2, y: TH / 2, vx: (Math.random() - 0.5) * 4, vy: toYou ? 5 : -5, r: PUCK_R };
   target = { x: paddle.x, y: paddle.y };
   guestTarget = { x: TW / 2, y: 60 };
+  _aiDecideAt = 0; _aiAim = { x: ai.x, y: ai.y };
 }
 function newGame(m) {
   mode = m; scoreYou = 0; scoreAI = 0; state = 'play'; msg = ''; _guestGranted = false;
@@ -78,6 +89,55 @@ function collide(p, pv) {
   }
 }
 
+// ── AI (solo) ───────────────────────────────────────────────────────────────
+// Predict the puck's x when it reaches `targetY`, optionally reflecting off the
+// side rails so a smart bot reads bank shots.
+function predictX(px, vx, py, vy, targetY, mode) {
+  if (mode === 'none' || vy >= -0.05) return px;
+  const t = (targetY - py) / vy;
+  if (t <= 0) return px;
+  let x = px + vx * t;
+  const lo = PUCK_R, hi = TW - PUCK_R;
+  if (mode === 'straight') return Math.max(lo, Math.min(hi, x));
+  const span = hi - lo;                       // triangle-wave reflection into [lo,hi]
+  let m = (x - lo) % (2 * span); if (m < 0) m += 2 * span;
+  return m < span ? lo + m : hi - (m - span);
+}
+function aiDecide(cfg) {
+  const defY = PADDLE_R + 24;
+  const threat = puck.vy < -0.2 && puck.y < TH * 0.62;     // puck heading up at the AI goal
+  const inAIHalf = puck.y < TH / 2 - PUCK_R;
+  if (threat) {                                            // DEFEND — intercept on the goal line
+    let x = predictX(puck.x, puck.vx, puck.y, puck.vy, defY, cfg.predict);
+    x = x * 0.82 + (TW / 2) * 0.18;                        // bias toward the goal mouth when wide
+    _aiAim = { x, y: defY }; _aiSpd = cfg.maxSpeed; return;
+  }
+  if (inAIHalf && Math.random() < cfg.aggression) {        // ATTACK — line up behind, drive through toward the player's goal
+    if (ai.y > puck.y + 2) {                               // mallet is BELOW the puck — slip around it (never shove it up into our own goal)
+      const side = ai.x < puck.x ? -1 : 1;
+      _aiAim = { x: Math.max(PUCK_R, Math.min(TW - PUCK_R, puck.x + side * (PADDLE_R + PUCK_R + 6))), y: TH / 2 - PADDLE_R };
+      _aiSpd = cfg.maxSpeed; return;
+    }
+    const gx = TW / 2 + (Math.random() * 2 - 1) * cfg.aimError, gy = TH + 10;
+    let dx = gx - puck.x, dy = gy - puck.y; const dd = Math.hypot(dx, dy) || 1; dx /= dd; dy /= dd;
+    const behindX = puck.x - dx * (PADDLE_R + PUCK_R), behindY = puck.y - dy * (PADDLE_R + PUCK_R);
+    const rel = (ai.x - puck.x) * dx + (ai.y - puck.y) * dy;          // <0 ⇒ mallet is behind the puck
+    const offLine = Math.abs((ai.x - puck.x) * dy - (ai.y - puck.y) * dx);
+    if (rel < -2 && offLine < PADDLE_R * 0.8 && behindY >= PADDLE_R) _aiAim = { x: puck.x + dx * 60, y: puck.y + dy * 60 };
+    else if (behindY >= PADDLE_R) _aiAim = { x: behindX, y: behindY };
+    else _aiAim = { x: puck.x, y: defY };                  // too close to the centre line → just clear it
+    _aiSpd = cfg.maxSpeed; return;
+  }
+  _aiAim = { x: TW / 2 + (puck.x - TW / 2) * 0.45, y: 64 }; // RETURN — pre-position near home
+  _aiSpd = cfg.maxSpeed * 0.8;
+}
+function aiThink() {
+  const cfg = AI_LEVELS[aiDiff] || AI_LEVELS.med;
+  const now = performance.now();
+  if (now >= _aiDecideAt) { aiDecide(cfg); _aiDecideAt = now + cfg.reactMs; }   // decision lag = reactMs
+  return { x: _aiAim.x, y: _aiAim.y, spd: _aiSpd };
+}
+
 function step() {
   if (state !== 'play') return;
   // mallets move toward their targets at a capped speed (real bounded velocity,
@@ -85,12 +145,7 @@ function step() {
   const pv = moveMallet(paddle, target.x, target.y, false, MALLET_MAX);
   let av;
   if (mode === 'room') av = moveMallet(ai, guestTarget.x, guestTarget.y, true, MALLET_MAX);
-  else {
-    let tx, ty;
-    if (puck.y < TH / 2 && puck.vy < 0.5) { tx = puck.x + puck.vx * 2; ty = Math.max(54, puck.y - 6); }
-    else { tx = TW / 2 + (puck.x - TW / 2) * 0.3; ty = 60; }
-    av = moveMallet(ai, tx, ty, true, AI_MAX);
-  }
+  else { const a = aiThink(); av = moveMallet(ai, a.x, a.y, true, a.spd); }
   // puck: near-frictionless glide, capped top speed
   puck.vx *= FRICTION; puck.vy *= FRICTION;
   const sp = Math.hypot(puck.vx, puck.vy);
@@ -212,13 +267,20 @@ function showOverlay() {
     body = `<div class="ah-ov-note">Waiting for the host to start the match…</div>`;
   } else {
     const roomLbl = state === 'over' ? '👥 Rematch in room' : '👥 Play someone in the room';
-    body = `<div class="ah-ov-btns">`
+    const diffRow = `<div class="ah-diff-row">` + Object.keys(AI_LEVELS).map(k =>
+      `<button class="ah-diff${k === aiDiff ? ' on' : ''}" data-diff="${k}">${AI_LEVELS[k].label}</button>`).join('') + `</div>`;
+    body = diffRow
+      + `<div class="ah-ov-btns">`
       + `<button class="ah-btn" id="ah-solo">🤖 ${state === 'over' ? 'Play again' : 'Play the computer'}</button>`
       + `<button class="ah-btn" id="ah-room"${haveRoom ? '' : ' disabled'}>${roomLbl}</button></div>`
       + `<div class="ah-ov-note">${haveRoom ? (window._isRoomHost ? "You'll host — a roommate can join by opening Air Hockey." : "Join the host's table (open it while they host).") : 'Join or create a room first to play someone.'}</div>`;
   }
   overlayEl.innerHTML = `<div class="ah-ov-title">${title}</div><div class="ah-ov-sub">First to ${GOALS_TO_WIN} · drag your paddle</div>${body}`;
   overlayEl.style.display = 'flex';
+  overlayEl.querySelectorAll('.ah-diff').forEach(b => b.onclick = () => {
+    aiDiff = b.dataset.diff; try { localStorage.setItem('aq_ah_diff', aiDiff); } catch {}
+    overlayEl.querySelectorAll('.ah-diff').forEach(x => x.classList.toggle('on', x.dataset.diff === aiDiff));
+  });
   const sb = overlayEl.querySelector('#ah-solo'); if (sb) sb.onclick = () => newGame('solo');
   const rb = overlayEl.querySelector('#ah-room'); if (rb && haveRoom) rb.onclick = startRoom;
 }

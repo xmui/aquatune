@@ -613,6 +613,15 @@ function renderDex() {
       const lab = document.createElement('div'); lab.className = 'fish-dex-lab';
       lab.innerHTML = seen ? `${f.name}<span>×${n}</span>` : `???<span>—</span>`;
       cell.appendChild(lab);
+      // Caught fish can be released onto the desktop as a singing, flopping pet.
+      if (seen && typeof window.aqFishpetToggle === 'function') {
+        const out = !!(window.aqFishpetHas && window.aqFishpetHas(f.name));
+        const btn = document.createElement('button');
+        btn.className = 'fish-dex-pet' + (out ? ' on' : '');
+        btn.textContent = out ? '🖥️ on desktop' : '🐟 to desktop';
+        btn.onclick = () => { window.aqFishpetToggle(f.name); renderDex(); };
+        cell.appendChild(btn);
+      }
       grid.appendChild(cell);
     });
     sec.appendChild(grid); dexEl.appendChild(sec);
@@ -695,6 +704,12 @@ function openFishing(show = true) {
 
 if (typeof window !== 'undefined') {
   window.openFishing = openFishing;
+  // Desktop fish-pets bridge: look up any caught fish's sprite + draw it the same way.
+  const _allFish = FISH.concat(MONSTERS);
+  window.aqFishDef = (name) => _allFish.find(f => f.name === name) || null;
+  window.aqFishCaught = readCaught;
+  window.aqDrawFishSprite = (ctx, shape, col, ox, oy, scale) => drawSprite(ctx, shape, col, ox, oy, scale, false);
+  window.aqFishSpriteDims = (shape) => { const r = SHAPES[shape] || SHAPES.classic; return { w: r[0].length, h: r.length }; };
   // Cloud game-save may resolve after the window is open — re-read restored rod/zone.
   window.addEventListener('aq-gamedata-synced', () => {
     const w = document.getElementById('fishing-wrap');

@@ -3699,27 +3699,56 @@ body.perf-mode #aqua-gun { display: none !important; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
-    /* ── XP popups — big skill-tinted numbers stacked on the right (never overlap) ─── */
-    #aq-xp-popups { position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:3000; pointer-events:none;
-      display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-    .aq-xp-pop { display:flex; align-items:center; gap:8px; pointer-events:none; color:#7fd4ff;
-      font-size:30px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
+    /* ── Desktop fish pets (released from the Fishing Fish-o-pedia) ─── */
+    #aq-fishpets { position:fixed; inset:0; z-index:455; pointer-events:none; overflow:hidden; }
+    .aq-fishpet { position:absolute; pointer-events:auto; cursor:grab; touch-action:none; will-change:left,top;
+      filter:drop-shadow(0 4px 4px rgba(0,0,0,0.35)); }
+    .aq-fishpet:active { cursor:grabbing; }
+    .aqfp-flop { transform-origin:50% 80%; animation:aqfpFlop 0.9s ease-in-out infinite; }
+    .aq-fishpet.singing .aqfp-flop { animation-duration:0.26s; }
+    .aq-fishpet.aqfp-frozen .aqfp-flop { animation-play-state:paused; }   /* still unless music is playing */
+    .aqfp-cvs { display:block; image-rendering:pixelated; image-rendering:crisp-edges; }
+    @keyframes aqfpFlop {
+      0%,100% { transform:rotate(-9deg) translateY(0); }
+      25% { transform:rotate(7deg) translateY(-5px); }
+      50% { transform:rotate(-4deg) translateY(0); }
+      75% { transform:rotate(9deg) translateY(-3px); }
+    }
+    .aqfp-x { position:absolute; top:-7px; right:-7px; width:17px; height:17px; border-radius:50%; border:none; cursor:pointer;
+      background:rgba(20,20,28,0.82); color:#fff; font-size:11px; line-height:15px; padding:0; opacity:0; transition:opacity .15s; pointer-events:auto; }
+    .aq-fishpet:hover .aqfp-x { opacity:1; }
+    .aqfp-note { position:absolute; pointer-events:none; font-size:16px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6)); animation:aqfpNote 1.1s ease-out forwards; }
+    @keyframes aqfpNote { 0%{opacity:0; transform:translateY(0) scale(.6);} 20%{opacity:1;} 100%{opacity:0; transform:translateY(-34px) scale(1.1);} }
+    .fish-dex-pet { margin-top:3px; width:100%; font-size:9px; font-weight:700; font-family:monospace; cursor:pointer;
+      color:#0f380f; background:#cfe8a0; border:1px solid #2a3a1a; border-radius:3px; padding:2px 3px; }
+    .fish-dex-pet.on { background:#7ba672; color:#0f380f; }
+
+    /* ── XP popups — big skill-tinted "+N XP 🎣" rising from the bottom-right (never overlap) ─── */
+    #aq-xp-popups { position:fixed; right:18px; bottom:96px; z-index:3000; pointer-events:none;
+      display:flex; flex-direction:column-reverse; align-items:flex-end; gap:6px; }
+    .aq-xp-pop { display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
+      font-size:29px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
       text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.2s ease-out forwards; }
     .aq-xp-ico { font-size:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
-    .aq-xp-pop span { font-size:13px; font-weight:700; opacity:.8; color:#cfe0ee; letter-spacing:0; }
-    .aq-xp-pop.lvl { color:#ffd24a; font-size:24px; }
-    .aq-xp-pop.lvl span { color:#ffcf6a; }
-    /* slide in from the right, hold, fade — no big vertical travel so the stack stays clean */
+    .aq-xp-pop.lvl { color:#ffd24a; font-size:23px; }
+    /* rise up from the bottom, hold, fade */
     @keyframes aqXpRise {
-      0%   { opacity:0; transform:translateX(44px) scale(.7); }
-      12%  { opacity:1; transform:translateX(0) scale(1); }
-      72%  { opacity:1; transform:translateX(0); }
-      100% { opacity:0; transform:translateX(0) translateY(-8px) scale(.97); }
+      0%   { opacity:0; transform:translateY(26px) scale(.78); }
+      16%  { opacity:1; transform:translateY(0) scale(1); }
+      72%  { opacity:1; transform:translateY(-2px); }
+      100% { opacity:0; transform:translateY(-16px) scale(.97); }
     }
-    @media (max-width:768px) { #aq-xp-popups { right:12px; } .aq-xp-pop { font-size:25px; } .aq-xp-ico { font-size:22px; } }
+    @media (max-width:768px) { #aq-xp-popups { right:12px; bottom:calc(118px + env(safe-area-inset-bottom,0px)); } .aq-xp-pop { font-size:24px; } .aq-xp-ico { font-size:22px; } }
+    /* Classic mode — the original boxed toast (Settings → Classic XP popups) */
+    #aq-xp-popups.classic { top:auto; right:16px; bottom:84px; flex-direction:column; align-items:flex-end; gap:5px; }
+    #aq-xp-popups.classic .aq-xp-pop { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:14px;
+      padding:4px 11px; font-size:12px; font-weight:700; letter-spacing:0; box-shadow:0 4px 14px rgba(0,0,0,0.25); text-shadow:none; animation:aqXpRiseClassic 1.75s ease-out forwards; }
+    #aq-xp-popups.classic .aq-xp-pop span { color:var(--text2); font-weight:600; font-size:12px; }
+    #aq-xp-popups.classic .aq-xp-pop.lvl { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); font-size:13px; font-weight:800; }
+    @keyframes aqXpRiseClassic { 0%{opacity:0; transform:translateY(10px) scale(.9);} 12%{opacity:1; transform:translateY(0) scale(1);} 72%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-16px);} }
 
     /* ── OSRS-style minimal skill HUD (opt-in, bottom of screen) ─── */
-    #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:2960;
+    #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:3002;
       pointer-events:none; max-width:96vw; flex-wrap:wrap; justify-content:center; }
     #aq-skill-hud.on { display:flex; }
     .aq-hud-pill { display:flex; align-items:center; gap:7px; background:rgba(8,16,26,0.82); border:1px solid var(--border);
@@ -5775,6 +5804,11 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
         <input type="checkbox" id="perf-mode-chk" onchange="setPerfMode(this.checked)" style="cursor:pointer"> ⚡ Performance mode
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="xp-classic-chk" onchange="window.aqSetXpStyle && window.aqSetXpStyle(this.checked?'classic':'new')" style="cursor:pointer"> ✨ Classic XP popups
       </label>
     </div>
     <div id="bubble-sub" style="max-height:0;overflow:hidden;transition:max-height .25s ease;margin-top:0">
@@ -12385,6 +12419,7 @@ function _hslToRgb(h, s, l) {
   function updateBeat(isPlaying) {
     beatOn = isPlaying;
     logo.classList.toggle('logo-beat', isPlaying);
+    window._aqMediaPlaying = !!isPlaying;   // desktop fish pets only flop/sing while music plays
   }
   // Hook into global playing state changes
   const origOnState = window.__onStateProxy || (() => {});
@@ -14641,6 +14676,26 @@ function arcadeBlipSfx(name) {
 }
 window.tanksSfx = arcadeBlipSfx;
 window.airhockeySfx = arcadeBlipSfx;
+
+// Desktop fish pet — a goofy little Billy-Bass-style ditty.
+function fishSing() {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol * 0.9;
+  const tune = [523, 659, 784, 659, 784, 880, 784, 659];   // bouncy major run
+  tune.forEach((f, i) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = i % 2 ? 'square' : 'triangle';
+    const st = t + i * 0.16;
+    o.frequency.setValueAtTime(f, st);
+    o.frequency.setValueAtTime(f * 1.005, st + 0.05);   // tiny wobble = "singing"
+    g.gain.setValueAtTime(0.0001, st);
+    g.gain.exponentialRampToValueAtTime(0.16 * V, st + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, st + 0.16);
+    o.connect(g); g.connect(cx.destination); o.start(st); o.stop(st + 0.18);
+  });
+}
+window.fishSing = fishSing;
 
 /* ── BUDDY SHOOT SFX — gunshot / hit / empty ── */
 function buddySfx(name) {
@@ -17276,6 +17331,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/stocks.js"></script>
 <script type="module" src="/src/poker.js"></script>
 <script type="module" src="/src/fishing.js"></script>
+<script type="module" src="/src/fishpets.js"></script>
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
 <script type="module" src="/src/pool8.js"></script>

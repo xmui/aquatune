@@ -238,22 +238,35 @@ function addXp(skillId, amount) {
   if (_open) renderSkillsPanel();
 }
 
+// Two visual styles: the default big skill-colored "+N XP 🎣" rising from the
+// bottom-right, or the original boxed toast (opt-in via Settings → 'aq_xp_classic').
+function xpClassic() { try { return localStorage.getItem('aq_xp_classic') === '1'; } catch { return false; } }
 // Floating popup chips for XP gains / level-ups (always shown).
 function showXpPopup(skillId, amount, leveledTo) {
   if (typeof document === 'undefined') return;
   const s = SKILL_BY_ID[skillId]; if (!s) return;
   let host = document.getElementById('aq-xp-popups');
   if (!host) { host = document.createElement('div'); host.id = 'aq-xp-popups'; document.body.appendChild(host); }
+  const classic = xpClassic();
+  host.classList.toggle('classic', classic);
+  const life = classic ? 1750 : 2200;
+  const n = '+' + Math.round(amount).toLocaleString() + ' XP';
   const add = (html, cls) => {
     const chip = document.createElement('div');
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
-    if (!cls) chip.style.color = s.color || '#7fd4ff';   // big number tinted to the skill (glow follows via currentColor)
+    if (!classic && !cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
     chip.innerHTML = html;
     host.appendChild(chip);
-    setTimeout(() => chip.remove(), 2200);
+    setTimeout(() => chip.remove(), life);
   };
-  add(`<span class="aq-xp-ico">${s.icon}</span>+${Math.round(amount).toLocaleString()} XP <span>${esc(s.name)}</span>`);
-  if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
+  if (classic) {
+    add(`${n} <span>${s.icon} ${esc(s.name)}</span>`);
+    if (leveledTo) add(`${s.icon} ${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
+  } else {
+    // just the number + the skill symbol
+    add(`<span class="aq-xp-ico">${s.icon}</span>${n}`);
+    if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>Level ${leveledTo}!`, 'lvl');
+  }
   // hard-cap the stack so chips never pile up / overlap
   while (host.children.length > 6) host.firstChild.remove();
 }
@@ -576,6 +589,9 @@ if (typeof window !== 'undefined') {
   window.aqHudEnabled = hudEnabled;
   window.aqHudToggle = setHud;
   window.aqRefreshStats = () => { if (_open) renderSkillsPanel(); };
+  // XP popup style toggle (Settings). 'classic' = the original boxed toast.
+  window.aqSetXpStyle = (style) => { try { localStorage.setItem('aq_xp_classic', style === 'classic' ? '1' : '0'); } catch {} };
+  const _xpcb = document.getElementById('xp-classic-chk'); if (_xpcb) _xpcb.checked = xpClassic();
   // Mirror the OSRS-style HUD to whatever game window is focused / closed.
   if (window.OS && typeof window.OS.focus === 'function') {
     const _focus = window.OS.focus.bind(window.OS);

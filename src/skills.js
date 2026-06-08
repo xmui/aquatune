@@ -242,6 +242,7 @@ function addXp(skillId, amount) {
 // bottom-right, or the original boxed toast (opt-in via Settings → 'aq_xp_classic').
 function xpClassic() { try { return localStorage.getItem('aq_xp_classic') === '1'; } catch { return false; } }
 // Floating popup chips for XP gains / level-ups (always shown).
+const _xpAgg = {};   // skillId -> { chip, total, expire } — coalesces rapid same-skill gains into one chip
 function showXpPopup(skillId, amount, leveledTo) {
   if (typeof document === 'undefined') return;
   const s = SKILL_BY_ID[skillId]; if (!s) return;
@@ -250,30 +251,42 @@ function showXpPopup(skillId, amount, leveledTo) {
   const classic = xpClassic();
   host.classList.toggle('classic', classic);
   const life = classic ? 1750 : 3200;
-  const n = '+' + Math.round(amount).toLocaleString() + ' XP';
-  const add = (html, cls) => {
-    const chip = document.createElement('div');
+  const COALESCE_MS = 750;     // gains for the same skill within this window merge into the live chip
+  const numHtml = (total) => {
+    const n = '+' + Math.round(total).toLocaleString() + ' XP';
+    return classic ? `${n} <span>${s.icon} ${esc(s.name)}</span>` : `<span class="aq-xp-ico">${s.icon}</span>${n}`;
+  };
+  const place = (chip, cls) => {
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
     if (!classic) {
       if (!cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
       // ladder each new chip above the ones already floating so they never overlap,
-      // then let them flutter side-to-side as they rise all the way past the top.
+      // then let them flutter (small amplitude) while staying anchored to the right edge.
       const stack = host.children.length;
-      chip.style.right = (16 + Math.random() * 38) + 'px';
+      chip.style.right = (18 + Math.random() * 14) + 'px';   // tight right-side column
       chip.style.bottom = (80 + stack * 32 + Math.random() * 14) + 'px';
-      chip.style.setProperty('--sway', ((Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 16)) + 'px');
+      chip.style.setProperty('--sway', ((Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 7)) + 'px');
     }
-    chip.innerHTML = html;
+  };
+  // number chip — coalesce a burst of same-skill grants (e.g. mining grants XP twice per dig) into one
+  const now = Date.now(), agg = _xpAgg[skillId];
+  if (agg && agg.chip.isConnected && now < agg.expire) {
+    agg.total += amount; agg.expire = now + COALESCE_MS;
+    agg.chip.innerHTML = numHtml(agg.total);
+  } else {
+    const chip = document.createElement('div');
+    place(chip, ''); chip.innerHTML = numHtml(amount); host.appendChild(chip);
+    const rec = { chip, total: amount, expire: now + COALESCE_MS };
+    _xpAgg[skillId] = rec;
+    setTimeout(() => { chip.remove(); if (_xpAgg[skillId] === rec) delete _xpAgg[skillId]; }, life);
+  }
+  // level-up chip — always its own (a milestone, never coalesced)
+  if (leveledTo) {
+    const chip = document.createElement('div');
+    place(chip, 'lvl');
+    chip.innerHTML = classic ? `${s.icon} ${esc(s.name)} — Level ${leveledTo}!` : `<span class="aq-xp-ico">${s.icon}</span>Level ${leveledTo}!`;
     host.appendChild(chip);
     setTimeout(() => chip.remove(), life);
-  };
-  if (classic) {
-    add(`${n} <span>${s.icon} ${esc(s.name)}</span>`);
-    if (leveledTo) add(`${s.icon} ${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
-  } else {
-    // just the number + the skill symbol
-    add(`<span class="aq-xp-ico">${s.icon}</span>${n}`);
-    if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>Level ${leveledTo}!`, 'lvl');
   }
   // hard-cap the stack so chips never pile up / overlap
   while (host.children.length > 6) host.firstChild.remove();

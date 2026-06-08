@@ -3723,24 +3723,24 @@ body.perf-mode #aqua-gun { display: none !important; }
       color:#0f380f; background:#cfe8a0; border:1px solid #2a3a1a; border-radius:3px; padding:2px 3px; }
     .fish-dex-pet.on { background:#7ba672; color:#0f380f; }
 
-    /* ── XP popups — big skill-tinted "+N XP 🎣" rising from the bottom-right (never overlap) ─── */
-    #aq-xp-popups { position:fixed; right:18px; bottom:96px; z-index:3000; pointer-events:none;
-      display:flex; flex-direction:column-reverse; align-items:flex-end; gap:6px; }
-    .aq-xp-pop { display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
-      font-size:29px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
-      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.2s ease-out forwards; }
+    /* ── XP popups — big skill-tinted "+N XP 🎣" that float up the right of the screen ─── */
+    #aq-xp-popups { position:fixed; inset:0; z-index:3000; pointer-events:none; }
+    .aq-xp-pop { position:absolute; display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
+      font-size:28px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
+      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.7s ease-out forwards; will-change:transform,opacity; }
     .aq-xp-ico { font-size:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
     .aq-xp-pop.lvl { color:#ffd24a; font-size:23px; }
-    /* rise up from the bottom, hold, fade */
+    /* float up and away from the bottom-right, fading near the top */
     @keyframes aqXpRise {
-      0%   { opacity:0; transform:translateY(26px) scale(.78); }
-      16%  { opacity:1; transform:translateY(0) scale(1); }
-      72%  { opacity:1; transform:translateY(-2px); }
-      100% { opacity:0; transform:translateY(-16px) scale(.97); }
+      0%   { opacity:0; transform:translateY(22px) scale(.7); }
+      12%  { opacity:1; transform:translateY(0) scale(1); }
+      78%  { opacity:1; }
+      100% { opacity:0; transform:translateY(-54vh) scale(1.06); }
     }
-    @media (max-width:768px) { #aq-xp-popups { right:12px; bottom:calc(118px + env(safe-area-inset-bottom,0px)); } .aq-xp-pop { font-size:24px; } .aq-xp-ico { font-size:22px; } }
+    @media (max-width:768px) { .aq-xp-pop { font-size:24px; } .aq-xp-ico { font-size:22px; } }
     /* Classic mode — the original boxed toast (Settings → Classic XP popups) */
-    #aq-xp-popups.classic { top:auto; right:16px; bottom:84px; flex-direction:column; align-items:flex-end; gap:5px; }
+    #aq-xp-popups.classic { inset:auto; top:auto; right:16px; bottom:84px; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+    #aq-xp-popups.classic .aq-xp-pop { position:static; right:auto; bottom:auto; }
     #aq-xp-popups.classic .aq-xp-pop { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:14px;
       padding:4px 11px; font-size:12px; font-weight:700; letter-spacing:0; box-shadow:0 4px 14px rgba(0,0,0,0.25); text-shadow:none; animation:aqXpRiseClassic 1.75s ease-out forwards; }
     #aq-xp-popups.classic .aq-xp-pop span { color:var(--text2); font-weight:600; font-size:12px; }

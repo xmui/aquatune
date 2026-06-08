@@ -3699,28 +3699,24 @@ body.perf-mode #aqua-gun { display: none !important; }
       .sk-grid { grid-template-columns:1fr; }
     }
 
-    /* ── XP popups — ULTRA: flashy numbers fountaining up the whole screen (click-through) ─── */
-    #aq-xp-popups { position:fixed; inset:0; z-index:3000; pointer-events:none; overflow:hidden; }
-    .aq-xp-pop { position:absolute; bottom:-6vh; display:flex; align-items:center; gap:8px; pointer-events:none;
-      font-size:27px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums; color:#fff; transform-origin:center;
-      text-shadow:0 0 8px rgba(40,210,255,0.95), 0 0 20px rgba(40,150,255,0.75), 0 0 34px rgba(150,80,255,0.6), 0 2px 4px rgba(0,0,0,0.9);
-      animation:aqXpRise 3.2s cubic-bezier(.22,.6,.2,1) forwards, aqXpHue 1.1s linear infinite; will-change:transform,opacity; }
-    .aq-xp-ico { font-size:31px; filter:drop-shadow(0 0 10px rgba(255,255,255,0.85)); }
-    .aq-xp-pop span { font-size:13px; font-weight:700; opacity:.85; letter-spacing:0; }
-    .aq-xp-pop.lvl { font-size:36px; font-weight:900;
-      text-shadow:0 0 12px rgba(255,220,90,1), 0 0 26px rgba(255,170,40,0.9), 0 0 46px rgba(255,110,40,0.7), 0 2px 5px rgba(0,0,0,0.95);
-      animation-duration:3.8s, 1.4s; }
-    @keyframes aqXpHue { from { filter:hue-rotate(0deg) saturate(1.35); } to { filter:hue-rotate(360deg) saturate(1.35); } }
+    /* ── XP popups — big skill-tinted numbers stacked on the right (never overlap) ─── */
+    #aq-xp-popups { position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:3000; pointer-events:none;
+      display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+    .aq-xp-pop { display:flex; align-items:center; gap:8px; pointer-events:none; color:#7fd4ff;
+      font-size:30px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
+      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.2s ease-out forwards; }
+    .aq-xp-ico { font-size:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+    .aq-xp-pop span { font-size:13px; font-weight:700; opacity:.8; color:#cfe0ee; letter-spacing:0; }
+    .aq-xp-pop.lvl { color:#ffd24a; font-size:24px; }
+    .aq-xp-pop.lvl span { color:#ffcf6a; }
+    /* slide in from the right, hold, fade — no big vertical travel so the stack stays clean */
     @keyframes aqXpRise {
-      0%   { opacity:0; transform:translate(0,0) scale(.4) rotate(-8deg); }
-      7%   { opacity:1; transform:translate(0,-6vh) scale(1.35) rotate(4deg); }
-      20%  { transform:translate(var(--dx,0),-22vh) scale(1) rotate(-4deg); }
-      40%  { opacity:1; transform:translate(calc(var(--dx,0) * -1),-42vh) scale(1.14) rotate(4deg); }
-      62%  { transform:translate(var(--dx,0),-62vh) scale(1) rotate(-3deg); }
-      82%  { opacity:.9; transform:translate(calc(var(--dx,0) * -0.6),-82vh) scale(1.1) rotate(2deg); }
-      100% { opacity:0; transform:translate(0,-104vh) scale(1.25) rotate(0deg); }
+      0%   { opacity:0; transform:translateX(44px) scale(.7); }
+      12%  { opacity:1; transform:translateX(0) scale(1); }
+      72%  { opacity:1; transform:translateX(0); }
+      100% { opacity:0; transform:translateX(0) translateY(-8px) scale(.97); }
     }
-    @media (max-width:768px) { .aq-xp-pop { font-size:22px; } .aq-xp-pop.lvl { font-size:29px; } .aq-xp-ico { font-size:25px; } }
+    @media (max-width:768px) { #aq-xp-popups { right:12px; } .aq-xp-pop { font-size:25px; } .aq-xp-ico { font-size:22px; } }
 
     /* ── OSRS-style minimal skill HUD (opt-in, bottom of screen) ─── */
     #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:2960;

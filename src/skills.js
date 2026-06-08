@@ -242,6 +242,7 @@ function addXp(skillId, amount) {
 // bottom-right, or the original boxed toast (opt-in via Settings → 'aq_xp_classic').
 function xpClassic() { try { return localStorage.getItem('aq_xp_classic') === '1'; } catch { return false; } }
 // Floating popup chips for XP gains / level-ups (always shown).
+const _xpAgg = {};   // skillId -> { chip, total, expire } — coalesces rapid same-skill gains into one chip
 function showXpPopup(skillId, amount, leveledTo) {
   if (typeof document === 'undefined') return;
   const s = SKILL_BY_ID[skillId]; if (!s) return;
@@ -249,31 +250,81 @@ function showXpPopup(skillId, amount, leveledTo) {
   if (!host) { host = document.createElement('div'); host.id = 'aq-xp-popups'; document.body.appendChild(host); }
   const classic = xpClassic();
   host.classList.toggle('classic', classic);
-  const life = classic ? 1750 : 2700;
-  const n = '+' + Math.round(amount).toLocaleString() + ' XP';
-  const add = (html, cls) => {
-    const chip = document.createElement('div');
+  const life = classic ? 1750 : 3200;
+  const COALESCE_MS = 750;     // gains for the same skill within this window merge into the live chip
+  const numHtml = (total) => {
+    const n = '+' + Math.round(total).toLocaleString() + ' XP';
+    return classic ? `${n} <span>${s.icon} ${esc(s.name)}</span>` : `<span class="aq-xp-ico">${s.icon}</span>${n}`;
+  };
+  const place = (chip, cls) => {
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
     if (!classic) {
       if (!cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
-      // start near the bottom-right with a little jitter, then float up the screen
-      chip.style.right = (14 + Math.random() * 46) + 'px';
-      chip.style.bottom = (84 + Math.random() * 44) + 'px';
+      // ladder each new chip above the ones already floating so they never overlap,
+      // then let them flutter (small amplitude) while staying anchored to the right edge.
+      const stack = host.children.length;
+      chip.style.right = (18 + Math.random() * 14) + 'px';   // tight right-side column
+      chip.style.bottom = (80 + stack * 32 + Math.random() * 14) + 'px';
+      chip.style.setProperty('--sway', ((Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 7)) + 'px');
     }
-    chip.innerHTML = html;
-    host.appendChild(chip);
-    setTimeout(() => chip.remove(), life);
   };
-  if (classic) {
-    add(`${n} <span>${s.icon} ${esc(s.name)}</span>`);
-    if (leveledTo) add(`${s.icon} ${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
+  // number chip — coalesce a burst of same-skill grants (e.g. mining grants XP twice per dig) into one
+  const now = Date.now(), agg = _xpAgg[skillId];
+  if (agg && agg.chip.isConnected && now < agg.expire) {
+    agg.total += amount; agg.expire = now + COALESCE_MS;
+    agg.chip.innerHTML = numHtml(agg.total);
   } else {
-    // just the number + the skill symbol
-    add(`<span class="aq-xp-ico">${s.icon}</span>${n}`);
-    if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>Level ${leveledTo}!`, 'lvl');
+    const chip = document.createElement('div');
+    place(chip, ''); chip.innerHTML = numHtml(amount); host.appendChild(chip);
+    const rec = { chip, total: amount, expire: now + COALESCE_MS };
+    _xpAgg[skillId] = rec;
+    setTimeout(() => { chip.remove(); if (_xpAgg[skillId] === rec) delete _xpAgg[skillId]; }, life);
+  }
+  // level-up — a big FFXIV-style splash (default), or the small gold chip in classic mode
+  if (leveledTo) {
+    if (classic) {
+      const chip = document.createElement('div');
+      place(chip, 'lvl');
+      chip.innerHTML = `${s.icon} ${esc(s.name)} — Level ${leveledTo}!`;
+      host.appendChild(chip);
+      setTimeout(() => chip.remove(), life);
+    } else {
+      showLevelUp(s, leveledTo);
+    }
   }
   // hard-cap the stack so chips never pile up / overlap
   while (host.children.length > 6) host.firstChild.remove();
+}
+
+// FFXIV-inspired LEVEL UP! splash: a big light-burst banner with the skill's
+// symbol raining down the screen. Purely cosmetic (pointer-events:none).
+function showLevelUp(s, level) {
+  if (typeof document === 'undefined') return;
+  let host = document.getElementById('aq-levelup');
+  if (!host) { host = document.createElement('div'); host.id = 'aq-levelup'; document.body.appendChild(host); }
+  host.innerHTML = '';   // one splash at a time
+  const wrap = document.createElement('div');
+  wrap.className = 'aq-lvlup-wrap';
+  wrap.style.setProperty('--c', s.color || '#ffd24a');
+  wrap.innerHTML =
+    '<div class="aq-lvlup-rays"></div>' +
+    '<div class="aq-lvlup-bar"></div>' +
+    '<div class="aq-lvlup-rain"></div>' +
+    `<div class="aq-lvlup"><div class="aq-lvlup-icon">${s.icon}</div><div class="aq-lvlup-word">LEVEL UP!</div><div class="aq-lvlup-sub">${esc(s.name)} &nbsp;·&nbsp; Level ${level}</div></div>`;
+  const rain = wrap.querySelector('.aq-lvlup-rain');
+  for (let i = 0; i < 28; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = s.icon;
+    sp.style.left = (Math.random() * 100) + 'vw';
+    sp.style.fontSize = (16 + Math.random() * 30) + 'px';
+    sp.style.animationDuration = (2.2 + Math.random() * 1.4) + 's';
+    sp.style.animationDelay = (Math.random() * 0.9) + 's';
+    sp.style.setProperty('--r', ((Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 420)) + 'deg');
+    rain.appendChild(sp);
+  }
+  host.appendChild(wrap);
+  setTimeout(() => { if (wrap.parentNode) wrap.remove(); }, 3700);
+  try { window.playFanfare && window.playFanfare('small'); } catch (e) {}
 }
 
 // ---------------------------------------------------------------------------

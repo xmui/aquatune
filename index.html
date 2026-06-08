@@ -3725,17 +3725,20 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     /* ── XP popups — big skill-tinted "+N XP 🎣" that float up the right of the screen ─── */
     #aq-xp-popups { position:fixed; inset:0; z-index:3000; pointer-events:none; }
-    .aq-xp-pop { position:absolute; display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
+    .aq-xp-pop { --sway:12px; position:absolute; display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
       font-size:28px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
-      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.7s ease-out forwards; will-change:transform,opacity; }
+      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 3.2s ease-out forwards; will-change:transform,opacity; }
     .aq-xp-ico { font-size:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
     .aq-xp-pop.lvl { color:#ffd24a; font-size:23px; }
-    /* float up and away from the bottom-right, fading near the top */
+    /* flutter side-to-side while floating all the way up and off the top of the screen */
     @keyframes aqXpRise {
-      0%   { opacity:0; transform:translateY(22px) scale(.7); }
-      12%  { opacity:1; transform:translateY(0) scale(1); }
-      78%  { opacity:1; }
-      100% { opacity:0; transform:translateY(-54vh) scale(1.06); }
+      0%   { opacity:0; transform:translate(0,22px) scale(.7); }
+      10%  { opacity:1; transform:translate(0,0) scale(1); }
+      28%  { transform:translate(var(--sway),-26vh) scale(1.02); }
+      46%  { transform:translate(calc(var(--sway) * -1),-48vh) scale(1.02); }
+      64%  { transform:translate(var(--sway),-70vh) scale(1.03); }
+      82%  { opacity:1; transform:translate(calc(var(--sway) * -0.6),-90vh) scale(1.04); }
+      100% { opacity:0; transform:translate(0,-110vh) scale(1.07); }
     }
     @media (max-width:768px) { .aq-xp-pop { font-size:24px; } .aq-xp-ico { font-size:22px; } }
     /* Classic mode — the original boxed toast (Settings → Classic XP popups) */
@@ -3746,6 +3749,32 @@ body.perf-mode #aqua-gun { display: none !important; }
     #aq-xp-popups.classic .aq-xp-pop span { color:var(--text2); font-weight:600; font-size:12px; }
     #aq-xp-popups.classic .aq-xp-pop.lvl { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; border-color:var(--accent); font-size:13px; font-weight:800; }
     @keyframes aqXpRiseClassic { 0%{opacity:0; transform:translateY(10px) scale(.9);} 12%{opacity:1; transform:translateY(0) scale(1);} 72%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-16px);} }
+
+    /* ── FFXIV-style LEVEL UP! splash — light-burst banner + raining skill symbols ─── */
+    #aq-levelup { position:fixed; inset:0; z-index:3400; pointer-events:none; overflow:hidden; }
+    .aq-lvlup-wrap { position:absolute; inset:0; }
+    .aq-lvlup-rays { position:absolute; top:40%; left:50%; width:170vmax; height:170vmax; transform:translate(-50%,-50%);
+      background:repeating-conic-gradient(from 0deg, var(--c,#ffd24a) 0deg 1.6deg, transparent 1.6deg 9deg);
+      opacity:0; mix-blend-mode:screen; animation:aqLvlRays 3.5s ease-out forwards; }
+    .aq-lvlup-bar { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); height:108px; width:0;
+      background:linear-gradient(90deg,transparent,var(--c,#ffd24a),#fff,var(--c,#ffd24a),transparent); filter:blur(3px);
+      opacity:0; animation:aqLvlBar 3.5s ease-out forwards; }
+    .aq-lvlup { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); text-align:center; white-space:nowrap;
+      animation:aqLvlPop 3.5s cubic-bezier(.18,.9,.24,1) forwards; }
+    .aq-lvlup-icon { font-size:clamp(56px,11vw,94px); line-height:1; filter:drop-shadow(0 0 22px var(--c,#ffd24a)); animation:aqLvlIcon 3.5s ease-out forwards; }
+    .aq-lvlup-word { font-size:clamp(38px,9vw,78px); font-weight:900; letter-spacing:5px; color:#fff;
+      text-shadow:0 0 24px var(--c,#ffd24a), 0 0 7px var(--c,#ffd24a), 0 5px 14px rgba(0,0,0,.7); }
+    .aq-lvlup-sub { margin-top:6px; font-size:clamp(17px,3.4vw,28px); font-weight:800; letter-spacing:1px; color:var(--c,#ffd24a);
+      text-shadow:0 2px 8px rgba(0,0,0,.75); }
+    .aq-lvlup-rain { position:absolute; inset:0; }
+    .aq-lvlup-rain span { position:absolute; top:0; line-height:1; opacity:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+      animation-name:aqLvlRain; animation-timing-function:linear; animation-fill-mode:forwards; }
+    @keyframes aqLvlRays { 0%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(0)} 14%{opacity:.32} 60%{opacity:.16} 100%{opacity:0; transform:translate(-50%,-50%) scale(1) rotate(26deg)} }
+    @keyframes aqLvlBar { 0%{width:0;opacity:0} 14%{width:122vw;opacity:.9} 32%{opacity:.5} 80%{opacity:.4} 100%{width:122vw;opacity:0} }
+    @keyframes aqLvlPop { 0%{opacity:0; transform:translate(-50%,-50%) scale(.5)} 12%{opacity:1; transform:translate(-50%,-50%) scale(1.12)} 22%{transform:translate(-50%,-50%) scale(1)} 82%{opacity:1; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(-50%,-58%) scale(1.05)} }
+    @keyframes aqLvlIcon { 0%{transform:translateY(10px) rotate(-12deg) scale(.55)} 16%{transform:translateY(0) rotate(0) scale(1)} 100%{transform:translateY(0) rotate(0) scale(1)} }
+    @keyframes aqLvlRain { 0%{opacity:0; transform:translateY(-12vh) rotate(0)} 8%{opacity:.95} 88%{opacity:.95} 100%{opacity:0; transform:translateY(112vh) rotate(var(--r,360deg))} }
+    @media (prefers-reduced-motion: reduce) { .aq-lvlup-rain, .aq-lvlup-rays { display:none; } }
 
     /* ── OSRS-style minimal skill HUD (opt-in, bottom of screen) ─── */
     #aq-skill-hud { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); display:none; gap:8px; z-index:3002;

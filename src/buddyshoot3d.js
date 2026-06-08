@@ -479,7 +479,7 @@ function updatePlayer(dt) {
   if (_touch) { fwd += -touchMove.y; strafe += touchMove.x; }
   let sp = run.stats.moveSpeed;
   if (performance.now() < run.speedBurstUntil) sp *= 1.4;
-  const rx = dirY, ry = -dirX;                 // "right" strafe vector
+  const rx = -dirY, ry = dirX;                 // "right" strafe vector (= +camera plane)
   const mx = dirX * fwd + rx * strafe;
   const my = dirY * fwd + ry * strafe;
   const ml = Math.hypot(mx, my) || 1;

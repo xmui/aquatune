@@ -249,16 +249,19 @@ function showXpPopup(skillId, amount, leveledTo) {
   if (!host) { host = document.createElement('div'); host.id = 'aq-xp-popups'; document.body.appendChild(host); }
   const classic = xpClassic();
   host.classList.toggle('classic', classic);
-  const life = classic ? 1750 : 2700;
+  const life = classic ? 1750 : 3200;
   const n = '+' + Math.round(amount).toLocaleString() + ' XP';
   const add = (html, cls) => {
     const chip = document.createElement('div');
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
     if (!classic) {
       if (!cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
-      // start near the bottom-right with a little jitter, then float up the screen
-      chip.style.right = (14 + Math.random() * 46) + 'px';
-      chip.style.bottom = (84 + Math.random() * 44) + 'px';
+      // ladder each new chip above the ones already floating so they never overlap,
+      // then let them flutter side-to-side as they rise all the way past the top.
+      const stack = host.children.length;
+      chip.style.right = (16 + Math.random() * 38) + 'px';
+      chip.style.bottom = (80 + stack * 32 + Math.random() * 14) + 'px';
+      chip.style.setProperty('--sway', ((Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 16)) + 'px');
     }
     chip.innerHTML = html;
     host.appendChild(chip);

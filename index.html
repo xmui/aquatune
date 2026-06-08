@@ -3725,17 +3725,20 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     /* ── XP popups — big skill-tinted "+N XP 🎣" that float up the right of the screen ─── */
     #aq-xp-popups { position:fixed; inset:0; z-index:3000; pointer-events:none; }
-    .aq-xp-pop { position:absolute; display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
+    .aq-xp-pop { --sway:12px; position:absolute; display:flex; align-items:center; gap:7px; pointer-events:none; color:#7fd4ff;
       font-size:28px; font-weight:900; letter-spacing:.5px; white-space:nowrap; font-variant-numeric:tabular-nums;
-      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 2.7s ease-out forwards; will-change:transform,opacity; }
+      text-shadow:0 2px 5px rgba(0,0,0,0.85), 0 0 16px currentColor; animation:aqXpRise 3.2s ease-out forwards; will-change:transform,opacity; }
     .aq-xp-ico { font-size:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
     .aq-xp-pop.lvl { color:#ffd24a; font-size:23px; }
-    /* float up and away from the bottom-right, fading near the top */
+    /* flutter side-to-side while floating all the way up and off the top of the screen */
     @keyframes aqXpRise {
-      0%   { opacity:0; transform:translateY(22px) scale(.7); }
-      12%  { opacity:1; transform:translateY(0) scale(1); }
-      78%  { opacity:1; }
-      100% { opacity:0; transform:translateY(-54vh) scale(1.06); }
+      0%   { opacity:0; transform:translate(0,22px) scale(.7); }
+      10%  { opacity:1; transform:translate(0,0) scale(1); }
+      28%  { transform:translate(var(--sway),-26vh) scale(1.02); }
+      46%  { transform:translate(calc(var(--sway) * -1),-48vh) scale(1.02); }
+      64%  { transform:translate(var(--sway),-70vh) scale(1.03); }
+      82%  { opacity:1; transform:translate(calc(var(--sway) * -0.6),-90vh) scale(1.04); }
+      100% { opacity:0; transform:translate(0,-110vh) scale(1.07); }
     }
     @media (max-width:768px) { .aq-xp-pop { font-size:24px; } .aq-xp-ico { font-size:22px; } }
     /* Classic mode — the original boxed toast (Settings → Classic XP popups) */

@@ -7,8 +7,11 @@ const TW = 300, TH = 460;
 const GOAL_W = TW * 0.44;
 const GOALS_TO_WIN = 7;
 const PADDLE_R = 26, PUCK_R = 13;
-const PUCK_MAX = 11;          // px per step cap
-const PADDLE_MAX = 12;        // AI move speed cap (lower = easier to beat)
+const PUCK_MAX = 14;          // top puck speed (px/step)
+const MALLET_MAX = 20;        // your/host mallet max speed — bounded so hits are consistent & it can't tunnel past the puck
+const AI_MAX = 9;             // AI mallet speed (slower → beatable)
+const FRICTION = 0.998;       // near-frictionless air table
+const REST = 0.9;             // puck restitution off a mallet
 const BROADCAST_MS = 50;      // host state stream interval
 const INPUT_MS = 45;          // guest paddle input interval
 
@@ -43,42 +46,53 @@ function clampPaddle(p, topHalf) {
   p.x = Math.max(p.r + 2, Math.min(TW - p.r - 2, p.x));
   p.y = Math.max(minY, Math.min(maxY, p.y));
 }
-function collide(p, pvx, pvy) {
+// Move a mallet toward its target with a CAPPED speed (a real, bounded velocity
+// instead of a teleport) and return that velocity for the collision impulse.
+function moveMallet(p, tx, ty, topHalf, maxStep) {
+  const ox = p.x, oy = p.y;
+  let dx = tx - p.x, dy = ty - p.y;
+  const d = Math.hypot(dx, dy);
+  if (d > maxStep) { dx = dx / d * maxStep; dy = dy / d * maxStep; }
+  p.x += dx; p.y += dy; clampPaddle(p, topHalf);
+  return { vx: p.x - ox, vy: p.y - oy };
+}
+// Puck vs an infinite-mass moving mallet: reflect the puck's velocity RELATIVE to
+// the mallet along the contact normal, with restitution — this naturally imparts
+// the mallet's motion (a hard swing launches the puck; a still mallet just bounces
+// it). Positional correction + the "only when closing (vn<0)" guard kill sticking
+// and double-hits. (Standard model — ericleong / air-hockey sim references.)
+function collide(p, pv) {
   const dx = puck.x - p.x, dy = puck.y - p.y;
-  const d = Math.hypot(dx, dy), min = p.r + puck.r;
-  if (d >= min || d === 0) return;
+  let d = Math.hypot(dx, dy); const min = p.r + puck.r;
+  if (d >= min) return;
+  if (d < 0.01) d = 0.01;
   const nx = dx / d, ny = dy / d;
-  puck.x = p.x + nx * (min + 0.5); puck.y = p.y + ny * (min + 0.5);
-  const dot = puck.vx * nx + puck.vy * ny;
-  puck.vx += (-2 * dot) * nx + (pvx || 0) * 0.6;
-  puck.vy += (-2 * dot) * ny + (pvy || 0) * 0.6;
-  const sp = Math.hypot(puck.vx, puck.vy);
-  if (sp < 5) { puck.vx = nx * 6; puck.vy = ny * 6; }
-  sfx('hitpaddle');
+  puck.x = p.x + nx * min; puck.y = p.y + ny * min;     // lift puck onto the mallet surface
+  const vn = (puck.vx - pv.vx) * nx + (puck.vy - pv.vy) * ny;
+  if (vn < 0) {
+    puck.vx -= (1 + REST) * vn * nx;
+    puck.vy -= (1 + REST) * vn * ny;
+    const sp = Math.hypot(puck.vx, puck.vy);
+    if (sp > PUCK_MAX) { puck.vx = puck.vx / sp * PUCK_MAX; puck.vy = puck.vy / sp * PUCK_MAX; }
+    sfx('hitpaddle');
+  }
 }
 
 function step() {
   if (state !== 'play') return;
-  // bottom (you / host) paddle follows the local pointer target
-  const oldx = paddle.x, oldy = paddle.y;
-  paddle.x = target.x; paddle.y = target.y; clampPaddle(paddle, false);
-  const pvx = paddle.x - oldx, pvy = paddle.y - oldy;
-
-  // top paddle: a roommate's paddle (room host) or the AI (solo)
-  const aox = ai.x, aoy = ai.y;
-  if (mode === 'room') { ai.x = guestTarget.x; ai.y = guestTarget.y; clampPaddle(ai, true); }
+  // mallets move toward their targets at a capped speed (real bounded velocity,
+  // no teleport) → consistent hits and no jumping past the puck.
+  const pv = moveMallet(paddle, target.x, target.y, false, MALLET_MAX);
+  let av;
+  if (mode === 'room') av = moveMallet(ai, guestTarget.x, guestTarget.y, true, MALLET_MAX);
   else {
     let tx, ty;
     if (puck.y < TH / 2 && puck.vy < 0.5) { tx = puck.x + puck.vx * 2; ty = Math.max(54, puck.y - 6); }
     else { tx = TW / 2 + (puck.x - TW / 2) * 0.3; ty = 60; }
-    const adx = tx - ai.x, ady = ty - ai.y, ad = Math.hypot(adx, ady) || 1;
-    const aspd = Math.min(PADDLE_MAX, ad * 0.5);
-    ai.x += adx / ad * aspd; ai.y += ady / ad * aspd; clampPaddle(ai, true);
+    av = moveMallet(ai, tx, ty, true, AI_MAX);
   }
-  const avx = ai.x - aox, avy = ai.y - aoy;
-
-  // puck physics
-  puck.vx *= 0.995; puck.vy *= 0.995;
+  // puck: near-frictionless glide, capped top speed
+  puck.vx *= FRICTION; puck.vy *= FRICTION;
   const sp = Math.hypot(puck.vx, puck.vy);
   if (sp > PUCK_MAX) { puck.vx = puck.vx / sp * PUCK_MAX; puck.vy = puck.vy / sp * PUCK_MAX; }
   puck.x += puck.vx; puck.y += puck.vy;
@@ -89,8 +103,8 @@ function step() {
   if (puck.y < puck.r) { if (inGoalX) { scoreYou++; goal(true); return; } puck.y = puck.r; puck.vy = Math.abs(puck.vy); sfx('wall'); }
   if (puck.y > TH - puck.r) { if (inGoalX) { scoreAI++; goal(false); return; } puck.y = TH - puck.r; puck.vy = -Math.abs(puck.vy); sfx('wall'); }
 
-  collide(paddle, pvx, pvy);
-  collide(ai, avx, avy);
+  collide(paddle, pv);
+  collide(ai, av);
 }
 
 function goal(youScored) {
@@ -177,7 +191,7 @@ function tick(t) {
   const dt = Math.min(40, t - (_last || t)); _last = t;
   if (_flashGoal) { _flashGoal *= 0.86; if (Math.abs(_flashGoal) < 0.05) _flashGoal = 0; }
   if (isGuest()) {
-    if (puck) { paddle.x = target.x; paddle.y = target.y; clampPaddle(paddle, false); }   // client-side prediction of own paddle
+    if (puck) moveMallet(paddle, target.x, target.y, false, MALLET_MAX);   // smooth client-side prediction of own paddle
     if (state === 'play') sendGuestInput();
   } else if (state === 'play') {
     const steps = Math.max(1, Math.round(dt / 16)); for (let i = 0; i < steps; i++) step();

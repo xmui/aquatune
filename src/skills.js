@@ -14,14 +14,14 @@ import { db } from './firebase.js';
 // Skill registry — append here to add more skills later.
 // ---------------------------------------------------------------------------
 const SKILLS = [
-  { id: 'fishing',  name: 'Fishing',   icon: '🎣', blurb: 'Reel them in' },
-  { id: 'mining',   name: 'Mining',    icon: '⛏️', blurb: 'Crack the rocks' },
-  { id: 'gambling', name: 'Gambling',  icon: '🎲', blurb: 'Slots, Blackjack & Hold’em' },
-  { id: 'intellect',name: 'Intellect', icon: '🧠', blurb: 'Picross, Mines & Solitaire' },
-  { id: 'speed',    name: 'Speed',     icon: '⚡', blurb: 'Beat Tap & Tetris' },
-  { id: 'music',    name: 'Music',     icon: '🎵', blurb: 'Watching & making music' },
-  { id: 'finance',  name: 'Finance',   icon: '💹', blurb: 'Earning & trading' },
-  { id: 'combat',   name: 'Combat',    icon: '⚔️', blurb: 'Buddy Shoot' },
+  { id: 'fishing',  name: 'Fishing',   icon: '🎣', color: '#39b7ff', blurb: 'Reel them in' },
+  { id: 'mining',   name: 'Mining',    icon: '⛏️', color: '#d59a4a', blurb: 'Crack the rocks' },
+  { id: 'gambling', name: 'Gambling',  icon: '🎲', color: '#ff5a6a', blurb: 'Slots, Blackjack & Hold’em' },
+  { id: 'intellect',name: 'Intellect', icon: '🧠', color: '#b07cff', blurb: 'Picross, Mines & Solitaire' },
+  { id: 'speed',    name: 'Speed',     icon: '⚡', color: '#ffe14d', blurb: 'Beat Tap & Tetris' },
+  { id: 'music',    name: 'Music',     icon: '🎵', color: '#ff6bd6', blurb: 'Watching & making music' },
+  { id: 'finance',  name: 'Finance',   icon: '💹', color: '#46d07a', blurb: 'Earning & trading' },
+  { id: 'combat',   name: 'Combat',    icon: '⚔️', color: '#ff7a3a', blurb: 'Buddy Shoot' },
 ];
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 const MAX_LEVEL = 100;
@@ -247,16 +247,15 @@ function showXpPopup(skillId, amount, leveledTo) {
   const add = (html, cls) => {
     const chip = document.createElement('div');
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
+    if (!cls) chip.style.color = s.color || '#7fd4ff';   // big number tinted to the skill (glow follows via currentColor)
     chip.innerHTML = html;
-    // scatter across the screen + random sway/tilt so numbers fountain up the WHOLE viewport
-    chip.style.left = (8 + Math.random() * 64) + 'vw';
-    chip.style.setProperty('--dx', (Math.random() * 80 - 40) + 'px');
     host.appendChild(chip);
-    setTimeout(() => chip.remove(), 3900);
+    setTimeout(() => chip.remove(), 2200);
   };
   add(`<span class="aq-xp-ico">${s.icon}</span>+${Math.round(amount).toLocaleString()} XP <span>${esc(s.name)}</span>`);
   if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
-  while (host.children.length > 40) host.firstChild.remove();
+  // hard-cap the stack so chips never pile up / overlap
+  while (host.children.length > 6) host.firstChild.remove();
 }
 
 // ---------------------------------------------------------------------------

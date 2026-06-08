@@ -5726,6 +5726,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
       <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
       <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
+      <button class="apps-game-btn" data-app="buddyshoot3d" onclick="OS.open('buddyshoot3d')"><span class="agb-icon">&#128520;</span><span class="agb-name">Shoot 3D</span></button>
       <button class="apps-game-btn" data-app="pool" onclick="OS.open('pool')"><span class="agb-icon">&#127921;</span><span class="agb-name">8-Ball Pool</span></button>
       <button class="apps-game-btn" data-app="tetris" onclick="OS.open('tetris')"><span class="agb-icon">&#129521;</span><span class="agb-name">Tetris</span></button>
       <button class="apps-game-btn" data-app="rogue" onclick="OS.open('rogue')"><span class="agb-icon">&#129302;</span><span class="agb-name">Neon Runner</span></button>
@@ -8552,6 +8553,7 @@ const APPS = {
   fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
   mining:    { el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
   buddyshoot:{ el:'buddyshoot-wrap',name:'Buddy Shoot',tb:'#buddyshoot-titlebar',openFn:()=>window.openBuddyShoot?.(), closeFn:()=>window.openBuddyShoot?.(false) },
+  buddyshoot3d:{ el:'buddyshoot3d-wrap',name:'Buddy Shoot 3D',tb:'#buddyshoot3d-titlebar',openFn:()=>window.openBuddyShoot3D?.(), closeFn:()=>window.openBuddyShoot3D?.(false) },
   pool:      { el:'pool-wrap',      name:'8-Ball Pool', tb:'#pool-titlebar',     openFn:()=>window.openPool?.(),       closeFn:()=>window.openPool?.(false) },
   tetris:    { el:'tetris-wrap',    name:'Tetris',      tb:'#tetris-titlebar',   openFn:()=>window.openTetris?.(),     closeFn:()=>window.openTetris?.(false) },
   rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
@@ -8886,7 +8888,7 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
-  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'},
+  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
   tanks:{icon:'🐢',label:'Tank Battle'}, airhockey:{icon:'🏒',label:'Air Hockey'},
 };
@@ -8957,6 +8959,7 @@ const LB_GAMES = {
   fishing:  { label:'Fishing',      icon:'🎣', unit:'value',   lower:false },
   mining:   { label:'Mining',       icon:'⛏️', unit:'ore',     lower:false },
   buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
+  buddyshoot3d:{ label:'Buddy Shoot 3D', icon:'😈', unit:'lvl', lower:false },
   pool8:    { label:'8-Ball Pool',  icon:'🎱', unit:'wins',    lower:false },
   tetris:   { label:'Tetris',       icon:'🧱', unit:'pts',     lower:false },
   rogue:    { label:'Neon Runner',  icon:'🤖', unit:'depth',   lower:false },
@@ -12335,6 +12338,7 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('fishing')" title="Fishing">🎣<span>Fishing</span></button>
   <button class="mob-tool-btn" onclick="OS.open('mining')" title="Mining">⛏️<span>Mining</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('buddyshoot3d')" title="Buddy Shoot 3D">😈<span>Shoot3D</span></button>
   <button class="mob-tool-btn" onclick="OS.open('pool')" title="8-Ball Pool">🎱<span>Pool</span></button>
   <button class="mob-tool-btn" onclick="OS.open('tetris')" title="Tetris">🧱<span>Tetris</span></button>
   <button class="mob-tool-btn" onclick="OS.open('rogue')" title="Neon Runner">🤖<span>Runner</span></button>
@@ -14739,6 +14743,52 @@ function buddySfx(name) {
   } catch (e) {}
 }
 window.buddySfx = buddySfx;
+
+/* ── BUDDY SHOOT 3D SFX — guns / demon hits / pickups / level flow ── */
+function buddyShoot3dSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(1, slide), t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const noise = (start, freq, dur, vol, lp) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = 0.8;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      // weapons — smg kept short/quiet since it fires rapidly
+      case 'shoot_pistol':  noise(0, 1100, 0.10, 0.30, true); blip(220, 0, 0.09, 'sawtooth', 0.12, 70); break;
+      case 'shoot_shotgun': noise(0, 700, 0.22, 0.40, true); blip(120, 0, 0.18, 'sawtooth', 0.16, 50); blip(90, 0.04, 0.16, 'square', 0.12, 40); break;
+      case 'shoot_smg':     noise(0, 1500, 0.05, 0.16, true); blip(300, 0, 0.04, 'square', 0.07, 120); break;
+      case 'shoot_rocket':  noise(0, 500, 0.30, 0.34, true); blip(140, 0, 0.28, 'sawtooth', 0.16, 60); break;
+      case 'hit':           blip(1400, 0, 0.05, 'triangle', 0.12, 2200); break;                      // bullet bites flesh
+      case 'enemydie':      blip(420, 0, 0.16, 'sawtooth', 0.16, 70); noise(0, 1800, 0.14, 0.18, true); break; // demon screech-poof
+      case 'hurt':          blip(180, 0, 0.20, 'sawtooth', 0.20, 60); noise(0, 600, 0.14, 0.16, true); break;  // player ow
+      case 'pickup':        blip(660, 0, 0.08, 'square', 0.13); blip(990, 0.07, 0.10, 'square', 0.13); break;  // rising two-note
+      case 'reload':        noise(0, 1700, 0.04, 0.13); noise(0.07, 1300, 0.04, 0.11); break;
+      case 'empty':         blip(2000, 0, 0.03, 'square', 0.08); blip(1500, 0.03, 0.03, 'square', 0.06); break;
+      case 'levelclear':    [523, 659, 784, 1047, 1319].forEach((f, i) => blip(f, i * 0.07, 0.16, 'triangle', 0.14)); break;
+      case 'perkpick':      blip(880, 0, 0.10, 'triangle', 0.16); blip(1320, 0.08, 0.14, 'triangle', 0.16); break;
+      case 'gameover':      blip(320, 0, 0.5, 'sawtooth', 0.20, 70); blip(150, 0.16, 0.5, 'sawtooth', 0.18, 50); blip(90, 0.34, 0.5, 'sawtooth', 0.16, 40); break;
+      case 'newweapon':     [392, 523, 659, 880].forEach((f, i) => blip(f, i * 0.08, 0.18, 'square', 0.15)); break;
+    }
+  } catch (e) {}
+}
+window.buddyShoot3dSfx = buddyShoot3dSfx;
 
 /* ── 8-BALL POOL SFX — clacks, cushion, pocket drop, win/lose ── */
 function poolSfx(name) {
@@ -17338,6 +17388,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/fishpets.js"></script>
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
+<script type="module" src="/src/buddyshoot3d.js"></script>
 <script type="module" src="/src/pool8.js"></script>
 <script type="module" src="/src/tetris.js"></script>
 <script type="module" src="/src/rogue.js"></script>
@@ -17560,6 +17611,15 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openBuddyShoot(false)">×</button>
   </div>
   <div id="buddyshoot-area"></div>
+</div>
+
+<!-- BUDDY SHOOT 3D (Doom-style raycaster roguelite) -->
+<div id="buddyshoot3d-wrap" style="display:none">
+  <div class="sol-titlebar" id="buddyshoot3d-titlebar">
+    <span>😈 Buddy Shoot 3D</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openBuddyShoot3D(false)">×</button>
+  </div>
+  <div id="buddyshoot3d-area"></div>
 </div>
 
 <!-- 8-BALL POOL (native canvas) -->

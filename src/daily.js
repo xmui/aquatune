@@ -49,7 +49,7 @@ const POOL = [
   { id: 'fishing120', kind: 'xpSkill', skill: 'fishing', goal: 120, label: 'Train Fishing (120 XP)', xpSkill: 'fishing', xp: 50, credits: 80 },
 ];
 // Games that count toward "play N different games" / get an 'open' event.
-const GAME_IDS = new Set(['slots', 'blackjack', 'holdem', 'picross', 'mines', 'solitaire', 'pool', 'tetris', 'rhythm', 'fishing', 'mining', 'buddyshoot', 'rogue', 'tanks', 'airhockey', 'stocks']);
+const GAME_IDS = new Set(['slots', 'blackjack', 'holdem', 'picross', 'mines', 'solitaire', 'pool', 'tetris', 'rhythm', 'fishing', 'mining', 'buddyshoot', 'buddyshoot3d', 'rogue', 'tanks', 'airhockey', 'stocks']);
 
 // ---------------------------------------------------------------------------
 // Challenge state

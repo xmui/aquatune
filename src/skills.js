@@ -248,12 +248,15 @@ function showXpPopup(skillId, amount, leveledTo) {
     const chip = document.createElement('div');
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
     chip.innerHTML = html;
+    // scatter across the screen + random sway/tilt so numbers fountain up the WHOLE viewport
+    chip.style.left = (8 + Math.random() * 64) + 'vw';
+    chip.style.setProperty('--dx', (Math.random() * 80 - 40) + 'px');
     host.appendChild(chip);
-    setTimeout(() => chip.remove(), 1750);
+    setTimeout(() => chip.remove(), 3900);
   };
   add(`<span class="aq-xp-ico">${s.icon}</span>+${Math.round(amount).toLocaleString()} XP <span>${esc(s.name)}</span>`);
   if (leveledTo) add(`<span class="aq-xp-ico">${s.icon}</span>${esc(s.name)} — Level ${leveledTo}!`, 'lvl');
-  while (host.children.length > 7) host.firstChild.remove();
+  while (host.children.length > 40) host.firstChild.remove();
 }
 
 // ---------------------------------------------------------------------------

@@ -280,16 +280,51 @@ function showXpPopup(skillId, amount, leveledTo) {
     _xpAgg[skillId] = rec;
     setTimeout(() => { chip.remove(); if (_xpAgg[skillId] === rec) delete _xpAgg[skillId]; }, life);
   }
-  // level-up chip — always its own (a milestone, never coalesced)
+  // level-up — a big FFXIV-style splash (default), or the small gold chip in classic mode
   if (leveledTo) {
-    const chip = document.createElement('div');
-    place(chip, 'lvl');
-    chip.innerHTML = classic ? `${s.icon} ${esc(s.name)} — Level ${leveledTo}!` : `<span class="aq-xp-ico">${s.icon}</span>Level ${leveledTo}!`;
-    host.appendChild(chip);
-    setTimeout(() => chip.remove(), life);
+    if (classic) {
+      const chip = document.createElement('div');
+      place(chip, 'lvl');
+      chip.innerHTML = `${s.icon} ${esc(s.name)} — Level ${leveledTo}!`;
+      host.appendChild(chip);
+      setTimeout(() => chip.remove(), life);
+    } else {
+      showLevelUp(s, leveledTo);
+    }
   }
   // hard-cap the stack so chips never pile up / overlap
   while (host.children.length > 6) host.firstChild.remove();
+}
+
+// FFXIV-inspired LEVEL UP! splash: a big light-burst banner with the skill's
+// symbol raining down the screen. Purely cosmetic (pointer-events:none).
+function showLevelUp(s, level) {
+  if (typeof document === 'undefined') return;
+  let host = document.getElementById('aq-levelup');
+  if (!host) { host = document.createElement('div'); host.id = 'aq-levelup'; document.body.appendChild(host); }
+  host.innerHTML = '';   // one splash at a time
+  const wrap = document.createElement('div');
+  wrap.className = 'aq-lvlup-wrap';
+  wrap.style.setProperty('--c', s.color || '#ffd24a');
+  wrap.innerHTML =
+    '<div class="aq-lvlup-rays"></div>' +
+    '<div class="aq-lvlup-bar"></div>' +
+    '<div class="aq-lvlup-rain"></div>' +
+    `<div class="aq-lvlup"><div class="aq-lvlup-icon">${s.icon}</div><div class="aq-lvlup-word">LEVEL UP!</div><div class="aq-lvlup-sub">${esc(s.name)} &nbsp;·&nbsp; Level ${level}</div></div>`;
+  const rain = wrap.querySelector('.aq-lvlup-rain');
+  for (let i = 0; i < 28; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = s.icon;
+    sp.style.left = (Math.random() * 100) + 'vw';
+    sp.style.fontSize = (16 + Math.random() * 30) + 'px';
+    sp.style.animationDuration = (2.2 + Math.random() * 1.4) + 's';
+    sp.style.animationDelay = (Math.random() * 0.9) + 's';
+    sp.style.setProperty('--r', ((Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 420)) + 'deg');
+    rain.appendChild(sp);
+  }
+  host.appendChild(wrap);
+  setTimeout(() => { if (wrap.parentNode) wrap.remove(); }, 3700);
+  try { window.playFanfare && window.playFanfare('small'); } catch (e) {}
 }
 
 // ---------------------------------------------------------------------------

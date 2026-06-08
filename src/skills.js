@@ -249,12 +249,17 @@ function showXpPopup(skillId, amount, leveledTo) {
   if (!host) { host = document.createElement('div'); host.id = 'aq-xp-popups'; document.body.appendChild(host); }
   const classic = xpClassic();
   host.classList.toggle('classic', classic);
-  const life = classic ? 1750 : 2200;
+  const life = classic ? 1750 : 2700;
   const n = '+' + Math.round(amount).toLocaleString() + ' XP';
   const add = (html, cls) => {
     const chip = document.createElement('div');
     chip.className = 'aq-xp-pop' + (cls ? ' ' + cls : '');
-    if (!classic && !cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
+    if (!classic) {
+      if (!cls) chip.style.color = s.color || '#7fd4ff';   // number tinted to the skill (glow follows via currentColor)
+      // start near the bottom-right with a little jitter, then float up the screen
+      chip.style.right = (14 + Math.random() * 46) + 'px';
+      chip.style.bottom = (84 + Math.random() * 44) + 'px';
+    }
     chip.innerHTML = html;
     host.appendChild(chip);
     setTimeout(() => chip.remove(), life);
@@ -603,6 +608,17 @@ if (typeof window !== 'undefined') {
     // window); '__none__' has no GAME_SKILLS entry, so updateHud just hides it.
     window.OS.close = (id) => { _close(id); try { if (GAME_SKILLS[id]) updateHud('__none__'); } catch {} };
   }
+  // Some games (Slots, Blackjack, …) open via direct calls that bypass OS.focus, so
+  // the focus hook above never fires. Catch interaction with ANY game window and map
+  // it back to its skill, so the HUD always tracks the game you're actually using.
+  const WIN_TO_ID = { 'win-player': 'player', 'studio-win': 'studio', 'synth-flyout': 'synth' };
+  document.addEventListener('pointerdown', (e) => {
+    if (!hudEnabled() || !hasAccount() || !e.target || !e.target.closest) return;
+    const wrap = e.target.closest('[id$="-wrap"], #win-player, #studio-win, #synth-flyout');
+    if (!wrap) return;
+    const id = WIN_TO_ID[wrap.id] || wrap.id.replace(/-wrap$/, '');
+    if (GAME_SKILLS[id]) updateHud(id);
+  }, true);
   hookEarnXp();
   // Load early so XP grants during the session persist + sync.
   loadSkills();

@@ -113,6 +113,8 @@ function endRound() {
 }
 function gameOver() {
   state = 'over'; clearBuddies();
+  // Anti-farm: failing the first round without hitting anything (idle open→fail) earns nothing.
+  if (roundsCleared === 0 && score <= 0) { showOverlay('Game Over', 'Score 0 · reached round ' + round, 'Play again', () => showStart()); return; }
   const reward = Math.round(score * diff.reward * 0.4);
   sfx('fail'); try { window.playFanfare && window.playFanfare(roundsCleared >= 3 ? 'win' : 'small'); } catch (e) {}
   if (reward > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);   // also feeds Finance XP

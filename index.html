@@ -15788,7 +15788,7 @@ let solDrawCount=3, solMaxPasses=999, solStockPasses=0;
 let solDragState=null, solUndoStack=[], solFlipSet=new Set();
 let _solitaireInited=false;
 let solSeconds=0, solTimerInt=null;
-let _solXpLastMoves=0, _solXpLastSec=0;   // anti-idle XP gate (needs BOTH moves & time)
+let _solXpLastMoves=0, _solXpLastSec=0, _solXpGrants=0;   // anti-idle XP gate (needs BOTH moves & time) + per-deal cap
 function solTimerFmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
 function solStartTimer(){
   if(solTimerInt) return;
@@ -15798,8 +15798,10 @@ function solStartTimer(){
     if(el) el.textContent=solTimerFmt(solSeconds);
     // Award a little Intellect XP for ACTIVE play: requires both fresh moves and
     // elapsed time, so a board left open (no moves) or mashing (no time) earns ~nothing.
-    if(solMoves - _solXpLastMoves >= 6 && solSeconds - _solXpLastSec >= 12){
-      _solXpLastMoves=solMoves; _solXpLastSec=solSeconds;
+    // Per-deal cap (anti-farm): one deal can't be shuffled forever — ~12 grants
+    // (~96 XP) covers a genuine solve; deal a new game to keep earning.
+    if(solMoves - _solXpLastMoves >= 6 && solSeconds - _solXpLastSec >= 12 && _solXpGrants < 12){
+      _solXpLastMoves=solMoves; _solXpLastSec=solSeconds; _solXpGrants++;
       if(window.aqAddXp) window.aqAddXp('intellect', 8);  // balanced ~55/min (gated: 6 moves + 12s active)
     }
   },1000);
@@ -15872,7 +15874,7 @@ function newSolitaireGame(){
   solStock=[...deck].map(c=>({...c,face:false}));
   solWaste=[]; solFoundations=[[],[],[],[]];
   solSelected=null; solMoves=0; solStockPasses=0; solUndoStack=[]; _solAutoCompleting=false;
-  solStopTimer(); solSeconds=0; _solXpLastMoves=0; _solXpLastSec=0;
+  solStopTimer(); solSeconds=0; _solXpLastMoves=0; _solXpLastSec=0; _solXpGrants=0;
   const timerEl=document.getElementById('sol-timer'); if(timerEl) timerEl.textContent='0:00';
   solRender();
 }

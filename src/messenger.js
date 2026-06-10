@@ -155,16 +155,25 @@ function appendMsg(log, p) {
 
 const EMOTES = ['😀', '😂', '😉', '😎', '😍', '😭', '😡', '👍', '👎', '❤️', '🔥', '🎉', '😈', '💀', '🙄', '😴'];
 
+// On phones, show a single messenger window at a time (avoids full-screen windows
+// stacking on top of and blocking each other).
+function mobileSolo(key) {
+  if (!isMobile()) return;
+  if (_contactsWin) _contactsWin.style.display = 'none';
+  for (const k in _convs) if (k !== key) _convs[k].win.style.display = 'none';
+}
+function showContacts() { if (_contactsWin) { _contactsWin.style.display = 'flex'; focusWin(_contactsWin); } }
+
 function openConversation(key, name, otherUid) {
   let c = _convs[key];
-  if (c) { c.win.classList.remove('msn-min'); c.win.style.display = 'flex'; focusWin(c.win); markRead(key, otherUid); c.input && c.input.focus(); return; }
+  if (c) { c.win.classList.remove('msn-min'); c.win.style.display = 'flex'; mobileSolo(key); focusWin(c.win); markRead(key, otherUid); c.input && c.input.focus(); return; }
 
   const win = el('div', 'msn-win msn-conv' + (isMobile() ? ' msn-mobile' : ''));
   const bar = el('div', 'msn-titlebar');
   bar.innerHTML = `<span class="msn-tt">${convTitle(key, name)}</span>`;
   const closeBtn = el('button', 'msn-x', '✕'); closeBtn.onclick = () => closeConversation(key);
-  const minBtn = el('button', 'msn-min-btn', '—'); minBtn.onclick = () => { win.classList.add('msn-min'); win.style.display = 'none'; };
-  bar.append(minBtn, closeBtn);
+  if (isMobile()) { const back = el('button', 'msn-back', '‹ Contacts'); back.onclick = () => closeConversation(key); bar.prepend(back); bar.append(closeBtn); }
+  else { const minBtn = el('button', 'msn-min-btn', '—'); minBtn.onclick = () => { win.classList.add('msn-min'); win.style.display = 'none'; }; bar.append(minBtn, closeBtn); }
   const log = el('div', 'msn-log');
   const tools = el('div', 'msn-tools');
   const emoBtn = el('button', 'msn-tool-btn', '☺'); emoBtn.title = 'Emoticons';
@@ -191,6 +200,7 @@ function openConversation(key, name, otherUid) {
   document.body.appendChild(win);
   makeDrag(win, bar);
   win.addEventListener('pointerdown', () => { focusWin(win); markRead(key, otherUid); c.focused = true; }, true);
+  mobileSolo(key);
   focusWin(win);
 
   c = _convs[key] = { win, log, input: ta, focused: true, unsub: null };
@@ -203,6 +213,7 @@ function closeConversation(key) {
   const c = _convs[key]; if (!c) return;
   if (c.unsub) { try { c.unsub(); } catch (e) {} }
   c.win.remove(); delete _convs[key];
+  if (isMobile()) { const other = Object.keys(_convs)[0]; if (other) { _convs[other].win.style.display = 'flex'; focusWin(_convs[other].win); } else showContacts(); }
 }
 function attachListener(key, otherUid, log) {
   const c = _convs[key]; if (!c || !fbReady()) return;
@@ -333,6 +344,7 @@ function injectStyle() {
   .msn-titlebar{display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:move;background:linear-gradient(180deg,#eaf4ff 0%,#bcd9f5 48%,#9cc4ec 100%);border-bottom:1px solid #6f9fd0;box-shadow:inset 0 1px 0 rgba(255,255,255,.85);user-select:none}
   .msn-tt{flex:1;font-weight:700;font-size:13px;color:#103a66;text-shadow:0 1px 0 rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .msn-x,.msn-min-btn{width:20px;height:18px;border:1px solid #7fa6cf;border-radius:4px;background:linear-gradient(180deg,#fff,#cfe0f4);cursor:pointer;font-size:11px;line-height:1;color:#0a2a4a}
+  .msn-back{margin-right:6px;border:1px solid #7fa6cf;border-radius:5px;background:linear-gradient(180deg,#fff,#cfe0f4);cursor:pointer;font-size:13px;font-weight:700;color:#0a3a66;padding:3px 9px}
   .msn-x:hover{background:linear-gradient(180deg,#ffd0d0,#f08a8a)}
   .msn-me{display:flex;gap:10px;align-items:center;padding:9px 10px;background:linear-gradient(180deg,#fdfdff,#e7f1fc);border-bottom:1px solid #c4d8ef}
   .msn-me-av,.msn-row-av{position:relative;flex-shrink:0;border-radius:8px;background:#fff;border:1px solid #b9d2ec;padding:2px}
@@ -369,7 +381,7 @@ function injectStyle() {
   .msn-min{display:none!important}
   .msn-nudge{animation:msnShake .55s linear}
   @keyframes msnShake{0%,100%{transform:translate(0,0)}10%{transform:translate(-6px,3px)}25%{transform:translate(7px,-4px)}40%{transform:translate(-7px,-2px)}55%{transform:translate(6px,4px)}70%{transform:translate(-4px,-3px)}85%{transform:translate(3px,2px)}}
-  @media (max-width:768px){.msn-mobile{left:0!important;top:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100dvh!important;max-width:none;max-height:none;border-radius:0;z-index:900}.msn-titlebar{cursor:default}}
+  @media (max-width:768px){.msn-mobile{left:0!important;top:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100dvh!important;max-width:none;max-height:none;border-radius:0;z-index:900!important}.msn-conv.msn-mobile{z-index:902!important}.msn-titlebar{cursor:default}.msn-back{font-size:15px;padding:6px 12px}.msn-input{height:44px}.msn-send{padding:0 18px}}
   `;
   document.head.appendChild(s);
 }

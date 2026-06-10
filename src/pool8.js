@@ -33,7 +33,7 @@ const SPINUP = 2.5;                     // a solid sphere spins up at 2.5× the 
 const CUSHION_REST = 0.68;              // cushion coefficient of restitution (<1, lossy)
 const BALL_REST = 0.96;                 // ball-ball restitution
 const STOP = 9;                         // speed below which a ball is "stopped"
-const STREAM_MS = 90;                   // host → guest state stream throttle
+const STREAM_MS = 50;                   // host → guest state stream throttle (20Hz; guest dead-reckons between)
 
 const POCKETS = [
   { x: LX, y: TY }, { x: W / 2, y: TY - 3, mid: 'top' }, { x: RXn, y: TY },
@@ -379,7 +379,8 @@ function broadcastState(force) {
   if (!force && now - _lastBroadcast < STREAM_MS) return;
   _lastBroadcast = now;
   window.poolBroadcast({
-    balls: balls.map(b => ({ n: b.n, x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, p: b.potted ? 1 : 0 })),
+    // include velocity (px/sec) so the guest can dead-reckon between the 20Hz snapshots
+    balls: balls.map(b => ({ n: b.n, x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, vx: Math.round(b.vx), vy: Math.round(b.vy), p: b.potted ? 1 : 0 })),
     turn, groups, open, broke,
     moving: anyMoving() || state === 'shoot' ? 1 : 0,
     inhand: pendingInhand ? 1 : 0,
@@ -389,13 +390,17 @@ function broadcastState(force) {
 // Guest adopts the host's authoritative state and lerps balls toward it.
 function adoptState(s) {
   if (!s || !Array.isArray(s.balls)) return;
+  const moving = !!s.moving, inhand = !!s.inhand;
+  const now = performance.now();
   for (const ib of s.balls) {
     let b = balls.find(x => x.n === ib.n);
     if (!b) { b = { n: ib.n, x: ib.x, y: ib.y, vx: 0, vy: 0, potted: !!ib.p }; balls.push(b); }
+    // store the authoritative snapshot + velocity so the watch loop can extrapolate
+    b.nx = ib.x; b.ny = ib.y; b.nvx = ib.vx || 0; b.nvy = ib.vy || 0; b._adoptT = now;
     b.tx = ib.x; b.ty = ib.y; b.potted = !!ib.p;
+    if (b._seen === undefined || !moving) { b.x = ib.x; b.y = ib.y; b._seen = 1; }  // snap on first sight / at rest
   }
   turn = s.turn; groups = s.groups || { A: null, B: null }; open = !!s.open; broke = !!s.broke;
-  const moving = !!s.moving, inhand = !!s.inhand;
   guestInhand = inhand && turn === mySeat;
   updateHud();
   // Make sure the host knows we're here (covers the guest-joined-before-host case).
@@ -797,10 +802,17 @@ function tick(t) {
       if (!anyMoving()) resolveShot();
     }
   } else if (state === 'watch') {
-    // Guest watching the opponent: smoothly interpolate balls toward the host's
-    // last broadcast. (Skip during our own aim/place so cue placement isn't fought.)
-    const k = Math.min(1, dt * 12);
-    for (const b of balls) { if (b.tx !== undefined) { b.x += (b.tx - b.x) * k; b.y += (b.ty - b.y) * k; } }
+    // Guest watching the opponent: dead-reckon each ball from the last authoritative
+    // snapshot using its broadcast velocity, then ease toward that predicted point.
+    // This keeps motion fluid between the 20Hz packets instead of snapping. (Skip
+    // during our own aim/place so cue placement isn't fought.)
+    const now = performance.now(), k = Math.min(1, dt * 18);
+    for (const b of balls) {
+      if (b.nx === undefined) continue;
+      const age = Math.min(0.25, (now - (b._adoptT || now)) / 1000);   // cap so a stalled packet can't fling a ball
+      const predX = b.nx + (b.nvx || 0) * age, predY = b.ny + (b.nvy || 0) * age;
+      b.x += (predX - b.x) * k; b.y += (predY - b.y) * k;
+    }
   }
   draw();
   raf = requestAnimationFrame(tick);

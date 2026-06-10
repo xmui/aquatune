@@ -3,21 +3,21 @@
 // the host runs the physics and streams the table; the guest renders it (rotated so
 // it sits at the bottom too) and streams back its paddle position. Grants Speed XP.
 
-const TW = 300, TH = 460;
+const TW = 330, TH = 540;     // bigger table + smaller mallets below = roomier play field
 const GOAL_W = TW * 0.44;
 const GOALS_TO_WIN = 7;
-const PADDLE_R = 26, PUCK_R = 13;
-const PUCK_MAX = 14;          // top puck speed (px/step)
-const MALLET_MAX = 20;        // your/host mallet max speed — bounded so hits are consistent & it can't tunnel past the puck
+const PADDLE_R = 18, PUCK_R = 10;   // scaled down (was 26/13) so the paddles don't eat the field
+const PUCK_MAX = 16;          // top puck speed (px/step) — scaled for the larger table
+const MALLET_MAX = 22;        // your/host mallet max speed — bounded so hits are consistent & it can't tunnel past the puck
 const FRICTION = 0.998;       // near-frictionless air table
 // AI difficulty profiles (solo only). maxSpeed < player's 20 so every level stays
 // beatable on raw speed; reactMs is the decision lag (lower = snappier); predict is
 // how well it reads incoming shots; aimError is shot spread; aggression = how readily
 // it goes on offense.
 const AI_LEVELS = {
-  easy: { maxSpeed: 7,  reactMs: 180, predict: 'none',     aimError: 34, aggression: 0.35, label: 'Easy' },
-  med:  { maxSpeed: 11, reactMs: 90,  predict: 'straight', aimError: 16, aggression: 0.60, label: 'Medium' },
-  hard: { maxSpeed: 16, reactMs: 40,  predict: 'bounce',   aimError: 6,  aggression: 0.85, label: 'Hard' },
+  easy: { maxSpeed: 8,  reactMs: 175, predict: 'none',     aimError: 36, aggression: 0.35, label: 'Easy' },
+  med:  { maxSpeed: 13, reactMs: 85,  predict: 'straight', aimError: 16, aggression: 0.62, label: 'Medium' },
+  hard: { maxSpeed: 18, reactMs: 38,  predict: 'bounce',   aimError: 6,  aggression: 0.88, label: 'Hard' },
 };
 let aiDiff = (() => { try { const d = localStorage.getItem('aq_ah_diff'); return AI_LEVELS[d] ? d : 'med'; } catch { return 'med'; } })();
 let _aiDecideAt = 0, _aiAim = { x: 0, y: 0 }, _aiSpd = 9;
@@ -38,11 +38,11 @@ function iAmHost() { return inRoom() && !!window._isRoomHost; }
 function isGuest() { return inRoom() && !window._isRoomHost; }
 
 function reset(toYou) {
-  paddle = { x: TW / 2, y: TH - 60, r: PADDLE_R };
-  ai = { x: TW / 2, y: 60, r: PADDLE_R };
+  paddle = { x: TW / 2, y: TH - 50, r: PADDLE_R };
+  ai = { x: TW / 2, y: 50, r: PADDLE_R };
   puck = { x: TW / 2, y: TH / 2, vx: (Math.random() - 0.5) * 4, vy: toYou ? 5 : -5, r: PUCK_R };
   target = { x: paddle.x, y: paddle.y };
-  guestTarget = { x: TW / 2, y: 60 };
+  guestTarget = { x: TW / 2, y: 50 };
   _aiDecideAt = 0; _aiAim = { x: ai.x, y: ai.y };
 }
 function newGame(m) {

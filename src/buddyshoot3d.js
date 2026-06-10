@@ -141,6 +141,10 @@ function bakeArt() {
   demonSprites.brute   = { normal: bakeDemon(['#b06a5a', '#7a1414', '#2a0606'], '#1a0202', '#ff6a2a') };
   demonSprites.spitter = { normal: bakeDemon(['#c79aff', '#7a2fc0', '#2e0a64'], '#160430', '#9bff5a') };
   demonSprites.boss    = { normal: bakeDemon(['#ff5a3a', '#8a0000', '#1a0000'], '#000', '#fff23a') };
+  demonSprites.charger  = { normal: bakeDemon(['#ffb24a', '#e05a14', '#5a2400'], '#2a1000', '#fff04a') };
+  demonSprites.bomber   = { normal: bakeDemon(['#6a6a6a', '#2a2a2a', '#0a0a0a'], '#000', '#ff3a2a') };
+  demonSprites.summoner = { normal: bakeDemon(['#9bff9b', '#2f9a4b', '#0a3a18'], '#06200c', '#ff5af0') };
+  demonSprites.wraith   = { normal: bakeDemon(['#dff0ff', '#9ab8d8', '#46607a'], '#243646', '#bfffff') };
   for (const k in demonSprites) demonSprites[k].hurt = makeHurt(demonSprites[k].normal);
   pickupSprites.health = bakeHealth();
   pickupSprites.ammo = bakeAmmo();
@@ -178,11 +182,26 @@ const PERKS = [
 
 // ── enemy archetypes ───────────────────────────────────────────────────────────
 const ETYPE = {
-  imp:     { hp: 30,  speed: 2.7, radius: 0.42, dmg: 8,  size: 0.85, pts: 10, ranged: false, color: 'imp' },
-  brute:   { hp: 95,  speed: 1.4, radius: 0.5,  dmg: 18, size: 1.15, pts: 30, ranged: false, color: 'brute' },
-  spitter: { hp: 42,  speed: 1.5, radius: 0.42, dmg: 12, size: 0.9,  pts: 20, ranged: true,  color: 'spitter' },
-  boss:    { hp: 420, speed: 1.5, radius: 0.7,  dmg: 30, size: 1.75, pts: 220, ranged: false, color: 'boss' },
+  imp:      { hp: 30,  speed: 2.7, radius: 0.42, dmg: 8,  size: 0.85, pts: 10, ranged: false, color: 'imp' },
+  brute:    { hp: 95,  speed: 1.4, radius: 0.5,  dmg: 18, size: 1.15, pts: 30, ranged: false, color: 'brute' },
+  spitter:  { hp: 42,  speed: 1.5, radius: 0.42, dmg: 12, size: 0.9,  pts: 20, ranged: true,  color: 'spitter' },
+  charger:  { hp: 60,  speed: 2.3, radius: 0.45, dmg: 15, size: 0.95, pts: 28, ranged: false, color: 'charger' },  // periodically lunges
+  bomber:   { hp: 26,  speed: 3.0, radius: 0.4,  dmg: 34, size: 0.9,  pts: 26, ranged: false, color: 'bomber' },   // kamikaze — explodes on contact
+  summoner: { hp: 80,  speed: 1.2, radius: 0.5,  dmg: 0,  size: 1.05, pts: 45, ranged: false, color: 'summoner' }, // spawns imps
+  wraith:   { hp: 22,  speed: 3.5, radius: 0.38, dmg: 11, size: 0.82, pts: 22, ranged: false, color: 'wraith' },   // fast, ghostly
+  boss:     { hp: 420, speed: 1.5, radius: 0.7,  dmg: 30, size: 1.75, pts: 220, ranged: false, color: 'boss' },
 };
+const ENEMY_HARDCAP = 38;   // total alive incl. summoned (perf + fairness ceiling)
+
+// ── per-level modifiers (Post-Void-style affixes) ───────────────────────────────
+const MODS = [
+  { id: 'swarm',   name: 'Swarm',      icon: '🐝', apply: m => { m.count = Math.round(m.count * 1.6); m.hpMul *= 0.7; } },
+  { id: 'berserk', name: 'Berserk',    icon: '😡', apply: m => { m.spMul *= 1.25; m.dmgMul *= 1.3; } },
+  { id: 'fog',     name: 'Fog',        icon: '🌫️', apply: m => { m.vis = 0.5; } },
+  { id: 'elite',   name: 'Elite Pack', icon: '⭐', apply: m => { m.elite = true; } },
+  { id: 'glass',   name: 'Glass',      icon: '🔪', apply: m => { m.glass = true; } },
+  { id: 'frenzy',  name: 'Frenzy',     icon: '⚡', apply: m => { m.coolMul = 0.6; } },
+];
 
 // ── module state ────────────────────────────────────────────────────────────────
 let _built = false, raf = null, _lastT = 0;
@@ -201,6 +220,9 @@ let run = null;
 const keys = {};
 let firing = false, lastFireT = 0, recoilT = 0, walkPhase = 0, muzzleT = 0;
 let bestLevel = 0;
+// per-level modifier state (set in genLevel)
+let levelMods = [], visDist = MAXVIS, glassMod = false, frenzyMul = 1;
+let lvlHpMul = 1, lvlSpMul = 1, lvlDmgMul = 1, bannerT = null;
 
 const BASE_STATS = () => ({ dmgMul: 1, moveSpeed: 3.4, fireRateMul: 1, maxHp: 100, spreadMul: 1, pelletBonus: 0, lifesteal: 0, rangeDmg: 0, berserk: 0, killBurst: 0, revive: 0, dmgTaken: 1 });
 
@@ -227,11 +249,11 @@ function carveCorridor(x1, y1, x2, y2) {
 }
 
 function genLevel(level) {
-  MW = MH = Math.min(30, 22 + Math.floor(level * 0.6));
+  MW = MH = Math.min(34, 22 + Math.floor(level * 0.7));
   map = new Uint8Array(MW * MH);
   // start solid; assign varied wall tile ids for texture variety
   for (let i = 0; i < map.length; i++) map[i] = 1 + ((Math.random() < 0.7) ? 0 : rint(1, 2));
-  const rooms = [], nRooms = Math.min(10, 4 + level);
+  const rooms = [], nRooms = Math.min(12, 4 + level);
   let tries = 0;
   while (rooms.length < nRooms && tries++ < 200) {
     const w = rint(4, 7), h = rint(4, 7);
@@ -250,29 +272,62 @@ function genLevel(level) {
   for (const r of rooms) { const c = ctr(r); const d = (c.x - s.x) ** 2 + (c.y - s.y) ** 2; if (d > fd) { fd = d; far = r; } }
   const fc = ctr(far); portal = { x: fc.x + 0.5, y: fc.y + 0.5, kind: 'portal', size: 0.85, float: 0.04, canvas: portalSprite };
 
-  // enemies
+  // enemies — steeper scaling + per-level modifiers
   enemies = []; eproj = [];
   const boss = level % 5 === 0;
-  let count = Math.min(16, 4 + Math.floor(level * 1.7));
-  const hpMul = 1 + 0.12 * (level - 1), spMul = Math.min(1.6, 1 + 0.03 * (level - 1)), dmgMul = 1 + 0.05 * (level - 1);
-  if (boss) { spawnEnemy('boss', far, hpMul, spMul, dmgMul); count = Math.max(3, count - 6); }
-  for (let i = 0; i < count; i++) {
-    const room = choice(rooms.slice(1).length ? rooms.slice(1) : rooms);
-    let kind = 'imp';
-    const roll = Math.random();
-    if (level >= 3 && roll < 0.22) kind = 'brute';
-    else if (level >= 2 && roll < 0.5) kind = 'spitter';
-    spawnEnemy(kind, room, hpMul, spMul, dmgMul);
-  }
-  // pickups
+  const m = {
+    count: Math.min(26, 5 + Math.floor(level * 2.1)),
+    hpMul: 1 + 0.14 * (level - 1) + 0.004 * (level - 1) ** 2,   // slightly super-linear so deep levels bite
+    spMul: Math.min(2.3, 1 + 0.04 * (level - 1)),
+    dmgMul: 1 + 0.07 * (level - 1),
+    vis: 1, elite: false, glass: false, coolMul: 1,
+  };
+  // roll 0–2 modifiers (more likely the deeper you are)
+  levelMods = [];
+  let nMods = level < 2 ? 0 : level < 6 ? (Math.random() < 0.6 ? 1 : 0) : (Math.random() < 0.5 ? 2 : 1);
+  const pool = MODS.slice();
+  while (nMods-- > 0 && pool.length) { const mod = pool.splice((Math.random() * pool.length) | 0, 1)[0]; mod.apply(m); levelMods.push(mod); }
+  lvlHpMul = m.hpMul; lvlSpMul = m.spMul; lvlDmgMul = m.dmgMul;
+  visDist = MAXVIS * m.vis; glassMod = m.glass; frenzyMul = m.coolMul;
+
+  const otherRooms = () => (rooms.slice(1).length ? rooms.slice(1) : rooms);
+  if (boss) { spawnEnemy('boss', far, m.hpMul, m.spMul, m.dmgMul); m.count = Math.max(4, m.count - 5); }
+  for (let i = 0; i < m.count; i++) spawnEnemy(pickKind(level), choice(otherRooms()), m.hpMul, m.spMul, m.dmgMul);
+  if (m.elite) spawnEnemy(level >= 4 ? 'charger' : 'brute', choice(otherRooms()), m.hpMul, m.spMul, m.dmgMul * 1.2, { elite: true });
+  // pickups (a few more when the level is nasty)
   pickups = [];
-  const pls = Math.max(2, 3 + (boss ? 2 : 0));
+  const pls = Math.max(2, 3 + (boss ? 2 : 0) + levelMods.length);
   for (let i = 0; i < pls; i++) scatterPickup(Math.random() < 0.6 ? 'health' : 'ammo', rooms);
 }
-function spawnEnemy(kind, room, hpMul, spMul, dmgMul) {
-  const base = ETYPE[kind];
+// weighted enemy pick — new archetypes phase in by depth, imps thin out
+function pickKind(level) {
+  const opts = [['imp', Math.max(0.3, 1 - level * 0.04)]];
+  if (level >= 2) opts.push(['spitter', 0.5]);
+  if (level >= 3) opts.push(['brute', 0.32]);
+  if (level >= 4) opts.push(['charger', 0.4]);
+  if (level >= 6) opts.push(['bomber', 0.3]);
+  if (level >= 8) opts.push(['summoner', 0.16]);
+  if (level >= 10) opts.push(['wraith', 0.45]);
+  let tot = 0; for (const o of opts) tot += o[1];
+  let x = Math.random() * tot;
+  for (const [k, w] of opts) { x -= w; if (x <= 0) return k; }
+  return 'imp';
+}
+function spawnEnemy(kind, room, hpMul, spMul, dmgMul, opts) {
   const x = room.x + 0.5 + Math.random() * (room.w - 1), y = room.y + 0.5 + Math.random() * (room.h - 1);
-  enemies.push({ kind, x, y, hp: Math.round(base.hp * hpMul), maxHp: Math.round(base.hp * hpMul), speed: base.speed * spMul, radius: base.radius, dmg: base.dmg * dmgMul, size: base.size, pts: base.pts, ranged: base.ranged, cool: Math.random() * 0.8, hurtT: 0, los: false, losT: 0, phase: Math.random() * TWOPI, canvas: demonSprites[base.color].normal, hurtCanvas: demonSprites[base.color].hurt });
+  makeEnemy(kind, x, y, hpMul, spMul, dmgMul, opts);
+}
+function makeEnemy(kind, x, y, hpMul, spMul, dmgMul, opts) {
+  if (enemies.length >= ENEMY_HARDCAP) return;
+  const base = ETYPE[kind]; opts = opts || {};
+  const eliteM = opts.elite ? 3 : 1, hp = Math.round(base.hp * hpMul * eliteM);
+  enemies.push({
+    kind, x, y, hp, maxHp: hp, speed: base.speed * spMul, radius: base.radius * (opts.elite ? 1.3 : 1),
+    dmg: base.dmg * dmgMul, size: base.size * (opts.elite ? 1.5 : 1), pts: Math.round(base.pts * eliteM),
+    ranged: base.ranged, elite: !!opts.elite, alpha: kind === 'wraith' ? 0.6 : 1,
+    cool: Math.random() * 0.8, lunge: 0, fuse: 0, hurtT: 0, los: false, losT: 0, phase: Math.random() * TWOPI,
+    canvas: demonSprites[base.color].normal, hurtCanvas: demonSprites[base.color].hurt,
+  });
 }
 function scatterPickup(kind, rooms) {
   for (let t = 0; t < 30; t++) {
@@ -293,6 +348,18 @@ function nextLevel() {
   lastFireT = 0; firing = false;
   setHudVisible(true);
   updateHud();
+  showLevelBanner(run.level);
+}
+// transient, non-blocking banner announcing the level + its active modifiers
+function showLevelBanner(level) {
+  if (!area) return;
+  const old = area.querySelector('.b3-banner'); if (old) old.remove();
+  const b = el('div', 'b3-banner');
+  let html = `<div class="b3-banner-lv">LEVEL ${level}${level % 5 === 0 ? ' · BOSS' : ''}</div>`;
+  if (levelMods.length) html += '<div class="b3-banner-mods">' + levelMods.map(mm => `<span>${mm.icon} ${mm.name}</span>`).join('') + '</div>';
+  b.innerHTML = html;
+  area.appendChild(b);
+  clearTimeout(bannerT); bannerT = setTimeout(() => { if (b.parentNode) b.remove(); }, 2800);
 }
 function clearLevel() {
   state = 'levelclear';
@@ -360,7 +427,7 @@ function fireWeapon() {
   }
   lastFireT = now; recoilT = 1; muzzleT = 1; sfx(w.sfx);
   const pellets = w.pellets + (w.pellets === 1 ? run.stats.pelletBonus : 0);
-  const berserkMul = 1 + run.stats.berserk * 0.5 * (1 - run.hp / run.maxHp);
+  const berserkMul = (1 + run.stats.berserk * 0.5 * (1 - run.hp / run.maxHp)) * (glassMod ? 1.5 : 1);
   for (let p = 0; p < pellets; p++) {
     const ang = pa + (Math.random() - 0.5) * w.spread * run.stats.spreadMul * 2;
     const rdx = Math.cos(ang), rdy = Math.sin(ang);
@@ -394,13 +461,14 @@ function damageEnemy(e, dmg) {
   e.hp -= dmg; e.hurtT = 0.12; sfx('hit');
   if (e.hp <= 0) {
     run.kills++; run.score += e.pts; sfx('enemydie');
+    if (e.kind === 'bomber' && !e._boomed) { e._boomed = true; if (Math.hypot(e.x - px, e.y - py) < 1.6) hurtPlayer(e.dmg * 0.6); }
     if (run.stats.lifesteal) run.hp = Math.min(run.maxHp, run.hp + run.stats.lifesteal);
     if (run.stats.killBurst) run.speedBurstUntil = performance.now() + 1400;
     updateHud();
   }
 }
 function hurtPlayer(dmg) {
-  run.hp -= dmg * run.stats.dmgTaken; sfx('hurt'); flashHurt();
+  run.hp -= dmg * run.stats.dmgTaken * (glassMod ? 1.5 : 1); sfx('hurt'); flashHurt();
   if (run.hp <= 0) gameOver(); else updateHud();
 }
 
@@ -417,23 +485,32 @@ function updateEnemies(dt) {
     e.cool -= dt; e.losT -= dt;
     const dx = px - e.x, dy = py - e.y, dist = Math.hypot(dx, dy) || 1e-3;
     if (e.losT <= 0) { e.los = losClear(e.x, e.y, px, py); e.losT = 0.15; }
-    if (e.los || dist < 4) {
-      const nx = dx / dist, ny = dy / dist;
-      if (e.ranged) {
-        if (dist > 3.5) moveEnemy(e, nx, ny, dt);
-        else if (dist < 2.4) moveEnemy(e, -nx, -ny, dt);
-        if (e.los && e.cool <= 0 && dist < 11) { eproj.push({ x: e.x, y: e.y, dx: nx * 5, dy: ny * 5, dmg: e.dmg }); e.cool = 1.6; }
-      } else {
-        if (dist > e.radius + 0.45) moveEnemy(e, nx, ny, dt);
-        else if (e.cool <= 0) { hurtPlayer(e.dmg); e.cool = 1.0; }
+    if (!(e.los || dist < 4.5)) continue;
+    const nx = dx / dist, ny = dy / dist;
+    if (e.kind === 'spitter') {
+      if (dist > 3.5) moveEnemy(e, nx, ny, dt); else if (dist < 2.4) moveEnemy(e, -nx, -ny, dt);
+      if (e.los && e.cool <= 0 && dist < 11) { eproj.push({ x: e.x, y: e.y, dx: nx * 5, dy: ny * 5, dmg: e.dmg }); e.cool = 1.6 * frenzyMul; }
+    } else if (e.kind === 'summoner') {
+      if (dist > 5) moveEnemy(e, nx, ny, dt); else if (dist < 3.5) moveEnemy(e, -nx, -ny, dt);
+      if (e.los && e.cool <= 0 && enemies.length < ENEMY_HARDCAP) { summon(e); e.cool = 3.6 * frenzyMul; }
+    } else if (e.kind === 'bomber') {
+      moveEnemy(e, nx, ny, dt);
+      if (dist < 1.7) { e.fuse += dt; if (e.fuse > 0.35) bomberBoom(e); } else e.fuse = Math.max(0, e.fuse - dt);
+    } else {
+      let mul = 1;
+      if (e.kind === 'charger') {
+        if (e.lunge > 0) { e.lunge -= dt; mul = 2.6; }
+        else if (e.los && e.cool <= 0 && dist > 1.4 && dist < 8) { e.lunge = 0.45; e.cool = 2.2 * frenzyMul; }
       }
+      if (dist > e.radius + 0.45) moveEnemy(e, nx, ny, dt, mul);
+      else if (e.cool <= 0) { hurtPlayer(e.dmg); e.cool = (e.kind === 'wraith' ? 0.8 : 1.0) * frenzyMul; }
     }
   }
-  // light separation so demons don't fully stack
+  // light separation so demons don't fully stack (wraiths phase through)
   for (let i = 0; i < enemies.length; i++) {
-    const a = enemies[i]; if (a.hp <= 0) continue;
+    const a = enemies[i]; if (a.hp <= 0 || a.kind === 'wraith') continue;
     for (let j = i + 1; j < enemies.length; j++) {
-      const b = enemies[j]; if (b.hp <= 0) continue;
+      const b = enemies[j]; if (b.hp <= 0 || b.kind === 'wraith') continue;
       const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
       if (d > 0 && d < 0.55) { const push = (0.55 - d) / 2, ux = dx / d, uy = dy / d; if (!isWall(a.x - ux * push, a.y - uy * push)) { a.x -= ux * push; a.y -= uy * push; } if (!isWall(b.x + ux * push, b.y + uy * push)) { b.x += ux * push; b.y += uy * push; } }
     }
@@ -441,8 +518,21 @@ function updateEnemies(dt) {
   // remove dead
   if (enemies.some(e => e.hp <= 0)) enemies = enemies.filter(e => e.hp > 0);
 }
-function moveEnemy(e, nx, ny, dt) {
-  const sp = e.speed * dt;
+function summon(e) {
+  const n = 1 + (Math.random() < 0.5 ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TWOPI, sx = e.x + Math.cos(a) * 0.9, sy = e.y + Math.sin(a) * 0.9;
+    if (!isWall(sx, sy)) makeEnemy('imp', sx, sy, lvlHpMul, lvlSpMul, lvlDmgMul);
+  }
+  sfx('hit');
+}
+function bomberBoom(e) {
+  if (e._boomed) return; e._boomed = true; e.hp = 0;
+  if (Math.hypot(e.x - px, e.y - py) < 2.0) hurtPlayer(e.dmg);
+  sfx('enemydie');
+}
+function moveEnemy(e, nx, ny, dt, mul) {
+  const sp = e.speed * dt * (mul || 1);
   if (!isWall(e.x + nx * (sp + e.radius), e.y)) e.x += nx * sp;
   if (!isWall(e.x, e.y + ny * (sp + e.radius))) e.y += ny * sp;
 }
@@ -527,7 +617,7 @@ function render() {
     if ((side === 0 && rdx > 0) || (side === 1 && rdy < 0)) texX = TEX - texX - 1;
     ctx.drawImage(tex, texX, 0, 1, TEX, x, drawStart, 1, lineH);
     // distance + side shading (clamped overlay rect)
-    const sh = clamp(perp / MAXVIS, 0, 0.78) + (side === 1 ? 0.16 : 0);
+    const sh = clamp(perp / visDist, 0, 0.78) + (side === 1 ? 0.16 : 0);
     if (sh > 0.02) {
       ctx.fillStyle = 'rgba(0,0,0,' + Math.min(0.85, sh) + ')';
       const y0 = Math.max(0, drawStart), y1 = Math.min(RH, drawStart + lineH);
@@ -538,7 +628,7 @@ function render() {
   const sprites = [];
   if (portal && enemies.length === 0) sprites.push(portal);
   for (const p of pickups) sprites.push(p);
-  for (const e of enemies) sprites.push({ x: e.x, y: e.y, size: e.size, float: 0, bob: Math.sin(walkPhase * 0.6 + e.phase) * (RH * 0.012), canvas: e.hurtT > 0 ? e.hurtCanvas : e.canvas });
+  for (const e of enemies) sprites.push({ x: e.x, y: e.y, size: e.size * (e.kind === 'bomber' && e.fuse > 0 ? 1.25 : 1), float: 0, bob: Math.sin(walkPhase * 0.6 + e.phase) * (RH * 0.012), alpha: e.alpha, canvas: e.hurtT > 0 ? e.hurtCanvas : e.canvas });
   for (const p of eproj) sprites.push({ x: p.x, y: p.y, size: 0.3, float: 0.4, canvas: spitSprite });
   sprites.sort((a, b) => ((b.x - px) ** 2 + (b.y - py) ** 2) - ((a.x - px) ** 2 + (a.y - py) ** 2));
   for (const sp of sprites) drawSprite(sp);
@@ -559,7 +649,7 @@ function drawSprite(sp) {
   const drawY = bottomY - h - (sp.bob || 0);
   const startX = screenX - w / 2;
   const x0 = Math.max(0, Math.ceil(startX)), x1 = Math.min(RW - 1, Math.floor(startX + w));
-  const fog = clamp(1 - tY / (MAXVIS * 1.4), 0.4, 1);
+  const fog = clamp(1 - tY / (visDist * 1.4), 0.4, 1) * (sp.alpha == null ? 1 : sp.alpha);
   let runStart = -1;
   for (let x = x0; x <= x1 + 1; x++) {
     const vis = x <= x1 && tY < zbuffer[x];
@@ -782,6 +872,12 @@ function injectStyle() {
   .b3-hp span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;text-shadow:0 1px 2px #000}
   .b3-stat,.b3-wpn{background:rgba(0,0,0,.35);padding:3px 8px;border-radius:7px;white-space:nowrap}
   .b3-wpn b{color:#ffcd50}
+  .b3-banner{position:absolute;top:22%;left:50%;transform:translateX(-50%);z-index:9;pointer-events:none;text-align:center;animation:b3bannerIn .35s ease-out, b3bannerOut .5s ease-in 2.3s forwards}
+  .b3-banner-lv{font-size:30px;font-weight:900;letter-spacing:2px;color:#ff7a3a;text-shadow:0 2px 0 #5a0808,0 0 14px rgba(255,90,40,.6)}
+  .b3-banner-mods{margin-top:8px;display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+  .b3-banner-mods span{background:rgba(40,8,12,.85);border:1px solid #ff6a2a;border-radius:20px;padding:3px 11px;font-size:12px;font-weight:800;color:#ffd0a0;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  @keyframes b3bannerIn{0%{opacity:0;transform:translateX(-50%) scale(.7)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+  @keyframes b3bannerOut{0%{opacity:1}100%{opacity:0}}
   .b3-overlay{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:18px;text-align:center;background:rgba(8,2,4,.9);color:#fff}
   .b3-title{font-size:24px;font-weight:900;letter-spacing:1px;color:#ff5a3a;text-shadow:0 2px 0 #5a0808}
   .b3-title.b3-dead{color:#ff2a2a}

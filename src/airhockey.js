@@ -170,6 +170,8 @@ function goal(youScored) {
   if (iAmHost()) broadcast();
 }
 function grantResult(won, myScore) {
+  // Anti-farm: getting shut out without scoring a goal (idling vs the AI) earns no XP.
+  if (!won && myScore <= 0) return;
   if (typeof window.aqAddXp === 'function') window.aqAddXp('speed', Math.round(Math.min(300, 60 + myScore * 20 + (won ? 120 : 0))));
   if (won && typeof window.aqAddCredits === 'function') window.aqAddCredits(40 + myScore * 6);
   if (typeof window.recordScore === 'function') window.recordScore('airhockey', myScore, myScore + ' goals');

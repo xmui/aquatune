@@ -303,16 +303,21 @@ function descend() {
 function nextFloor() { depth++; genFloor(depth); projectiles = []; floaters = []; player.x = W / 2; player.y = H / 2; state = 'play'; }
 function die() { if (state === 'over') return; sfx('die'); state = 'over'; endRun(false); }
 
-function endRun(won) {
+function endRun(won, quit = false) {
   if (_finished) return; _finished = true;
   runScore = depth * 100 + runKills * 5;
-  // Balanced to ~55/min for a multi-minute run: reward scales with depth reached (skill) and
-  // kills, capped. aqAddXp (no luck roll) keeps a big end-grant under the anti-cheat cap.
-  if (window.aqAddXp) window.aqAddXp('combat', Math.round(Math.min(600, 50 + depth * 70 + runKills * 3)));
-  runPayout = Math.round(Math.min(150, depth * 12 + runKills * 1.5));
-  if (runPayout > 0 && window.aqAddCredits) window.aqAddCredits(runPayout);
-  if (window.recordScore) window.recordScore('rogue', runScore, 'Reached F' + depth + ' · ' + runKills + ' kills');
-  if (depth >= 6 && window.aqGameAnnounce) window.aqGameAnnounce('reached Floor ' + depth + ' in Neon Runner 🤖');
+  // Anti-farm: no rewards for quitting mid-run (closing the window) or for a
+  // no-effort floor-1 death — you must actually make progress to earn XP/credits.
+  const earned = !quit && (depth > 1 || runKills > 0);
+  if (earned) {
+    // Balanced to ~55/min for a multi-minute run: reward scales with depth reached (skill) and
+    // kills, capped. aqAddXp (no luck roll) keeps a big end-grant under the anti-cheat cap.
+    if (window.aqAddXp) window.aqAddXp('combat', Math.round(Math.min(600, 50 + depth * 70 + runKills * 3)));
+    runPayout = Math.round(Math.min(150, depth * 12 + runKills * 1.5));
+    if (runPayout > 0 && window.aqAddCredits) window.aqAddCredits(runPayout);
+    if (window.recordScore) window.recordScore('rogue', runScore, 'Reached F' + depth + ' · ' + runKills + ' kills');
+    if (depth >= 6 && window.aqGameAnnounce) window.aqGameAnnounce('reached Floor ' + depth + ' in Neon Runner 🤖');
+  }
   persistProgress();
 }
 function persistProgress() {
@@ -517,7 +522,7 @@ function build() {
 function openRogue(show = true) {
   const w = document.getElementById('rogue-wrap'); if (!w) return;
   if (show === false) {
-    if (state === 'play' || state === 'descend') { state = 'over'; endRun(false); }
+    if (state === 'play' || state === 'descend') { state = 'over'; endRun(false, true); }   // quit = no rewards
     w.classList.remove('open'); w.style.display = 'none';
     if (raf) { cancelAnimationFrame(raf); raf = null; }
     clearInputs(); return;

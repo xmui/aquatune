@@ -314,7 +314,8 @@ function grantOutcome(winnerSeat, text) {
   // roll) on a grant this large so a 5% lucky spike can't trip the per-min anti-cheat cap.
   const myG = groups[mySeat];
   const myPots = myG ? balls.filter(b => groupOf(b.n) === myG && b.potted).length : 0;
-  if (window.aqAddXp) window.aqAddXp('intellect', Math.round(45 + myPots * 42 + (youWon ? 130 : 0)));
+  // Anti-farm: losing without sinking a single ball (e.g. idling vs the bot) earns no XP.
+  if (window.aqAddXp && (youWon || myPots > 0)) window.aqAddXp('intellect', Math.round(45 + myPots * 42 + (youWon ? 130 : 0)));
   if (window.recordScore) window.recordScore('pool8', youWon ? 1 : 0, youWon ? 'win' : 'loss');
   sfx(youWon ? 'win' : 'lose');
   showOverlay(youWon ? '🎱 You win!' : '🎱 You lose', text + (youWon ? '  +40💰' : ''), 'Rematch', showStart);

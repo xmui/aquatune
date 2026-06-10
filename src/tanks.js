@@ -110,6 +110,8 @@ function killEnemy(e) {
 function endGame() {
   state = 'over';
   sfx('lose');
+  // Anti-farm: idling until the AI kills you (no kills, first wave) earns nothing.
+  if (score <= 0 && wave <= 1) return;
   if (typeof window.aqAddXp === 'function') window.aqAddXp('combat', Math.round(Math.min(600, 40 + wave * 45 + score * 0.04)));
   if (typeof window.aqAddCredits === 'function') { const c = Math.round(Math.min(160, wave * 12 + score * 0.03)); if (c > 0) window.aqAddCredits(c); }
   if (typeof window.recordScore === 'function') window.recordScore('tanks', score, 'wave ' + wave);

@@ -388,16 +388,18 @@ function gameOver() {
   sfx('gameover');
   const level = run.level, kills = run.kills;
   const score = level * 1000 + kills * 50 + run.score;
+  // Anti-farm: dying on level 1 with zero kills (idle open→die) earns no rewards.
+  const earned = kills > 0 || level > 1;
   // meta best level (max-merge persisted to cloud)
   const prev = parseInt(localStorage.getItem('aq_bs3d_best') || '0', 10) || 0;
   if (level > prev) { try { localStorage.setItem('aq_bs3d_best', String(level)); window.aqGamePersist && window.aqGamePersist('aq_bs3d_best'); } catch (e) {} }
   bestLevel = Math.max(bestLevel, level);
   // credits (modest, capped) — also auto-feeds Finance XP
-  const reward = Math.min(300, Math.round(score * 0.02));
+  const reward = earned ? Math.min(300, Math.round(score * 0.02)) : 0;
   if (reward > 0 && typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);
   // combat XP — capped & grindy (mirrors Buddy Shoot's end-grant)
-  if (typeof window.aqAddXp === 'function') window.aqAddXp('combat', Math.round(Math.min(600, 40 + level * 60 + score * 0.02)));
-  if (typeof window.recordScore === 'function') window.recordScore('buddyshoot3d', score, 'level ' + level);
+  if (earned && typeof window.aqAddXp === 'function') window.aqAddXp('combat', Math.round(Math.min(600, 40 + level * 60 + score * 0.02)));
+  if (earned && typeof window.recordScore === 'function') window.recordScore('buddyshoot3d', score, 'level ' + level);
   if (level >= 5 && typeof window.aqGameAnnounce === 'function') window.aqGameAnnounce(`survived to level ${level} of Buddy Shoot 3D 😈`);
   showGameOver(level, kills, score, reward);
 }

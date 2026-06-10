@@ -31,10 +31,14 @@ function myOutfitKey() {
   return keys[i];
 }
 
-// ── Aquatard avatar (self-contained buddy SVG, blue palette + outfit overlay) ─────
+// ── Aquatard avatar — delegates to the unified buddy renderer when available ──────
+// Accepts either a full buddy config object or a legacy outfit-key string.
 let _avid = 0;
-function buddyAvatarSvg(outfitKey, size) {
+function buddyAvatarSvg(cfgOrKey, size) {
+  const cfg = (cfgOrKey && typeof cfgOrKey === 'object') ? cfgOrKey : { outfit: cfgOrKey };
+  if (typeof window.aqBuildBuddySvg === 'function') return window.aqBuildBuddySvg(cfg, { size });
   const id = 'mav' + (_avid++) + '_';
+  const outfitKey = cfg.outfit;
   const hat = (window.aqBuddyOutfits && window.aqBuddyOutfits[outfitKey]) || '';
   const h = ['#c8f2ff', '#38c4f0', '#003d6a'], b = ['#b8ecff', '#0082bc', '#003058'];
   return `<svg viewBox="0 0 100 112" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="display:block">
@@ -73,9 +77,10 @@ function effStatus() {
 }
 
 // ── presence ─────────────────────────────────────────────────────────────────────
+function myBuddyCfg() { try { return (window.aqBuddyConfig && window.aqBuddyConfig()) || null; } catch (e) { return null; } }
 function writePresence() {
   if (!hasAcct() || !fbReady()) return;
-  F().set(fref('users/' + uid()), { username: myName(), status: effStatus(), statusMsg: _myMsg.slice(0, 80), buddyOutfit: myOutfitKey(), lastSeen: Date.now() }).catch(() => {});
+  F().set(fref('users/' + uid()), { username: myName(), status: effStatus(), statusMsg: _myMsg.slice(0, 80), buddyOutfit: myOutfitKey(), buddyCfg: myBuddyCfg(), lastSeen: Date.now() }).catch(() => {});
 }
 function startPresence() {
   if (_presStarted || !hasAcct() || !fbReady()) return;
@@ -168,6 +173,12 @@ function mobileSolo(key) {
 function showContacts() { if (_contactsWin) { _contactsWin.style.display = 'flex'; focusWin(_contactsWin); } }
 
 function openConversation(key, name, otherUid) {
+  // A conversation can be opened "cold" straight from a notification tap before
+  // the Messenger has ever been opened this session — make sure the stylesheet and
+  // presence are live, otherwise the (mobile) window renders unstyled and the
+  // user gets stuck with no working back/close button.
+  injectStyle();
+  startPresence();
   let c = _convs[key];
   if (c) { c.win.classList.remove('msn-min'); c.win.style.display = 'flex'; mobileSolo(key); focusWin(c.win); markRead(key, otherUid); c.input && c.input.focus(); return; }
 
@@ -317,7 +328,7 @@ function renderMe() {
   if (!hasAcct()) { box.innerHTML = `<div class="msn-signin">Sign in to chat with people, send DMs and show up online.</div>`; return; }
   const st = STATUS[effStatus()] || STATUS.online;
   box.innerHTML = `
-    <div class="msn-me-av" style="--dot:${st.dot}">${buddyAvatarSvg(myOutfitKey(), 46)}</div>
+    <div class="msn-me-av" style="--dot:${st.dot}">${buddyAvatarSvg(myBuddyCfg() || myOutfitKey(), 46)}</div>
     <div class="msn-me-info">
       <div class="msn-me-top"><span class="msn-me-name">${esc(myName())}</span>
         <select class="msn-status-sel">${Object.keys(STATUS).map(k => `<option value="${k}"${k === _myStatus ? ' selected' : ''}>${STATUS[k].label}</option>`).join('')}</select>
@@ -364,7 +375,7 @@ function renderList() {
     sec.appendChild(el('div', 'msn-sec-hd', `${title} (${arr.length})`));
     for (const [id, u] of arr) {
       const st = STATUS[u.status] || STATUS.online;
-      const row = contactRow(u.username || 'Aquatard', u.statusMsg || '', dim ? '#8a8f98' : st.dot, u.buddyOutfit || 'none', () => openConversation('dm:' + id, u.username, id), _unread[id]);
+      const row = contactRow(u.username || 'Aquatard', u.statusMsg || '', dim ? '#8a8f98' : st.dot, u.buddyCfg || u.buddyOutfit || 'none', () => openConversation('dm:' + id, u.username, id), _unread[id]);
       if (dim) row.classList.add('msn-off');
       sec.appendChild(row);
     }
@@ -445,6 +456,18 @@ function openMessenger() {
 if (typeof window !== 'undefined') {
   window.openMessenger = openMessenger;
   window.messengerOpenConversation = openConversation;
+  // Re-push presence whenever the buddy look changes, so contacts see the new avatar.
+  window.aqRefreshPresence = () => { try { writePresence(); renderContacts(); } catch (e) {} };
+  // Roster for @-mention autocomplete: live presence + anyone we've seen chat.
+  window.aqUserRoster = () => {
+    const out = new Map();
+    for (const id in _users) {
+      const u = _users[id]; if (!u || !u.username) continue;
+      out.set(u.username.toLowerCase(), { uid: id, name: u.username, cfg: u.buddyCfg || (u.buddyOutfit ? { outfit: u.buddyOutfit } : null) });
+    }
+    if (window._aqChatSenders) for (const [k, v] of window._aqChatSenders) if (!out.has(k)) out.set(k, v);
+    return Array.from(out.values());
+  };
   // begin presence once accounts/firebase are ready (so you show online without opening chat)
   const tryStart = () => { if (hasAcct() && fbReady()) { startPresence(); } else { setTimeout(tryStart, 1500); } };
   setTimeout(tryStart, 2500);

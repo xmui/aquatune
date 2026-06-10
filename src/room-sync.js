@@ -690,8 +690,14 @@ window.listenGlobalChat = function(callback) {
 
 window.sendGlobalMessage = function(msg, imageData) {
   const username = localStorage.getItem('aq_username') || 'Guest';
+  // Denormalize sender identity into the message so chat avatars render without a
+  // lookup (works for anonymous guests too) and the profile card can find them.
+  const uid = (window.effectiveUserId && window.effectiveUserId()) || null;
+  let avatar = null;
+  try { avatar = window.aqBuddyConfig ? window.aqBuddyConfig() : null; } catch (e) {}
   push(ref(db, GLOBAL_CHAT_PATH), {
     username, message: msg, imageData: imageData || null, timestamp: Date.now(),
+    uid: uid || null, avatar: avatar || null, acct: !!window._aqAccountId,
   });
 };
 

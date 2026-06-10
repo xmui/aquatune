@@ -247,7 +247,8 @@ function regimeLabel(r) {
 // the early values converge so the anchor choice doesn't matter.
 // ---------------------------------------------------------------------------
 let _timeframe = '1h';
-const _series = {}; // id -> [{tick, price}] for the current timeframe
+const _series = {}; // id -> [{tick, price}] for the current timeframe (drives the chart)
+const _hourSeries = {}; // id -> [{tick, price}] — always the last hour (drives list % + dips/highs)
 
 // Fast numeric PRNG used only for the timeframe series. It needn't match the
 // live engine (the series is rescaled to end at the live price), so we avoid
@@ -262,10 +263,11 @@ function _regimeFast(t) {
   return a + (b - a) * s;
 }
 
-function rebuildSeries(ids) {
-  const now = lastComputedTick;
-  if (now < 1) { for (const id of ids) _series[id] = (history[id] || []).slice(); return; }
-  const frameTicks = TIMEFRAMES[_timeframe] || 900;
+// Core deterministic builder — simulate `ids` over the last `frameTicks` and return
+// id -> [{tick,price}] (downsampled, rescaled to end at the live price).
+function _simSeries(ids, frameTicks) {
+  const now = lastComputedTick, out = {};
+  if (now < 1) { for (const id of ids) out[id] = (history[id] || []).slice(); return out; }
   const start = Math.max(0, now - frameTicks);
   const span = now - start;
   const step = Math.max(1, Math.floor(span / SERIES_POINTS));
@@ -294,10 +296,35 @@ function rebuildSeries(ids) {
   for (const id of ids) {
     const arr = pts[id], live = priceOf(id), endP = arr[arr.length - 1].price;
     if (endP > 0 && live > 0 && isFinite(live)) { const k = live / endP; for (const pt of arr) pt.price *= k; }
-    _series[id] = arr;
+    out[id] = arr;
   }
+  return out;
+}
+function rebuildSeries(ids) {
+  const out = _simSeries(ids, TIMEFRAMES[_timeframe] || 900);
+  for (const id of ids) _series[id] = out[id];
 }
 function rebuildAllSeries() { rebuildSeries(STOCKS.map(s => s.id)); }
+// Always-on last-hour window (independent of the selected chart timeframe).
+function rebuildHourSeries() {
+  const ids = STOCKS.map(s => s.id), out = _simSeries(ids, TIMEFRAMES['1h'] || 900);
+  for (const id of ids) _hourSeries[id] = out[id];
+}
+// % change over the last hour (current price vs ~1h ago).
+function pctHour(id) {
+  const buf = _hourSeries[id];
+  if (!buf || buf.length < 2) return pctChange(id);
+  const a = buf[0].price, b = buf[buf.length - 1].price;
+  return a > 0 ? (b - a) / a * 100 : 0;
+}
+// High/low ("dips and highs") within the last hour.
+function rangeHour(id) {
+  const buf = _hourSeries[id];
+  if (!buf || !buf.length) { const p = priceOf(id); return { hi: p, lo: p }; }
+  let hi = -Infinity, lo = Infinity;
+  for (const pt of buf) { if (pt.price > hi) hi = pt.price; if (pt.price < lo) lo = pt.price; }
+  return { hi, lo };
+}
 function visibleIds() { return _compareMode ? [..._compareSet] : [_selected]; }
 function seriesOf(id) { return _series[id] && _series[id].length ? _series[id] : (history[id] || []); }
 
@@ -456,6 +483,7 @@ function buildUI() {
     <div id="stk-root">
       <div id="stk-left">
         <div id="stk-regime"></div>
+        <div id="stk-list-hd"><span>Markets</span><span>Δ 1h</span></div>
         <div id="stk-list"></div>
       </div>
       <div id="stk-main">
@@ -492,7 +520,7 @@ function renderList() {
   if (!list) return;
   list.innerHTML = '';
   for (const s of STOCKS) {
-    const pct = pctChange(s.id);
+    const pct = pctHour(s.id);   // list change is always last-hour
     const up = pct >= 0;
     const h = holdings[s.id];
     const held = !!(h && h.shares > 0);
@@ -532,14 +560,15 @@ function renderChartHead() {
       [...STOCKS].filter(s => _compareSet.has(s.id)).forEach((s, i) => {
         const c = COMPARE_COLORS[i % COMPARE_COLORS.length];
         const tag = el('span', 'stk-leg');
-        tag.innerHTML = `<i style="background:${c}"></i>${s.ticker} ${pctChange(s.id).toFixed(1)}%`;
+        tag.innerHTML = `<i style="background:${c}"></i>${s.ticker} ${pctHour(s.id).toFixed(1)}%`;
         legend.appendChild(tag);
       });
     }
   } else {
     const s = STOCKS.find(x => x.id === _selected);
-    const pct = pctChange(_selected);
-    if (title) title.innerHTML = `<b>${s.ticker}</b> ${s.name} &nbsp; <span style="color:${pct >= 0 ? '#5ad17a' : '#ff5d5d'}">${fmt(priceOf(_selected))} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)</span>`;
+    const pct = pctHour(_selected);
+    const hr = rangeHour(_selected);
+    if (title) title.innerHTML = `<b>${s.ticker}</b> ${s.name} &nbsp; <span style="color:${pct >= 0 ? '#5ad17a' : '#ff5d5d'}">${fmt(priceOf(_selected))} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% · 1h)</span> &nbsp; <span style="opacity:.65;font-size:.82em">1h H ${fmt(hr.hi)} · L ${fmt(hr.lo)}</span>`;
     if (legend) legend.innerHTML = '';
   }
 }
@@ -737,6 +766,7 @@ function onTick() {
     // negligible slice of a week and a full 1w rebuild is ~250ms).
     if (_timeframe === '1w') { if (++_sinceRebuild >= 4) { rebuildSeries(visibleIds()); _sinceRebuild = 0; } }
     else rebuildAllSeries();
+    rebuildHourSeries();   // list % + dips/highs always reflect the last hour
     renderAll();
   }
 }
@@ -754,6 +784,7 @@ async function ensureInit() {
   await initConfig();
   await loadSnapshotAndSeed();
   rebuildAllSeries();
+  rebuildHourSeries();
   hookCreditSync();
   await loadPortfolio();
 }

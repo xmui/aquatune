@@ -8589,7 +8589,7 @@ const APPS = {
   rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
   tanks:     { el:'tanks-wrap',     name:'Tank Battle', tb:'#tanks-titlebar',    openFn:()=>window.openTanks?.(),      closeFn:()=>window.openTanks?.(false) },
   airhockey: { el:'airhockey-wrap', name:'Air Hockey',  tb:'#airhockey-titlebar',openFn:()=>window.openAirHockey?.(),  closeFn:()=>window.openAirHockey?.(false) },
-  chat:      { modal:true, name:'Chat', openFn:()=>toggleBoard() },
+  chat:      { modal:true, name:'Messenger', openFn:()=>{ window.openMessenger ? window.openMessenger() : toggleBoard(); } },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
 const OS = {
@@ -8909,7 +8909,7 @@ const DESKTOP_APPS = [
 ];
 /* ---------- Dock (rendered from a persisted pin list) ---------- */
 const DOCK_META = {
-  chat:{icon:'💬',label:'Chat'}, player:{icon:'♪',label:'Player'}, arcade:{icon:'🎮',label:'Arcade'},
+  chat:{icon:'💬',label:'Messenger'}, player:{icon:'♪',label:'Player'}, arcade:{icon:'🎮',label:'Arcade'},
   synth:{icon:'🎹',label:'AquaSynth'}, studio:{icon:'🎛️',label:'AquaSynth Studio'}, paint:{icon:'🎨',label:'AquaPaint'},
   files:{icon:'📁',label:'Files'}, texteditor:{icon:'📝',label:'Text Editor'},
   leaderboard:{icon:'🏆',label:'Leaderboard'}, photos:{icon:'📷',label:'Photos'}, rooms:{icon:'🌐',label:'Public Rooms'},
@@ -12970,6 +12970,8 @@ function closeBoard() {
   boardStopSse();
 }
 function toggleBoard() {
+  // Chat was redesigned into the MSN-style Messenger; route all chat entry points there.
+  if (window.openMessenger) { window.openMessenger(); return; }
   const ov = document.getElementById('board-overlay');
   if (ov.classList.contains('show')) { closeBoard(); } else { openBoard(); }
 }
@@ -14819,6 +14821,32 @@ function buddyShoot3dSfx(name) {
   } catch (e) {}
 }
 window.buddyShoot3dSfx = buddyShoot3dSfx;
+
+/* ── MESSENGER (MSN) SFX — sign-in / new message / nudge / send ── */
+function msnSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(1, slide), t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'signin':  [523, 659, 880].forEach((f, i) => blip(f, i * 0.10, 0.18, 'sine', 0.12)); break;      // the classic chimey rise
+      case 'msg':     blip(880, 0, 0.10, 'sine', 0.12); blip(1170, 0.10, 0.13, 'sine', 0.12); break;        // doot-doot
+      case 'nudge':   blip(196, 0, 0.16, 'square', 0.16, 140); blip(160, 0.14, 0.18, 'square', 0.14, 110); break;  // buzz
+      case 'send':    blip(660, 0, 0.06, 'triangle', 0.08); break;
+    }
+  } catch (e) {}
+}
+window.msnSfx = msnSfx;
 
 /* ── 8-BALL POOL SFX — clacks, cushion, pocket drop, win/lose ── */
 function poolSfx(name) {
@@ -17419,6 +17447,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
 <script type="module" src="/src/buddyshoot3d.js"></script>
+<script type="module" src="/src/messenger.js"></script>
 <script type="module" src="/src/pool8.js"></script>
 <script type="module" src="/src/tetris.js"></script>
 <script type="module" src="/src/rogue.js"></script>

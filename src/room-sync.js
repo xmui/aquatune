@@ -343,6 +343,7 @@ window.initRoom = async function(roomId, isHost, opts) {
   window._currentRoomId = roomId;
   window._isRoomHost    = isHost;
   window._canControl    = isHost;
+  try { window.msnOnRoomChange && window.msnOnRoomChange(); } catch (e) {}   // refresh Messenger's Room Chat entry
   if (isHost) _roomHostUserId = myUserId;
   // Keep the persisted session role in sync with the resolved role
   try { localStorage.setItem('aq_session_room', JSON.stringify({ roomId, wasHost: isHost })); } catch {}

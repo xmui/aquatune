@@ -182,33 +182,47 @@ function applyResets() {
 // per action, rarely ×lucky). These ceilings sit ~10× above that, so a real player
 // never trips them, but an exploit or console-injected dump of thousands does. A
 // trip auto-(site-)bans the account.
-const _xpLog = [];                       // { ts, skill, amt } within the last RATE_LONG
+const _xpLog = [];                       // { ts, skill, amt } granted within the last RATE_LONG
 const RATE_SHORT = 60 * 1000, RATE_LONG = 5 * 60 * 1000;
-const SHORT_SKILL = 3500, LONG_SKILL = 9000;    // per-skill ceilings (1 min / 5 min)
-const SHORT_TOTAL = 6000, LONG_TOTAL = 15000;   // all-skills ceilings (1 min / 5 min)
-let _cheatFlagged = false;
-function _antiCheat(skillId, amount) {
-  const now = Date.now();
-  _xpLog.push({ ts: now, skill: skillId, amt: amount });
-  while (_xpLog.length && now - _xpLog[0].ts > RATE_LONG) _xpLog.shift();
-  if (_cheatFlagged) return;
+// Ceilings sit ~10× above the densest legit play. A burst over them is CLAMPED (the
+// excess simply isn't granted) rather than instantly banning — a real fast player is
+// never locked out, an injection dump just can't farm past the cap. Repeated trips
+// escalate to a silent shadow-ban (see _antiCheat).
+const SHORT_SKILL = 5000, LONG_SKILL = 13000;   // per-skill ceilings (1 min / 5 min)
+const SHORT_TOTAL = 8000, LONG_TOTAL = 22000;   // all-skills ceilings (1 min / 5 min)
+const STRIKES_TO_BAN = 3;
+let _lastStrikeAt = 0;
+// Headroom left under every ceiling for `skillId` right now (≥0). Used to clamp grants.
+function _xpHeadroom(skillId, now) {
   let sShort = 0, sLong = 0, tShort = 0, tLong = 0;
   for (const e of _xpLog) {
     const recent = now - e.ts <= RATE_SHORT;
     tLong += e.amt; if (recent) tShort += e.amt;
     if (e.skill === skillId) { sLong += e.amt; if (recent) sShort += e.amt; }
   }
-  const name = SKILL_BY_ID[skillId] ? SKILL_BY_ID[skillId].name : skillId;
-  let reason = '';
-  if (sShort > SHORT_SKILL) reason = `${name} +${sShort} XP in under a minute`;
-  else if (sLong > LONG_SKILL) reason = `${name} +${sLong} XP in 5 minutes`;
-  else if (tShort > SHORT_TOTAL) reason = `+${tShort} XP across skills in under a minute`;
-  else if (tLong > LONG_TOTAL) reason = `+${tLong} XP across skills in 5 minutes`;
-  if (reason) {
-    _cheatFlagged = true;
-    if (typeof window.aqAutoBan === 'function') window.aqAutoBan('Auto-banned for an impossible XP rate (' + reason + ').');
-  }
+  return Math.max(0, Math.min(SHORT_SKILL - sShort, LONG_SKILL - sLong, SHORT_TOTAL - tShort, LONG_TOTAL - tLong));
 }
+// Returns how much of `requested` is allowed; records the grant; escalates on abuse.
+function _antiCheat(skillId, requested) {
+  const now = Date.now();
+  while (_xpLog.length && now - _xpLog[0].ts > RATE_LONG) _xpLog.shift();
+  const headroom = _xpHeadroom(skillId, now);
+  const allowed = Math.max(0, Math.min(requested, headroom));
+  if (allowed > 0) _xpLog.push({ ts: now, skill: skillId, amt: allowed });
+  if (requested > headroom) {            // tried to exceed the cap → a "trip"
+    const name = SKILL_BY_ID[skillId] ? SKILL_BY_ID[skillId].name : skillId;
+    if (now - _lastStrikeAt > 60 * 1000 && !window._aqShadowBanned) {   // ≤1 strike/min
+      _lastStrikeAt = now;
+      let strikes = 1;
+      try { strikes = (parseInt(localStorage.getItem('aq_xp_strikes') || '0', 10) || 0) + 1; localStorage.setItem('aq_xp_strikes', String(strikes)); } catch (e) {}
+      const reason = `${name} XP rate cap exceeded`;
+      try { window.aqSystemLog && window.aqSystemLog(`⚠️ ${currentName()} tripped anti-cheat: ${reason} (strike ${strikes})`, 'cheat'); } catch (e) {}
+      if (strikes >= STRIKES_TO_BAN && typeof window.aqShadowBan === 'function') window.aqShadowBan('Repeated impossible XP rate (' + reason + ').');
+    }
+  }
+  return allowed;
+}
+function currentName() { return (typeof window.currentDisplayName === 'function' && window.currentDisplayName()) || localStorage.getItem('aq_username') || 'Someone'; }
 
 // ---------------------------------------------------------------------------
 // Public API (on window so inline games + modules can grant XP)
@@ -218,21 +232,33 @@ function _antiCheat(skillId, amount) {
 // this single factor, making the climb ~2.5× grindier without touching the curve or
 // any per-game formula. Music is exempt (it's already the slow, intentional outlier).
 const XP_SCALE = 0.4;
+const _lvlAnnouncedAt = {};   // skillId -> ts, to throttle global-chat level-up shouts
 function addXp(skillId, amount) {
   if (!hasAccount()) return;   // no account → no XP
+  if (window._aqShadowBanned) return;   // shadow-banned: silently stop earning (no lockout)
   if (!SKILL_BY_ID[skillId]) return;
   amount = Math.round(amount);
   if (!isFinite(amount) || amount <= 0) return;
   if (skillId !== 'music') amount = Math.max(1, Math.round(amount * XP_SCALE));   // grindier; keep ≥1 so the popup still shows
+  amount = _antiCheat(skillId, amount);   // clamp to the rate cap (excess dropped; repeated abuse → silent ban)
+  if (amount <= 0) return;
   const before = levelForXp(_xp[skillId] | 0);
   _xp[skillId] = Math.min(xpForLevel(MAX_LEVEL), (_xp[skillId] | 0) + amount);
   const after = levelForXp(_xp[skillId]);
   _writeLocal();
   _saveRemote();
-  _antiCheat(skillId, amount);   // flag + auto-ban implausibly fast XP
   // Always pop: a "+N XP" chip on every gain, plus a level-up chip when it ticks.
   showXpPopup(skillId, amount, after > before ? after : 0);
   refreshHudFills();
+  // Shout level-ups to Global Chat (throttled per skill so a multi-level dump posts once).
+  if (after > before && typeof window.aqGameAnnounce === 'function') {
+    const now = Date.now();
+    if (now - (_lvlAnnouncedAt[skillId] || 0) > 8000) {
+      _lvlAnnouncedAt[skillId] = now;
+      const s = SKILL_BY_ID[skillId];
+      try { window.aqGameAnnounce(`reached Level ${after} ${s.name} ${s.icon}`); } catch (e) {}
+    }
+  }
   // Feed daily challenges that track XP gained (skill-specific + any-skill).
   if (typeof window.aqDailyProgress === 'function') window.aqDailyProgress('xp', amount, skillId);
   if (_open) renderSkillsPanel();

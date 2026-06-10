@@ -825,8 +825,8 @@ function buildTouch() {
   stick.addEventListener('touchend', endStick); stick.addEventListener('touchcancel', endStick);
   // look — drag anywhere on the right half (the canvas)
   let lid = null, lx = 0;
-  cv.addEventListener('touchstart', e => { if (state !== 'playing') return; const t = e.changedTouches[0]; lid = t.identifier; lx = t.clientX; }, { passive: true });
-  cv.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === lid) { pa += (t.clientX - lx) * 0.006; lx = t.clientX; } }, { passive: true });
+  cv.addEventListener('touchstart', e => { if (state !== 'playing' || (e.touches && e.touches.length > 2)) return; const t = e.changedTouches[0]; lid = t.identifier; lx = t.clientX; }, { passive: true });
+  cv.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 2) return; for (const t of e.changedTouches) if (t.identifier === lid) { pa += (t.clientX - lx) * 0.006; lx = t.clientX; } }, { passive: true });
   const endLook = e => { for (const t of e.changedTouches) if (t.identifier === lid) lid = null; };
   cv.addEventListener('touchend', endLook); cv.addEventListener('touchcancel', endLook);
   // fire / swap

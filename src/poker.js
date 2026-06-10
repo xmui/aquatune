@@ -269,7 +269,8 @@ function settleYou() {
     // pot you took, capped) while every hand still grants a small played trickle.
     if (myIdx >= 0) {
       const myWin = ((Array.isArray(G.winners) && G.winners.find(w => w.idx === myIdx)) || {}).amt || 0;
-      const mult = iWon ? Math.min(16, 8 + myWin / (BB * 2)) : 3;
+      // Higher stakes ⇒ more XP: winners scale with the pot they took, losers with the blind size.
+      const mult = iWon ? Math.min(20, 8 + myWin / (BB * 2)) : Math.min(8, 2 + Math.log10(1 + BB) * 1.5);
       window.aqGameXp('gambling', { played: true, won: iWon, luck: 0.4, mult });
     }
   }

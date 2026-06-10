@@ -149,12 +149,21 @@ async function attachAccount(id, { adoptCredits = true } = {}) {
       _account.admin = true;
       update(accRef(id), { admin: true, updatedAt: Date.now() }).catch(() => {});
     }
+    // Retire the old aggressive auto-bans: lift any account a previous anti-cheat
+    // version site-banned (these were the false positives). Manual admin bans —
+    // siteBanned WITHOUT the autoBanned flag — are left intact below.
+    if (_account.siteBanned && _account.autoBanned) {
+      _account.siteBanned = false; delete _account.siteBanReason; delete _account.autoBanned;
+      update(accRef(id), { siteBanned: null, siteBanReason: null, autoBanned: null, updatedAt: Date.now() }).catch(() => {});
+      update(ref(db, 'user-skills/' + id), { banned: null }).catch(() => {});
+    }
+    window._aqShadowBanned = !!_account.shadowBanned;   // silent ban: stops XP/ranking, no lockout
   }
   hookAccountCredits();
   watchCredits(id);
   if (typeof window.aqRefreshCreditDisplays === 'function') window.aqRefreshCreditDisplays();
   aqRenderAccountPanel();
-  // Site-banned account restored from a saved session → block the whole app.
+  // Site-banned account restored from a saved session → block the whole app (manual bans only now).
   if (_account && _account.siteBanned) showSiteBanScreen(_account.siteBanReason);
 }
 
@@ -219,6 +228,7 @@ async function aqSignup(username, password) {
     await mergeLocalIntoAccount(accountId);
     localStorage.setItem('aq_account_id', accountId);
     localStorage.setItem('aq_username', username);
+    try { window.aqSystemLog && window.aqSystemLog(`🆕 ${username} joined Aquatune`, 'signup'); } catch (e) {}
     location.reload();
     return { ok: true, accountId };
   } catch (e) { return { ok: false, error: 'Signup failed (network?).' }; }
@@ -466,6 +476,7 @@ async function aqAdminSetSiteBan(username, banned, reason) {
     await update(ref(db, 'user-skills/' + accountId), { banned: banned ? true : null });
   } catch (e) { return { ok: false, error: 'Update failed (check DB rules).' }; }
   if (accountId === window._aqAccountId && _account) { if (banned) _account.siteBanned = true; else delete _account.siteBanned; }
+  try { window.aqSystemLog && window.aqSystemLog(`${banned ? '🚫' : '✅'} ${_account.username} ${banned ? 'banned' : 'unbanned'} ${username}${banned && reason ? ' — ' + reason : ''}`, 'ban'); } catch (e) {}
   return { ok: true, banned: !!banned };
 }
 // Is the CURRENT user banned from the whole site?
@@ -486,6 +497,20 @@ async function aqAutoBan(reason) {
     } catch (e) {}
   }
   showSiteBanScreen((_account && _account.siteBanReason) || r);
+}
+// Silent (shadow) ban: drop from rankings + stop earning XP, but NO lockout screen —
+// the player keeps using the site, they just quietly stop ranking. Used by the
+// anti-cheat after repeated trips so a one-off false positive never locks anyone out.
+async function aqShadowBan(reason) {
+  const id = window._aqAccountId; if (!id) return;
+  if (window._aqShadowBanned) return;
+  const r = String(reason || 'Auto shadow-ban by anti-cheat.');
+  window._aqShadowBanned = true;
+  try { await update(accRef(id), { shadowBanned: true, shadowReason: r, updatedAt: Date.now() }); } catch (e) {}
+  try { await update(ref(db, 'user-skills/' + id), { banned: true }); } catch (e) {}   // drop off rankings
+  if (_account) { _account.shadowBanned = true; _account.shadowReason = r; }
+  try { const name = (_account && _account.username) || localStorage.getItem('aq_username'); if (name && typeof window.aqPurgeLeaderboard === 'function') await window.aqPurgeLeaderboard(name); } catch (e) {}
+  try { window.aqSystemLog && window.aqSystemLog(`🚫 ${(_account && _account.username) || 'A user'} was shadow-banned (auto): ${r}`, 'ban'); } catch (e) {}
 }
 // Full-screen block shown to a site-banned user. Captures all input (top z-index)
 // and only offers a log-out, so the rest of the app is unusable.
@@ -667,7 +692,7 @@ async function renderAdminBox(box) {
 Object.assign(window, {
   aqSignup, aqLogin, aqLogout, aqChangePassword, aqChangeUsername, aqRequestReset,
   aqLinkGoogle, aqLoginWithGoogle, aqRenderAccountPanel, aqAdminAdjustCredits, aqAdminSetSkill,
-  aqAdminSetBan, aqIsBanned, aqAdminSetSiteBan, aqIsSiteBanned, aqAutoBan,
+  aqAdminSetBan, aqIsBanned, aqAdminSetSiteBan, aqIsSiteBanned, aqAutoBan, aqShadowBan,
 });
 
 // ---------------------------------------------------------------------------

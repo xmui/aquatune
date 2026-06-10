@@ -694,3 +694,17 @@ window.sendGlobalMessage = function(msg, imageData) {
     username, message: msg, imageData: imageData || null, timestamp: Date.now(),
   });
 };
+
+// System event log — an admin-only feed (read in the Messenger). Records notable
+// site events (anti-cheat trips, bans, signups). Best-effort; opportunistically
+// prunes its own entries older than 7 days on read.
+window.aqSystemLog = function(text, kind) {
+  try { push(ref(db, 'system-log'), { text: String(text || '').slice(0, 300), kind: kind || 'info', ts: Date.now() }); } catch (e) {}
+};
+window.listenSystemLog = function(callback) {
+  onChildAdded(ref(db, 'system-log'), snap => {
+    const e = snap.val(); if (!e) return;
+    if (e.ts && Date.now() - e.ts > 7 * 86400000) { try { remove(snap.ref); } catch (er) {} return; }
+    callback(e);
+  });
+};

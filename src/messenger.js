@@ -105,7 +105,8 @@ function onDmIndex() {
       if (incoming && !openFocused) {
         _unread[other] = (_unread[other] || 0) + 1;
         sfx('msg');
-        try { window.aqNotify && window.aqNotify({ name: e.withName || 'Aquatard', text: e.lastMsg || 'sent a message' }); } catch (er) {}
+        const oid = other, oname = e.withName || 'Aquatard';
+        try { window.aqNotify && window.aqNotify({ name: oname, text: e.lastMsg || 'sent a message', onClick: () => openConversation('dm:' + oid, oname, oid) }); } catch (er) {}
       }
       _seenTs[other] = e.lastTs || 0;
     }
@@ -145,8 +146,10 @@ function makeDrag(win, handle) {
 function convTitle(key, name) {
   if (key === 'global') return '🌐 Global Chat';
   if (key === 'room') return '🚪 Room Chat';
+  if (key === 'system') return '🛡️ System Log';
   return '😎 ' + esc(name || 'Aquatard');
 }
+function isAdmin() { try { return !!(window.aqCurrentAccount && window.aqCurrentAccount() && window.aqCurrentAccount().admin); } catch (e) { return false; } }
 function appendMsg(log, p) {
   if (p && p.type === 'nudge') { const d = el('div', 'msn-sys', `👋 ${esc(p.username || 'Someone')} sent a nudge!`); log.appendChild(d); log.scrollTop = 99999; return; }
   if (typeof window.renderChatMsg === 'function') window.renderChatMsg(log, p);
@@ -175,27 +178,31 @@ function openConversation(key, name, otherUid) {
   if (isMobile()) { const back = el('button', 'msn-back', '‹ Contacts'); back.onclick = () => closeConversation(key); bar.prepend(back); bar.append(closeBtn); }
   else { const minBtn = el('button', 'msn-min-btn', '—'); minBtn.onclick = () => { win.classList.add('msn-min'); win.style.display = 'none'; }; bar.append(minBtn, closeBtn); }
   const log = el('div', 'msn-log');
-  const tools = el('div', 'msn-tools');
-  const emoBtn = el('button', 'msn-tool-btn', '☺'); emoBtn.title = 'Emoticons';
-  const emoBar = el('div', 'msn-emobar'); emoBar.style.display = 'none';
-  EMOTES.forEach(em => { const b = el('button', 'msn-emo', em); b.onclick = () => { ta.value += em; ta.focus(); }; emoBar.appendChild(b); });
-  emoBtn.onclick = () => { emoBar.style.display = emoBar.style.display === 'none' ? 'flex' : 'none'; };
-  tools.appendChild(emoBtn);
-  if (key.startsWith('dm:')) { const nudge = el('button', 'msn-tool-btn', '👋 Nudge'); nudge.onclick = () => doNudge(key, otherUid, name); tools.appendChild(nudge); }
-  const inputRow = el('div', 'msn-input-row');
-  const ta = el('textarea', 'msn-input'); ta.maxLength = 500; ta.placeholder = 'Type a message…';
-  const sendBtn = el('button', 'msn-send', 'Send');
-  const doSend = () => {
-    const v = ta.value.trim(); if (!v) return;
-    if (key === 'global') window.sendGlobalMessage && window.sendGlobalMessage(v);
-    else if (key === 'room') { if (window._currentRoomId) window.sendRoomMessage && window.sendRoomMessage(v); }
-    else sendDm(otherUid, name, v);
-    ta.value = ''; sfx('send');
-  };
-  sendBtn.onclick = doSend;
-  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
-  inputRow.append(ta, sendBtn);
-  win.append(bar, log, emoBar, tools, inputRow);
+  let ta = null;            // null for read-only channels (system)
+  win.append(bar, log);
+  if (key !== 'system') {   // System is a read-only admin feed — no composer
+    const tools = el('div', 'msn-tools');
+    const emoBtn = el('button', 'msn-tool-btn', '☺'); emoBtn.title = 'Emoticons';
+    const emoBar = el('div', 'msn-emobar'); emoBar.style.display = 'none';
+    EMOTES.forEach(em => { const b = el('button', 'msn-emo', em); b.onclick = () => { ta.value += em; ta.focus(); }; emoBar.appendChild(b); });
+    emoBtn.onclick = () => { emoBar.style.display = emoBar.style.display === 'none' ? 'flex' : 'none'; };
+    tools.appendChild(emoBtn);
+    if (key.startsWith('dm:')) { const nudge = el('button', 'msn-tool-btn', '👋 Nudge'); nudge.onclick = () => doNudge(key, otherUid, name); tools.appendChild(nudge); }
+    const inputRow = el('div', 'msn-input-row');
+    ta = el('textarea', 'msn-input'); ta.maxLength = 500; ta.placeholder = 'Type a message…';
+    const sendBtn = el('button', 'msn-send', 'Send');
+    const doSend = () => {
+      const v = ta.value.trim(); if (!v) return;
+      if (key === 'global') window.sendGlobalMessage && window.sendGlobalMessage(v);
+      else if (key === 'room') { if (window._currentRoomId) window.sendRoomMessage && window.sendRoomMessage(v); }
+      else sendDm(otherUid, name, v);
+      ta.value = ''; sfx('send');
+    };
+    sendBtn.onclick = doSend;
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+    inputRow.append(ta, sendBtn);
+    win.append(emoBar, tools, inputRow);
+  }
   if (!isMobile()) { const n = Object.keys(_convs).length; win.style.left = (90 + n * 26) + 'px'; win.style.top = (70 + n * 26) + 'px'; }
   document.body.appendChild(win);
   makeDrag(win, bar);
@@ -207,7 +214,7 @@ function openConversation(key, name, otherUid) {
   attachListener(key, otherUid, log);
   if (key === 'room' && !window._currentRoomId) { log.appendChild(el('div', 'msn-sys', 'Join or create a public room to chat here.')); }
   markRead(key, otherUid);
-  ta.focus();
+  if (ta) ta.focus();
 }
 function closeConversation(key) {
   const c = _convs[key]; if (!c) return;
@@ -218,6 +225,7 @@ function closeConversation(key) {
 function attachListener(key, otherUid, log) {
   const c = _convs[key]; if (!c || !fbReady()) return;
   log.innerHTML = '';
+  if (key === 'system') { if (window.listenSystemLog) c.unsub = window.listenSystemLog(e => { const d = el('div', 'msn-sys', `${esc(e.text || '')}`); log.appendChild(d); log.scrollTop = 99999; }); return; }
   if (key === 'global') { window.listenGlobalChat && window.listenGlobalChat(p => appendMsg(log, p)); return; }
   if (key === 'room') {
     if (!window._currentRoomId) return;
@@ -252,10 +260,42 @@ window.msnOnRoomChange = function () {
 
 // ── contacts window ──────────────────────────────────────────────────────────────
 let _contactsWin = null, _searchTerm = '';
+
+// ── customizable banner (MSN-style top strip) ────────────────────────────────────
+const BANNER_THEMES = [
+  'linear-gradient(135deg,#1e6fd0,#7db8f0)',
+  'linear-gradient(135deg,#7a2fc0,#e08adf)',
+  'linear-gradient(135deg,#0f9d58,#7be0a0)',
+  'linear-gradient(135deg,#e0463a,#ffae8a)',
+  'linear-gradient(135deg,#16213a,#3a5a8a)',
+  'linear-gradient(135deg,#ff8a00,#ffd23a)',
+];
+let _banner = null;
+function loadBanner() {
+  if (_banner) return _banner;
+  try { _banner = JSON.parse(localStorage.getItem('aq_msn_banner') || 'null'); } catch (e) { _banner = null; }
+  if (!_banner || typeof _banner !== 'object') _banner = { text: '♪ Aquatune Messenger ♪', theme: 0 };
+  return _banner;
+}
+function saveBanner() {
+  try { localStorage.setItem('aq_msn_banner', JSON.stringify(_banner)); window.aqGamePersist && window.aqGamePersist('aq_msn_banner'); } catch (e) {}
+}
+function renderBanner() {
+  const box = _contactsWin && _contactsWin.querySelector('.msn-banner'); if (!box) return;
+  const b = loadBanner();
+  box.style.background = BANNER_THEMES[b.theme % BANNER_THEMES.length];
+  box.innerHTML = `<span class="msn-banner-txt" title="Click to edit your banner">${esc(b.text)}</span><button class="msn-banner-theme" title="Change theme">🎨</button>`;
+  box.querySelector('.msn-banner-txt').onclick = () => {
+    const v = prompt('Your banner:', b.text); if (v == null) return;
+    b.text = String(v).slice(0, 60); saveBanner(); renderBanner();
+  };
+  box.querySelector('.msn-banner-theme').onclick = e => { e.stopPropagation(); b.theme = (b.theme + 1) % BANNER_THEMES.length; saveBanner(); renderBanner(); };
+}
 function buildContactsWin() {
   const win = el('div', 'msn-win msn-contacts' + (isMobile() ? ' msn-mobile' : ''));
   win.innerHTML = `
     <div class="msn-titlebar msn-cbar"><span class="msn-tt">💬 Aquatune Messenger</span><button class="msn-x" data-act="close">✕</button></div>
+    <div class="msn-banner" data-act="banner"></div>
     <div class="msn-me"></div>
     <input class="msn-search" placeholder="Search Aquatards…">
     <div class="msn-list"></div>`;
@@ -271,7 +311,7 @@ function buildContactsWin() {
   renderContacts();
 }
 
-function renderContacts() { if (_contactsWin) { renderMe(); renderList(); } }
+function renderContacts() { if (_contactsWin) { renderBanner(); renderMe(); renderList(); } }
 function renderMe() {
   const box = _contactsWin && _contactsWin.querySelector('.msn-me'); if (!box) return;
   if (!hasAcct()) { box.innerHTML = `<div class="msn-signin">Sign in to chat with people, send DMs and show up online.</div>`; return; }
@@ -304,6 +344,7 @@ function renderList() {
   const pinned = el('div', 'msn-section');
   pinned.appendChild(contactRow('Room Chat', { ico: '🚪', text: window._currentRoomId ? ('Room ' + window._currentRoomId) : 'Not in a room' }, null, null, () => openConversation('room', 'Room Chat')));
   pinned.appendChild(contactRow('Global Chat', { ico: '🌐', text: 'Everyone on Aquatune' }, null, null, () => openConversation('global', 'Global Chat')));
+  if (isAdmin()) pinned.appendChild(contactRow('System Log', { ico: '🛡️', text: 'Admin · site events' }, null, null, () => openConversation('system', 'System Log')));
   list.appendChild(pinned);
   if (!hasAcct()) return;
   // partition online / offline
@@ -346,6 +387,9 @@ function injectStyle() {
   .msn-x,.msn-min-btn{width:20px;height:18px;border:1px solid #7fa6cf;border-radius:4px;background:linear-gradient(180deg,#fff,#cfe0f4);cursor:pointer;font-size:11px;line-height:1;color:#0a2a4a}
   .msn-back{margin-right:6px;border:1px solid #7fa6cf;border-radius:5px;background:linear-gradient(180deg,#fff,#cfe0f4);cursor:pointer;font-size:13px;font-weight:700;color:#0a3a66;padding:3px 9px}
   .msn-x:hover{background:linear-gradient(180deg,#ffd0d0,#f08a8a)}
+  .msn-banner{position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;padding:8px 34px;color:#fff;font-weight:800;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.45);border-bottom:1px solid #6f9fd0;cursor:pointer;overflow:hidden}
+  .msn-banner-txt{cursor:text}
+  .msn-banner-theme{position:absolute;right:6px;top:6px;border:none;background:rgba(255,255,255,.25);border-radius:6px;cursor:pointer;font-size:13px;padding:2px 5px}
   .msn-me{display:flex;gap:10px;align-items:center;padding:9px 10px;background:linear-gradient(180deg,#fdfdff,#e7f1fc);border-bottom:1px solid #c4d8ef}
   .msn-me-av,.msn-row-av{position:relative;flex-shrink:0;border-radius:8px;background:#fff;border:1px solid #b9d2ec;padding:2px}
   .msn-me-av{width:50px;height:50px}.msn-row-av{width:34px;height:34px;display:flex;align-items:center;justify-content:center}

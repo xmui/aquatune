@@ -445,7 +445,9 @@ function finish() {
   // relative to the bet (capped); losing spins stay at the small played trickle.
   if (window.aqGameXp) {
     const betT = (typeof betTotal === 'function' ? betTotal() : 0);
-    const mult = wonThisSpin && betT > 0 ? Math.min(2.5, 1 + (spinWin / betT) * 0.1) : 1;
+    // Bigger wagers pay more XP (scale-agnostic via log10), on top of the win-size bonus.
+    const betFactor = Math.min(3.5, 1 + Math.log10(1 + betT) * 0.8);
+    const mult = betT > 0 ? Math.min(5, betFactor * (wonThisSpin ? (1 + (spinWin / betT) * 0.1) : 0.6)) : 1;
     window.aqGameXp('gambling', { played: true, won: wonThisSpin, luck: 0.4, mult });
   }
   // free spins continue automatically

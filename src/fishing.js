@@ -64,11 +64,11 @@ const SHAPES = {
 // shape/col: its pixel sprite. Catch it and it joins your Fish-o-pedia.
 const FISH = [
   // River (zone 0)
-  { name: 'Minnow',        zone: 0, rarity: 0, value: 4,   rod: 0, shape: 'classic', col: '#bcd0c0' },
-  { name: 'Bass',          zone: 0, rarity: 1, value: 10,  rod: 0, shape: 'classic', col: '#6fae5a' },
-  { name: 'Pike',          zone: 0, rarity: 1, value: 18,  rod: 1, shape: 'long',    col: '#5a8a3a' },
-  { name: 'Rainbow Trout', zone: 0, rarity: 2, value: 30,  rod: 2, shape: 'classic', col: '#d98f5a' },
-  { name: 'Golden Carp',   zone: 0, rarity: 3, value: 75,  rod: 3, shape: 'round',   col: '#e8c000' },
+  { name: 'Minnow',        zone: 0, rarity: 0, value: 4,   rod: 0, shape: 'classic', col: '#bcd0c0', img: 'river/minnow' },
+  { name: 'Bass',          zone: 0, rarity: 1, value: 10,  rod: 0, shape: 'classic', col: '#6fae5a', img: 'river/bass' },
+  { name: 'Pike',          zone: 0, rarity: 1, value: 18,  rod: 1, shape: 'long',    col: '#5a8a3a', img: 'river/pike' },
+  { name: 'Rainbow Trout', zone: 0, rarity: 2, value: 30,  rod: 2, shape: 'classic', col: '#d98f5a', img: 'river/rainbow-trout' },
+  { name: 'Golden Carp',   zone: 0, rarity: 3, value: 75,  rod: 3, shape: 'round',   col: '#e8c000', img: 'river/golden-carp' },
   // Ocean (zone 1)
   { name: 'Sardine',       zone: 1, rarity: 0, value: 8,   rod: 0, shape: 'classic', col: '#9fb8c8' },
   { name: 'Mackerel',      zone: 1, rarity: 1, value: 18,  rod: 0, shape: 'classic', col: '#4a7fa0' },
@@ -342,7 +342,7 @@ function landFish(now) {
   if ((f.monster || f.rarity >= 4) && typeof window.aqGameAnnounce === 'function') {
     window.aqGameAnnounce(f.monster ? `landed the LEVIATHAN 🐋 (+${value}💰)!` : `reeled in a rare ${f.name} 🎣 (+${value}💰)`);
   }
-  lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster };
+  lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster, img: f.img };
   recordCaught(f.name);
   if (dexOpen) renderDex();
   try {
@@ -470,6 +470,40 @@ function drawSprite(ctx, shape, col, ox, oy, scale, silhouette) {
 }
 function spriteW(shape) { return (SHAPES[shape] || SHAPES.classic)[0].length; }
 
+// Photo art replaces the pixel sprites where present (River so far). Each fish's
+// `img` is a path under /fish (e.g. 'river/bass' → /fish/river/bass.png). Images
+// preload lazily; until one is ready, callers fall back to the pixel sprite.
+const FISH_IMG = {};
+function fishImg(key) {
+  if (!key || typeof window === 'undefined') return null;
+  let im = FISH_IMG[key];
+  if (!im) {
+    im = FISH_IMG[key] = new Image();
+    im.src = `/fish/${key}.png`;
+    im.onload = () => { try { if (dexEl && dexEl.style.display !== 'none') renderDex(); } catch (e) {} };
+  }
+  return (im.complete && im.naturalWidth) ? im : null;
+}
+// Draw a fish photo aspect-fit into the box (bx,by,bw,bh). Source art faces left;
+// `silhouette` tints it dark for unseen Fish-o-pedia entries (the caller passes a
+// dedicated canvas so source-atop only touches the fish).
+function drawFishImg(ctx, im, bx, by, bw, bh, silhouette) {
+  const s = Math.min(bw / im.naturalWidth, bh / im.naturalHeight);
+  const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+  const dx = bx + (bw - dw) / 2, dy = by + (bh - dh) / 2;
+  const prevSmooth = ctx.imageSmoothingEnabled;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(im, dx, dy, dw, dh);
+  if (silhouette) {
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = '#22331a';
+    ctx.fillRect(dx, dy, dw, dh);
+  }
+  ctx.restore();
+  ctx.imageSmoothingEnabled = prevSmooth;
+}
+
 function draw(t) {
   if (!cx) return;
   cx.fillStyle = SKY; cx.fillRect(0, 0, W, WATER_Y);
@@ -529,12 +563,17 @@ function draw(t) {
     px(mx, my - 11, mw * tl, 2, 3);
   }
 
-  // caught! — show the fish's pixel sprite leaping above the water
+  // caught! — show the fish leaping above the water (photo art, pixel fallback)
   if (state === 'caught' && lastCatch) {
-    const sc = lastCatch.monster ? 6 : 5;
-    const sw = spriteW(lastCatch.shape) * sc;
-    const ox = (W - sw) / 2, oy = 20 + Math.sin(t / 160) * 2;
-    drawSprite(cx, lastCatch.shape, lastCatch.col, ox, oy, sc, false);
+    const oy = 14 + Math.sin(t / 160) * 2;
+    const im = fishImg(lastCatch.img);
+    if (im) {
+      drawFishImg(cx, im, 12, oy, W - 24, lastCatch.monster ? 64 : 56, false);
+    } else {
+      const sc = lastCatch.monster ? 6 : 5;
+      const sw = spriteW(lastCatch.shape) * sc;
+      drawSprite(cx, lastCatch.shape, lastCatch.col, (W - sw) / 2, oy + 6, sc, false);
+    }
   }
 
   // message banner
@@ -607,8 +646,13 @@ function renderDex() {
       const cell = document.createElement('div'); cell.className = 'fish-dex-cell';
       const c = document.createElement('canvas'); c.width = 60; c.height = 38; c.className = 'fish-dex-spr';
       const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
-      const sc = 3, sw = spriteW(f.shape) * sc;
-      drawSprite(ctx, f.shape, f.col, (60 - sw) / 2, 4, sc, !seen);
+      const im = fishImg(f.img);
+      if (im) {
+        drawFishImg(ctx, im, 2, 2, 56, 34, !seen);
+      } else {
+        const sc = 3, sw = spriteW(f.shape) * sc;
+        drawSprite(ctx, f.shape, f.col, (60 - sw) / 2, 4, sc, !seen);
+      }
       cell.appendChild(c);
       const lab = document.createElement('div'); lab.className = 'fish-dex-lab';
       lab.innerHTML = seen ? `${f.name}<span>×${n}</span>` : `???<span>—</span>`;

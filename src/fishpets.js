@@ -49,6 +49,19 @@ function makeEl(p) {
   cvs.width = dims.w * SC; cvs.height = dims.h * SC;
   const ctx = cvs.getContext('2d'); ctx.imageSmoothingEnabled = false;
   if (window.aqDrawFishSprite) window.aqDrawFishSprite(ctx, def.shape, def.col, 0, 0, SC);
+  // Upgrade to photo art when the fish has it (pixel sprite shows until it loads).
+  // Source art faces left; draw it mirrored so the base faces right like the pixel
+  // sprites — place()'s dir-based scaleX then flips it correctly when swimming left.
+  if (def.img) {
+    const im = new Image();
+    im.onload = () => {
+      const w = 88, h = Math.max(1, Math.round(w * im.naturalHeight / im.naturalWidth));
+      cvs.width = w; cvs.height = h;
+      const c2 = cvs.getContext('2d'); c2.imageSmoothingEnabled = true;
+      c2.translate(w, 0); c2.scale(-1, 1); c2.drawImage(im, 0, 0, w, h);
+    };
+    im.src = `/fish/${def.img}.png`;
+  }
   flop.appendChild(cvs);
   const x = document.createElement('button'); x.className = 'aqfp-x'; x.textContent = '✕';
   x.onclick = (e) => { e.stopPropagation(); removePet(p.name); };

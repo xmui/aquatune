@@ -1,5 +1,5 @@
-// Microsoft Roulette — an American (0 + 00) roulette table dressed in Windows-XP
-// "Luna" chrome. Bet credits on the felt, spin the wheel, earn Gambling XP.
+// Roulette — an American (0 + 00) roulette table dressed in retro blue "Luna"
+// chrome. Bet credits on the felt, spin the wheel, earn Gambling XP.
 //
 // Reuses the shared economy (window.aqGetCredits/aqSetCredits/aqAddCredits) and XP
 // hook (window.aqGameXp('gambling', …)). Best win persists via gamesave
@@ -235,7 +235,7 @@ function resolve(result, staked) {
     } catch (e) {}
     if (net >= 2000 && window.sendGlobalMessage) {
       const u = localStorage.getItem('aq_username') || 'Someone';
-      window.sendGlobalMessage(`🎡 ${u} won ${net.toLocaleString()} on Microsoft Roulette (${result})!`);
+      window.sendGlobalMessage(`🎡 ${u} won ${net.toLocaleString()} on Roulette (${result})!`);
     }
   }
 

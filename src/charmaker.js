@@ -1,4 +1,4 @@
-// Mii Studio — a Mii-style creator for your Aqua Buddy.
+// Aquatard Creator — a character creator for your Aqua Buddy (aka your Aquatard).
 //
 // Edits the unified buddy config (color · expression · hat · clothes) exposed by
 // src/buddy.js. Saving commits via window.aqSetBuddyConfig, which instantly

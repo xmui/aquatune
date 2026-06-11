@@ -4,12 +4,34 @@
   <meta charset="UTF-8">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="application-name" content="Aquatune">
+  <!-- Status-bar / browser-chrome tint, with light + dark variants (Safari honors the media variants). -->
   <meta name="theme-color" content="#18b8d8">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#48d8f8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a3540">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Aquatune">
+  <!-- Favicons: SVG (modern, self-tints for dark mode) with PNG + ICO fallbacks. -->
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" href="/icons/favicon.ico" sizes="32x32">
+  <!-- iOS home-screen icon (180x180). iOS 26 applies the Liquid Glass squircle + specular highlight to this flat PNG automatically. -->
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
   <title>AQUATUNE</title>
+  <script>
+    /* Best-effort: pick the dark apple-touch-icon at load. iOS only reads this at
+       add-to-home-screen time and won't update live, so it's an enhancement, not a
+       guarantee (PWAs can't swap icons dynamically). */
+    try {
+      if (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) {
+        var ati = document.querySelector('link[rel="apple-touch-icon"]');
+        if (ati) ati.href = '/icons/apple-touch-icon-dark.png';
+      }
+    } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">

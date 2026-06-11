@@ -782,6 +782,7 @@ function onKey(e) {
   const w = document.getElementById('buddyshoot3d-wrap');
   if (!w || !w.classList.contains('open')) return;
   if (e.type === 'keydown') {
+    if (window.aqIsActiveApp && !window.aqIsActiveApp('buddyshoot3d')) return;   // another window owns the keys
     keys[e.code] = true;
     // perk select via number keys
     if (state === 'levelclear' && overlayEl && overlayEl._picks && /^Digit[1-3]$/.test(e.code)) {
@@ -858,7 +859,7 @@ function injectStyle() {
   if (document.getElementById('b3-style')) return;
   const s = el('style'); s.id = 'b3-style';
   s.textContent = `
-  #buddyshoot3d-wrap{position:fixed;top:50px;left:50%;transform:translateX(-50%);width:520px;max-width:96vw;border-radius:var(--chrome-radius,10px);z-index:540;flex-direction:column;background:#0a0608;border:1px solid var(--border,#333);box-shadow:0 18px 50px rgba(0,0,0,.5);font-family:var(--font-ui);overflow:hidden}
+  #buddyshoot3d-wrap{position:fixed;top:50px;left:50%;transform:translateX(-50%);width:520px;max-width:96vw;border-radius:var(--chrome-radius,10px);z-index:540;flex-direction:column;background:var(--panel,#0a0608);border:1.5px solid var(--win-border,var(--border,#333));box-shadow:0 18px 50px rgba(0,0,0,.5);font-family:var(--font-ui);overflow:hidden}
   #buddyshoot3d-wrap.open{display:flex}
   #buddyshoot3d-area{position:relative;display:flex;flex-direction:column;background:#000}
   #buddyshoot3d-area canvas{width:100%;height:auto;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:crosshair;touch-action:none;background:#000}

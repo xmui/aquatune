@@ -856,6 +856,7 @@ function setupInput() {
   const open = () => document.getElementById('studio-win')?.classList.contains('open');
   document.addEventListener('keydown', e => {
     if (!open() || e.repeat) return;
+    if (window.aqIsActiveApp && !window.aqIsActiveApp('studio')) return;   // another window owns the keys
     if (e.target && e.target.closest && e.target.closest('input,select,textarea')) return;
     const key = (e.key || '').toLowerCase();
     // command shortcuts with modifiers (don't trigger notes)

@@ -826,6 +826,7 @@ function onKey(e) {
   const w = document.getElementById('mining-wrap');
   if (!w || !w.classList.contains('open')) return;
   if (e.type === 'keydown') {
+    if (window.aqIsActiveApp && !window.aqIsActiveApp('mining')) return;   // another window owns the keys
     keys[e.code] = true;
     if (state === 'playing' && e.code === 'Space') { e.preventDefault(); swinging = true; swing(); }
   } else {
@@ -891,7 +892,7 @@ function injectStyle() {
   if (document.getElementById('m3-style')) return;
   const s = el('style'); s.id = 'm3-style';
   s.textContent = `
-  #mining-wrap{width:560px;background:#0b0a10;border-color:#3a3450}
+  #mining-wrap{width:560px}
   #mining-area{background:#0b0a10;padding:0;gap:0}
   .m3-view{position:relative;background:#000;line-height:0}
   .m3-view canvas{width:100%;height:auto;display:block;image-rendering:pixelated;image-rendering:crisp-edges;cursor:crosshair;touch-action:none}

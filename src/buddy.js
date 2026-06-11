@@ -3,7 +3,7 @@
 // One synced config (color · expression · clothes · hat) drives THREE things:
 //   1. the floating on-screen mascot (#aqua-buddy, a static SVG in index.html),
 //   2. every chat/stats/profile avatar (built fresh via aqBuildBuddySvg),
-//   3. the Mii Studio creator preview.
+//   3. the Aquatard Creator preview.
 //
 // The mascot is mutated in place by applyToMascot() (so the speech/idle
 // animations that reference #ab-mouth / #ab-outfit keep working). Avatars are
@@ -311,7 +311,7 @@ if (typeof window !== 'undefined') {
   window.aqSetBuddyConfig = setBuddyConfig;
   window.aqApplyBuddyToMascot = () => applyToMascot(buddyConfig());
   window.aqShowProfileCard = showProfileCard;
-  // expose the catalogs for the Mii Studio creator
+  // expose the catalogs for the Aquatard Creator
   window.aqBuddyPalettes = PALETTES;
   window.aqBuddyPaletteKeys = PALETTE_KEYS;
   window.aqBuddyExpressions = EXPRESSIONS;

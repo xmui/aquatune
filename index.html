@@ -3838,7 +3838,7 @@ body.perf-mode #aqua-gun { display: none !important; }
       #fishing-wrap, #mining-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
     }
 
-    /* ── XP-LUNA WINDOW CHROME (Roulette + Mii Studio) ─── */
+    /* ── XP-LUNA WINDOW CHROME (Roulette + Aquatard Creator) ─── */
     #roulette-wrap, #charmaker-wrap {
       position:fixed; top:46px; left:50%; transform:translateX(-50%);
       background:#ece9d8; border:1px solid #0831d9; border-radius:8px 8px 6px 6px;
@@ -5564,7 +5564,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
               <span class="agb-icon">🎡</span><span class="agb-name">Roulette</span>
             </button>
             <button class="apps-game-btn" onclick="OS.open('charmaker');toggleAppsMenu()">
-              <span class="agb-icon">🧑‍🎨</span><span class="agb-name">Mii Studio</span>
+              <span class="agb-icon">🧑‍🎨</span><span class="agb-name">Aquatard Creator</span>
             </button>
             <button class="apps-game-btn" onclick="OS.open('stats');toggleAppsMenu()">
               <span class="agb-icon">📊</span><span class="agb-name">Stats</span>
@@ -5863,7 +5863,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="tanks" onclick="OS.open('tanks')"><span class="agb-icon">&#128034;</span><span class="agb-name">Tank Battle</span></button>
       <button class="apps-game-btn" data-app="airhockey" onclick="OS.open('airhockey')"><span class="agb-icon">&#127922;</span><span class="agb-name">Air Hockey</span></button>
       <button class="apps-game-btn" data-app="roulette" onclick="OS.open('roulette')"><span class="agb-icon">&#127905;</span><span class="agb-name">Roulette</span></button>
-      <button class="apps-game-btn" data-app="charmaker" onclick="OS.open('charmaker')"><span class="agb-icon">&#129489;&#8205;&#127912;</span><span class="agb-name">Mii Studio</span></button>
+      <button class="apps-game-btn" data-app="charmaker" onclick="OS.open('charmaker')"><span class="agb-icon">&#129489;&#8205;&#127912;</span><span class="agb-name">Aquatard Creator</span></button>
       <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
@@ -8695,8 +8695,8 @@ const APPS = {
   rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
   tanks:     { el:'tanks-wrap',     name:'Tank Battle', tb:'#tanks-titlebar',    openFn:()=>window.openTanks?.(),      closeFn:()=>window.openTanks?.(false) },
   airhockey: { el:'airhockey-wrap', name:'Air Hockey',  tb:'#airhockey-titlebar',openFn:()=>window.openAirHockey?.(),  closeFn:()=>window.openAirHockey?.(false) },
-  roulette:  { el:'roulette-wrap',  name:'Microsoft Roulette', tb:'#roulette-titlebar', openFn:()=>window.openRoulette?.(),  closeFn:()=>window.openRoulette?.(false) },
-  charmaker: { el:'charmaker-wrap', name:'Mii Studio',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
+  roulette:  { el:'roulette-wrap',  name:'Roulette', tb:'#roulette-titlebar', openFn:()=>window.openRoulette?.(),  closeFn:()=>window.openRoulette?.(false) },
+  charmaker: { el:'charmaker-wrap', name:'Aquatard Creator',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
   chat:      { modal:true, name:'Messenger', openFn:()=>{ window.openMessenger ? window.openMessenger() : toggleBoard(); } },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -9029,7 +9029,7 @@ const DOCK_META = {
   stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
   tanks:{icon:'🐢',label:'Tank Battle'}, airhockey:{icon:'🏒',label:'Air Hockey'},
-  roulette:{icon:'🎡',label:'Microsoft Roulette'}, charmaker:{icon:'🧑‍🎨',label:'Mii Studio'},
+  roulette:{icon:'🎡',label:'Roulette'}, charmaker:{icon:'🧑‍🎨',label:'Aquatard Creator'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
@@ -12486,8 +12486,8 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('rogue')" title="Neon Runner">🤖<span>Runner</span></button>
   <button class="mob-tool-btn" onclick="OS.open('tanks')" title="Tank Battle">🐢<span>Tanks</span></button>
   <button class="mob-tool-btn" onclick="OS.open('airhockey')" title="Air Hockey">🏒<span>Hockey</span></button>
-  <button class="mob-tool-btn" onclick="OS.open('roulette')" title="Microsoft Roulette">🎡<span>Roulette</span></button>
-  <button class="mob-tool-btn" onclick="OS.open('charmaker')" title="Mii Studio">🧑‍🎨<span>Mii Studio</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('roulette')" title="Roulette">🎡<span>Roulette</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('charmaker')" title="Aquatard Creator">🧑‍🎨<span>Aquatard</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
@@ -17909,7 +17909,7 @@ function bjUpdateBalance(){
 <!-- MICROSOFT ROULETTE (American 0+00, XP-Luna skin) -->
 <div id="roulette-wrap" style="display:none">
   <div class="xp-titlebar" id="roulette-titlebar">
-    <span>🎡 Microsoft Roulette</span>
+    <span>🎡 Roulette</span>
     <button class="xp-titlebtn xp-close" onclick="window.openRoulette(false)">×</button>
   </div>
   <div id="roulette-area"></div>
@@ -17918,7 +17918,7 @@ function bjUpdateBalance(){
 <!-- MII STUDIO (Aqua Buddy character creator) -->
 <div id="charmaker-wrap" style="display:none">
   <div class="xp-titlebar" id="charmaker-titlebar">
-    <span>🧑‍🎨 Mii Studio</span>
+    <span>🧑‍🎨 Aquatard Creator</span>
     <button class="xp-titlebtn xp-close" onclick="window.openCharMaker(false)">×</button>
   </div>
   <div id="charmaker-area"></div>

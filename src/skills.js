@@ -455,10 +455,16 @@ let _rankBusy = false;
 let _rankQuery = '';
 let _rankDetail = null;   // a selected entry to show in detail
 
-// header: name + heart + total level
-function statsHeader(name, total) {
+// header: buddy avatar + name + heart + total level
+function statsHeader(name, total, cfg) {
   const head = el('div', 'sk-head');
-  head.appendChild(el('div', 'sk-heart', '❤'));
+  if (typeof window.aqBuildBuddySvg === 'function') {
+    const av = el('div', 'sk-avatar');
+    av.innerHTML = window.aqBuildBuddySvg(cfg || null, { size: 46 });
+    head.appendChild(av);
+  } else {
+    head.appendChild(el('div', 'sk-heart', '❤'));
+  }
   const ident = el('div', 'sk-ident');
   ident.appendChild(el('div', 'sk-name', esc(name)));
   ident.appendChild(el('div', 'sk-total', `Total level <b>${total}</b> / ${SKILLS.length * MAX_LEVEL}`));
@@ -517,7 +523,8 @@ function renderSkillsPanel() {
       return;
     }
     const name = (localStorage.getItem('aq_username') || '').trim() || 'Anonymous';
-    area.appendChild(statsHeader(name, totalLevelOf(_xp)));
+    const myCfg = (typeof window.aqBuddyConfig === 'function') ? window.aqBuddyConfig() : null;
+    area.appendChild(statsHeader(name, totalLevelOf(_xp), myCfg));
     const credits = (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0;
     const credLine = el('div', 'sk-credits', 'Credits ');
     // `.aq-credits-display` makes aqRefreshCreditDisplays() keep this live.
@@ -543,7 +550,7 @@ function renderRankings(area) {
     const back = el('button', 'sk-back', '← Rankings');
     back.onclick = () => { _rankDetail = null; renderSkillsPanel(); };
     area.appendChild(back);
-    area.appendChild(statsHeader(_rankDetail.name, _rankDetail.total));
+    area.appendChild(statsHeader(_rankDetail.name, _rankDetail.total, _rankDetail.buddyCfg));
     const credLine = el('div', 'sk-credits', 'Credits ');
     const credVal = el('span', 'sk-credits-val', `💰 ${(_rankDetail.credits | 0).toLocaleString()}`);
     credLine.appendChild(credVal);
@@ -608,7 +615,7 @@ function renderRankings(area) {
         // Skip anonymous / nameless entries — only real accounts show in global stats.
         if (!name || name.toLowerCase() === 'anonymous') continue;
         const xp = node.xp || {};
-        arr.push({ uid, name, xp, credits: node.credits | 0, total: totalLevelOf(xp) });
+        arr.push({ uid, name, xp, credits: node.credits | 0, total: totalLevelOf(xp), buddyCfg: node.buddyCfg || null });
       }
       arr.sort((a, b) => b.total - a.total);
       arr.forEach((r, i) => r.rank = i + 1);
@@ -627,6 +634,26 @@ function openStats(show = true) {
   if (window.OS && window.OS.register) { window.OS.register('stats'); window.OS.focus('stats'); }
   if (!_loaded) loadSkills();
   renderSkillsPanel();
+}
+
+// Open the stats window straight to a specific player's profile (from a chat
+// profile card). Reuses the Rankings detail view.
+function openStatsForUser(uid, name) {
+  if (!uid) return;
+  openStats(true);
+  _statsTab = 'rank';
+  const cached = _rankData && _rankData.find(r => r.uid === uid);
+  if (cached) { _rankDetail = cached; renderSkillsPanel(); return; }
+  _rankDetail = { uid, name: name || 'Player', xp: {}, credits: 0, total: 0, buddyCfg: null };
+  renderSkillsPanel();
+  get(ref(db, 'user-skills/' + uid)).then(snap => {
+    const node = snap.exists() ? snap.val() : null;
+    if (node) {
+      const xp = node.xp || {};
+      _rankDetail = { uid, name: node.name || name || 'Player', xp, credits: node.credits | 0, total: totalLevelOf(xp), buddyCfg: node.buddyCfg || null };
+    }
+    if (_open) renderSkillsPanel();
+  }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -667,6 +694,7 @@ if (typeof window !== 'undefined') {
     return true;
   };
   window.openStats = openStats;
+  window.openStatsForUser = openStatsForUser;
   window._aqStatsClosed = () => { _open = false; };
   window.aqHudEnabled = hudEnabled;
   window.aqHudToggle = setHud;

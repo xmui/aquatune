@@ -1022,12 +1022,22 @@
     .board-day-sep::before,.board-day-sep::after { content:''; flex:1; height:1px; background:#DDD; }
     .bmsg { display:flex; gap:8px; margin:4px 0; align-items:flex-start; }
     .bmsg-av {
-      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      width:36px; height:36px; border-radius:9px; flex-shrink:0;
       display:flex; align-items:center; justify-content:center;
       font-size:14px; font-weight:bold; color:#fff; margin-top:2px;
-      border:2px solid rgba(0,0,0,0.15);
-      box-shadow:0 1px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.6); border:1px solid rgba(0,80,160,0.22); padding:1px; overflow:hidden;
+      box-shadow:0 1px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4);
     }
+    .bmsg-av svg { width:100%; height:100%; }
+    .bmsg-clk { cursor:pointer; }
+    .bmsg-name.bmsg-clk:hover { text-decoration:underline; }
+    .bmsg-at { background:rgba(60,150,255,0.18); color:#1c6fd0; border-radius:4px; padding:0 3px; font-weight:700; }
+    #aq-mention-menu { position:fixed; z-index:5300; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #6f9fd0; border-radius:8px; box-shadow:0 8px 26px rgba(0,40,90,.35); font-family:'Segoe UI',system-ui,sans-serif; }
+    .aq-mm-item { display:flex; align-items:center; gap:8px; padding:5px 9px; cursor:pointer; }
+    .aq-mm-item.on, .aq-mm-item:hover { background:rgba(90,160,240,.22); }
+    .aq-mm-av { width:22px; height:22px; flex-shrink:0; }
+    .aq-mm-av svg { width:100%; height:100%; }
+    .aq-mm-name { font-size:13px; font-weight:700; color:#0a3a66; }
     .bmsg-body { flex:1; min-width:0; }
     .bmsg-meta { display:flex; align-items:baseline; gap:6px; margin-bottom:2px; flex-wrap:wrap; }
     .bmsg-name { font-size:12px; font-weight:bold; }
@@ -3640,6 +3650,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     #stats-area { background:var(--panel); color:var(--text); padding:14px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0; overflow:auto; }
     .sk-head { display:flex; align-items:center; gap:12px; padding-bottom:12px; border-bottom:1px solid var(--border); }
     .sk-heart { font-size:30px; color:#ff3b5c; filter:drop-shadow(0 0 6px rgba(255,59,92,0.7)); animation:aq-heartbeat 1.1s ease-in-out infinite; transform-origin:center; }
+    .sk-avatar { width:46px; height:46px; flex-shrink:0; background:rgba(255,255,255,0.55); border:1px solid var(--border); border-radius:10px; padding:2px; }
+    .sk-avatar svg { width:100%; height:100%; }
     @keyframes aq-heartbeat {
       0%,100% { transform:scale(1); }
       12% { transform:scale(1.42); filter:drop-shadow(0 0 14px rgba(255,59,92,0.95)); }
@@ -3824,6 +3836,88 @@ body.perf-mode #aqua-gun { display: none !important; }
     .fish-dex-lab span { display:block; color:#7ba672; font-weight:700; }
     @media (max-width:768px) {
       #fishing-wrap, #mining-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
+    }
+
+    /* ── XP-LUNA WINDOW CHROME (Roulette + Mii Studio) ─── */
+    #roulette-wrap, #charmaker-wrap {
+      position:fixed; top:46px; left:50%; transform:translateX(-50%);
+      background:#ece9d8; border:1px solid #0831d9; border-radius:8px 8px 6px 6px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:'Segoe UI',Tahoma,sans-serif;
+      z-index:540; flex-direction:column; max-width:96vw; max-height:calc(100vh - 56px); overflow:hidden;
+    }
+    #roulette-wrap { width:560px; }
+    #charmaker-wrap { width:520px; }
+    #roulette-wrap.open, #charmaker-wrap.open { display:flex; }
+    .xp-titlebar {
+      display:flex; align-items:center; justify-content:space-between; padding:4px 6px 4px 9px;
+      background:linear-gradient(180deg,#0997ff 0%,#0053ee 8%,#0050ee 40%,#06f 88%,#0741dd 100%);
+      color:#fff; font-weight:700; font-size:13px; cursor:move; text-shadow:0 1px 1px rgba(0,0,0,0.45);
+      border-radius:7px 7px 0 0; user-select:none;
+    }
+    .xp-titlebtn {
+      width:21px; height:21px; border:1px solid #fff; border-radius:4px; cursor:pointer; font-size:13px; font-weight:800;
+      color:#fff; background:linear-gradient(180deg,#f98a6e,#e2492c); box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    .xp-titlebtn:hover { filter:brightness(1.08); }
+    #roulette-area, #charmaker-area { padding:10px; overflow:auto; flex:1; min-height:0; }
+
+    /* roulette */
+    .rl-top { display:flex; gap:12px; align-items:flex-start; }
+    .rl-wheel { position:relative; width:200px; flex-shrink:0; }
+    .rl-wheel-svg { width:200px; height:200px; display:block; filter:drop-shadow(0 4px 8px rgba(0,0,0,.35)); }
+    .rl-pointer { position:absolute; top:-2px; left:50%; transform:translateX(-50%); color:#ffd24a; font-size:18px; text-shadow:0 1px 2px #000; }
+    .rl-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .rl-result { font-size:15px; font-weight:800; color:#0a3a66; min-height:20px; }
+    .rl-red-txt { color:#c8102e; } .rl-black-txt { color:#1b1b1b; } .rl-green-txt { color:#0a8a3a; }
+    .rl-history { display:flex; flex-wrap:wrap; gap:3px; }
+    .rl-hist { font-size:10px; font-weight:700; color:#fff; border-radius:3px; padding:1px 4px; }
+    .rl-stat { font-size:12px; color:#23354a; }
+    .rl-table { margin-top:10px; display:flex; flex-direction:column; gap:3px; }
+    .rl-row { display:flex; gap:3px; }
+    .rl-zeros .rl-num { flex:1; }
+    .rl-row .rl-num { flex:1; }
+    .rl-num, .rl-out {
+      position:relative; min-width:0; border:1px solid rgba(0,0,0,.35); border-radius:3px; cursor:pointer;
+      color:#fff; font-weight:700; font-size:11px; padding:6px 2px; text-align:center;
+    }
+    .rl-red { background:#c8102e; } .rl-black { background:#1b1b1b; } .rl-green { background:#0a8a3a; }
+    .rl-out { background:linear-gradient(180deg,#3a6a3a,#264826); }
+    .rl-colbet { flex:0 0 38px; }
+    .rl-dozens .rl-out, .rl-evens .rl-out { flex:1; }
+    .rl-num:hover, .rl-out:hover { outline:2px solid #ffd24a; outline-offset:-2px; }
+    .rl-chip-amt { display:none; position:absolute; top:-6px; right:-4px; background:#ffd24a; color:#3a2a10; font-size:9px; font-weight:800; border-radius:9px; padding:0 4px; border:1px solid #8a6a18; }
+    .rl-chip-amt.on { display:block; }
+    .rl-controls { margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .rl-chips { display:flex; gap:5px; }
+    .rl-chipbtn { width:34px; height:34px; border-radius:50%; border:2px dashed #fff; cursor:pointer; font-size:11px; font-weight:800; color:#fff; background:radial-gradient(circle at 35% 30%,#3a8fe0,#0a4f9e); box-shadow:0 2px 4px rgba(0,0,0,.3); }
+    .rl-chipbtn.on { outline:3px solid #ffd24a; }
+    .rl-cbtn { padding:8px 16px; border:1px solid #6f9fd0; border-radius:6px; font-weight:800; cursor:pointer; font-size:13px; }
+    .rl-clear { background:linear-gradient(180deg,#fff,#dfe7f0); color:#33485e; }
+    .rl-spin { background:linear-gradient(180deg,#39d05a,#0a8a3a); color:#fff; margin-left:auto; padding:8px 26px; }
+    .rl-spin:disabled { opacity:.5; cursor:default; }
+
+    /* mii studio */
+    .cm-stage { display:flex; flex-direction:column; align-items:center; gap:6px; }
+    .cm-preview { width:190px; height:190px; background:radial-gradient(circle at 50% 35%,#dff0ff,#bcd9f5); border:1px solid #6f9fd0; border-radius:12px; padding:6px; box-shadow:inset 0 1px 0 rgba(255,255,255,.7); }
+    .cm-preview svg { width:100%; height:100%; }
+    .cm-note { font-size:11px; color:#5a7088; min-height:14px; }
+    .cm-panel { margin-top:10px; }
+    .cm-tabs { display:flex; gap:4px; }
+    .cm-tab { flex:1; padding:6px 4px; border:1px solid #6f9fd0; border-bottom:none; border-radius:6px 6px 0 0; background:linear-gradient(180deg,#f4f8fd,#d9e6f5); cursor:pointer; font-size:12px; font-weight:700; color:#23415e; }
+    .cm-tab.on { background:linear-gradient(180deg,#fff,#eaf3ff); color:#0a4f9e; }
+    .cm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:6px; padding:8px; border:1px solid #6f9fd0; border-radius:0 0 6px 6px; background:#f6faff; max-height:200px; overflow:auto; }
+    .cm-cell { display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 2px; border:1px solid #c4d8ef; border-radius:7px; background:#fff; cursor:pointer; }
+    .cm-cell.on { border-color:#0a4f9e; box-shadow:0 0 0 2px rgba(10,79,158,.3); background:#eef6ff; }
+    .cm-cell-av { width:48px; height:48px; }
+    .cm-cell-av svg { width:100%; height:100%; }
+    .cm-cell-lab { font-size:10px; color:#33485e; text-align:center; line-height:1.1; }
+    .cm-actions { margin-top:10px; display:flex; gap:8px; }
+    .cm-btn { padding:9px 16px; border:1px solid #6f9fd0; border-radius:7px; font-weight:800; cursor:pointer; font-size:13px; }
+    .cm-rand { background:linear-gradient(180deg,#fff,#dfe7f0); color:#33485e; }
+    .cm-save { flex:1; background:linear-gradient(180deg,#39d05a,#0a8a3a); color:#fff; }
+    @media (max-width:768px) {
+      #roulette-wrap, #charmaker-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
+      .rl-top { flex-direction:column; align-items:center; }
     }
 
     /* ── BUDDY SHOOT ─── */
@@ -5466,6 +5560,12 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             <button class="apps-game-btn" onclick="OS.open('buddyshoot');toggleAppsMenu()">
               <span class="agb-icon">🦆</span><span class="agb-name">Buddy Shoot</span>
             </button>
+            <button class="apps-game-btn" onclick="OS.open('roulette');toggleAppsMenu()">
+              <span class="agb-icon">🎡</span><span class="agb-name">Roulette</span>
+            </button>
+            <button class="apps-game-btn" onclick="OS.open('charmaker');toggleAppsMenu()">
+              <span class="agb-icon">🧑‍🎨</span><span class="agb-name">Mii Studio</span>
+            </button>
             <button class="apps-game-btn" onclick="OS.open('stats');toggleAppsMenu()">
               <span class="agb-icon">📊</span><span class="agb-name">Stats</span>
             </button>
@@ -5762,6 +5862,8 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="rogue" onclick="OS.open('rogue')"><span class="agb-icon">&#129302;</span><span class="agb-name">Neon Runner</span></button>
       <button class="apps-game-btn" data-app="tanks" onclick="OS.open('tanks')"><span class="agb-icon">&#128034;</span><span class="agb-name">Tank Battle</span></button>
       <button class="apps-game-btn" data-app="airhockey" onclick="OS.open('airhockey')"><span class="agb-icon">&#127922;</span><span class="agb-name">Air Hockey</span></button>
+      <button class="apps-game-btn" data-app="roulette" onclick="OS.open('roulette')"><span class="agb-icon">&#127905;</span><span class="agb-name">Roulette</span></button>
+      <button class="apps-game-btn" data-app="charmaker" onclick="OS.open('charmaker')"><span class="agb-icon">&#129489;&#8205;&#127912;</span><span class="agb-name">Mii Studio</span></button>
       <button class="apps-game-btn" data-app="stats" onclick="OS.open('stats')"><span class="agb-icon">&#128202;</span><span class="agb-name">Stats</span></button>
       <button class="apps-game-btn" data-app="leaderboard" onclick="OS.open('leaderboard')"><span class="agb-icon">&#127942;</span><span class="agb-name">Scores</span></button>
     </div>
@@ -6075,21 +6177,25 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     <!-- Neck connector -->
     <ellipse cx="50" cy="64" rx="14" ry="5.5" fill="url(#ab-b)"/>
     <ellipse cx="50" cy="64" rx="14" ry="5.5" fill="rgba(0,0,0,0.16)"/>
+    <!-- Clothes overlay layer — swapped by the buddy creator -->
+    <g id="ab-clothes"></g>
     <!-- Head sphere -->
     <circle cx="50" cy="33" r="27" fill="url(#ab-h)"/>
     <!-- Head specular — the big Frutiger Aero gloss blob -->
     <ellipse cx="38" cy="22" rx="13" ry="8.5" fill="rgba(255,255,255,0.72)" transform="rotate(-28 38 22)"/>
     <!-- Secondary small highlight -->
     <ellipse cx="57" cy="17" rx="5"  ry="3"   fill="rgba(255,255,255,0.44)" transform="rotate(-15 57 17)"/>
-    <!-- Eyes: dark base + colored iris + pupil + white shine -->
-    <circle cx="43" cy="35" r="5"   fill="#001e38"/>
-    <circle cx="57" cy="35" r="5"   fill="#001e38"/>
-    <circle cx="43.3" cy="35.3" r="2.7" fill="rgba(0,188,230,0.58)"/>
-    <circle cx="57.3" cy="35.3" r="2.7" fill="rgba(0,188,230,0.58)"/>
-    <circle cx="41.5" cy="33.5" r="1.9" fill="rgba(255,255,255,0.95)"/>
-    <circle cx="55.5" cy="33.5" r="1.9" fill="rgba(255,255,255,0.95)"/>
-    <circle cx="44"   cy="36.2" r="1.4" fill="#000d1e"/>
-    <circle cx="58"   cy="36.2" r="1.4" fill="#000d1e"/>
+    <!-- Eyes: dark base + colored iris + pupil + white shine (swapped per expression) -->
+    <g id="ab-eyes">
+      <circle cx="43" cy="35" r="5"   fill="#001e38"/>
+      <circle cx="57" cy="35" r="5"   fill="#001e38"/>
+      <circle cx="43.3" cy="35.3" r="2.7" fill="rgba(0,188,230,0.58)"/>
+      <circle cx="57.3" cy="35.3" r="2.7" fill="rgba(0,188,230,0.58)"/>
+      <circle cx="41.5" cy="33.5" r="1.9" fill="rgba(255,255,255,0.95)"/>
+      <circle cx="55.5" cy="33.5" r="1.9" fill="rgba(255,255,255,0.95)"/>
+      <circle cx="44"   cy="36.2" r="1.4" fill="#000d1e"/>
+      <circle cx="58"   cy="36.2" r="1.4" fill="#000d1e"/>
+    </g>
     <!-- Smile -->
     <path id="ab-mouth" d="M 43.5 43.5 Q 50 50.5 56.5 43.5" stroke="#001e38" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-opacity="0.82"/>
     <!-- Outfit overlay layer — swapped by JS -->
@@ -8589,6 +8695,8 @@ const APPS = {
   rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
   tanks:     { el:'tanks-wrap',     name:'Tank Battle', tb:'#tanks-titlebar',    openFn:()=>window.openTanks?.(),      closeFn:()=>window.openTanks?.(false) },
   airhockey: { el:'airhockey-wrap', name:'Air Hockey',  tb:'#airhockey-titlebar',openFn:()=>window.openAirHockey?.(),  closeFn:()=>window.openAirHockey?.(false) },
+  roulette:  { el:'roulette-wrap',  name:'Microsoft Roulette', tb:'#roulette-titlebar', openFn:()=>window.openRoulette?.(),  closeFn:()=>window.openRoulette?.(false) },
+  charmaker: { el:'charmaker-wrap', name:'Mii Studio',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
   chat:      { modal:true, name:'Messenger', openFn:()=>{ window.openMessenger ? window.openMessenger() : toggleBoard(); } },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
 };
@@ -8921,6 +9029,7 @@ const DOCK_META = {
   stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
   tanks:{icon:'🐢',label:'Tank Battle'}, airhockey:{icon:'🏒',label:'Air Hockey'},
+  roulette:{icon:'🎡',label:'Microsoft Roulette'}, charmaker:{icon:'🧑‍🎨',label:'Mii Studio'},
 };
 const DOCK_DEFAULT = ['chat','player','arcade','studio','paint','files','photos','texteditor','stocks','stats','leaderboard','settings'];
 function getDockPins() {
@@ -9810,6 +9919,9 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
   function cycleOutfit(silent) {
     outfitIdx = (outfitIdx + 1) % OUTFIT_KEYS.length;
     applyOutfit();
+    // keep the unified buddy config in sync so the creator + chat/stats avatars
+    // reflect the auto-cycled hat too.
+    try { window.aqSetBuddyConfig && window.aqSetBuddyConfig({ outfit: OUTFIT_KEYS[outfitIdx] }); } catch (e) {}
     if (!silent) {
       const key = OUTFIT_KEYS[outfitIdx];
       const q = OUTFIT_QUIPS[key];
@@ -12374,6 +12486,8 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('rogue')" title="Neon Runner">🤖<span>Runner</span></button>
   <button class="mob-tool-btn" onclick="OS.open('tanks')" title="Tank Battle">🐢<span>Tanks</span></button>
   <button class="mob-tool-btn" onclick="OS.open('airhockey')" title="Air Hockey">🏒<span>Hockey</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('roulette')" title="Microsoft Roulette">🎡<span>Roulette</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('charmaker')" title="Mii Studio">🧑‍🎨<span>Mii Studio</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stats')" title="Stats">📊<span>Stats</span></button>
   <button class="mob-tool-btn" onclick="openRhythm()" title="Beat Tap">🎶<span>Beat Tap</span></button>
   <button class="mob-tool-btn" onclick="OS.open('stocks')" title="Aquatune Exchange">📈<span>Exchange</span></button>
@@ -14522,6 +14636,33 @@ function pokerSfx(name){
 }
 window.pokerSfx = pokerSfx;
 
+/* ── ROULETTE SFX — chip clinks, the spin whirr, ball ticks, win/lose stings ── */
+function rouletteSfx(name){
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch(e){ return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'chip':  blip(2500, 0, 0.04, 'triangle', 0.10, 2050); blip(3100, 0.04, 0.05, 'triangle', 0.07, 2650); break;
+      case 'spin':  blip(220, 0, 0.5, 'sawtooth', 0.06, 90); break;       // wheel whirr down
+      case 'tick':  blip(1600, 0, 0.02, 'square', 0.05, 1200); break;      // ball passing a fret
+      case 'win':   [784, 1047, 1319, 1568].forEach((f, i) => { blip(f, i * 0.09, 0.22, 'triangle', 0.14); blip(f, i * 0.09, 0.22, 'sine', 0.05); }); break;
+      case 'lose':  blip(300, 0, 0.18, 'sine', 0.16, 150); blip(220, 0.16, 0.22, 'sine', 0.13, 110); break;
+    }
+  } catch(e) {}
+}
+window.rouletteSfx = rouletteSfx;
+
 /* ── FISHING SFX — lo-fi GBC-ish: bitcrushed water ambient loop + event blips ── */
 let _fishWave = null;  // { src, gain, lfo } refs for the looping ambient
 function fishingSfx(name) {
@@ -14978,27 +15119,57 @@ function playJoinChime() {
   } catch {}
 }
 window.playJoinChime = playJoinChime;
+// A roster of everyone we've seen post, for @-mention autocomplete and profile cards.
+window._aqChatSenders = window._aqChatSenders || new Map();   // lowername -> {name, uid, cfg}
+function aqRememberSender(p) {
+  const name = (p.username || p.name || '').trim();
+  if (!name || name.toLowerCase() === 'anonymous') return;
+  window._aqChatSenders.set(name.toLowerCase(), { name, uid: p.uid || null, cfg: p.avatar || null });
+}
+// Wrap @mentions in a highlighted chip (operates on already-escaped HTML).
+function aqMentionize(html) {
+  return html.replace(/(^|[\s(])@([A-Za-z0-9_-]{1,24})/g, (m, pre, nm) => `${pre}<span class="bmsg-at">@${nm}</span>`);
+}
 function renderChatMsg(logEl, p) {
   const ts = p.timestamp || p.ts || 0;
   if (ts && ts < Date.now() - 86400000) return; // skip messages older than 24 hours (chat auto-archives daily)
+  aqRememberSender(p);
   const div = document.createElement('div');
   div.className = 'bmsg';
   const name = p.username || p.name || 'Anonymous';
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
-  const initl = name[0].toUpperCase();
   const timeStr = typeof boardFmtTime === 'function' ? boardFmtTime(ts || Date.now()) : '';
   const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '').replace(/data:[^\s"'<>)]+/gi, '').trim();
-  const msgHtml = msnEmoji(esc(rawMsg));
+  const msgHtml = aqMentionize(msnEmoji(esc(rawMsg)));
+  const avatar = (typeof window.aqBuildBuddySvg === 'function')
+    ? window.aqBuildBuddySvg(p.avatar, { size: 34 })
+    : `<div style="width:34px;height:34px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">${esc(name[0].toUpperCase())}</div>`;
   div.innerHTML = `
-    <div class="bmsg-av" style="background:${color}">${esc(initl)}</div>
+    <div class="bmsg-av bmsg-clk">${avatar}</div>
     <div class="bmsg-body">
       <div class="bmsg-meta">
-        <span class="bmsg-name" style="color:${color}">${esc(name)}</span>
+        <span class="bmsg-name bmsg-clk" style="color:${color}">${esc(name)}</span>
         <span class="bmsg-time">${timeStr}</span>
       </div>
       <div class="bmsg-text">${msgHtml}</div>
       ${p.imageData ? `<img class="chat-img" src="${p.imageData}" loading="lazy" onclick="window.open(this.src)">` : ''}
     </div>`;
+  // Clicking the avatar or name opens the profile card.
+  const openCard = (e) => {
+    e.stopPropagation();
+    if (typeof window.aqShowProfileCard === 'function') {
+      window.aqShowProfileCard({ uid: p.uid || null, name, avatarCfg: p.avatar || null, acct: p.acct, anchorEl: e.currentTarget });
+    }
+  };
+  div.querySelectorAll('.bmsg-clk').forEach(elc => elc.addEventListener('click', openCard));
+  // Ping when someone @mentions you (not your own message).
+  try {
+    const myName = (localStorage.getItem('aq_username') || '').trim();
+    if (myName && name !== myName && new RegExp('@' + myName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(rawMsg)) {
+      if (typeof playMsgNotification === 'function') playMsgNotification();
+      if (typeof aqNotify === 'function') aqNotify({ name, text: rawMsg });
+    }
+  } catch (e) {}
   logEl.appendChild(div);
   logEl.scrollTop = 99999;
 }
@@ -15009,12 +15180,15 @@ function renderTheaterChatMsg(p, isRoom) {
   const name = p.username || p.name || 'Anonymous';
   const color = typeof msnColor === 'function' ? msnColor(name) : '#0068b8';
   const rawMsg = (p.message || p.com || '').replace(/<[^>]+>/g, '').replace(/data:[^\s"'<>)]+/gi, '').trim();
-  const msgHtml = msnEmoji(esc(rawMsg));
+  const msgHtml = aqMentionize(msnEmoji(esc(rawMsg)));
   const badge = isRoom ? `<span style="font-size:9px;background:rgba(0,180,100,0.35);color:#7fe;border-radius:4px;padding:0 4px;margin-left:4px;font-weight:700">room</span>` : '';
+  const avatar = (typeof window.aqBuildBuddySvg === 'function')
+    ? window.aqBuildBuddySvg(p.avatar, { size: 28 })
+    : esc(name[0].toUpperCase());
   const div = document.createElement('div');
   div.className = 'th-msg';
   div.innerHTML = `
-    <div class="th-msg-av" style="background:${color}">${esc(name[0].toUpperCase())}</div>
+    <div class="th-msg-av" style="background:${color};overflow:hidden;padding:1px">${avatar}</div>
     <div class="th-msg-body">
       <div class="th-msg-name" style="color:${color}">${esc(name)}${badge}</div>
       <div class="th-msg-text">${msgHtml}${p.imageData ? `<br><img src="${p.imageData}" style="max-width:180px;border-radius:4px;margin-top:3px" loading="lazy" onclick="window.open(this.src)">` : ''}</div>
@@ -15128,6 +15302,79 @@ function sendGlobalChatMsg() {
   window.sendGlobalMessage?.(msg);
   if (msgEl) msgEl.value = '';
 }
+
+// ── @-mention autocomplete for the global chat box ───────────────────────────────
+function aqSetupMentionAutocomplete() {
+  const ta = document.getElementById('global-msg');
+  if (!ta || ta._mentionWired) return;
+  ta._mentionWired = true;
+  const menu = document.createElement('div');
+  menu.id = 'aq-mention-menu';
+  menu.style.display = 'none';
+  document.body.appendChild(menu);
+  let items = [], sel = 0;
+
+  const hide = () => { menu.style.display = 'none'; items = []; };
+  const curToken = () => {
+    const v = ta.value.slice(0, ta.selectionStart);
+    const m = v.match(/@([A-Za-z0-9_-]*)$/);
+    return m ? m[1] : null;
+  };
+  const paint = () => {
+    if (!items.length) { hide(); return; }
+    menu.innerHTML = items.map((it, i) =>
+      `<div class="aq-mm-item${i === sel ? ' on' : ''}" data-i="${i}">
+         <span class="aq-mm-av">${(typeof window.aqBuildBuddySvg === 'function') ? window.aqBuildBuddySvg(it.cfg, { size: 22 }) : ''}</span>
+         <span class="aq-mm-name">${esc(it.name)}</span></div>`).join('');
+    menu.querySelectorAll('.aq-mm-item').forEach(el => {
+      el.onmousedown = (e) => { e.preventDefault(); accept(parseInt(el.dataset.i, 10)); };
+    });
+    const r = ta.getBoundingClientRect();
+    menu.style.left = r.left + 'px';
+    menu.style.width = Math.max(160, r.width) + 'px';
+    menu.style.top = (r.top - Math.min(menu.offsetHeight || 150, 180) - 4) + 'px';
+    menu.style.display = 'block';
+    // reposition now that height is known
+    menu.style.top = (r.top - (menu.offsetHeight || 150) - 4) + 'px';
+  };
+  const refresh = () => {
+    const tok = curToken();
+    if (tok === null) { hide(); return; }
+    const roster = (window.aqUserRoster && window.aqUserRoster()) || [];
+    const q = tok.toLowerCase();
+    const myName = (localStorage.getItem('aq_username') || '').toLowerCase();
+    items = roster.filter(r => r.name && r.name.toLowerCase() !== myName && r.name.toLowerCase().includes(q)).slice(0, 6);
+    sel = 0; paint();
+  };
+  const accept = (i) => {
+    const it = items[i]; if (!it) return;
+    const start = ta.selectionStart;
+    const before = ta.value.slice(0, start).replace(/@([A-Za-z0-9_-]*)$/, '@' + it.name + ' ');
+    const after = ta.value.slice(start);
+    ta.value = before + after;
+    const pos = before.length;
+    ta.setSelectionRange(pos, pos);
+    hide(); ta.focus();
+  };
+
+  ta.addEventListener('input', refresh);
+  ta.addEventListener('blur', () => setTimeout(hide, 120));
+  // Single keydown owner for the box: when the mention menu is open it steers the
+  // menu; otherwise Enter (without Shift) sends. (The inline onkeydown was removed
+  // so there's no ordering ambiguity.)
+  ta.addEventListener('keydown', (e) => {
+    const open = menu.style.display !== 'none' && items.length;
+    if (open) {
+      if (e.key === 'ArrowDown') { sel = (sel + 1) % items.length; paint(); e.preventDefault(); return; }
+      if (e.key === 'ArrowUp') { sel = (sel - 1 + items.length) % items.length; paint(); e.preventDefault(); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { accept(sel); e.preventDefault(); return; }
+      if (e.key === 'Escape') { hide(); e.preventDefault(); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGlobalChatMsg(); }
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aqSetupMentionAutocomplete);
+else aqSetupMentionAutocomplete();
 
 // Broadcast a noteworthy game event (a win, a rare drop, a personal best) to the
 // GLOBAL chat so the whole lobby sees it — same channel AquaSlots already uses.
@@ -17061,7 +17308,7 @@ function bjUpdateBalance(){
             <button class="emoji-toggle-btn" onclick="toggleKaomojiBar('global')" title="Text faces (kaomoji)">(•‿•)</button>
             <button class="emoji-toggle-btn" onclick="toggleEmojiBar('global')" title="Emoticons">☺</button>
           </div>
-          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalChatMsg();}"></textarea>
+          <textarea id="global-msg" class="board-msg-inp" maxlength="500" placeholder="Global chat… (Enter to send)"></textarea>
           <button class="board-send-btn" onclick="sendGlobalChatMsg()">Send</button>
         </div>
       </div>
@@ -17456,6 +17703,9 @@ function bjUpdateBalance(){
 <script type="module" src="/src/tanks.js"></script>
 <script type="module" src="/src/airhockey.js"></script>
 <script type="module" src="/src/daily.js"></script>
+<script type="module" src="/src/buddy.js"></script>
+<script type="module" src="/src/roulette.js"></script>
+<script type="module" src="/src/charmaker.js"></script>
 <script type="module" src="/src/version-check.js"></script>
 
 <!-- SLOT MACHINE -->
@@ -17654,6 +17904,24 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openFishing(false)">×</button>
   </div>
   <div id="fishing-area"></div>
+</div>
+
+<!-- MICROSOFT ROULETTE (American 0+00, XP-Luna skin) -->
+<div id="roulette-wrap" style="display:none">
+  <div class="xp-titlebar" id="roulette-titlebar">
+    <span>🎡 Microsoft Roulette</span>
+    <button class="xp-titlebtn xp-close" onclick="window.openRoulette(false)">×</button>
+  </div>
+  <div id="roulette-area"></div>
+</div>
+
+<!-- MII STUDIO (Aqua Buddy character creator) -->
+<div id="charmaker-wrap" style="display:none">
+  <div class="xp-titlebar" id="charmaker-titlebar">
+    <span>🧑‍🎨 Mii Studio</span>
+    <button class="xp-titlebtn xp-close" onclick="window.openCharMaker(false)">×</button>
+  </div>
+  <div id="charmaker-area"></div>
 </div>
 
 <!-- MINING (Game Boy Color style) -->

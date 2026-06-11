@@ -14799,6 +14799,9 @@ function miningSfx(name) {
       case 'break': cnoise(0, 600, 0.32, 0.30, true); cblip(150, 0, 0.34, 'sawtooth', 0.16, 60); cblip(300, 0.02, 0.2, 'square', 0.08, 120); break; // rock shatter
       case 'crit':  cblip(520, 0, 0.10, 'square', 0.2, 880); cnoise(0, 3200, 0.07, 0.22); cblip(1040, 0.03, 0.12, 'triangle', 0.12); break; // bright clang
       case 'upgrade': [330, 440, 587, 784].forEach((f, i) => cblip(f, i * 0.07, 0.12, 'square', 0.14)); break; // chime
+      case 'hurt':  cblip(110, 0, 0.18, 'sawtooth', 0.2, 60); cnoise(0, 400, 0.16, 0.22, true); break;      // clawed
+      case 'slay':  cblip(220, 0, 0.12, 'square', 0.16, 440); cblip(440, 0.06, 0.14, 'square', 0.12, 880); cnoise(0, 1500, 0.1, 0.15); break; // creature down
+      case 'growl': cblip(90, 0, 0.3, 'sawtooth', 0.16, 55); cnoise(0.04, 300, 0.22, 0.14, true); break;    // something stirs
     }
   } catch (e) {}
 }

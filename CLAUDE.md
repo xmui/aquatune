@@ -37,9 +37,12 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - New apps/games: add to `APPS`, `DOCK_META`, the Arcade window, the mobile apps grid
   and `#mob-tools-bar`; open via `OS.open(id)` with an `openX()` that calls
   `OS.register`/`OS.focus`.
-- Pixel games (Fishing/Mining) use the Game Boy Color 4-tone palette on a small
-  nearest-neighbor canvas; SFX synthesized via `window.*Sfx` defined near `pokerSfx`
-  in `index.html` (uses `initActx()` + `_gameVol`).
+- Fishing uses the Game Boy Color 4-tone palette on a small nearest-neighbor
+  canvas. Mining (`src/mining.js`) is a PS1/N64-style first-person raycaster
+  (same engine family as `buddyshoot3d.js`): walkable procedural caves, ore
+  veins mined in-world, a sack→sell-at-cart loop, hostile cave creatures.
+  SFX for both synthesized via `window.*Sfx` defined near `pokerSfx` in
+  `index.html` (uses `initActx()` + `_gameVol`).
 - **Persist bought game items to the cloud.** Anything a user buys/unlocks (pickaxe,
   rod, stage/zone, dex…) must sync per-account or it "resets" on update/new device.
   Write the localStorage key as before, then call `window.aqGamePersist('<key>')`;

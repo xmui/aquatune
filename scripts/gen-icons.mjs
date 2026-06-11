@@ -74,13 +74,13 @@ const out = (name, buf) => { writeFileSync(resolve(ICONS, name), buf); console.l
 
 console.log('Generating Aquatune PWA icons…');
 // Canonical SVG (favicon + manifest "any"), carries its own dark-mode styling.
-const svgFavicon = buildSvg({ scale: 0.80, withDarkMedia: true });
+const svgFavicon = buildSvg({ scale: 0.90, withDarkMedia: true });
 out('icon.svg', Buffer.from(svgFavicon));
 
-const svgLight = buildSvg({ scale: 0.80 });
-const svgDark = buildSvg({ scale: 0.80, dark: true });
-const svgMask = buildSvg({ scale: 0.62 });          // tighter for the maskable circle
-const svgMaskDark = buildSvg({ scale: 0.62, dark: true });
+const svgLight = buildSvg({ scale: 0.90 });          // big, with a tiny margin from the edges
+const svgDark = buildSvg({ scale: 0.90, dark: true });
+const svgMask = buildSvg({ scale: 0.70 });          // tighter so it stays inside the maskable circle
+const svgMaskDark = buildSvg({ scale: 0.70, dark: true });
 
 out('apple-touch-icon.png', png(svgLight, 180));     // iOS home screen (opaque)
 out('apple-touch-icon-dark.png', png(svgDark, 180));

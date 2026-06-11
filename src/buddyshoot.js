@@ -175,9 +175,18 @@ function checkRound() {
 }
 
 // ── input ──────────────────────────────────────────────────────────────────────
+// Multitouch/turbo backstop: a touchscreen fires one pointerdown PER finger, so
+// five-finger mashing = many shots per gesture (more score → more combat XP). Drop
+// non-primary pointers and floor the shot interval (~33/s, above any human finger).
+let _lastShotMs = 0;
+const MIN_SHOT_GAP = 30;
 function fire(e) {
   if (state !== 'round') return;
   e.preventDefault();
+  if (e.isPrimary === false) return;   // ignore extra simultaneous fingers (multitouch spam)
+  const _now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if (_now - _lastShotMs < MIN_SHOT_GAP) return;
+  _lastShotMs = _now;
   if (ammo <= 0) { sfx('empty'); return; }
   ammo--; sfx('shot');
   const r = stage.getBoundingClientRect();

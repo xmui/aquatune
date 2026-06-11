@@ -37,6 +37,18 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - New apps/games: add to `APPS`, `DOCK_META`, the Arcade window, the mobile apps grid
   and `#mob-tools-bar`; open via `OS.open(id)` with an `openX()` that calls
   `OS.register`/`OS.focus`.
+- **Keyboard focus:** games that use the keyboard set `keys:true` on their `APPS`
+  entry — the global video shortcuts (Space/N/P/arrows/M) stand down while such a
+  window is focused (`aqGameKeysActive()`), and each game gates its own keydown on
+  `window.aqIsActiveApp('<id>')` (keyup stays ungated so held keys release).
+- **Window chrome is theme-driven.** Every theme has a unique `data-era` on `<html>`;
+  frames use `var(--panel)` + `--win-border`/`--win-shadow`/`--chrome-radius`
+  (defined per era as `html[data-era=X]` vars), and legacy titlebars carry the
+  `.aq-tb` marker class which gets per-era skins (plus `.sol-titlebtn`/`.xp-titlebtn`
+  button skins) near the "LEGACY-WINDOW TITLEBARS" CSS section. Titlebar text colour
+  comes from `--titlebar-text` (computed in `applyTheme` from the theme's header).
+  Game window INTERIORS keep their own art (GBC shell, DAW, casino felt…) on their
+  `-area`/body element — never hardcode frame colours on a `*-wrap` again.
 - Fishing uses the Game Boy Color 4-tone palette on a small nearest-neighbor
   canvas. Mining (`src/mining.js`) is a PS1/N64-style first-person raycaster
   (same engine family as `buddyshoot3d.js`): walkable procedural caves, ore

@@ -645,22 +645,18 @@
       width:min(860px, 96vw); min-width:340px; height:540px; max-height:92vh;
       background:var(--panel);
       backdrop-filter:blur(28px) saturate(1.5);
-      border:1.5px solid var(--border);
-      border-radius:12px 12px 8px 8px;
-      box-shadow:0 24px 80px rgba(0,60,150,0.4);
+      border:1.5px solid var(--win-border,var(--border));
+      border-radius:var(--chrome-radius,12px);
+      box-shadow:var(--win-shadow,0 24px 80px rgba(0,60,150,0.4));
       z-index:450;
       display:none; flex-direction:column; overflow:hidden;
     }
     #synth-flyout.open { display:flex; }
-    [data-scheme=dark] #synth-flyout { background: rgba(8,20,50,0.98); border-color: rgba(56,189,248,0.3); }
 
     /* AquaSynth titlebar (drag handle, title, close-right) */
     #synth-titlebar {
       display:flex; align-items:center; gap:8px; padding:5px 10px 6px; flex-shrink:0;
-      background:var(--hdr-bg);
-      box-shadow:0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
-      position:relative; overflow:hidden; cursor:move;
-      border-radius:12px 12px 0 0; user-select:none;
+      position:relative; overflow:hidden; cursor:move; user-select:none;
     }
     #synth-titlebar::after {
       content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
@@ -919,11 +915,11 @@
     #board-wrap {
       width:520px; max-width:96vw;
       height:480px; max-height:85vh;
-      background:linear-gradient(170deg,rgba(240,250,255,0.98),rgba(210,235,255,0.96));
+      background:var(--panel);
       backdrop-filter:blur(20px) saturate(1.4);
-      border:2px solid rgba(255,255,255,0.8);
-      border-radius:14px 14px 10px 10px;
-      box-shadow:0 20px 60px rgba(0,60,150,0.35), 0 4px 16px rgba(0,100,200,0.2);
+      border:1.5px solid var(--win-border,var(--border));
+      border-radius:var(--chrome-radius,14px);
+      box-shadow:var(--win-shadow,0 20px 60px rgba(0,60,150,0.35));
       display:flex; flex-direction:column;
       font-family:'M PLUS Rounded 1c',Tahoma,'Segoe UI',Arial,sans-serif;
       overflow:hidden;
@@ -934,7 +930,7 @@
       background: var(--hdr-bg);
       box-shadow: 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
       padding:5px 8px 6px; display:flex; align-items:center; gap:7px;
-      flex-shrink:0; user-select:none; border-radius:14px 14px 0 0; cursor:move;
+      flex-shrink:0; user-select:none; cursor:move;
       position:relative; overflow:hidden;
     }
     .board-titlebar::after {
@@ -943,10 +939,8 @@
       border-radius:14px 14px 0 0;
     }
     #paint-titlebar {
-      background: var(--hdr-bg);
-      box-shadow: 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52);
       padding:5px 8px; display:flex; align-items:center; gap:8px; flex-shrink:0;
-      cursor:move; border-radius:10px 10px 0 0; position:relative; overflow:hidden;
+      cursor:move; position:relative; overflow:hidden;
     }
     #paint-titlebar::after {
       content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
@@ -1276,22 +1270,22 @@
     /* ── SLOTS REVAMP ──────────────────────────────────────── */
     #slots-wrap { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
       width:420px; max-width:96vw; border-radius:var(--chrome-radius,14px); z-index:810; flex-direction:column;
-      background:linear-gradient(160deg,#1a0035 0%,#0d0025 50%,#001a35 100%);
-      border:2px solid var(--accent); box-shadow:0 0 50px rgba(140,0,255,0.22),0 20px 60px rgba(0,0,0,0.7); }
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45)); overflow:hidden; }
+    #slots-body { background:linear-gradient(160deg,#1a0035 0%,#0d0025 50%,#001a35 100%); }
     #slots-wrap.open { display:flex; }
     /* ── Beat Tap rhythm game ── */
     #rhythm-wrap { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:392px; max-width:96vw; border-radius:12px 12px 8px 8px; z-index:810; flex-direction:column;
-      background:var(--panel); border:1.5px solid var(--border);
-      box-shadow:0 20px 60px rgba(0,40,120,0.25); }
+      width:392px; max-width:96vw; border-radius:var(--chrome-radius,12px); z-index:810; flex-direction:column;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); overflow:hidden;
+      box-shadow:var(--win-shadow,0 20px 60px rgba(0,40,120,0.25)); }
     #rhythm-wrap.open { display:flex; }
     #rhythm-titlebar { display:flex; align-items:center; justify-content:space-between; padding:5px 8px 6px;
-      background:var(--hdr-bg); border-radius:10px 10px 0 0; cursor:move; user-select:none;
+      cursor:move; user-select:none;
       position:relative; overflow:hidden; }
     #rhythm-titlebar::after { content:''; position:absolute; inset:0; bottom:50%; pointer-events:none;
       background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%);
       border-radius:10px 10px 0 0; }
-    #rhythm-titlebar span { font-size:13px; font-weight:700; color:#fff; letter-spacing:0.3px; position:relative; z-index:1; }
+    #rhythm-titlebar span { font-size:13px; font-weight:700; color:inherit; letter-spacing:0.3px; position:relative; z-index:1; }
     #rhythm-body { padding:12px 14px 16px; display:flex; flex-direction:column; gap:10px; align-items:center; }
     #rhythm-canvas { width:100%; max-width:360px; border-radius:10px; background:rgba(0,0,0,0.35);
       border:1px solid rgba(120,200,255,0.18); touch-action:manipulation; }
@@ -1304,10 +1298,8 @@
     #rhythm-start-btn { font-size:13px; font-weight:800; padding:6px 22px; border-radius:10px; cursor:pointer;
       color:#04121f; background:linear-gradient(180deg,#7dffe0,#22c8e0); border:none; }
     #rhythm-msg { font-size:11px; color:var(--text2); text-align:center; min-height:14px; }
-    #slots-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px;
-      background:linear-gradient(180deg,rgba(160,30,220,0.6),rgba(80,10,150,0.4));
-      border-radius:12px 12px 0 0; border-bottom:1px solid rgba(180,80,255,0.25); }
-    #slots-titlebar span { font-size:14px; font-weight:800; color:#f0d0ff; letter-spacing:0.5px; }
+    #slots-titlebar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px; }
+    #slots-titlebar span { font-size:14px; font-weight:800; color:inherit; letter-spacing:0.5px; }
     #slots-body { padding:12px 14px 16px; display:flex; flex-direction:column; gap:10px; }
     #slots-credits-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     #slots-credits-label { font-size:11px; color:rgba(200,150,255,0.7); }
@@ -1387,8 +1379,8 @@
     #slots-wrap.reels-5 .slot-sym { width:62px; font-size:28px; }
     /* themed skins (subtle tints over the base purple) */
     #slots-wrap.skin-fruit { border-color:#ff5d8f; box-shadow:0 0 50px rgba(255,80,120,0.22),0 20px 60px rgba(0,0,0,0.7); }
-    #slots-wrap.skin-spooky { background:linear-gradient(160deg,#1a0a2e 0%,#0a0a14 60%,#160026 100%); border-color:#7bff9e; }
-    #slots-wrap.skin-space { background:linear-gradient(160deg,#001033 0%,#000018 55%,#0a0030 100%); border-color:#5ad1ff; }
+    #slots-wrap.skin-spooky #slots-body { background:linear-gradient(160deg,#1a0a2e 0%,#0a0a14 60%,#160026 100%); border-color:#7bff9e; }
+    #slots-wrap.skin-space #slots-body { background:linear-gradient(160deg,#001033 0%,#000018 55%,#0a0030 100%); border-color:#5ad1ff; }
     [data-era=mono90s] #slots-wrap { background:#000 !important; border-color:#fff !important; }
     [data-era=mono90s] .slot-sym { filter:none !important; }
     [data-era=mono90s] .slots-btn { background:#000 !important; border-color:#fff !important; color:#fff !important; }
@@ -1741,7 +1733,7 @@
     #mob-tools-bar::-webkit-scrollbar { display: none; }
     #mob-tools-bar .mob-tool-btn { flex: 0 0 64px; min-width: 64px; }
     .mob-tool-btn {
-      flex: 1; border: none; background: none; color: rgba(255,255,255,0.82);
+      flex: 1; border: none; background: none; color: var(--hdr-text, rgba(255,255,255,0.82));
       font-size: 18px; cursor: pointer; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 1px;
       border-right: 1px solid rgba(255,255,255,0.1); transition: background .12s;
@@ -1956,9 +1948,9 @@
       display:none; position:fixed; left:50%; top:50%;
       transform:translate(-50%,-50%); z-index:810;
       width:680px; max-width:96vw; height:520px; max-height:90vh;
-      background:rgba(235,242,255,0.98); backdrop-filter:blur(20px);
-      border-radius:12px 12px 8px 8px; border:2px solid rgba(255,255,255,0.85);
-      box-shadow:0 24px 80px rgba(0,60,150,0.4);
+      background:var(--panel); backdrop-filter:blur(20px);
+      border-radius:var(--chrome-radius,12px); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 24px 80px rgba(0,60,150,0.4));
       flex-direction:column;
       font-family:'M PLUS Rounded 1c',system-ui,sans-serif; overflow:hidden;
     }
@@ -1990,9 +1982,9 @@
     #studio-win {
       display:none; position:fixed; left:50%; top:46%; transform:translate(-50%,-50%);
       width:920px; max-width:97vw; height:600px; max-height:92vh; z-index:820;
-      flex-direction:column; border-radius:14px; overflow:hidden;
+      flex-direction:column; border-radius:var(--chrome-radius,14px); overflow:hidden;
       background:linear-gradient(180deg,#2b2f3a,#1b1e26);
-      border:1px solid #0c0e13; box-shadow:0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+      border:1.5px solid var(--win-border,#0c0e13); box-shadow:var(--win-shadow,0 24px 70px rgba(0,0,0,.55)), inset 0 1px 0 rgba(255,255,255,.06);
       color:#e7ecf5; font-family:var(--font-ui);
       --st-accent:#ffd23f;
     }
@@ -2255,7 +2247,6 @@
     [data-scheme=dark] .settings-label { color: var(--text2); }
     [data-scheme=dark] #board-fb-inp { background: rgba(8,20,50,0.95); border-color: rgba(56,189,248,0.25); color: var(--text); }
     [data-scheme=dark] #weather-zip { background: rgba(8,20,50,0.95); border-color: rgba(56,189,248,0.25); color: var(--text); }
-    [data-scheme=dark] #paint-wrap { background: rgba(8,20,50,0.98); border-color: rgba(56,189,248,0.3); }
     #paint-toolbar {
       background: rgba(240,246,255,0.85); border-bottom: 1px solid rgba(0,80,180,0.12);
       padding: 5px 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap;
@@ -2595,183 +2586,175 @@ body.perf-mode #aqua-gun { display: none !important; }
 /* ── ERA-SPECIFIC OVERRIDES ─────────────────────────── */
 
 /* macOS Aqua: brushed metal panels, gel capsule buttons */
-[data-era=macos] .panel,
-[data-era=macos] #ctrl-bubble {
+[data-scheme=light][data-era=metal] .panel,
+[data-scheme=light][data-era=metal] #ctrl-bubble {
   background: linear-gradient(180deg,rgba(248,248,248,0.99) 0%,rgba(218,218,218,0.97) 100%) !important;
   backdrop-filter: none !important;
   border: 1px solid rgba(0,0,0,0.26) !important;
   border-radius: 14px !important;
   box-shadow: 0 4px 18px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06) !important;
 }
-[data-era=macos] #board-wrap {
+[data-scheme=light][data-era=metal] #board-wrap {
   background: linear-gradient(180deg,rgba(248,248,248,0.99) 0%,rgba(228,228,228,0.97) 100%) !important;
   backdrop-filter: none !important;
   border: 1px solid rgba(0,0,0,0.28) !important;
   border-radius: 14px 14px 10px 10px !important;
   box-shadow: 0 8px 30px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.9) !important;
 }
-[data-era=macos] #theme-panel {
+[data-scheme=light][data-era=metal] #theme-panel {
   background: linear-gradient(180deg,rgba(248,248,248,0.99) 0%,rgba(218,218,218,0.97) 100%) !important;
   backdrop-filter: none !important;
   border: 1px solid rgba(0,0,0,0.24) !important;
   border-radius: 14px !important;
 }
-[data-era=macos] #hdr {
-  background: linear-gradient(180deg,#3a94e0 0%,#0070c9 50%,#005ba8 100%) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.32) !important;
-}
-[data-era=macos] #hdr::after {
-  background: linear-gradient(180deg,rgba(255,255,255,0.24) 0%,rgba(255,255,255,0) 100%) !important;
-}
-[data-era=macos] .board-titlebar,
-[data-era=macos] #paint-titlebar {
+[data-scheme=light][data-era=metal] .board-titlebar,
+[data-scheme=light][data-era=metal] #paint-titlebar {
   background: linear-gradient(180deg,#3a94e0 0%,#005ba8 100%) !important;
   border-radius: 12px 12px 0 0 !important;
 }
-[data-era=macos] .board-titlebar::after,
-[data-era=macos] #paint-titlebar::after {
+[data-scheme=light][data-era=metal] .board-titlebar::after,
+[data-scheme=light][data-era=metal] #paint-titlebar::after {
   background: linear-gradient(180deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 100%) !important;
   border-radius: 12px 12px 0 0 !important;
 }
-[data-era=macos] .cb, [data-era=macos] .mb, [data-era=macos] .mbtn,
-[data-era=macos] .ico-btn, [data-era=macos] .q-btn, [data-era=macos] .sm-tab,
-[data-era=macos] .sp-btn, [data-era=macos] .sp-opt-btn {
+[data-scheme=light][data-era=metal] .cb, [data-scheme=light][data-era=metal] .mb, [data-scheme=light][data-era=metal] .mbtn,
+[data-scheme=light][data-era=metal] .ico-btn, [data-scheme=light][data-era=metal] .q-btn, [data-scheme=light][data-era=metal] .sm-tab,
+[data-scheme=light][data-era=metal] .sp-btn, [data-scheme=light][data-era=metal] .sp-opt-btn {
   background: linear-gradient(180deg,rgba(255,255,255,0.95) 0%,rgba(220,220,220,0.92) 50%,rgba(198,198,198,0.90) 100%) !important;
   border: 1px solid rgba(0,0,0,0.30) !important;
   border-radius: 8px !important;
   color: #1a1a1a !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.92) !important;
 }
-[data-era=macos] .cb:hover, [data-era=macos] .mb:hover, [data-era=macos] .mbtn:hover,
-[data-era=macos] .ico-btn:hover, [data-era=macos] .q-btn:hover {
+[data-scheme=light][data-era=metal] .cb:hover, [data-scheme=light][data-era=metal] .mb:hover, [data-scheme=light][data-era=metal] .mbtn:hover,
+[data-scheme=light][data-era=metal] .ico-btn:hover, [data-scheme=light][data-era=metal] .q-btn:hover {
   background: linear-gradient(180deg,rgba(255,255,255,1) 0%,rgba(238,238,238,0.97) 50%,rgba(220,220,220,0.95) 100%) !important;
   transform: none !important;
 }
-[data-era=macos] .tab.on, [data-era=macos] .sm-tab.on,
-[data-era=macos] #search-btn, [data-era=macos] .mbtn.p,
-[data-era=macos] .sp-opt-btn.sp-opt-create {
+[data-scheme=light][data-era=metal] .tab.on, [data-scheme=light][data-era=metal] .sm-tab.on,
+[data-scheme=light][data-era=metal] #search-btn, [data-scheme=light][data-era=metal] .mbtn.p,
+[data-scheme=light][data-era=metal] .sp-opt-btn.sp-opt-create {
   background: linear-gradient(180deg,#7ab4e8 0%,#3a7cd0 50%,#2868b8 100%) !important;
   border-color: rgba(0,0,0,0.38) !important;
   color: #fff !important;
   box-shadow: 0 1px 5px rgba(0,80,160,0.42), inset 0 1px 0 rgba(255,255,255,0.28) !important;
 }
-[data-era=macos] .tab { background: linear-gradient(180deg,rgba(245,245,245,0.95) 0%,rgba(218,218,218,0.9) 100%) !important; border-radius: 0 !important; border-bottom: 3px solid transparent !important; border-top: none !important; border-left: none !important; border-right: none !important; color: #4a4a4a !important; }
-[data-era=macos] .tab:hover { background: linear-gradient(180deg,rgba(255,255,255,0.98) 0%,rgba(230,230,230,0.94) 100%) !important; color: #1a1a1a !important; transform: none !important; }
-[data-era=macos] #q, [data-era=macos] input[type=text], [data-era=macos] input[type=search], [data-era=macos] textarea {
+[data-scheme=light][data-era=metal] .tab { background: linear-gradient(180deg,rgba(245,245,245,0.95) 0%,rgba(218,218,218,0.9) 100%) !important; border-radius: 0 !important; border-bottom: 3px solid transparent !important; border-top: none !important; border-left: none !important; border-right: none !important; color: #4a4a4a !important; }
+[data-scheme=light][data-era=metal] .tab:hover { background: linear-gradient(180deg,rgba(255,255,255,0.98) 0%,rgba(230,230,230,0.94) 100%) !important; color: #1a1a1a !important; transform: none !important; }
+[data-scheme=light][data-era=metal] #q, [data-scheme=light][data-era=metal] input[type=text], [data-scheme=light][data-era=metal] input[type=search], [data-scheme=light][data-era=metal] textarea {
   background: linear-gradient(180deg,rgba(255,255,255,0.99) 0%,rgba(248,248,248,0.97) 100%) !important;
   border: 1px solid rgba(0,0,0,0.30) !important;
   border-radius: 8px !important;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.10) !important;
 }
-[data-era=macos] .r-item:hover { background: rgba(0,100,200,0.09) !important; border-color: rgba(0,100,200,0.32) !important; }
-[data-era=macos] .v-item:hover { background: rgba(0,100,200,0.09) !important; border-color: rgba(0,100,200,0.32) !important; }
-[data-era=macos] .v-item.now { background: rgba(0,100,200,0.13) !important; border-left-color: #0070c9 !important; }
-[data-era=macos] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.28) !important; border-radius: 4px !important; }
-[data-era=macos] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05) !important; }
-[data-era=macos] #splash { background: linear-gradient(180deg,#c8d8e8 0%,#a8b8c8 100%) !important; }
-[data-era=macos] #splash-room { font-family: 'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif !important; background: linear-gradient(180deg,rgba(248,248,248,0.99) 0%,rgba(218,218,218,0.97) 100%) !important; border: 1px solid rgba(0,0,0,0.26) !important; border-radius: 12px 12px 8px 8px !important; }
-[data-era=macos] #sp-room-titlebar { border-radius: 12px 12px 0 0 !important; }
+[data-scheme=light][data-era=metal] .r-item:hover { background: rgba(0,100,200,0.09) !important; border-color: rgba(0,100,200,0.32) !important; }
+[data-scheme=light][data-era=metal] .v-item:hover { background: rgba(0,100,200,0.09) !important; border-color: rgba(0,100,200,0.32) !important; }
+[data-scheme=light][data-era=metal] .v-item.now { background: rgba(0,100,200,0.13) !important; border-left-color: #0070c9 !important; }
+[data-scheme=light][data-era=metal] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.28) !important; border-radius: 4px !important; }
+[data-scheme=light][data-era=metal] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05) !important; }
+[data-scheme=light][data-era=metal] #splash { background: linear-gradient(180deg,#c8d8e8 0%,#a8b8c8 100%) !important; }
+[data-scheme=light][data-era=metal] #splash-room { font-family: 'Lucida Grande','Lucida Sans Unicode',Helvetica,Arial,sans-serif !important; background: linear-gradient(180deg,rgba(248,248,248,0.99) 0%,rgba(218,218,218,0.97) 100%) !important; border: 1px solid rgba(0,0,0,0.26) !important; border-radius: 12px 12px 8px 8px !important; }
+[data-scheme=light][data-era=metal] #sp-room-titlebar { border-radius: 12px 12px 0 0 !important; }
 
 /* Nintendo DS/3DS: chunky plastic, bold red accent */
-[data-era=nintendo] .panel,
-[data-era=nintendo] #ctrl-bubble {
+[data-scheme=light][data-era=wii] .panel,
+[data-scheme=light][data-era=wii] #ctrl-bubble {
   background: rgba(255,255,255,0.99) !important;
   backdrop-filter: none !important;
   border: 2.5px solid rgba(0,0,0,0.16) !important;
   border-radius: 20px !important;
   box-shadow: 0 4px 18px rgba(0,0,0,0.12), inset 0 1.5px 0 rgba(255,255,255,1) !important;
 }
-[data-era=nintendo] #board-wrap {
+[data-scheme=light][data-era=wii] #board-wrap {
   background: #ffffff !important;
   backdrop-filter: none !important;
   border: 2.5px solid rgba(0,0,0,0.18) !important;
   border-radius: 16px 16px 12px 12px !important;
   box-shadow: 0 6px 24px rgba(0,0,0,0.18) !important;
 }
-[data-era=nintendo] #theme-panel {
+[data-scheme=light][data-era=wii] #theme-panel {
   background: #f8f8fa !important;
   backdrop-filter: none !important;
   border: 2.5px solid rgba(0,0,0,0.16) !important;
   border-radius: 20px !important;
 }
-[data-era=nintendo] #hdr {
+[data-scheme=light][data-era=wii] #hdr {
   background: linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%) !important;
   border-radius: 20px !important;
   box-shadow: 0 4px 18px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.12) !important;
 }
-[data-era=nintendo] #hdr::after { opacity: 0.12 !important; }
-[data-era=nintendo] .board-titlebar,
-[data-era=nintendo] #paint-titlebar {
+[data-scheme=light][data-era=wii] #hdr::after { opacity: 0.12 !important; }
+[data-scheme=light][data-era=wii] .board-titlebar,
+[data-scheme=light][data-era=wii] #paint-titlebar {
   background: linear-gradient(180deg,#2e2e3e 0%,#1a1a28 100%) !important;
   border-radius: 16px 16px 0 0 !important;
 }
-[data-era=nintendo] .board-titlebar::after,
-[data-era=nintendo] #paint-titlebar::after { opacity: 0.12 !important; }
-[data-era=nintendo] .cb, [data-era=nintendo] .mb, [data-era=nintendo] .mbtn,
-[data-era=nintendo] .ico-btn, [data-era=nintendo] .q-btn, [data-era=nintendo] .sm-tab,
-[data-era=nintendo] .sp-btn, [data-era=nintendo] .sp-opt-btn {
+[data-scheme=light][data-era=wii] .board-titlebar::after,
+[data-scheme=light][data-era=wii] #paint-titlebar::after { opacity: 0.12 !important; }
+[data-scheme=light][data-era=wii] .cb, [data-scheme=light][data-era=wii] .mb, [data-scheme=light][data-era=wii] .mbtn,
+[data-scheme=light][data-era=wii] .ico-btn, [data-scheme=light][data-era=wii] .q-btn, [data-scheme=light][data-era=wii] .sm-tab,
+[data-scheme=light][data-era=wii] .sp-btn, [data-scheme=light][data-era=wii] .sp-opt-btn {
   background: linear-gradient(180deg,#f8f8f8 0%,#e8e8e8 100%) !important;
   border: 2px solid rgba(0,0,0,0.22) !important;
   border-radius: 14px !important;
   color: #1a1a2e !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.10), inset 0 1.5px 0 rgba(255,255,255,0.92) !important;
 }
-[data-era=nintendo] .cb:hover, [data-era=nintendo] .mb:hover, [data-era=nintendo] .mbtn:hover,
-[data-era=nintendo] .ico-btn:hover, [data-era=nintendo] .q-btn:hover {
+[data-scheme=light][data-era=wii] .cb:hover, [data-scheme=light][data-era=wii] .mb:hover, [data-scheme=light][data-era=wii] .mbtn:hover,
+[data-scheme=light][data-era=wii] .ico-btn:hover, [data-scheme=light][data-era=wii] .q-btn:hover {
   background: linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%) !important;
-  border-color: #e4000f !important;
+  border-color: var(--accent) !important;
   transform: translateY(-1px) !important;
 }
-[data-era=nintendo] .tab.on, [data-era=nintendo] .sm-tab.on,
-[data-era=nintendo] #search-btn, [data-era=nintendo] .mbtn.p,
-[data-era=nintendo] .sp-opt-btn.sp-opt-create {
-  background: linear-gradient(180deg,#ff4848 0%,#cc0011 100%) !important;
+[data-scheme=light][data-era=wii] .tab.on, [data-scheme=light][data-era=wii] .sm-tab.on,
+[data-scheme=light][data-era=wii] #search-btn, [data-scheme=light][data-era=wii] .mbtn.p,
+[data-scheme=light][data-era=wii] .sp-opt-btn.sp-opt-create {
+  background: linear-gradient(180deg,#ff4848 0%,#0e8ab8 100%) !important;
   border-color: rgba(0,0,0,0.28) !important;
   color: #fff !important;
   box-shadow: 0 2px 10px rgba(204,0,17,0.42), inset 0 1px 0 rgba(255,255,255,0.22) !important;
 }
-[data-era=nintendo] .tab { background: linear-gradient(180deg,rgba(248,248,252,0.98) 0%,rgba(232,232,240,0.9) 100%) !important; border-radius: 10px 10px 0 0 !important; border-bottom: 3px solid transparent !important; color: #4a4a60 !important; border-top: 2px solid rgba(0,0,0,0.08) !important; border-left: 2px solid rgba(0,0,0,0.08) !important; border-right: 2px solid rgba(0,0,0,0.08) !important; }
-[data-era=nintendo] .tab:hover { border-color: rgba(0,0,0,0.15) !important; border-bottom-color: transparent !important; color: #1a1a2e !important; background: rgba(255,255,255,0.98) !important; transform: none !important; }
-[data-era=nintendo] #q, [data-era=nintendo] input[type=text], [data-era=nintendo] input[type=search], [data-era=nintendo] textarea {
+[data-scheme=light][data-era=wii] .tab { background: linear-gradient(180deg,rgba(248,248,252,0.98) 0%,rgba(232,232,240,0.9) 100%) !important; border-radius: 10px 10px 0 0 !important; border-bottom: 3px solid transparent !important; color: #4a4a60 !important; border-top: 2px solid rgba(0,0,0,0.08) !important; border-left: 2px solid rgba(0,0,0,0.08) !important; border-right: 2px solid rgba(0,0,0,0.08) !important; }
+[data-scheme=light][data-era=wii] .tab:hover { border-color: rgba(0,0,0,0.15) !important; border-bottom-color: transparent !important; color: #1a1a2e !important; background: rgba(255,255,255,0.98) !important; transform: none !important; }
+[data-scheme=light][data-era=wii] #q, [data-scheme=light][data-era=wii] input[type=text], [data-scheme=light][data-era=wii] input[type=search], [data-scheme=light][data-era=wii] textarea {
   background: #fff !important;
   border: 2px solid rgba(0,0,0,0.20) !important;
   border-radius: 12px !important;
   box-shadow: inset 0 1px 4px rgba(0,0,0,0.07) !important;
 }
-[data-era=nintendo] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
-[data-era=nintendo] .v-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
-[data-era=nintendo] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: #e4000f !important; }
-[data-era=nintendo] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.5) !important; border-radius: 10px !important; }
-[data-era=nintendo] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04) !important; }
-[data-era=nintendo] #splash { background: linear-gradient(180deg,#e8e8ec 0%,#d0d0d8 100%) !important; }
-[data-era=nintendo] #splash-room { font-family: Arial,Helvetica,sans-serif !important; background: #fff !important; border: 2.5px solid rgba(0,0,0,0.18) !important; border-radius: 20px 20px 14px 14px !important; }
-[data-era=nintendo] #hdr { box-shadow: 0 6px 24px rgba(228,0,15,0.35), 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52) !important; }
-[data-era=nintendo] .panel, [data-era=nintendo] #board-wrap,
-[data-era=nintendo] #left, [data-era=nintendo] #right, [data-era=nintendo] #center {
+[data-scheme=light][data-era=wii] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
+[data-scheme=light][data-era=wii] .v-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
+[data-scheme=light][data-era=wii] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: var(--accent) !important; }
+[data-scheme=light][data-era=wii] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.5) !important; border-radius: 10px !important; }
+[data-scheme=light][data-era=wii] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04) !important; }
+[data-scheme=light][data-era=wii] #splash { background: linear-gradient(180deg,#e8e8ec 0%,#d0d0d8 100%) !important; }
+[data-scheme=light][data-era=wii] #splash-room { font-family: Arial,Helvetica,sans-serif !important; background: #fff !important; border: 2.5px solid rgba(0,0,0,0.18) !important; border-radius: 20px 20px 14px 14px !important; }
+[data-scheme=light][data-era=wii] #hdr { box-shadow: 0 6px 24px rgba(228,0,15,0.35), 0 1px 0 rgba(255,255,255,0.18), inset 0 1.5px 0 rgba(255,255,255,0.52) !important; }
+[data-scheme=light][data-era=wii] .panel, [data-scheme=light][data-era=wii] #board-wrap,
+[data-scheme=light][data-era=wii] #left, [data-scheme=light][data-era=wii] #right, [data-scheme=light][data-era=wii] #center {
   box-shadow: 0 4px 16px rgba(228,0,15,0.12) !important;
 }
-[data-era=nintendo] #prog { accent-color: #e4000f; }
-[data-era=nintendo] #vol { accent-color: #e4000f; }
-[data-era=nintendo] .tab.on { border-bottom-color: #e4000f !important; }
-[data-era=nintendo] .vb { background: linear-gradient(0deg, #cc0011 0%, #e4000f 55%, #ff6666 100%) !important; }
-[data-era=nintendo] #prog-fill { background: linear-gradient(90deg,#e4000f,#ff4444) !important; box-shadow: 0 0 8px rgba(228,0,15,0.4) !important; }
-[data-era=nintendo] #prog { background: rgba(228,0,15,0.1) !important; }
-[data-era=nintendo] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: #e4000f !important; }
-[data-era=nintendo] .pl-item.active { background: rgba(228,0,15,0.1) !important; border-left-color: #e4000f !important; border-color: rgba(228,0,15,0.25) !important; }
-[data-era=nintendo] .sec-ttl { border-left-color: #e4000f !important; }
-[data-era=nintendo] #q:focus, [data-era=nintendo] input:focus { box-shadow: 0 0 0 3px rgba(228,0,15,0.15) !important; border-color: rgba(228,0,15,0.4) !important; }
-[data-era=nintendo] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.45) !important; }
-[data-era=nintendo] .cb:hover, [data-era=nintendo] .q-btn:hover { background: linear-gradient(180deg,#fff 0%,#f0f0f0 100%) !important; border-color: #e4000f !important; }
-[data-era=nintendo] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
-[data-era=nintendo] .sm-opt.active, [data-era=nintendo] .sm-opt:hover { color: #e4000f !important; background: rgba(228,0,15,0.06) !important; }
+[data-scheme=light][data-era=wii] #prog { accent-color: var(--accent); }
+[data-scheme=light][data-era=wii] #vol { accent-color: var(--accent); }
+[data-scheme=light][data-era=wii] .tab.on { border-bottom-color: var(--accent) !important; }
+[data-scheme=light][data-era=wii] .vb { background: linear-gradient(0deg, #0e8ab8 0%, var(--accent) 55%, #5ec8ec 100%) !important; }
+[data-scheme=light][data-era=wii] #prog-fill { background: linear-gradient(90deg,var(--accent),#5ec8ec) !important; box-shadow: 0 0 8px rgba(228,0,15,0.4) !important; }
+[data-scheme=light][data-era=wii] #prog { background: rgba(228,0,15,0.1) !important; }
+[data-scheme=light][data-era=wii] .v-item.now { background: rgba(228,0,15,0.09) !important; border-left-color: var(--accent) !important; }
+[data-scheme=light][data-era=wii] .pl-item.active { background: rgba(228,0,15,0.1) !important; border-left-color: var(--accent) !important; border-color: rgba(228,0,15,0.25) !important; }
+[data-scheme=light][data-era=wii] .sec-ttl { border-left-color: var(--accent) !important; }
+[data-scheme=light][data-era=wii] #q:focus, [data-scheme=light][data-era=wii] input:focus { box-shadow: 0 0 0 3px rgba(228,0,15,0.15) !important; border-color: rgba(228,0,15,0.4) !important; }
+[data-scheme=light][data-era=wii] ::-webkit-scrollbar-thumb { background: rgba(228,0,15,0.45) !important; }
+[data-scheme=light][data-era=wii] .cb:hover, [data-scheme=light][data-era=wii] .q-btn:hover { background: linear-gradient(180deg,#fff 0%,#f0f0f0 100%) !important; border-color: var(--accent) !important; }
+[data-scheme=light][data-era=wii] .r-item:hover { background: rgba(228,0,15,0.07) !important; border-color: rgba(228,0,15,0.28) !important; }
+[data-scheme=light][data-era=wii] .sm-opt.active, [data-scheme=light][data-era=wii] .sm-opt:hover { color: var(--accent) !important; background: rgba(228,0,15,0.06) !important; }
 
 /* Retro 95: flat Windows 95 chrome, 3D raised borders */
-[data-era=retro] .panel,
-[data-era=retro] #ctrl-bubble,
-[data-era=retro] #board-wrap,
-[data-era=retro] #theme-panel,
-[data-era=retro] #admin-wrap {
+[data-era=win95] .panel,
+[data-era=win95] #ctrl-bubble,
+[data-era=win95] #board-wrap,
+[data-era=win95] #theme-panel,
+[data-era=win95] #admin-wrap {
   background: #d4d0c8 !important;
   backdrop-filter: none !important;
   border: 2px solid !important;
@@ -2779,22 +2762,22 @@ body.perf-mode #aqua-gun { display: none !important; }
   border-radius: 0 !important;
   box-shadow: 2px 2px 0 #000 !important;
 }
-[data-era=retro] #hdr {
+[data-era=win95] #hdr {
   background: linear-gradient(180deg,#0a0ab0 0%,#000096 100%) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
-[data-era=retro] #hdr::after { display: none !important; }
-[data-era=retro] .board-titlebar,
-[data-era=retro] #paint-titlebar {
+[data-era=win95] #hdr::after { display: none !important; }
+[data-era=win95] .board-titlebar,
+[data-era=win95] #paint-titlebar {
   background: linear-gradient(90deg,#000080 0%,#0808a8 100%) !important;
   border-radius: 0 !important;
 }
-[data-era=retro] .board-titlebar::after,
-[data-era=retro] #paint-titlebar::after { display: none !important; }
-[data-era=retro] .cb, [data-era=retro] .mb, [data-era=retro] .mbtn,
-[data-era=retro] .ico-btn, [data-era=retro] .q-btn, [data-era=retro] .sm-tab,
-[data-era=retro] .sp-btn, [data-era=retro] .sp-opt-btn {
+[data-era=win95] .board-titlebar::after,
+[data-era=win95] #paint-titlebar::after { display: none !important; }
+[data-era=win95] .cb, [data-era=win95] .mb, [data-era=win95] .mbtn,
+[data-era=win95] .ico-btn, [data-era=win95] .q-btn, [data-era=win95] .sm-tab,
+[data-era=win95] .sp-btn, [data-era=win95] .sp-opt-btn {
   background: #d4d0c8 !important;
   border: 2px solid !important;
   border-color: #ffffff #808080 #808080 #ffffff !important;
@@ -2802,61 +2785,49 @@ body.perf-mode #aqua-gun { display: none !important; }
   color: #000 !important;
   box-shadow: none !important;
 }
-[data-era=retro] .cb:hover, [data-era=retro] .mb:hover, [data-era=retro] .mbtn:hover,
-[data-era=retro] .ico-btn:hover, [data-era=retro] .q-btn:hover {
+[data-era=win95] .cb:hover, [data-era=win95] .mb:hover, [data-era=win95] .mbtn:hover,
+[data-era=win95] .ico-btn:hover, [data-era=win95] .q-btn:hover {
   background: #c8c4bc !important;
   transform: none !important;
   border-color: #ffffff #808080 #808080 #ffffff !important;
 }
-[data-era=retro] .cb:active, [data-era=retro] .mb:active, [data-era=retro] .mbtn:active {
+[data-era=win95] .cb:active, [data-era=win95] .mb:active, [data-era=win95] .mbtn:active {
   border-color: #808080 #ffffff #ffffff #808080 !important;
 }
-[data-era=retro] .tab {
+[data-era=win95] .tab {
   background: #d4d0c8 !important;
   border: none !important;
   border-bottom: 3px solid transparent !important;
   border-radius: 0 !important;
   color: #444 !important;
 }
-[data-era=retro] .tab:hover { background: #e0dcd4 !important; color: #000 !important; transform: none !important; }
-[data-era=retro] .tab.on {
+[data-era=win95] .tab:hover { background: #e0dcd4 !important; color: #000 !important; transform: none !important; }
+[data-era=win95] .tab.on {
   background: #ffffff !important;
   border-bottom-color: #000080 !important;
   color: #000 !important;
   font-weight: 800 !important;
 }
-[data-era=retro] .sm-tab.on { background: #d4d0c8 !important; border-color: #808080 #ffffff #ffffff #808080 !important; color: #000 !important; }
-[data-era=retro] #search-btn { background: #d4d0c8 !important; border: 2px solid !important; border-color: #ffffff #808080 #808080 #ffffff !important; color: #000 !important; border-radius: 2px !important; box-shadow: none !important; }
-[data-era=retro] .mbtn.p, [data-era=retro] .sp-opt-btn.sp-opt-create { background: #d4d0c8 !important; color: #000 !important; border-color: #ffffff #808080 #808080 #ffffff !important; }
-[data-era=retro] #q, [data-era=retro] input[type=text], [data-era=retro] input[type=search], [data-era=retro] textarea {
+[data-era=win95] .sm-tab.on { background: #d4d0c8 !important; border-color: #808080 #ffffff #ffffff #808080 !important; color: #000 !important; }
+[data-era=win95] #search-btn { background: #d4d0c8 !important; border: 2px solid !important; border-color: #ffffff #808080 #808080 #ffffff !important; color: #000 !important; border-radius: 2px !important; box-shadow: none !important; }
+[data-era=win95] .mbtn.p, [data-era=win95] .sp-opt-btn.sp-opt-create { background: #d4d0c8 !important; color: #000 !important; border-color: #ffffff #808080 #808080 #ffffff !important; }
+[data-era=win95] #q, [data-era=win95] input[type=text], [data-era=win95] input[type=search], [data-era=win95] textarea {
   background: #ffffff !important;
   border: 2px solid !important;
   border-color: #808080 #ffffff #ffffff #808080 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
-[data-era=retro] .r-item:hover { background: #000080 !important; border-color: transparent !important; }
-[data-era=retro] .r-item:hover .r-title, [data-era=retro] .r-item:hover .r-ch { color: #fff !important; }
-[data-era=retro] .v-item:hover { background: #000080 !important; border-color: transparent !important; }
-[data-era=retro] .v-item:hover .vtt, [data-era=retro] .v-item:hover .vch { color: #fff !important; }
-[data-era=retro] .v-item.now { background: rgba(0,0,128,0.10) !important; border-left-color: #000080 !important; }
-[data-era=retro] #splash { background: #008080 !important; }
-[data-era=retro] #splash-room { font-family: Arial, Helvetica, sans-serif !important; background: #d4d0c8 !important; border: 2px solid !important; border-color: #ffffff #808080 #808080 #ffffff !important; border-radius: 0 !important; }
-[data-era=retro] ::-webkit-scrollbar-thumb { background: #d4d0c8 !important; border: 2px solid; border-color: #fff #808080 #808080 #fff !important; border-radius: 0 !important; }
-[data-era=retro] ::-webkit-scrollbar-track { background: #d4d0c8 !important; }
+[data-era=win95] .r-item:hover { background: #000080 !important; border-color: transparent !important; }
+[data-era=win95] .r-item:hover .r-title, [data-era=win95] .r-item:hover .r-ch { color: #fff !important; }
+[data-era=win95] .v-item:hover { background: #000080 !important; border-color: transparent !important; }
+[data-era=win95] .v-item:hover .vtt, [data-era=win95] .v-item:hover .vch { color: #fff !important; }
+[data-era=win95] .v-item.now { background: rgba(0,0,128,0.10) !important; border-left-color: #000080 !important; }
+[data-era=win95] #splash { background: #008080 !important; }
+[data-era=win95] #splash-room { font-family: Arial, Helvetica, sans-serif !important; background: #d4d0c8 !important; border: 2px solid !important; border-color: #ffffff #808080 #808080 #ffffff !important; border-radius: 0 !important; }
+[data-era=win95] ::-webkit-scrollbar-thumb { background: #d4d0c8 !important; border: 2px solid; border-color: #fff #808080 #808080 #fff !important; border-radius: 0 !important; }
+[data-era=win95] ::-webkit-scrollbar-track { background: #d4d0c8 !important; }
 
-/* Dark Glass: already handled by [data-scheme=dark]; minor glass extras */
-[data-era=dark] .panel,
-[data-era=dark] #ctrl-bubble {
-  backdrop-filter: blur(24px) saturate(1.6) !important;
-}
-[data-era=dark] #board-wrap,
-[data-era=dark] #theme-panel {
-  backdrop-filter: blur(28px) saturate(1.8) !important;
-}
-[data-era=dark] #hdr {
-  backdrop-filter: blur(18px) saturate(1.5) !important;
-}
 
 /* ── MONO90S THEME (90s monochrome pixel art) ── */
 [data-era=mono90s] * {
@@ -3188,40 +3159,7 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=mono90s] .room-member-btn:hover { background: #fff !important; color: #000 !important; }
 [data-era=mono90s] .room-member-btn.revoke { border-color: #fff !important; color: #fff !important; }
 
-/* ── FROST THEME (Snow Leopard-inspired) ── */
-[data-era=frost] #board-wrap, [data-era=frost] .panel,
-[data-era=frost] #theme-panel, [data-era=frost] #hdr {
-  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(230,240,252,0.82));
-  border: 1px solid rgba(180,210,240,0.6);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 32px rgba(100,140,200,0.18);
-}
-[data-era=frost] .mbtn, [data-era=frost] button.mbtn {
-  background: linear-gradient(180deg, #f5f8fc, #ddeaf8);
-  border: 1px solid rgba(140,180,220,0.6);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
-  border-radius: 6px;
-  color: #1a1a1a;
-}
 
-/* ── GLASS THEME (Blueprint / Brutalist Indigo) ── */
-[data-era=glass] #board-wrap, [data-era=glass] #theme-panel,
-[data-era=glass] .panel, [data-era=glass] #ctrl-bubble {
-  background:#fff !important; backdrop-filter:none !important;
-  border:3px solid #0a1a4a !important; border-radius:4px !important;
-  box-shadow:6px 6px 0 #0a1a4a !important;
-}
-[data-era=glass] #hdr {
-  background:#0a1a4a !important; backdrop-filter:none !important;
-  border-bottom:3px solid #0057ff !important; box-shadow:0 4px 0 #0057ff !important;
-}
-[data-era=glass] #hdr::after { display:none !important; }
-[data-era=glass] #logo img { filter: drop-shadow(2px 2px 0 #0057ff) !important; }
-[data-era=glass] .mbtn {
-  background:#fff !important; color:#0a0a1a !important;
-  border:2.5px solid #0a1a4a !important; border-radius:3px !important;
-  font-weight:900 !important; box-shadow:3px 3px 0 #0a1a4a !important;
-  backdrop-filter:none !important;
-}
 
     /* ── APPS MENU / LAUNCHER ───────────────────────────── */
     #apps-menu-wrap { position:relative; }
@@ -3309,14 +3247,14 @@ body.perf-mode #aqua-gun { display: none !important; }
       display:none; flex-direction:column; position:fixed;
       top:50%; left:50%; transform:translate(-50%,-50%);
       width:min(560px, 96vw);
-      border-radius:12px 12px 8px 8px;
-      background:var(--panel); border:1.5px solid var(--border);
-      box-shadow:0 20px 60px rgba(0,40,120,0.2); z-index:500;
+      border-radius:var(--chrome-radius,12px); overflow:hidden;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 20px 60px rgba(0,40,120,0.2)); z-index:500;
     }
     #picross-wrap.open { display:flex; }
     #picross-titlebar {
-      background:var(--hdr-bg); padding:7px 10px; flex-shrink:0;
-      display:flex; align-items:center; gap:8px; border-radius:10px 10px 0 0;
+      padding:7px 10px; flex-shrink:0;
+      display:flex; align-items:center; gap:8px;
       position:relative; overflow:hidden;
     }
     #picross-titlebar::after { content:'';position:absolute;inset:0;bottom:50%;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.3) 0%,transparent 100%); }
@@ -3378,7 +3316,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     .win95-btn:active { border-color:#808080 #fff #fff #808080; }
     .sol-titlebar {
       background:var(--hdr-bg);
-      color:#fff;
+      color:var(--titlebar-text,#fff);
       font-family:var(--font-ui);
       font-size:12px;
       font-weight:bold;
@@ -3390,17 +3328,6 @@ body.perf-mode #aqua-gun { display: none !important; }
       flex-shrink:0;
       cursor:move;
       user-select:none;
-    }
-    /* light-menubar eras: dark title text so it stays readable on .sol-titlebar */
-    [data-era=beos] .sol-titlebar, [data-era=default] .sol-titlebar, [data-era=aero] .sol-titlebar,
-    [data-era=y2k] .sol-titlebar, [data-era=wii] .sol-titlebar, [data-era=metal] .sol-titlebar,
-    [data-era=classicmac] .sol-titlebar {
-      color:var(--text); text-shadow:0 1px 0 rgba(255,255,255,0.4);
-    }
-    [data-scheme=dark][data-era=beos] .sol-titlebar, [data-scheme=dark][data-era=default] .sol-titlebar,
-    [data-scheme=dark][data-era=aero] .sol-titlebar, [data-scheme=dark][data-era=y2k] .sol-titlebar,
-    [data-scheme=dark][data-era=metal] .sol-titlebar, [data-scheme=dark][data-era=classicmac] .sol-titlebar {
-      color:#fff; text-shadow:0 1px 1px rgba(0,0,0,0.4);
     }
     .sol-titlebtn {
       background:#d4d0c8;
@@ -3423,8 +3350,8 @@ body.perf-mode #aqua-gun { display: none !important; }
       display:none; flex-direction:column; position:fixed;
       top:55px; left:50%; transform:translateX(-50%);
       width:580px; background:var(--panel);
-      border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px);
+      border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px);
       font-family:var(--font-ui); z-index:500; overflow:hidden;
     }
     #solitaire-wrap.open { display:flex; }
@@ -3488,8 +3415,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── MINESWEEPER ─── */
     #mines-wrap {
       position:fixed; top:70px; left:calc(50% + 20px); transform:translateX(-50%);
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:510; flex-direction:column; overflow:hidden;
     }
     #mines-wrap.open { display:flex; }
@@ -3528,8 +3455,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── BLACKJACK ─── */
     #blackjack-wrap {
       position:fixed; top:80px; left:calc(50% - 20px); transform:translateX(-50%);
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:505; flex-direction:column; width:360px; overflow:hidden;
     }
     #blackjack-wrap.open { display:flex; }
@@ -3549,8 +3476,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── TEXAS HOLD'EM ─── */
     #holdem-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:506; flex-direction:column; width:480px; max-width:96vw; max-height:calc(100vh - 60px); overflow:hidden;
     }
     #holdem-wrap.open { display:flex; }
@@ -3605,8 +3532,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── AQUATUNE EXCHANGE (stock market) ─── */
     #stocks-wrap {
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:506; flex-direction:column; width:720px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #stocks-wrap.open { display:flex; }
@@ -3664,8 +3591,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── STATS / SKILLS ─── */
     #stats-wrap {
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
-      background:var(--panel); border:1px solid var(--border);
-      box-shadow:0 18px 50px rgba(0,0,0,0.35); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border));
+      box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.35)); border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:506; flex-direction:column; width:440px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #stats-wrap.open { display:flex; }
@@ -3826,8 +3753,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── GAME BOY COLOR mini-games (Fishing / Mining) ─── */
     #fishing-wrap, #mining-wrap {
       position:fixed; top:54px; left:50%; transform:translateX(-50%);
-      background:#1a1f12; border:3px solid #5a6b3a; box-shadow:0 18px 50px rgba(0,0,0,0.45);
-      border-radius:10px; font-family:var(--font-ui); z-index:506; flex-direction:column;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45));
+      border-radius:var(--chrome-radius,10px); font-family:var(--font-ui); z-index:506; flex-direction:column;
       width:360px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #fishing-wrap.open, #mining-wrap.open { display:flex; }
@@ -3863,18 +3790,22 @@ body.perf-mode #aqua-gun { display: none !important; }
     /* ── XP-LUNA WINDOW CHROME (Roulette + Aquatard Creator) ─── */
     #roulette-wrap, #charmaker-wrap {
       position:fixed; top:46px; left:50%; transform:translateX(-50%);
-      background:#ece9d8; border:1px solid #0831d9; border-radius:8px 8px 6px 6px;
-      box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:'Segoe UI',Tahoma,sans-serif;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45));
+      border-radius:var(--chrome-radius,8px); font-family:var(--font-ui);
       z-index:540; flex-direction:column; max-width:96vw; max-height:calc(100vh - 56px); overflow:hidden;
     }
+    #roulette-area, #charmaker-area { background:#ece9d8; font-family:'Segoe UI',Tahoma,sans-serif; }
     #roulette-wrap { width:560px; }
     #charmaker-wrap { width:520px; }
     #roulette-wrap.open, #charmaker-wrap.open { display:flex; }
     .xp-titlebar {
       display:flex; align-items:center; justify-content:space-between; padding:4px 6px 4px 9px;
+      font-weight:700; font-size:13px; cursor:move; text-shadow:0 1px 1px rgba(0,0,0,0.45);
+      user-select:none;
+    }
+    [data-era=winxp] .xp-titlebar {
       background:linear-gradient(180deg,#0997ff 0%,#0053ee 8%,#0050ee 40%,#06f 88%,#0741dd 100%);
-      color:#fff; font-weight:700; font-size:13px; cursor:move; text-shadow:0 1px 1px rgba(0,0,0,0.45);
-      border-radius:7px 7px 0 0; user-select:none;
+      color:#fff;
     }
     .xp-titlebtn {
       width:21px; height:21px; border:1px solid #fff; border-radius:4px; cursor:pointer; font-size:13px; font-weight:800;
@@ -3946,7 +3877,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #buddyshoot-wrap {
       position:fixed; top:50px; left:50%; transform:translateX(-50%);
       width:420px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
-      background:var(--panel); border:1px solid var(--border); box-shadow:0 18px 50px rgba(0,0,0,0.4); font-family:var(--font-ui); overflow:hidden;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.4)); font-family:var(--font-ui); overflow:hidden;
     }
     #buddyshoot-wrap.open { display:flex; }
     #buddyshoot-area { display:flex; flex-direction:column; }
@@ -3986,7 +3917,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #pool-wrap {
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
       width:720px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
-      background:#ece9d8; border:1px solid #0a246a; box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--font-ui); overflow:hidden;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45)); font-family:var(--font-ui); overflow:hidden;
     }
     #pool-wrap.open { display:flex; }
     #pool-area { display:flex; flex-direction:column; background:#ece9d8; position:relative; }
@@ -4048,7 +3979,7 @@ body.perf-mode #aqua-gun { display: none !important; }
     #tetris-wrap {
       position:fixed; top:40px; left:50%; transform:translateX(-50%);
       width:420px; max-width:96vw; border-radius:var(--chrome-radius,10px); z-index:540; flex-direction:column;
-      background:#1a1140; border:2px solid #5a3fc0; box-shadow:0 18px 50px rgba(0,0,0,0.5); font-family:var(--font-ui); overflow:hidden;
+      background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45)); font-family:var(--font-ui); overflow:hidden;
     }
     #tetris-wrap.open { display:flex; }
     #tetris-area { display:flex; flex-direction:column; gap:8px; padding:10px; background:linear-gradient(180deg,#241a55,#140d33); }
@@ -4079,8 +4010,8 @@ body.perf-mode #aqua-gun { display: none !important; }
     .tt-key:active { transform:translateY(2px); box-shadow:none; }
     /* ── NEON RUNNER (cyberpunk roguelike) ── */
     #rogue-wrap { position:fixed; top:40px; left:50%; transform:translateX(-50%); width:380px; max-width:96vw;
-      z-index:540; flex-direction:column; background:#0a0e1f; border:2px solid #2de0ff; border-radius:10px;
-      box-shadow:0 18px 50px rgba(0,0,0,0.55); font-family:var(--font-ui); overflow:hidden; }
+      z-index:540; flex-direction:column; background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45));
+      border-radius:var(--chrome-radius,10px); font-family:var(--font-ui); overflow:hidden; }
     #rogue-wrap.open { display:flex; }
     #rogue-area { display:flex; flex-direction:column; gap:8px; padding:10px; background:#0a0e1f; min-height:0; }
     .rogue-canvas { width:100%; image-rendering:pixelated; image-rendering:crisp-edges; display:block;
@@ -4115,10 +4046,10 @@ body.perf-mode #aqua-gun { display: none !important; }
 
     /* ── TANK BATTLE + AIR HOCKEY (Wii-Play-style arcade) ── */
     #tanks-wrap, #airhockey-wrap { position:fixed; top:40px; left:50%; transform:translateX(-50%); width:400px; max-width:96vw;
-      z-index:540; flex-direction:column; border-radius:10px; box-shadow:0 18px 50px rgba(0,0,0,0.55);
+      z-index:540; flex-direction:column; border-radius:var(--chrome-radius,10px); background:var(--panel); border:1.5px solid var(--win-border,var(--border)); box-shadow:var(--win-shadow,0 18px 50px rgba(0,0,0,0.45));
       font-family:var(--font-ui); overflow:hidden; }
-    #tanks-wrap { background:#1d2417; border:2px solid #8aa24a; }
-    #airhockey-wrap { background:#0c2030; border:2px solid #43c6e8; }
+    #tanks-area { background:#1d2417; }
+    #airhockey-area { background:#0c2030; }
     #tanks-wrap.open, #airhockey-wrap.open { display:flex; }
     #tanks-area, #airhockey-area { display:flex; flex-direction:column; gap:8px; padding:10px; min-height:0; align-items:center; }
     .arc-canvas { width:100%; image-rendering:pixelated; image-rendering:crisp-edges; display:block; border-radius:4px; touch-action:none; }
@@ -4382,14 +4313,6 @@ body.perf-mode #aqua-gun { display: none !important; }
   }
 }
 
-/* ── FROST THEME — DARKER HEADER ── */
-[data-era=frost] #logo img {
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 16px rgba(0,80,180,0.3));
-}
-[data-era=frost] #hdr {
-  background: linear-gradient(180deg, rgba(60,100,160,0.82) 0%, rgba(40,80,140,0.78) 100%) !important;
-  border-bottom: 1px solid rgba(140,180,230,0.5);
-}
 
 /* ── PLAYBACK CONTROLS PER THEME ── */
 
@@ -4401,43 +4324,43 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=default] .pb { color: #fff; }
 
 /* MACOS (Brushed) — pill buttons, silver gradient */
-[data-era=macos] .pb {
+[data-scheme=light][data-era=metal] .pb {
   background: linear-gradient(180deg, #e8e8e8, #c8c8c8) !important;
   border: 1px solid rgba(0,0,0,0.25) !important;
   border-radius: 999px !important;
   color: #333 !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.7) !important;
 }
-[data-era=macos] .pb:hover {
+[data-scheme=light][data-era=metal] .pb:hover {
   background: linear-gradient(180deg, #f0f0f0, #d8d8d8) !important;
 }
-[data-era=macos] #play-btn {
+[data-scheme=light][data-era=metal] #play-btn {
   background: linear-gradient(180deg, #5ab0f8, #1878e8) !important;
   color: #fff !important;
   box-shadow: 0 3px 10px rgba(30,100,220,0.45), inset 0 1px 0 rgba(255,255,255,0.4) !important;
 }
-[data-era=macos] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
-[data-era=macos] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
+[data-scheme=light][data-era=metal] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
+[data-scheme=light][data-era=metal] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#e8e8e8,#b0b0b0); border: 1px solid rgba(0,0,0,0.3); }
 
 /* NINTENDO (Handheld) — red accent, rounded */
-[data-era=nintendo] .pb {
+[data-scheme=light][data-era=wii] .pb {
   background: rgba(228,0,15,0.1) !important;
   border: 1.5px solid rgba(228,0,15,0.25) !important;
   border-radius: 50% !important;
-  color: #e4000f !important;
+  color: var(--accent) !important;
 }
-[data-era=nintendo] .pb:hover { background: rgba(228,0,15,0.2) !important; }
-[data-era=nintendo] #play-btn {
-  background: linear-gradient(180deg, #e4000f, #a00008) !important;
+[data-scheme=light][data-era=wii] .pb:hover { background: rgba(228,0,15,0.2) !important; }
+[data-scheme=light][data-era=wii] #play-btn {
+  background: linear-gradient(180deg, var(--accent), #a00008) !important;
   color: #fff !important;
   box-shadow: 0 3px 12px rgba(228,0,15,0.5) !important;
 }
-[data-era=nintendo] #prog::-webkit-slider-thumb { background: #e4000f; }
-[data-era=nintendo] #vol::-webkit-slider-thumb { background: #e4000f; }
-[data-era=nintendo] #prog::-webkit-slider-runnable-track { background: linear-gradient(90deg, #e4000f var(--pct,0%), rgba(0,0,0,0.15) var(--pct,0%)); }
+[data-scheme=light][data-era=wii] #prog::-webkit-slider-thumb { background: var(--accent); }
+[data-scheme=light][data-era=wii] #vol::-webkit-slider-thumb { background: var(--accent); }
+[data-scheme=light][data-era=wii] #prog::-webkit-slider-runnable-track { background: linear-gradient(90deg, var(--accent) var(--pct,0%), rgba(0,0,0,0.15) var(--pct,0%)); }
 
 /* RETRO (Win95/Classic) — Win95 raised button style */
-[data-era=retro] .pb {
+[data-era=win95] .pb {
   background: #d4d0c8 !important;
   border: 2px solid !important;
   border-color: #fff #808080 #808080 #fff !important;
@@ -4446,10 +4369,10 @@ body.perf-mode #aqua-gun { display: none !important; }
   box-shadow: none !important;
   font-family: Arial, sans-serif !important;
 }
-[data-era=retro] .pb:active {
+[data-era=win95] .pb:active {
   border-color: #808080 #fff #fff #808080 !important;
 }
-[data-era=retro] #play-btn {
+[data-era=win95] #play-btn {
   background: #d4d0c8 !important;
   border: 2px solid !important;
   border-color: #fff #808080 #808080 #fff !important;
@@ -4458,26 +4381,12 @@ body.perf-mode #aqua-gun { display: none !important; }
   box-shadow: none !important;
   font-size: 14px !important;
 }
-[data-era=retro] #prog { accent-color: #000080; }
-[data-era=retro] #vol { accent-color: #000080; }
-[data-era=retro] #prog::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
-[data-era=retro] #vol::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
-[data-era=retro] #prog::-webkit-slider-runnable-track { background: #d4d0c8; border: 1px inset #808080; border-radius: 0; }
+[data-era=win95] #prog { accent-color: #000080; }
+[data-era=win95] #vol { accent-color: #000080; }
+[data-era=win95] #prog::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
+[data-era=win95] #vol::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #fff #808080 #808080 #fff; border-radius: 2px; }
+[data-era=win95] #prog::-webkit-slider-runnable-track { background: #d4d0c8; border: 1px inset #808080; border-radius: 0; }
 
-/* DARK (Midnight) — glowing teal accents */
-[data-era=dark] .pb {
-  background: rgba(56,189,248,0.1) !important;
-  border: 1px solid rgba(56,189,248,0.2) !important;
-  color: #38bdf8 !important;
-}
-[data-era=dark] .pb:hover { background: rgba(56,189,248,0.2) !important; box-shadow: 0 0 8px rgba(56,189,248,0.3) !important; }
-[data-era=dark] #play-btn {
-  background: linear-gradient(180deg, #38bdf8, #0ea5e9) !important;
-  color: #0a1828 !important;
-  box-shadow: 0 4px 16px rgba(56,189,248,0.5), 0 0 20px rgba(56,189,248,0.25) !important;
-}
-[data-era=dark] #prog::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
-[data-era=dark] #vol::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.6); }
 
 /* MONO90S (90s Monochrome) — pure black/white pixel art */
 [data-era=mono90s] .pb {
@@ -4499,43 +4408,23 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=mono90s] #vol::-webkit-slider-thumb { background: #fff; border-radius: 0; }
 
 /* FROST (Snow Leopard) — soft blue-grey pill buttons */
-[data-era=frost] .pb {
+[data-scheme=light][data-era=aero] .pb {
   background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(210,225,245,0.8)) !important;
   border: 1px solid rgba(160,195,235,0.55) !important;
   border-radius: 999px !important;
   color: #2a5080 !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.9) !important;
 }
-[data-era=frost] .pb:hover { background: linear-gradient(180deg, #fff, rgba(220,235,252,0.9)) !important; }
-[data-era=frost] #play-btn {
+[data-scheme=light][data-era=aero] .pb:hover { background: linear-gradient(180deg, #fff, rgba(220,235,252,0.9)) !important; }
+[data-scheme=light][data-era=aero] #play-btn {
   background: linear-gradient(180deg, #5a9de8, #2e72c8) !important;
   border-radius: 999px !important;
   color: #fff !important;
   box-shadow: 0 3px 12px rgba(46,114,200,0.45), inset 0 1px 0 rgba(255,255,255,0.35) !important;
 }
-[data-era=frost] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); border: 1px solid rgba(60,100,180,0.4); }
-[data-era=frost] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); }
+[data-scheme=light][data-era=aero] #prog::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); border: 1px solid rgba(60,100,180,0.4); }
+[data-scheme=light][data-era=aero] #vol::-webkit-slider-thumb { background: linear-gradient(180deg,#7ab0e8,#4080c8); }
 
-/* GLASS (Blueprint) — bold indigo controls */
-[data-era=glass] .pb, [data-era=glass] .cb, [data-era=glass] .mb, [data-era=glass] .ico-btn,
-[data-era=glass] .q-btn, [data-era=glass] .tab, [data-era=glass] .sm-tab, [data-era=glass] .sp-opt-btn {
-  background:#fff !important; color:#0a0a1a !important; border:2.5px solid #0a1a4a !important;
-  border-radius:3px !important; font-weight:900 !important; box-shadow:3px 3px 0 #0a1a4a !important;
-  backdrop-filter:none !important; transition:transform .08s, box-shadow .08s !important;
-}
-[data-era=glass] .pb:hover, [data-era=glass] .cb:hover, [data-era=glass] .mbtn:hover,
-[data-era=glass] .q-btn:hover {
-  background:#0057ff !important; color:#fff !important;
-  box-shadow:5px 5px 0 #00c2ff !important; transform:translate(-1px,-1px) !important;
-}
-[data-era=glass] .pb:active, [data-era=glass] .mbtn:active { transform:translate(2px,2px) !important; box-shadow:1px 1px 0 #0a1a4a !important; }
-[data-era=glass] #play-btn {
-  background:#0057ff !important; color:#fff !important;
-  border:3px solid #0a1a4a !important; border-radius:4px !important; box-shadow:4px 4px 0 #0a1a4a !important;
-}
-[data-era=glass] #play-btn:hover { background:#00c2ff !important; }
-[data-era=glass] #prog::-webkit-slider-thumb { background:#0057ff; border:2px solid #0a1a4a; border-radius:2px; box-shadow:none; }
-[data-era=glass] #vol::-webkit-slider-thumb { background:#0057ff; border:2px solid #0a1a4a; border-radius:2px; }
 
 /* NEON — glowing borders */
 [data-era=neon] .pb {
@@ -4579,11 +4468,9 @@ body.perf-mode #aqua-gun { display: none !important; }
 
 /* ── VISUALIZER BAR COLORS PER THEME ── */
 [data-era=default] .vb { background: linear-gradient(0deg, #0098d8 0%, #00d0f0 55%, #80eeff 100%); }
-[data-era=macos] .vb { background: linear-gradient(0deg, #3368a8 0%, #5a90d8 55%, #9ac0f0 100%) !important; }
-[data-era=dark] .vb { background: linear-gradient(0deg, #0ea5e9 0%, #38bdf8 55%, #7dd3fc 100%) !important; }
-[data-era=retro] .vb { background: linear-gradient(0deg, #000060 0%, #000096 55%, #4040c0 100%) !important; border-radius: 0 !important; }
-[data-era=frost] .vb { background: linear-gradient(0deg, #2e72c8 0%, #5a9de8 55%, #90bff5 100%) !important; }
-[data-era=glass] .vb { background: linear-gradient(0deg, rgba(60,120,240,0.9) 0%, rgba(120,180,255,0.9) 55%, rgba(180,220,255,0.9) 100%) !important; }
+[data-scheme=light][data-era=metal] .vb { background: linear-gradient(0deg, #3368a8 0%, #5a90d8 55%, #9ac0f0 100%) !important; }
+[data-era=win95] .vb { background: linear-gradient(0deg, #000060 0%, #000096 55%, #4040c0 100%) !important; border-radius: 0 !important; }
+[data-scheme=light][data-era=aero] .vb { background: linear-gradient(0deg, #2e72c8 0%, #5a9de8 55%, #90bff5 100%) !important; }
 [data-era=neon] .vb { background: linear-gradient(0deg, #8800cc 0%, #cc44ff 55%, #e8a0ff 100%) !important; box-shadow: 0 0 5px rgba(180,50,255,0.5); }
 [data-era=pixel] .vb { background: #44bb44 !important; border-radius: 0 !important; }
 [data-era=mono90s] .vb { background: #fff !important; border-radius: 0 !important; }
@@ -4592,26 +4479,21 @@ body.perf-mode #aqua-gun { display: none !important; }
    THEME REDESIGNS (appended — later rules win on equal specificity)
    ════════════════════════════════════════════════════════════════ */
 
-/* ── SILVER (macos): accent-blue header ── */
-[data-era=macos] #hdr-clock, [data-era=macos] #wx-temp, [data-era=macos] #hdr-credits,
-[data-era=macos] #room-badge-code, [data-era=macos] #room-badge-members {
-  color:#333 !important; text-shadow:0 1px 0 rgba(255,255,255,0.7) !important;
-}
-[data-era=macos] #board-btn, [data-era=macos] #gear-btn, [data-era=macos] #apps-btn,
-[data-era=macos] #th-theater-btn, [data-era=macos] #viz-toggle-btn { color:#444 !important; }
-[data-era=macos] .panel, [data-era=macos] #ctrl-bubble, [data-era=macos] #board-wrap, [data-era=macos] #theme-panel {
+[data-scheme=light][data-era=metal] #board-btn, [data-scheme=light][data-era=metal] #gear-btn, [data-scheme=light][data-era=metal] #apps-btn,
+[data-scheme=light][data-era=metal] #th-theater-btn, [data-scheme=light][data-era=metal] #viz-toggle-btn { color:#444 !important; }
+[data-scheme=light][data-era=metal] .panel, [data-scheme=light][data-era=metal] #ctrl-bubble, [data-scheme=light][data-era=metal] #board-wrap, [data-scheme=light][data-era=metal] #theme-panel {
   background: linear-gradient(180deg,#f2f2f2,#dadada) !important;
   border:1px solid #9c9c9c !important; border-radius:8px !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.18) !important;
 }
-[data-era=macos] #search-btn, [data-era=macos] .mbtn.p, [data-era=macos] .sp-opt-btn.sp-opt-create, [data-era=macos] .sp-btn.primary {
+[data-scheme=light][data-era=metal] #search-btn, [data-scheme=light][data-era=metal] .mbtn.p, [data-scheme=light][data-era=metal] .sp-opt-btn.sp-opt-create, [data-scheme=light][data-era=metal] .sp-btn.primary {
   background: linear-gradient(180deg,#a8d4ff 0%,#4a9af0 48%,#1f7ae0 52%,#5aa8f5 100%) !important;
   border:1px solid #1a6ac8 !important; color:#fff !important; border-radius:6px !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 3px rgba(0,60,140,0.35) !important;
   animation: aquaPulse 2.4s ease-in-out infinite !important;
 }
 @keyframes aquaPulse { 0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),0 1px 3px rgba(0,60,140,0.35);} 50%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.8),0 0 10px rgba(60,150,240,0.7);} }
-[data-era=macos] ::-webkit-scrollbar-thumb { background: linear-gradient(90deg,#cfe6ff,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.5) !important; }
+[data-scheme=light][data-era=metal] ::-webkit-scrollbar-thumb { background: linear-gradient(90deg,#cfe6ff,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.5) !important; }
 
 /* ── MY SPACE (myspace): 2007 web 2.0 ── */
 [data-era=myspace] .panel, [data-era=myspace] #board-wrap, [data-era=myspace] #theme-panel, [data-era=myspace] #ctrl-bubble {
@@ -4649,53 +4531,33 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=myspace] #sp-room-titlebar { background: linear-gradient(180deg,#3a6ea5,#003399) !important; color:#fff !important; border-radius:0 !important; }
 
 /* ── FROST (Windows Vista Aero) ── */
-[data-era=frost] .panel, [data-era=frost] #board-wrap, [data-era=frost] #theme-panel, [data-era=frost] #ctrl-bubble {
+[data-scheme=light][data-era=aero] .panel, [data-scheme=light][data-era=aero] #board-wrap, [data-scheme=light][data-era=aero] #theme-panel, [data-scheme=light][data-era=aero] #ctrl-bubble {
   background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(214,232,247,0.6) 100%) !important;
   backdrop-filter: blur(18px) saturate(1.3) !important;
   border:1px solid rgba(255,255,255,0.85) !important; border-radius:10px !important;
   box-shadow: 0 0 0 1px rgba(120,180,235,0.45), inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 34px rgba(80,140,210,0.28) !important;
 }
-[data-era=frost] #hdr {
-  background: linear-gradient(180deg, rgba(244,250,255,0.82) 0%, rgba(190,222,250,0.74) 48%, rgba(150,200,240,0.7) 100%) !important;
-  backdrop-filter: blur(20px) saturate(1.3) !important;
-  border-bottom:1px solid rgba(255,255,255,0.8) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 14px rgba(80,140,210,0.25) !important;
-}
-[data-era=frost] #hdr::after { background: linear-gradient(180deg, rgba(255,255,255,0.55), transparent 60%) !important; }
-[data-era=frost] .pb, [data-era=frost] .cb, [data-era=frost] .mb, [data-era=frost] .mbtn,
-[data-era=frost] .ico-btn, [data-era=frost] .q-btn, [data-era=frost] .sp-opt-btn {
+[data-scheme=light][data-era=aero] .pb, [data-scheme=light][data-era=aero] .cb, [data-scheme=light][data-era=aero] .mb, [data-scheme=light][data-era=aero] .mbtn,
+[data-scheme=light][data-era=aero] .ico-btn, [data-scheme=light][data-era=aero] .q-btn, [data-scheme=light][data-era=aero] .sp-opt-btn {
   background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,250,255,0.9) 49%, rgba(206,228,248,0.92) 51%, rgba(224,240,252,0.95) 100%) !important;
   border:1px solid rgba(120,175,225,0.7) !important; border-radius:8px !important; color:#16365c !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 3px rgba(40,90,160,0.2) !important;
 }
-[data-era=frost] .pb:hover, [data-era=frost] .cb:hover, [data-era=frost] .mbtn:hover, [data-era=frost] .q-btn:hover {
+[data-scheme=light][data-era=aero] .pb:hover, [data-scheme=light][data-era=aero] .cb:hover, [data-scheme=light][data-era=aero] .mbtn:hover, [data-scheme=light][data-era=aero] .q-btn:hover {
   box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 0 10px rgba(120,190,255,0.7), 0 1px 4px rgba(40,90,160,0.25) !important;
 }
-[data-era=frost] #play-btn {
+[data-scheme=light][data-era=aero] #play-btn {
   background: radial-gradient(circle at 50% 30%, #cfeaff 0%, #5aa6ee 46%, #2170c8 100%) !important;
   border:1px solid rgba(255,255,255,0.85) !important; border-radius:999px !important; color:#fff !important;
   box-shadow: inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -3px 8px rgba(0,40,100,0.4), 0 4px 16px rgba(40,110,200,0.5), 0 0 0 1px rgba(80,150,220,0.5) !important;
 }
-[data-era=frost] .tab.on, [data-era=frost] #search-btn { background: linear-gradient(180deg,#7ab8f5,#2e8bdf) !important; color:#fff !important; }
-[data-era=frost] #q, [data-era=frost] input[type=text], [data-era=frost] textarea, [data-era=frost] select {
+[data-scheme=light][data-era=aero] .tab.on, [data-scheme=light][data-era=aero] #search-btn { background: linear-gradient(180deg,#7ab8f5,#2e8bdf) !important; color:#fff !important; }
+[data-scheme=light][data-era=aero] #q, [data-scheme=light][data-era=aero] input[type=text], [data-scheme=light][data-era=aero] textarea, [data-scheme=light][data-era=aero] select {
   background: rgba(255,255,255,0.9) !important; border:1px solid rgba(140,185,230,0.7) !important; color:#13243a !important; border-radius:6px !important;
 }
-[data-era=frost] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#bcdcf6,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.6) !important; }
-[data-era=frost] #splash { background: linear-gradient(180deg,#dcecfb 0%,#b6d4ee 100%) !important; }
+[data-scheme=light][data-era=aero] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#bcdcf6,#7ab0e8) !important; border-radius:6px !important; border:1px solid rgba(255,255,255,0.6) !important; }
+[data-scheme=light][data-era=aero] #splash { background: linear-gradient(180deg,#dcecfb 0%,#b6d4ee 100%) !important; }
 
-/* ── GLASS → Blueprint (indigo brutalist) — remaining rules ── */
-[data-era=glass] .tab.on, [data-era=glass] .sm-tab.on,
-[data-era=glass] #search-btn { background:#0057ff !important; color:#fff !important; }
-[data-era=glass] #q, [data-era=glass] input[type=text], [data-era=glass] textarea, [data-era=glass] select {
-  background:#fff !important; border:2.5px solid #0a1a4a !important; color:#0a0a1a !important; border-radius:3px !important; font-weight:700 !important;
-}
-[data-era=glass] ::-webkit-scrollbar-thumb { background:#0057ff !important; border:2px solid #0a1a4a !important; border-radius:0 !important; }
-[data-era=glass] #prog-fill { background:#0057ff !important; }
-[data-era=glass] .vb { background: linear-gradient(0deg,#0057ff,#00c2ff) !important; border-radius:0 !important; }
-[data-era=glass] #splash { background: linear-gradient(135deg,#0a1a4a 0%,#0d2a6a 50%,#0057ff 100%) !important; }
-[data-era=glass] #splash-room { border:3px solid #0a1a4a !important; box-shadow:8px 8px 0 #0a1a4a !important; border-radius:4px !important; background:#fff !important; }
-[data-era=glass] .board-titlebar, [data-era=glass] #paint-titlebar { background:#0a1a4a !important; color:#fff !important; }
-[data-era=glass] .board-titlebar::after, [data-era=glass] #paint-titlebar::after { display:none !important; }
 
 /* ── NEON → tasteful cheesy casino (gold & velvet) ── */
 [data-era=neon] .panel, [data-era=neon] #board-wrap, [data-era=neon] #theme-panel, [data-era=neon] #ctrl-bubble {
@@ -4797,10 +4659,9 @@ body.perf-mode #aqua-gun { display: none !important; }
 .bmsg-time, .bmsg-sub { color:var(--text2) !important; }
 [data-era=neon] .bmsg-bubble { background:rgba(255,215,0,0.08) !important; }
 [data-era=pixel] .bmsg-bubble { background:rgba(255,209,102,0.1) !important; }
-[data-era=glass] .bmsg-bubble { background:rgba(0,87,255,0.08) !important; color:#0a0a1a !important; }
 
 /* Missing board-titlebar coverage for new themes */
-[data-era=frost] .board-titlebar, [data-era=frost] #paint-titlebar { background:linear-gradient(180deg,rgba(220,236,251,0.98),rgba(182,212,238,0.96)) !important; color:#1a3a5a !important; }
+[data-scheme=light][data-era=aero] .board-titlebar, [data-scheme=light][data-era=aero] #paint-titlebar { background:linear-gradient(180deg,rgba(220,236,251,0.98),rgba(182,212,238,0.96)) !important; color:#1a3a5a !important; }
 [data-era=neon] .board-titlebar, [data-era=neon] #paint-titlebar { background:linear-gradient(180deg,#3a0512,#5a0a1a) !important; border-color:rgba(255,215,0,0.4) !important; }
 [data-era=pixel] .board-titlebar, [data-era=pixel] #paint-titlebar { background:#0f0f23 !important; color:#ffd166 !important; border-bottom:3px solid #457b9d !important; }
 
@@ -4812,9 +4673,6 @@ body.perf-mode #aqua-gun { display: none !important; }
 [data-era=pixel] #paint-toolbar { background:#0f0f23 !important; border-color:#457b9d !important; }
 [data-era=pixel] .ptool { background:#1c1c3a !important; color:#ffd166 !important; border-color:#457b9d !important; border-radius:0 !important; }
 [data-era=pixel] .ptool:hover, [data-era=pixel] .ptool.active { background:#457b9d !important; color:#fff !important; }
-[data-era=glass] #paint-toolbar { background:#f0f4ff !important; border-color:#0a1a4a !important; }
-[data-era=glass] .ptool { background:#fff !important; color:#0a0a1a !important; border:2px solid #0a1a4a !important; border-radius:3px !important; }
-[data-era=glass] .ptool:hover, [data-era=glass] .ptool.active { background:#0057ff !important; color:#fff !important; border-color:#0057ff !important; }
 
 /* Rhythm titlebar — draggable */
 #rhythm-titlebar { cursor:move; user-select:none; }
@@ -4906,7 +4764,7 @@ body.osmode #hdr::after { display:none; }
 body.osmode #logo { order:0; }
 body.osmode #logo img { height:18px; filter:drop-shadow(0 0 1.5px rgba(0,0,0,0.55)) drop-shadow(0 1px 2px rgba(0,0,0,0.45)); }
 /* white logo → invert to dark on the eras whose menubar is light, for readability */
-html[data-scheme=light][data-era=retro]      body.osmode #logo img,
+html[data-scheme=light][data-era=win95]      body.osmode #logo img,
 html[data-scheme=light][data-era=classicmac] body.osmode #logo img,
 html[data-scheme=light][data-era=metal]      body.osmode #logo img,
 html[data-scheme=light][data-era=wii]        body.osmode #logo img,
@@ -5039,8 +4897,8 @@ body.osmode #win-player {
   position:fixed; z-index:600; left:50%; top:40px; transform:translateX(-50%);
   width:min(1120px,95vw); height:min(780px,82vh);
   display:flex; flex-direction:column; overflow:hidden;
-  background:var(--panel); border:1px solid var(--border);
-  box-shadow:0 28px 80px rgba(0,0,0,0.40), 0 2px 10px rgba(0,0,0,0.25);
+  background:var(--panel); border:1px solid var(--win-border,var(--border));
+  box-shadow:var(--win-shadow,0 28px 80px rgba(0,0,0,0.40));
   border-radius:var(--chrome-radius);
 }
 body.osmode #win-player .win-body { flex:1; min-height:0; display:flex; padding:10px; }
@@ -5058,8 +4916,8 @@ body:not(.osmode) #win-player > .os-titlebar { display:none; }
 .os-window.win-std { display:none; }
 body.osmode .os-window.win-std {
   position:fixed; z-index:600; display:none; flex-direction:column; overflow:hidden;
-  background:var(--panel); border:1px solid var(--border);
-  box-shadow:0 28px 80px rgba(0,0,0,0.40), 0 2px 10px rgba(0,0,0,0.25);
+  background:var(--panel); border:1px solid var(--win-border,var(--border));
+  box-shadow:var(--win-shadow,0 28px 80px rgba(0,0,0,0.40));
   border-radius:var(--chrome-radius);
 }
 body.osmode .os-window.win-std.open { display:flex; }
@@ -5072,33 +4930,50 @@ body.osmode #synth-flyout.os-window, body.osmode #paint-wrap.os-window { border-
    PER-THEME OS PERSONALITIES (driven by html[data-era])
    ========================================================= */
 
-/* ---- Windows 95 (retro) ---- */
-[data-era=retro] .os-window { --chrome-radius:0; }
-[data-era=retro] #win-player, [data-era=retro] .os-window.win-std,
-[data-era=retro] #synth-flyout.os-window, [data-era=retro] #paint-wrap.os-window {
+/* ---- Mac OS X Aqua: glossy titlebar highlight ---- */
+[data-era=default] .os-titlebar { box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.18); }
+
+/* ---- Windows 95 ---- */
+[data-era=win95] .os-window { --chrome-radius:0; }
+[data-era=win95] #win-player, [data-era=win95] .os-window.win-std,
+[data-era=win95] #synth-flyout.os-window, [data-era=win95] #paint-wrap.os-window {
   background:#c0c0c0; border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040;
   box-shadow:2px 2px 0 #000; border-radius:0;
 }
-[data-era=retro] .os-titlebar { background:linear-gradient(90deg,#000080,#1084d0); height:22px;
+[data-era=win95] .os-titlebar { background:linear-gradient(90deg,#000080,#1084d0); height:22px;
   border-radius:0; box-shadow:none; padding:0 3px 0 5px; font-family:'MS Sans Serif',Tahoma,sans-serif; }
-[data-era=retro] .os-titlebar .os-title { text-align:left; order:1; font-weight:700; }
-[data-era=retro] .os-titlebar .os-ico { order:0; }
-[data-era=retro] .os-winbtns { order:2; gap:2px; }
-[data-era=retro] .os-winbtn { width:18px; height:16px; border-radius:0; background:#c0c0c0;
+[data-era=win95] .os-titlebar .os-title { text-align:left; order:1; font-weight:700; }
+[data-era=win95] .os-titlebar .os-ico { order:0; }
+[data-era=win95] .os-winbtns { order:2; gap:2px; }
+[data-era=win95] .os-winbtn { width:18px; height:16px; border-radius:0; background:#c0c0c0;
   border:1px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040;
   color:#000; font-size:10px; font-weight:800; box-shadow:none; }
-[data-era=retro] .os-winbtn.close::after { content:'\00D7'; }
-[data-era=retro] .os-winbtn.min::after   { content:'_'; transform:translateY(-3px); }
-[data-era=retro] .os-winbtn.max::after   { content:'\25A1'; }
-[data-era=retro] #dock { left:0; right:0; bottom:0; transform:none; width:100%;
+[data-era=win95] .os-winbtn.close::after { content:'\00D7'; }
+[data-era=win95] .os-winbtn.min::after   { content:'_'; transform:translateY(-3px); }
+[data-era=win95] .os-winbtn.max::after   { content:'\25A1'; }
+[data-era=win95] #dock { left:0; right:0; bottom:0; transform:none; width:100%;
   justify-content:flex-start; border-radius:0; background:#c0c0c0;
   border:none; border-top:2px solid #dfdfdf; box-shadow:none; backdrop-filter:none; padding:3px 4px; gap:3px; }
-[data-era=retro] .dock-item { border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; border-radius:0; background:#c0c0c0; }
-[data-era=retro] .dock-item:hover { transform:none; background:#d4d0c8; }
-[data-era=retro] #hdr { background:#c0c0c0; color:#000; box-shadow:0 2px 0 #808080;
+[data-era=win95] .dock-item { border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; border-radius:0; background:#c0c0c0; }
+[data-era=win95] .dock-item:hover { transform:none; background:#d4d0c8; }
+[data-era=win95] #hdr { background:#c0c0c0; color:#000; box-shadow:0 2px 0 #808080;
   border-bottom:1px solid #404040; }
-[data-era=retro] #hdr-clock, [data-era=retro] #wx-temp { color:#000; }
-[data-era=retro] #mb-appname { color:#000; }
+[data-era=win95] #hdr-clock, [data-era=win95] #wx-temp { color:#000; }
+[data-era=win95] #mb-appname { color:#000; }
+
+/* ---- Retro Hi-Score: arcade-cabinet marquee chrome ---- */
+[data-era=retro] .os-window { --chrome-radius:0; }
+[data-era=retro] #win-player, [data-era=retro] .os-window.win-std,
+[data-era=retro] #synth-flyout.os-window, [data-era=retro] #paint-wrap.os-window {
+  border:2px solid #1a0e04; border-radius:0; box-shadow:4px 4px 0 rgba(0,0,0,0.55); background:var(--panel); }
+[data-era=retro] .os-titlebar { background:var(--hdr-bg); color:#fff; height:24px;
+  border-radius:0; border-bottom:2px solid #1a0e04; box-shadow:none; font-weight:900; letter-spacing:1px; }
+[data-era=retro] .os-winbtn { border-radius:0; border:2px solid #1a0e04; box-shadow:none; color:#1a0e04; }
+[data-era=retro] .os-winbtn.close { background:#e23b2e; }
+[data-era=retro] .os-winbtn.min, [data-era=retro] .os-winbtn.max { background:#f2b705; }
+[data-era=retro] #dock { border-radius:0; border:2px solid #1a0e04; background:var(--panel);
+  box-shadow:4px 4px 0 rgba(0,0,0,0.55); backdrop-filter:none; }
+[data-era=retro] .dock-item { border-radius:0; }
 
 /* ---- retro handheld (pixel) ---- */
 [data-era=pixel] .os-window { --chrome-radius:0; }
@@ -5123,13 +4998,103 @@ body.osmode #synth-flyout.os-window, body.osmode #paint-wrap.os-window { border-
 [data-era=neon] #dock { border:1px solid var(--accent); box-shadow:0 0 22px rgba(255,215,0,0.3); }
 
 /* ---- dark / mono90s glass ---- */
-[data-era=dark] #dock, [data-era=mono90s] #dock { background:linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); }
+[data-era=mono90s] #dock { background:linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)); }
 [data-era=mono90s] .os-titlebar { background:#000; border-bottom:1px solid #fff; }
 [data-era=mono90s] #win-player, [data-era=mono90s] .os-window.win-std { border:1px solid #fff; }
 
-/* ---- nintendo / myspace inherit base, tuned ---- */
-[data-era=nintendo] .os-titlebar { background:linear-gradient(180deg,#2e2e3e,#1a1a28); }
 [data-era=myspace]  .os-titlebar { background:linear-gradient(180deg,#3a6ea5,#003399); }
+
+/* =========================================================
+   PER-ERA WINDOW-FRAME VARS — inherited by ALL windows (incl. legacy
+   game wraps): border colour, shadow and corner radius per theme.
+   ========================================================= */
+html { --win-border:var(--border); --win-shadow:0 18px 50px rgba(0,0,0,0.45); }
+html[data-era=default] { --chrome-radius:12px; }
+/* Aqua pinstripes (subtle) on light panels */
+[data-scheme=light][data-era=default] .panel, [data-scheme=light][data-era=default] #win-player {
+  background-image:repeating-linear-gradient(180deg, rgba(110,150,180,0.05) 0 2px, rgba(255,255,255,0) 2px 4px),
+                   linear-gradient(170deg, rgba(255,255,255,0.72) 0%, rgba(215,240,255,0.62) 100%); }
+html[data-era=win95] { --chrome-radius:0; --win-border:#9a9a9a; --win-shadow:2px 2px 0 #000; }
+html[data-era=win31] { --chrome-radius:0; --win-border:#808080; --win-shadow:1px 1px 0 #000; }
+html[data-era=winxp] { --chrome-radius:8px; --win-border:#0a4ad0; }
+html[data-scheme=dark][data-era=winxp] { --win-border:#16356e; }
+html[data-era=aero] { --chrome-radius:8px; --win-border:rgba(255,255,255,0.5); }
+html[data-scheme=dark][data-era=aero] { --win-border:rgba(120,180,230,0.45); }
+html[data-era=classicmac] { --chrome-radius:4px; --win-border:#000; --win-shadow:2px 2px 0 rgba(0,0,0,0.4); }
+html[data-era=metal] { --chrome-radius:9px; --win-border:rgba(0,0,0,0.35); }
+html[data-era=beos] { --chrome-radius:0; --win-shadow:3px 3px 0 rgba(0,0,0,0.28); }
+html[data-era=wii] { --chrome-radius:16px; --win-border:#d2e6f0; --win-shadow:0 14px 44px rgba(20,80,120,0.2); }
+html[data-scheme=dark][data-era=wii] { --win-border:#2a3942; }
+html[data-era=dreamcast] { --chrome-radius:14px; }
+html[data-era=y2k] { --chrome-radius:14px; --win-border:rgba(255,255,255,0.6); }
+html[data-era=mono90s] { --chrome-radius:0; --win-border:#fff; --win-shadow:none; }
+html[data-scheme=light][data-era=mono90s] { --win-border:#0a0a0a; }
+html[data-era=retro] { --chrome-radius:0; --win-border:#1a0e04; --win-shadow:4px 4px 0 rgba(0,0,0,0.55); }
+html[data-era=pixel] { --chrome-radius:0; --win-border:var(--accent); --win-shadow:6px 6px 0 rgba(0,0,0,0.5); }
+html[data-era=neon] { --chrome-radius:10px; --win-border:var(--accent); --win-shadow:0 0 24px rgba(123,47,247,0.45), 0 18px 60px rgba(0,0,0,0.6); }
+html[data-era=myspace] { --chrome-radius:4px; --win-border:#b8c4d4; }
+html[data-scheme=dark][data-era=myspace] { --win-border:#2a3a58; }
+
+/* =========================================================
+   LEGACY-WINDOW TITLEBARS (.aq-tb) — mirror each era's .os-titlebar
+   look so every game window matches the OS chrome. Colour/shape only;
+   layout inside these bars stays bespoke.
+   ========================================================= */
+.aq-tb { background:var(--hdr-bg); color:var(--titlebar-text,#fff); font-family:var(--font-ui); }
+[data-era=default] .aq-tb { box-shadow:inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.18); }
+[data-era=win95] .aq-tb, [data-era=win95] .xp-titlebar { background:linear-gradient(90deg,#000080,#1084d0); color:#fff;
+  border-radius:0; font-family:'MS Sans Serif',Tahoma,sans-serif; }
+[data-era=win31] .aq-tb, [data-era=win31] .xp-titlebar { background:#000080; color:#fff; border-radius:0; }
+[data-era=winxp] .aq-tb { background:linear-gradient(180deg,#3a8be0 0%,#1f5fd0 48%,#1a52c0 100%); color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.5); }
+[data-era=aero] .aq-tb { background:linear-gradient(180deg,rgba(255,255,255,0.5),rgba(190,220,250,0.28));
+  color:var(--text); text-shadow:0 1px 2px rgba(255,255,255,0.5); backdrop-filter:blur(8px); }
+[data-scheme=dark][data-era=aero] .aq-tb { background:linear-gradient(180deg,rgba(40,70,100,0.55),rgba(20,40,64,0.4));
+  color:var(--text); text-shadow:none; }
+[data-era=classicmac] .aq-tb { background:repeating-linear-gradient(180deg,#e8e8e8 0 2px,#cfcfcf 2px 4px);
+  color:#000; text-shadow:none; border-bottom:1px solid #000; }
+[data-scheme=dark][data-era=classicmac] .aq-tb { background:repeating-linear-gradient(180deg,#4a4a4a 0 2px,#363636 2px 4px); color:#f0f0f0; }
+[data-era=metal] .aq-tb { background:linear-gradient(180deg,#e6e6e6,#bcbcbc); color:#222;
+  text-shadow:0 1px 0 rgba(255,255,255,0.5); border-bottom:1px solid #888; }
+[data-scheme=dark][data-era=metal] .aq-tb { background:linear-gradient(180deg,#54545a,#3a3a40); color:#ececec; text-shadow:none; }
+[data-era=beos] .aq-tb { background:var(--accent); color:#1a1a1a; text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.4); }
+[data-era=wii] .aq-tb { background:linear-gradient(180deg,#ffffff,#eef6fb); color:#2a2a2a; text-shadow:none;
+  border-bottom:2px solid #dceaf2; }
+[data-scheme=dark][data-era=wii] .aq-tb { background:linear-gradient(180deg,#1a2228,#12181c); color:#eef6fb; border-bottom-color:#2a3942; }
+[data-era=dreamcast] .aq-tb { background:linear-gradient(180deg,#ff8a3a,#f0631e); color:#fff; }
+[data-era=y2k] .aq-tb { background:linear-gradient(180deg,#ffffff 0%,#e6f5ff 46%,#cdebff 52%,#eaf8ff 100%);
+  color:#0a2740; text-shadow:0 1px 1px rgba(255,255,255,0.7); border-bottom:1px solid rgba(120,200,245,0.6); }
+[data-scheme=dark][data-era=y2k] .aq-tb { background:linear-gradient(180deg,rgba(60,120,160,0.6),rgba(20,55,80,0.55)); color:#dff3ff; text-shadow:none; }
+[data-era=myspace] .aq-tb { background:linear-gradient(180deg,#3a6ea5,#003399); color:#fff; }
+[data-era=mono90s] .aq-tb { background:#000; color:#fff; border-bottom:1px solid #fff; border-radius:0; }
+[data-scheme=light][data-era=mono90s] .aq-tb { background:#d8d8d0; color:#0a0a0a; border-bottom:1px solid #0a0a0a; }
+[data-era=retro] .aq-tb { background:var(--hdr-bg); color:#fff; border-bottom:2px solid #1a0e04; border-radius:0; font-weight:900; }
+[data-era=pixel] .aq-tb { background:var(--accent); color:#08140c; border-radius:0;
+  font-family:'VT323','Courier New',monospace; font-size:15px; letter-spacing:1px; }
+[data-era=neon] .aq-tb { box-shadow:inset 0 0 14px rgba(255,215,0,0.35); }
+
+/* Bespoke titlebar buttons (.sol-titlebtn / .xp-titlebtn) re-skinned per era.
+   Base stays the classic bevel (authentic for win95/win31). */
+[data-era=default] .sol-titlebtn, [data-era=metal] .sol-titlebtn, [data-era=classicmac] .sol-titlebtn,
+[data-era=default] .xp-titlebtn, [data-era=metal] .xp-titlebtn, [data-era=classicmac] .xp-titlebtn {
+  background:#dcdcdc; border:1px solid #777; border-radius:3px; color:#222; box-shadow:inset 0 1px 0 #fff; }
+[data-era=default] .sol-titlebtn.sol-close, [data-era=default] .xp-titlebtn { background:radial-gradient(circle at 35% 30%,#ffb0a8,#e2492c); border-color:#a83a20; color:#fff; border-radius:8px; }
+[data-era=winxp] .sol-titlebtn, [data-era=winxp] .xp-titlebtn, [data-era=aero] .sol-titlebtn, [data-era=aero] .xp-titlebtn {
+  background:linear-gradient(180deg,#f98a6e,#e2492c); border:1px solid rgba(255,255,255,0.6); border-radius:4px; color:#fff; }
+[data-era=wii] .sol-titlebtn, [data-era=wii] .xp-titlebtn { background:#9fd2ec; border:2px solid #bcd8e8; border-radius:9px; color:#16323e; }
+[data-era=y2k] .sol-titlebtn, [data-era=y2k] .xp-titlebtn { background:radial-gradient(circle at 40% 30%,#ffd0d0,#ff7a7a);
+  border:1px solid rgba(90,170,220,0.7); border-radius:8px; color:#5a0a0a; }
+[data-era=dreamcast] .sol-titlebtn, [data-era=dreamcast] .xp-titlebtn { background:#fff; border:1px solid #c25018; border-radius:8px; color:#c25018; }
+[data-era=beos] .sol-titlebtn, [data-era=beos] .xp-titlebtn { background:#dcdcdc; border:1px solid #333; border-radius:0; color:#1a1a1a; box-shadow:none; }
+[data-era=mono90s] .sol-titlebtn, [data-era=mono90s] .xp-titlebtn { background:#000; border:1px solid #fff; border-radius:0; color:#fff; box-shadow:none; }
+[data-scheme=light][data-era=mono90s] .sol-titlebtn, [data-scheme=light][data-era=mono90s] .xp-titlebtn { background:#f4f4ee; border-color:#0a0a0a; color:#0a0a0a; }
+[data-era=pixel] .sol-titlebtn, [data-era=pixel] .xp-titlebtn { background:var(--panel); border:2px solid #000; border-radius:0; color:var(--text); box-shadow:none; }
+[data-era=retro] .sol-titlebtn, [data-era=retro] .xp-titlebtn { background:#e23b2e; border:2px solid #1a0e04; border-radius:0; color:#fff; box-shadow:none; }
+[data-era=neon] .sol-titlebtn, [data-era=neon] .xp-titlebtn { background:rgba(28,8,46,0.8); border:1px solid var(--accent); border-radius:6px; color:#fff; box-shadow:0 0 8px rgba(255,46,154,0.5); }
+[data-era=myspace] .sol-titlebtn, [data-era=myspace] .xp-titlebtn { background:#fff; border:1px solid #003399; border-radius:2px; color:#003399; }
+[data-era=win95] .xp-titlebtn, [data-era=win31] .xp-titlebtn { background:#c0c0c0; border:1px solid #fff;
+  border-right-color:#404040; border-bottom-color:#404040; border-radius:0; color:#000; box-shadow:none; }
 
 /* ---------- desktop icons (free-positioned, draggable) ---------- */
 #desktop-icons { position:fixed; inset:30px 0 60px 0; z-index:1; display:none; }
@@ -5217,12 +5182,12 @@ body.osmode .os-window.win-std.open, body.osmode #win-player { animation:osWinIn
 .start-item { text-align:left; padding:7px 10px; font-size:12px; font-weight:600; color:var(--text); cursor:pointer;
   border:none; background:none; border-radius:5px; font-family:var(--font-ui); }
 .start-item:hover { background:var(--accent); color:#fff; }
-[data-era=retro] #start-menu, [data-era=win31] #start-menu, [data-era=winxp] #start-menu {
+[data-era=win95] #start-menu, [data-era=win31] #start-menu, [data-era=winxp] #start-menu {
   border-radius:0; border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; }
-[data-era=retro] #os-start, [data-era=win31] #os-start { border-radius:0; background:#c0c0c0; color:#000;
+[data-era=win95] #os-start, [data-era=win31] #os-start { border-radius:0; background:#c0c0c0; color:#000;
   border:2px solid #dfdfdf; border-right-color:#404040; border-bottom-color:#404040; box-shadow:none; }
-[data-era=retro] #os-start .start-logo, [data-era=win31] #os-start .start-logo { color:#1084d0; }
-[data-scheme=dark][data-era=retro] #os-start, [data-scheme=dark][data-era=win31] #os-start {
+[data-era=win95] #os-start .start-logo, [data-era=win31] #os-start .start-logo { color:#1084d0; }
+[data-scheme=dark][data-era=win95] #os-start, [data-scheme=dark][data-era=win31] #os-start {
   background:#3a3a3a; color:#e8e8e8; border-color:#5a5a5a; border-right-color:#1a1a1a; border-bottom-color:#1a1a1a; }
 /* Windows-family taskbar dock items need readable labels in dark mode */
 [data-scheme=dark][data-family=windows] #dock { background:linear-gradient(180deg,#2a2a2a,#1a1a1a); }
@@ -5391,20 +5356,20 @@ html[data-era=beos] body.osmode #hdr #hdr-clock,
 html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shadow:none; }
 
 /* dark-mode tweaks for the gray "bevel" eras (their chrome hardcodes light grays) */
-[data-scheme=dark][data-era=retro] #win-player, [data-scheme=dark][data-era=retro] .os-window.win-std,
+[data-scheme=dark][data-era=win95] #win-player, [data-scheme=dark][data-era=win95] .os-window.win-std,
 [data-scheme=dark][data-era=win31] #win-player, [data-scheme=dark][data-era=win31] .os-window.win-std,
 [data-scheme=dark][data-era=classicmac] #win-player, [data-scheme=dark][data-era=classicmac] .os-window.win-std,
 [data-scheme=dark][data-era=metal] #win-player, [data-scheme=dark][data-era=metal] .os-window.win-std {
   background:var(--panel); color:var(--text); }
-[data-scheme=dark][data-era=retro] .os-winbtn, [data-scheme=dark][data-era=win31] .os-winbtn { background:#4a4a4a; color:#fff;
+[data-scheme=dark][data-era=win95] .os-winbtn, [data-scheme=dark][data-era=win31] .os-winbtn { background:#4a4a4a; color:#fff;
   border-color:#6a6a6a; border-right-color:#222; border-bottom-color:#222; }
 [data-scheme=dark][data-era=classicmac] .os-titlebar { background:repeating-linear-gradient(180deg,#4a4a4a 0 2px,#363636 2px 4px); color:#f0f0f0; }
 [data-scheme=dark][data-era=classicmac] .os-titlebar .os-title { color:#f0f0f0; }
 [data-scheme=dark][data-era=metal] .os-titlebar { background:linear-gradient(180deg,#54545a,#3a3a40); color:#ececec; text-shadow:none; }
 [data-scheme=dark][data-era=metal] .os-titlebar .os-title { color:#ececec; text-shadow:none; }
-[data-scheme=dark][data-era=retro] #hdr, [data-scheme=dark][data-era=win31] #hdr { background:#2a2a2a; color:#e8e8e8; border-bottom-color:#000; }
-[data-scheme=dark][data-era=retro] #hdr-clock, [data-scheme=dark][data-era=win31] #hdr-clock,
-[data-scheme=dark][data-era=retro] #mb-appname, [data-scheme=dark][data-era=win31] #mb-appname { color:#e8e8e8; }
+[data-scheme=dark][data-era=win95] #hdr, [data-scheme=dark][data-era=win31] #hdr { background:#2a2a2a; color:#e8e8e8; border-bottom-color:#000; }
+[data-scheme=dark][data-era=win95] #hdr-clock, [data-scheme=dark][data-era=win31] #hdr-clock,
+[data-scheme=dark][data-era=win95] #mb-appname, [data-scheme=dark][data-era=win31] #mb-appname { color:#e8e8e8; }
 [data-scheme=dark][data-era=wii] .os-titlebar { background:linear-gradient(180deg,#1a2228,#12181c); color:#eef6fb; border-bottom-color:#2a3942; }
 [data-scheme=dark][data-era=wii] .os-titlebar .os-title { color:#eef6fb; }
 
@@ -6449,7 +6414,7 @@ const THEMES = {
     dark:{ accent:'#5a5af0', accent2:'#8080ff', text:'#e8e8e8', text2:'#a8a8a8',
            bg:'#103838', hdr:'linear-gradient(90deg,#202060,#202060)',
            panel:'#3a3a3a', border:'#000000' } },
-  win95: { name:'Windows 95', family:'windows', era:'retro',
+  win95: { name:'Windows 95', family:'windows', era:'win95',
     font:"'MS Sans Serif',Tahoma,Arial,sans-serif",
     light:{ accent:'#000080', accent2:'#1084d0', text:'#000000', text2:'#404040',
             bg:'#008080', hdr:'linear-gradient(90deg,#000080,#1084d0)',
@@ -6652,6 +6617,15 @@ function applyTheme(name, customAccent) {
   r.setProperty('--text2', c.text2);
   r.setProperty('--panel', c.panel);
   r.setProperty('--border',c.border);
+  // Window-titlebar text: derive from the theme's header colours so titlebars
+  // stay legible on light chrome (Platinum, Wii, mono90s light, ...). Per-era
+  // CSS that repaints titlebars sets its own explicit color and wins over this.
+  {
+    const cols = _parseColors(customAccent || c.hdr || '');
+    const avg = cols.length ? cols.reduce((s, x) => s + _relLum(x[0], x[1], x[2]), 0) / cols.length : 0;
+    if (avg > 0.5) { r.setProperty('--titlebar-text', '#15202b'); r.setProperty('--titlebar-text-soft', 'rgba(20,32,43,0.66)'); }
+    else { r.setProperty('--titlebar-text', '#ffffff'); r.setProperty('--titlebar-text-soft', 'rgba(255,255,255,0.78)'); }
+  }
   document.getElementById('bg').style.background = c.bg;
   if (customAccent) {
     applyAccentToDOM(customAccent);
@@ -8691,15 +8665,15 @@ const APPS = {
   player:    { el:'win-player',     name:'Aquatune Player', alwaysOpen:true },
   arcade:    { el:'win-arcade',     name:'Arcade' },
   settings:  { el:'win-settings',   name:'Settings' },
-  synth:     { el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout() },
-  studio:    { el:'studio-win',     name:'AquaSynth Studio', tb:'#studio-titlebar', openFn:()=>window.openStudio?.() },
-  paint:     { el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
+  synth:{ keys:true, el:'synth-flyout',   name:'AquaSynth',  tb:'#synth-titlebar',     openFn:()=>toggleSynthFlyout() },
+  studio:{ keys:true, el:'studio-win',     name:'AquaSynth Studio', tb:'#studio-titlebar', openFn:()=>window.openStudio?.() },
+  paint:{ keys:true, el:'paint-wrap',     name:'AquaPaint',  tb:'#paint-titlebar',     openFn:()=>openPaint(), closeFn:()=>closePaint(), nativeDrag:true },
   slots:     { el:'slots-wrap',     name:'Slots',      tb:'#slots-titlebar',     openFn:()=>toggleSlots(),     nativeDrag:true },
   solitaire: { el:'solitaire-wrap', name:'Solitaire',  tb:'#solitaire-titlebar', openFn:()=>openSolitaire(),   nativeDrag:true },
   picross:   { el:'picross-wrap',   name:'Picross',    tb:'#picross-titlebar',   openFn:()=>openPicross(),     nativeDrag:true },
   mines:     { el:'mines-wrap',     name:'Minesweeper',tb:'#mines-titlebar',     openFn:()=>openMines(),       nativeDrag:true },
   blackjack: { el:'blackjack-wrap', name:'Blackjack',  tb:'#blackjack-titlebar', openFn:()=>openBlackjack(),   nativeDrag:true },
-  rhythm:    { el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
+  rhythm:{ keys:true, el:'rhythm-wrap',    name:'Beat Tap',   tb:'#rhythm-titlebar',    openFn:()=>openRhythm(),      nativeDrag:true },
   files:     { el:'win-files',      name:'Files' },
   texteditor:{ el:'win-texteditor', name:'Text Editor' },
   leaderboard:{ el:'win-leaderboard', name:'Leaderboard' },
@@ -8708,14 +8682,14 @@ const APPS = {
   holdem:    { el:'holdem-wrap',    name:"Texas Hold'em", tb:'#holdem-titlebar',  openFn:()=>openHoldem(),  nativeDrag:true },
   stocks:    { el:'stocks-wrap',    name:'Aquatune Exchange', tb:'#stocks-titlebar', openFn:()=>window.openStocks?.(), closeFn:()=>window.openStocks?.(false) },
   stats:     { el:'stats-wrap',     name:'Stats',      tb:'#stats-titlebar',     openFn:()=>window.openStats?.(),   closeFn:()=>{ window.openStats?.(false); window._aqStatsClosed?.(); } },
-  fishing:   { el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
-  mining:    { el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
+  fishing:{ keys:true, el:'fishing-wrap',   name:'Fishing',    tb:'#fishing-titlebar',   openFn:()=>window.openFishing?.(), closeFn:()=>window.openFishing?.(false) },
+  mining:{ keys:true, el:'mining-wrap',    name:'Mining',     tb:'#mining-titlebar',    openFn:()=>window.openMining?.(),  closeFn:()=>window.openMining?.(false) },
   buddyshoot:{ el:'buddyshoot-wrap',name:'Buddy Shoot',tb:'#buddyshoot-titlebar',openFn:()=>window.openBuddyShoot?.(), closeFn:()=>window.openBuddyShoot?.(false) },
-  buddyshoot3d:{ el:'buddyshoot3d-wrap',name:'Buddy Shoot 3D',tb:'#buddyshoot3d-titlebar',openFn:()=>window.openBuddyShoot3D?.(), closeFn:()=>window.openBuddyShoot3D?.(false) },
+  buddyshoot3d:{ keys:true, el:'buddyshoot3d-wrap',name:'Buddy Shoot 3D',tb:'#buddyshoot3d-titlebar',openFn:()=>window.openBuddyShoot3D?.(), closeFn:()=>window.openBuddyShoot3D?.(false) },
   pool:      { el:'pool-wrap',      name:'8-Ball Pool', tb:'#pool-titlebar',     openFn:()=>window.openPool?.(),       closeFn:()=>window.openPool?.(false) },
-  tetris:    { el:'tetris-wrap',    name:'Tetris',      tb:'#tetris-titlebar',   openFn:()=>window.openTetris?.(),     closeFn:()=>window.openTetris?.(false) },
-  rogue:     { el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
-  tanks:     { el:'tanks-wrap',     name:'Tank Battle', tb:'#tanks-titlebar',    openFn:()=>window.openTanks?.(),      closeFn:()=>window.openTanks?.(false) },
+  tetris:{ keys:true, el:'tetris-wrap',    name:'Tetris',      tb:'#tetris-titlebar',   openFn:()=>window.openTetris?.(),     closeFn:()=>window.openTetris?.(false) },
+  rogue:{ keys:true, el:'rogue-wrap',     name:'Neon Runner', tb:'#rogue-titlebar',    openFn:()=>window.openRogue?.(),      closeFn:()=>window.openRogue?.(false) },
+  tanks:{ keys:true, el:'tanks-wrap',     name:'Tank Battle', tb:'#tanks-titlebar',    openFn:()=>window.openTanks?.(),      closeFn:()=>window.openTanks?.(false) },
   airhockey: { el:'airhockey-wrap', name:'Air Hockey',  tb:'#airhockey-titlebar',openFn:()=>window.openAirHockey?.(),  closeFn:()=>window.openAirHockey?.(false) },
   roulette:  { el:'roulette-wrap',  name:'Roulette', tb:'#roulette-titlebar', openFn:()=>window.openRoulette?.(),  closeFn:()=>window.openRoulette?.(false) },
   charmaker: { el:'charmaker-wrap', name:'Aquatard Creator',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
@@ -8889,6 +8863,25 @@ const OS = {
   _iconClick() { /* single-click selects; double-click opens (see markup) */ },
 };
 window.OS = OS;
+/* Keyboard-focus helpers: a window "owns" the keyboard only while it is the
+   active app AND actually visible (open, not minimized). OS.close() never
+   clears _activeId, so visibility must be re-checked here. */
+window.aqAppKeyTarget = function (id) {
+  const reg = APPS[id]; if (!reg || reg.modal) return null;
+  const el = document.getElementById(reg.el);
+  if (!el || el.classList.contains('os-min')) return null;
+  if (!reg.alwaysOpen && !el.classList.contains('open')) return null;
+  return el;
+};
+window.aqIsActiveApp = function (id) {
+  if (!window.OS) return true;                 // no window manager -> stay permissive
+  if (OS._activeId !== id) return false;
+  return !!window.aqAppKeyTarget(id);
+};
+window.aqGameKeysActive = function () {
+  const id = window.OS && OS._activeId;
+  return !!(id && APPS[id] && APPS[id].keys && window.aqAppKeyTarget(id));
+};
 document.addEventListener('mousemove', e => {
   // Self-heal: if a drag ended off-window (no mouseup fired) lift the iframe shield
   // the moment the cursor returns with no button held, so iframes never stay click-through.
@@ -9666,6 +9659,8 @@ updateClock();
 // ─────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  // A focused game window owns the keyboard - don't drive video playback under it.
+  if (window.aqGameKeysActive && window.aqGameKeysActive()) return;
   switch(e.code) {
     case 'Space':      e.preventDefault(); togglePlay(); break;
     case 'KeyN':       nextVid(); break;
@@ -11654,6 +11649,7 @@ function randomizeBass() {
 /* ---- keyboard control ---- */
 document.addEventListener('keydown', e => {
   if (!document.getElementById('synth-flyout').classList.contains('open')) return;
+  if (window.aqIsActiveApp && !window.aqIsActiveApp('synth')) return;   // another window owns the keys
   if (e.target.matches('input,textarea,select')) return;
   if (e.repeat) return;
 
@@ -13835,6 +13831,7 @@ function initPaint() {
   document.addEventListener('keydown', e => {
     const w = document.getElementById('paint-wrap');
     if (!w.classList.contains('open')) return;
+    if (window.aqIsActiveApp && !window.aqIsActiveApp('paint')) return;   // another window owns the keys
     if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); paintUndo(); }
     else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); paintRedo(); }
     else if (e.ctrlKey && e.key === 'c' && _paintTool === 'select') { e.preventDefault(); paintCopy(); }
@@ -14138,6 +14135,7 @@ function _rhythmBindKeys(){
   document.addEventListener('keydown', e=>{
     const w=document.getElementById('rhythm-wrap');
     if(!w||!w.classList.contains('open')||!_rhythmPlaying) return;
+    if(window.aqIsActiveApp && !window.aqIsActiveApp('rhythm')) return;
     const lane=RHY_KEYS.indexOf(e.key.toLowerCase());
     if(lane>=0){ e.preventDefault(); _rhythmJudgeHit(lane); _rhythmFlashKey(lane); }
   });
@@ -17301,7 +17299,7 @@ function bjUpdateBalance(){
   <div id="board-wrap">
 
     <!-- Aero title bar -->
-    <div class="board-titlebar">
+    <div class="aq-tb board-titlebar">
       <span class="board-tb-icon">💬</span>
       <span class="board-tb-title">AquaChat</span>
       <div class="board-tb-btns">
@@ -17391,7 +17389,7 @@ function bjUpdateBalance(){
 <!-- ── PAINT TOOL ─────────────────────────────────────────── -->
 <div id="paint-overlay" style="display:none;position:fixed;inset:0;z-index:800;pointer-events:none"></div>
 <div id="paint-wrap">
-  <div id="paint-titlebar">
+  <div id="paint-titlebar" class="aq-tb">
     <span style="font-size:16px;position:relative;z-index:1">🎨</span>
     <span class="pt-label">AQUAPAINT</span>
     <button onclick="clearPaint()">Clear</button>
@@ -17432,7 +17430,7 @@ function bjUpdateBalance(){
 <!-- ── SYNTH FLYOUT ─────────────────────────────────────────── -->
 <div id="synth-flyout">
 
-  <div id="synth-titlebar">
+  <div id="synth-titlebar" class="aq-tb">
     <span style="flex:1;font-size:13px;font-weight:700;color:#fff;user-select:none;position:relative;z-index:1">🎹 AquaTune Studio</span>
     <button class="sf-close" onclick="synthSaveProject()" title="Save project" style="width:auto;padding:0 8px">💾</button>
     <button class="sf-close" onclick="synthOpenProject()" title="Open project" style="width:auto;padding:0 8px">📂</button>
@@ -17735,7 +17733,7 @@ function bjUpdateBalance(){
 
 <!-- SLOT MACHINE -->
       <div id="slots-wrap">
-        <div id="slots-titlebar">
+        <div id="slots-titlebar" class="aq-tb">
           <span>🎰 AquaSlots</span>
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="slots-credits" class="aq-credits-display" style="font-size:14px;font-weight:800;color:#ffd700"></span>
@@ -17789,7 +17787,7 @@ function bjUpdateBalance(){
 
 <!-- PICROSS -->
 <div id="picross-wrap">
-  <div id="picross-titlebar">
+  <div id="picross-titlebar" class="aq-tb">
     <span style="font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;flex:1;user-select:none;position:relative;z-index:1">◼ AquaPicross</span>
     <span id="picross-timer" style="font-size:11px;font-weight:700;color:#fff;opacity:.8;margin-right:6px;font-variant-numeric:tabular-nums;position:relative;z-index:1">0:00</span>
     <span id="picross-mistakes" style="font-size:11px;font-weight:700;color:#ffd0d0;margin-right:6px;font-variant-numeric:tabular-nums;position:relative;z-index:1">✗ 0</span>
@@ -17824,7 +17822,7 @@ function bjUpdateBalance(){
 
 <!-- SOLITAIRE -->
 <div id="solitaire-wrap">
-  <div class="sol-titlebar" id="solitaire-titlebar">
+  <div class="aq-tb sol-titlebar" id="solitaire-titlebar">
     <span>Solitaire</span>
     <div style="display:flex;gap:4px;align-items:center">
       <select id="sol-diff" onchange="solSetDifficulty(this.value)" style="font-size:10px;padding:1px 2px;font-family:Arial">
@@ -17855,7 +17853,7 @@ function bjUpdateBalance(){
 
 <!-- MINESWEEPER -->
 <div id="mines-wrap" style="display:none">
-  <div class="sol-titlebar" id="mines-titlebar">
+  <div class="aq-tb sol-titlebar" id="mines-titlebar">
     <span>Minesweeper</span>
     <button class="sol-titlebtn sol-close" onclick="openMines(false)">×</button>
   </div>
@@ -17874,7 +17872,7 @@ function bjUpdateBalance(){
 
 <!-- BLACKJACK -->
 <div id="blackjack-wrap" style="display:none">
-  <div class="sol-titlebar" id="blackjack-titlebar">
+  <div class="aq-tb sol-titlebar" id="blackjack-titlebar">
     <span>Blackjack</span>
     <button class="sol-titlebtn sol-close" onclick="openBlackjack(false)">×</button>
   </div>
@@ -17905,7 +17903,7 @@ function bjUpdateBalance(){
 
 <!-- TEXAS HOLD'EM -->
 <div id="holdem-wrap" style="display:none">
-  <div class="sol-titlebar" id="holdem-titlebar">
+  <div class="aq-tb sol-titlebar" id="holdem-titlebar">
     <span>🂡 Texas Hold'em</span>
     <button class="sol-titlebtn sol-close" onclick="openHoldem(false)">×</button>
   </div>
@@ -17915,7 +17913,7 @@ function bjUpdateBalance(){
 
 <!-- STATS / SKILLS -->
 <div id="stats-wrap" style="display:none">
-  <div class="sol-titlebar" id="stats-titlebar">
+  <div class="aq-tb sol-titlebar" id="stats-titlebar">
     <span>📊 Stats</span>
     <button class="sol-titlebtn sol-close" onclick="window.openStats(false);window._aqStatsClosed&&window._aqStatsClosed()">×</button>
   </div>
@@ -17924,7 +17922,7 @@ function bjUpdateBalance(){
 
 <!-- FISHING (Game Boy Color style) -->
 <div id="fishing-wrap" style="display:none">
-  <div class="sol-titlebar" id="fishing-titlebar">
+  <div class="aq-tb sol-titlebar" id="fishing-titlebar">
     <span>🎣 Fishing</span>
     <button class="sol-titlebtn sol-close" onclick="window.openFishing(false)">×</button>
   </div>
@@ -17933,7 +17931,7 @@ function bjUpdateBalance(){
 
 <!-- MICROSOFT ROULETTE (American 0+00, XP-Luna skin) -->
 <div id="roulette-wrap" style="display:none">
-  <div class="xp-titlebar" id="roulette-titlebar">
+  <div class="aq-tb xp-titlebar" id="roulette-titlebar">
     <span>🎡 Roulette</span>
     <button class="xp-titlebtn xp-close" onclick="window.openRoulette(false)">×</button>
   </div>
@@ -17942,7 +17940,7 @@ function bjUpdateBalance(){
 
 <!-- MII STUDIO (Aqua Buddy character creator) -->
 <div id="charmaker-wrap" style="display:none">
-  <div class="xp-titlebar" id="charmaker-titlebar">
+  <div class="aq-tb xp-titlebar" id="charmaker-titlebar">
     <span>🧑‍🎨 Aquatard Creator</span>
     <button class="xp-titlebtn xp-close" onclick="window.openCharMaker(false)">×</button>
   </div>
@@ -17951,7 +17949,7 @@ function bjUpdateBalance(){
 
 <!-- MINING (Game Boy Color style) -->
 <div id="mining-wrap" style="display:none">
-  <div class="sol-titlebar" id="mining-titlebar">
+  <div class="aq-tb sol-titlebar" id="mining-titlebar">
     <span>⛏️ Mining</span>
     <button class="sol-titlebtn sol-close" onclick="window.openMining(false)">×</button>
   </div>
@@ -17960,7 +17958,7 @@ function bjUpdateBalance(){
 
 <!-- BUDDY SHOOT (Duck-Hunt-style shooting gallery) -->
 <div id="buddyshoot-wrap" style="display:none">
-  <div class="sol-titlebar" id="buddyshoot-titlebar">
+  <div class="aq-tb sol-titlebar" id="buddyshoot-titlebar">
     <span>🦆 Buddy Shoot</span>
     <button class="sol-titlebtn sol-close" onclick="window.openBuddyShoot(false)">×</button>
   </div>
@@ -17969,7 +17967,7 @@ function bjUpdateBalance(){
 
 <!-- BUDDY SHOOT 3D (Doom-style raycaster roguelite) -->
 <div id="buddyshoot3d-wrap" style="display:none">
-  <div class="sol-titlebar" id="buddyshoot3d-titlebar">
+  <div class="aq-tb sol-titlebar" id="buddyshoot3d-titlebar">
     <span>😈 Buddy Shoot 3D</span>
     <button class="sol-titlebtn sol-close" onclick="window.openBuddyShoot3D(false)">×</button>
   </div>
@@ -17978,7 +17976,7 @@ function bjUpdateBalance(){
 
 <!-- 8-BALL POOL (native canvas) -->
 <div id="pool-wrap" style="display:none">
-  <div class="sol-titlebar" id="pool-titlebar">
+  <div class="aq-tb sol-titlebar" id="pool-titlebar">
     <span>🎱 8-Ball Pool</span>
     <button class="sol-titlebtn sol-close" onclick="window.openPool(false)">×</button>
   </div>
@@ -17987,7 +17985,7 @@ function bjUpdateBalance(){
 
 <!-- TETRIS (native canvas) -->
 <div id="tetris-wrap" style="display:none">
-  <div class="sol-titlebar" id="tetris-titlebar">
+  <div class="aq-tb sol-titlebar" id="tetris-titlebar">
     <span>🧱 Tetris</span>
     <button class="sol-titlebtn sol-close" onclick="window.openTetris(false)">×</button>
   </div>
@@ -17996,7 +17994,7 @@ function bjUpdateBalance(){
 
 <!-- NEON RUNNER (native canvas roguelike) -->
 <div id="rogue-wrap" style="display:none">
-  <div class="sol-titlebar" id="rogue-titlebar">
+  <div class="aq-tb sol-titlebar" id="rogue-titlebar">
     <span>🤖 Neon Runner</span>
     <button class="sol-titlebtn sol-close" onclick="window.openRogue(false)">×</button>
   </div>
@@ -18005,7 +18003,7 @@ function bjUpdateBalance(){
 
 <!-- TANK BATTLE (Wii-Play-style tank duel) -->
 <div id="tanks-wrap" style="display:none">
-  <div class="sol-titlebar" id="tanks-titlebar">
+  <div class="aq-tb sol-titlebar" id="tanks-titlebar">
     <span>🐢 Tank Battle</span>
     <button class="sol-titlebtn sol-close" onclick="window.openTanks(false)">×</button>
   </div>
@@ -18014,7 +18012,7 @@ function bjUpdateBalance(){
 
 <!-- AIR HOCKEY (Wii-Play-style table) -->
 <div id="airhockey-wrap" style="display:none">
-  <div class="sol-titlebar" id="airhockey-titlebar">
+  <div class="aq-tb sol-titlebar" id="airhockey-titlebar">
     <span>🏒 Air Hockey</span>
     <button class="sol-titlebtn sol-close" onclick="window.openAirHockey(false)">×</button>
   </div>
@@ -18024,7 +18022,7 @@ function bjUpdateBalance(){
 
 <!-- AQUATUNE EXCHANGE (stock market) -->
 <div id="stocks-wrap" style="display:none">
-  <div class="sol-titlebar" id="stocks-titlebar">
+  <div class="aq-tb sol-titlebar" id="stocks-titlebar">
     <span>📈 Aquatune Exchange</span>
     <button class="sol-titlebtn sol-close" onclick="window.openStocks(false)">×</button>
   </div>
@@ -18096,7 +18094,7 @@ function bjUpdateBalance(){
   <div id="room-requests-list"><div class="room-member-row" style="opacity:.6">No pending requests</div></div>
 </div>
 <div id="rhythm-wrap">
-  <div id="rhythm-titlebar">
+  <div id="rhythm-titlebar" class="aq-tb">
     <span>🎶 Beat Tap</span>
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="rhythm-credits" class="aq-credits-display" style="font-size:13px;font-weight:800;color:#7dffe0"></span>

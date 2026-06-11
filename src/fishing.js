@@ -709,7 +709,8 @@ function build() {
     window._fishKeyBound = true;
     window.addEventListener('keydown', (e) => {
       const w = document.getElementById('fishing-wrap');
-      if (e.code === 'Space' && w && w.classList.contains('open')) { e.preventDefault(); press(); }
+      if (e.code === 'Space' && w && w.classList.contains('open') &&
+          (!window.aqIsActiveApp || window.aqIsActiveApp('fishing'))) { e.preventDefault(); press(); }
     });
   }
   _built = true;

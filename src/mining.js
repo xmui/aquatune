@@ -102,6 +102,8 @@ let cart = null;                      // sell point sprite at the entrance
 let minimapBuf = null;
 
 let px = 2, py = 2, pa = 0, dirX = 1, dirY = 0, planeX = 0, planeY = FOV_PLANE;
+let pitch = 0;                        // vertical look, in screen pixels of horizon offset
+const PITCH_MAX = 52;
 let hp = MAX_HP, lastHurtAt = -1e9, invulnUntil = 0;
 let sack = [];                        // [{ name, value, color }]
 let swingT = 0, lastSwingAt = 0, swinging = false, walkPhase = 0;
@@ -124,7 +126,8 @@ function addDepth(n) {
 
 // ── procedural art ───────────────────────────────────────────────────────────
 let texRock = null, texEdge = null, texDepleted = null, texOre = {}, texCrack = null;
-let monSprites = {}, cartSprite = null;
+let monSprites = {}, cartSprite = null, stalactiteSprite = null;
+let stalactites = [];
 let _bakedZone = -1;
 
 // chunky 2×2 "texel" noise so walls read as low-poly PS1 surfaces
@@ -230,6 +233,15 @@ function bakeBat(body, eye, hurt) {
   }
   return c;
 }
+function bakeStalactite(pal) {
+  const c = mkCanvas(14, 26), g = c.getContext('2d');
+  g.fillStyle = pal.dark;
+  g.beginPath(); g.moveTo(1, 0); g.lineTo(13, 0); g.lineTo(8, 26); g.closePath(); g.fill();
+  g.fillStyle = pal.wall; g.globalAlpha = 0.6;
+  g.beginPath(); g.moveTo(3, 0); g.lineTo(8, 0); g.lineTo(7, 18); g.closePath(); g.fill();
+  g.globalAlpha = 1;
+  return c;
+}
 function bakeCart() {
   const W = 42, H = 34, c = mkCanvas(W, H), g = c.getContext('2d');
   g.fillStyle = '#5a3a1c'; g.fillRect(4, 10, 34, 16);                       // box
@@ -255,6 +267,7 @@ function bakeArt() {
   if (!texCrack) texCrack = bakeCrack();
   const tints = [['#6a8a4a', '#ffe04a'], ['#4a6a8a', '#5ae0ff'], ['#7a6a3a', '#ffd84a'], ['#8a3a2a', '#ff7a2a'], ['#5a3a8a', '#c08aff']];
   const [body, eye] = tints[curZone];
+  stalactiteSprite = bakeStalactite(pal);
   monSprites.gremlin = { normal: bakeGremlin(body, eye, false), hurt: bakeGremlin(body, eye, true) };
   monSprites.bat = { normal: bakeBat(body, eye, false), hurt: bakeBat(body, eye, true) };
   if (!cartSprite) cartSprite = bakeCart();
@@ -305,8 +318,14 @@ function genZone() {
     map[idx(x, y)] = T_ORE + def.i;
     veins.set(idx(x, y), { def, hp: def.hp, max: def.hp, flashT: 0, respawnAt: 0 });
   }
+  // hanging stalactites on open floor cells (cave dressing)
+  stalactites = [];
+  for (let i = 0; i < 16; i++) {
+    const p = randFloor(2);
+    if (p) stalactites.push({ x: p.x, y: p.y, size: 0.3 + Math.random() * 0.25, hang: 0.92 + Math.random() * 0.06 });
+  }
   // player + creatures
-  px = spawn.x; py = spawn.y + 0.9; pa = -Math.PI / 2;
+  px = spawn.x; py = spawn.y + 0.9; pa = -Math.PI / 2; pitch = 0;
   mons = []; monRespawnQ = [];
   for (let i = 0; i < ZONES[curZone].mons; i++) spawnMonster(true);
   bakeArt();
@@ -457,6 +476,7 @@ function swing() {
 function breakVein(vein, mapX, mapY, now) {
   const def = vein.def;
   sack.push({ name: def.name, value: Math.round(def.value * prestigeMult()), color: def.color });
+  if (typeof window.aqInvAdd === 'function') window.aqInvAdd('ore_' + def.name.toLowerCase(), 1);
   // The grind: XP per ore, scaled by rarity + zone depth + prestige, hard-capped.
   if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: true, won: true, mult: Math.min(XP_CAP, (0.3 + def.rarity * 0.15) * xpZoneMult() * prestigeMult()) });
   addDepth(5 + def.rarity * 2.5);
@@ -536,15 +556,19 @@ function render(now) {
   if (!ctx) return;
   const pal = ZONES[curZone].pal;
   const bob = Math.abs(Math.sin(walkPhase)) * 2;
-  // ceiling / floor as fog-banded flats (cheap PS1 depth haze)
-  ctx.fillStyle = pal.ceil; ctx.fillRect(0, 0, RW, RH / 2);
-  ctx.fillStyle = pal.floor; ctx.fillRect(0, RH / 2, RW, RH / 2);
+  const hor = RH / 2 + pitch + bob;        // pitch shifts the horizon (look up/down)
+  // ceiling / floor split at the horizon, with fog bands + overhead rock shading
+  ctx.fillStyle = pal.ceil; ctx.fillRect(0, 0, RW, Math.max(0, hor));
+  ctx.fillStyle = pal.floor; ctx.fillRect(0, Math.max(0, hor), RW, RH - Math.max(0, hor));
   const [fr, fg, fb] = pal.fog;
-  // haze bands stacked on the horizon — alpha accumulates toward the centre
   for (let b = 0; b < 4; b++) {
     ctx.fillStyle = `rgba(${fr},${fg},${fb},${0.05 + 0.05 * (3 - b)})`;
-    ctx.fillRect(0, RH / 2 - (b + 1) * 6, RW, (b + 1) * 12);
+    ctx.fillRect(0, hor - (b + 1) * 6, RW, (b + 1) * 12);
   }
+  // cave feel: the rock directly overhead/underfoot is darker than the distance
+  ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 46));
+  ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 26));
+  ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(0, Math.min(RH, hor + 50), RW, RH);
   // walls (DDA)
   for (let x = 0; x < RW; x++) {
     const cameraX = 2 * x / RW - 1;
@@ -563,7 +587,7 @@ function render(now) {
     const perp = side === 0 ? (sideX - ddx) : (sideY - ddy);
     zbuffer[x] = perp;
     const lineH = RH / perp;
-    const drawStart = -lineH / 2 + RH / 2 + bob;
+    const drawStart = -lineH / 2 + hor;
     const tex = texFor(tile);
     let wallX = side === 0 ? py + perp * rdy : px + perp * rdx; wallX -= Math.floor(wallX);
     let texX = (wallX * TEX) | 0;
@@ -585,6 +609,8 @@ function render(now) {
   // sprites far-first
   const sprites = [];
   if (cart && cart.canvas) sprites.push(cart);
+  if (stalactiteSprite) for (const st of stalactites)
+    sprites.push({ x: st.x, y: st.y, size: st.size, float: st.hang, canvas: stalactiteSprite });
   for (const e of mons) sprites.push({
     x: e.x, y: e.y, size: e.size,
     float: e.float ? e.float + Math.sin(now / 240 + e.phase) * 0.08 : 0,
@@ -592,7 +618,7 @@ function render(now) {
     canvas: e.hurtT > 0 ? monSprites[e.kind].hurt : monSprites[e.kind].normal,
   });
   sprites.sort((a, b) => ((b.x - px) ** 2 + (b.y - py) ** 2) - ((a.x - px) ** 2 + (a.y - py) ** 2));
-  for (const sp of sprites) drawSprite(sp, bob);
+  for (const sp of sprites) drawSprite(sp, hor);
   drawTargetLabel();
   drawPickaxe(now, bob);
   drawParticles();
@@ -601,7 +627,7 @@ function render(now) {
   if (sellFlashT > 0) { ctx.fillStyle = `rgba(255,216,74,${sellFlashT * 0.25})`; ctx.fillRect(0, 0, RW, RH); }
   if (performance.now() < invulnUntil) { ctx.fillStyle = `rgba(255,255,255,${0.1 + 0.08 * Math.sin(now / 60)})`; ctx.fillRect(0, 0, RW, RH); }
 }
-function drawSprite(sp, bob) {
+function drawSprite(sp, hor) {
   const dx = sp.x - px, dy = sp.y - py;
   const inv = 1 / (planeX * dirY - dirX * planeY);
   const tY = inv * (-planeY * dx + planeX * dy);
@@ -611,7 +637,7 @@ function drawSprite(sp, bob) {
   const fullH = RH / tY;
   const h = fullH * (sp.size || 1);
   const w = h * (sp.canvas.width / sp.canvas.height);
-  const bottomY = RH / 2 + fullH / 2 - (sp.float || 0) * fullH + (bob || 0);
+  const bottomY = hor + fullH / 2 - (sp.float || 0) * fullH;
   const drawY = bottomY - h - (sp.bob || 0);
   const startX = screenX - w / 2;
   const x0 = Math.max(0, Math.ceil(startX)), x1 = Math.min(RW - 1, Math.floor(startX + w));
@@ -834,7 +860,11 @@ function onKey(e) {
     if (e.code === 'Space') swinging = false;
   }
 }
-function onMouseMove(e) { if (state === 'playing' && document.pointerLockElement === cv) pa += e.movementX * 0.0026; }
+function onMouseMove(e) {
+  if (state !== 'playing' || document.pointerLockElement !== cv) return;
+  pa += e.movementX * 0.0026;
+  pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, pitch - e.movementY * 0.22));
+}
 function onMouseDown() {
   if (state !== 'playing') return;
   if (document.pointerLockElement !== cv && !_touch) { requestLock(); return; }
@@ -858,9 +888,12 @@ function buildTouch(view) {
   const endStick = e => { for (const t of e.changedTouches) if (t.identifier === sid) { sid = null; touchMove.x = touchMove.y = 0; knob.style.transform = ''; } };
   stick.addEventListener('touchend', endStick); stick.addEventListener('touchcancel', endStick);
   // drag anywhere on the view to look
-  let lid = null, lx = 0;
-  cv.addEventListener('touchstart', e => { if (state !== 'playing') return; const t = e.changedTouches[0]; lid = t.identifier; lx = t.clientX; }, { passive: true });
-  cv.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === lid) { pa += (t.clientX - lx) * 0.006; lx = t.clientX; } }, { passive: true });
+  let lid = null, lx = 0, ly = 0;
+  cv.addEventListener('touchstart', e => { if (state !== 'playing') return; const t = e.changedTouches[0]; lid = t.identifier; lx = t.clientX; ly = t.clientY; }, { passive: true });
+  cv.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === lid) {
+    pa += (t.clientX - lx) * 0.006; lx = t.clientX;
+    pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, pitch - (t.clientY - ly) * 0.4)); ly = t.clientY;
+  } }, { passive: true });
   const endLook = e => { for (const t of e.changedTouches) if (t.identifier === lid) lid = null; };
   cv.addEventListener('touchend', endLook); cv.addEventListener('touchcancel', endLook);
   mine.addEventListener('touchstart', e => { swinging = true; if (state === 'playing') swing(); e.preventDefault(); }, { passive: false });

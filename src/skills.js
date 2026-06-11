@@ -22,6 +22,7 @@ const SKILLS = [
   { id: 'music',    name: 'Music',     icon: '🎵', color: '#ff6bd6', blurb: 'Watching & making music' },
   { id: 'finance',  name: 'Finance',   icon: '💹', color: '#46d07a', blurb: 'Earning & trading' },
   { id: 'combat',   name: 'Combat',    icon: '⚔️', color: '#ff7a3a', blurb: 'Buddy Shoot' },
+  { id: 'woodcutting', name: 'Woodcutting', icon: '🪓', color: '#8a6a3a', blurb: 'Timber!' },
 ];
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
 const MAX_LEVEL = 100;

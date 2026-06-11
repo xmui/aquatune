@@ -22,7 +22,8 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
 - A rare (~5%) **lucky bonus** multiplies a grant for variance.
 - Skills are data-driven (the `SKILLS` array) so more can be added later. Games grant
   XP via the global `window.aqGameXp(skill, {played, won, mult})` / `window.aqAddXp`.
-  Current skills: fishing, mining, gambling, intellect, speed, music, finance, combat.
+  Current skills: fishing, mining, gambling, intellect, speed, music, finance, combat,
+  woodcutting (Lumberjack, `src/lumberjack.js`).
 - XP is account-gated: no account ⇒ no XP/leaderboard (see `hasAccount()`).
 - **Music** accrues from watching videos (`startProg` tick in `index.html`) AND making
   beats in the Studio (`playheadTick` in `aquasynth-studio.js`). **Finance** accrues
@@ -49,12 +50,19 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
   comes from `--titlebar-text` (computed in `applyTheme` from the theme's header).
   Game window INTERIORS keep their own art (GBC shell, DAW, casino felt…) on their
   `-area`/body element — never hardcode frame colours on a `*-wrap` again.
-- Fishing uses the Game Boy Color 4-tone palette on a small nearest-neighbor
+- Fishing uses per-zone Game Boy Color palettes on a small nearest-neighbor
   canvas. Mining (`src/mining.js`) is a PS1/N64-style first-person raycaster
   (same engine family as `buddyshoot3d.js`): walkable procedural caves, ore
-  veins mined in-world, a sack→sell-at-cart loop, hostile cave creatures.
-  SFX for both synthesized via `window.*Sfx` defined near `pokerSfx` in
+  veins mined in-world, a sack→sell-at-cart loop, hostile cave creatures, and
+  pitch (look up/down via horizon offset). Lumberjack (`src/lumberjack.js`)
+  uses the same camera math on an open plane: chunk-streamed deterministic
+  forest, billboard trees, rhythm-meter chopping, falling-tree danger.
+  Game SFX are synthesized via `window.*Sfx` defined near `pokerSfx` in
   `index.html` (uses `initActx()` + `_gameVol`).
+- **Gathered resources also land in the shared inventory** (`src/inventory.js`):
+  call `window.aqInvAdd('<ns>_<id>', n)` (e.g. `ore_copper`, `log_oak`) and
+  register the item's display info in its `ITEMS` map. Counts live in
+  `aq_inventory` (COUNT_KEYS, per-item max-merge) for the future trading post.
 - **Persist bought game items to the cloud.** Anything a user buys/unlocks (pickaxe,
   rod, stage/zone, dex…) must sync per-account or it "resets" on update/new device.
   Write the localStorage key as before, then call `window.aqGamePersist('<key>')`;

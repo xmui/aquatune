@@ -6251,6 +6251,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             <button class="apps-game-btn" onclick="OS.open('scratch');toggleAppsMenu()">
               <span class="agb-icon">🎟️</span><span class="agb-name">Scratch-Offs</span>
             </button>
+            <button class="apps-game-btn" onclick="OS.open('lumber');toggleAppsMenu()">
+              <span class="agb-icon">🪓</span><span class="agb-name">Lumberjack</span>
+            </button>
             <button class="apps-game-btn" onclick="OS.open('buddyshoot');toggleAppsMenu()">
               <span class="agb-icon">🦆</span><span class="agb-name">Buddy Shoot</span>
             </button>
@@ -6550,6 +6553,8 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="fishing" onclick="OS.open('fishing')"><span class="agb-icon">&#127907;</span><span class="agb-name">Fishing</span></button>
       <button class="apps-game-btn" data-app="mining" onclick="OS.open('mining')"><span class="agb-icon">&#9935;&#65039;</span><span class="agb-name">Mining</span></button>
       <button class="apps-game-btn" data-app="scratch" onclick="OS.open('scratch')"><span class="agb-icon">&#127903;&#65039;</span><span class="agb-name">Scratch</span></button>
+      <button class="apps-game-btn" data-app="lumber" onclick="OS.open('lumber')"><span class="agb-icon">&#129683;</span><span class="agb-name">Lumber</span></button>
+      <button class="apps-game-btn" data-app="inventory" onclick="OS.open('inventory')"><span class="agb-icon">&#127890;</span><span class="agb-name">Items</span></button>
       <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
       <button class="apps-game-btn" data-app="buddyshoot3d" onclick="OS.open('buddyshoot3d')"><span class="agb-icon">&#128520;</span><span class="agb-name">Shoot 3D</span></button>
       <button class="apps-game-btn" data-app="pool" onclick="OS.open('pool')"><span class="agb-icon">&#127921;</span><span class="agb-name">8-Ball Pool</span></button>
@@ -9401,6 +9406,8 @@ const APPS = {
   airhockey: { el:'airhockey-wrap', name:'Air Hockey',  tb:'#airhockey-titlebar',openFn:()=>window.openAirHockey?.(),  closeFn:()=>window.openAirHockey?.(false) },
   roulette:  { el:'roulette-wrap',  name:'Roulette', tb:'#roulette-titlebar', openFn:()=>window.openRoulette?.(),  closeFn:()=>window.openRoulette?.(false) },
   scratch:   { el:'scratch-wrap',   name:'Scratch-Offs', tb:'#scratch-titlebar', openFn:()=>window.openScratchers?.(), closeFn:()=>window.openScratchers?.(false) },
+  lumber:{ keys:true, el:'lumber-wrap', name:'Lumberjack', tb:'#lumber-titlebar', openFn:()=>window.openLumberjack?.(), closeFn:()=>window.openLumberjack?.(false) },
+  inventory: { el:'inventory-wrap', name:'Inventory', tb:'#inventory-titlebar', openFn:()=>window.openInventory?.(), closeFn:()=>window.openInventory?.(false) },
   charmaker: { el:'charmaker-wrap', name:'Aquatard Creator',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
   chat:      { modal:true, name:'Messenger', openFn:()=>{ window.openMessenger ? window.openMessenger() : toggleBoard(); } },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
@@ -9750,7 +9757,7 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
-  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, scratch:{icon:'🎟️',label:'Scratch-Offs'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
+  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, scratch:{icon:'🎟️',label:'Scratch-Offs'}, lumber:{icon:'🪓',label:'Lumberjack'}, inventory:{icon:'🎒',label:'Inventory'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
   tanks:{icon:'🐢',label:'Tank Battle'}, airhockey:{icon:'🏒',label:'Air Hockey'},
   roulette:{icon:'🎡',label:'Roulette'}, charmaker:{icon:'🧑‍🎨',label:'Aquatard Creator'},
@@ -9822,6 +9829,7 @@ const LB_GAMES = {
   fishing:  { label:'Fishing',      icon:'🎣', unit:'value',   lower:false },
   mining:   { label:'Mining',       icon:'⛏️', unit:'ore',     lower:false },
   scratch:  { label:'Scratch-Offs', icon:'🎟️', unit:'win',     lower:false },
+  lumber:   { label:'Lumberjack',   icon:'🪓', unit:'haul',    lower:false },
   buddyshoot:{ label:'Buddy Shoot', icon:'🦆', unit:'pts',     lower:false },
   buddyshoot3d:{ label:'Buddy Shoot 3D', icon:'😈', unit:'lvl', lower:false },
   pool8:    { label:'8-Ball Pool',  icon:'🎱', unit:'wins',    lower:false },
@@ -10359,7 +10367,10 @@ function updateClock() {
   let h = now.getHours(), m = now.getMinutes();
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
-  document.getElementById('hdr-clock').textContent = `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+  // Swatch Internet Time: the day split into 1000 .beats, anchored to UTC+1
+  // (Biel Mean Time) — peak Y2K, no timezones, just @beats.
+  const beats = Math.floor(((now.getUTCHours() + 1) % 24 * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 86.4);
+  document.getElementById('hdr-clock').textContent = `${h}:${String(m).padStart(2,'0')} ${ampm} · @${String(beats).padStart(3, '0')}`;
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -13208,6 +13219,8 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('fishing')" title="Fishing">🎣<span>Fishing</span></button>
   <button class="mob-tool-btn" onclick="OS.open('mining')" title="Mining">⛏️<span>Mining</span></button>
   <button class="mob-tool-btn" onclick="OS.open('scratch')" title="Scratch-Offs">🎟️<span>Scratch</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('lumber')" title="Lumberjack">🪓<span>Lumber</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('inventory')" title="Inventory">🎒<span>Items</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot3d')" title="Buddy Shoot 3D">😈<span>Shoot3D</span></button>
   <button class="mob-tool-btn" onclick="OS.open('pool')" title="8-Ball Pool">🎱<span>Pool</span></button>
@@ -15553,6 +15566,47 @@ function scratchSfx(name) {
   } catch (e) {}
 }
 window.scratchSfx = scratchSfx;
+
+/* ── LUMBERJACK SFX — axe thocks, creak, crashing timber, birdsong ── */
+function lumberSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  const noise = (start, freq, dur, vol, lp, q) => {
+    const src = cx.createBufferSource(); src.buffer = _pkNoise(cx);
+    const f = cx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'bandpass'; f.frequency.value = freq; f.Q.value = q || 0.8;
+    const g = cx.createGain();
+    g.gain.setValueAtTime(vol * V, t + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    src.connect(f); f.connect(g); g.connect(cx.destination);
+    src.start(t + start); src.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'chop':    blip(160, 0, 0.07, 'square', 0.18, 90); noise(0, 1200, 0.07, 0.2, true); break;   // axe thock
+      case 'perfect': blip(160, 0, 0.07, 'square', 0.18, 90); noise(0, 1200, 0.07, 0.2, true); blip(1320, 0.03, 0.12, 'triangle', 0.14); break;
+      case 'weak':    noise(0, 2600, 0.05, 0.1); blip(220, 0, 0.08, 'sawtooth', 0.08, 160); break;       // glancing scrape
+      case 'whiff':   noise(0, 3200, 0.06, 0.07); break;
+      case 'creak':   blip(90, 0, 0.5, 'sawtooth', 0.14, 55); blip(130, 0.18, 0.4, 'sawtooth', 0.1, 70); break;
+      case 'fall':    noise(0.05, 300, 0.5, 0.35, true); blip(70, 0.05, 0.45, 'sine', 0.26, 36); noise(0.12, 2000, 0.3, 0.12); break; // CRASH + leaves
+      case 'collect': [660, 880].forEach((f2, i) => blip(f2, i * 0.07, 0.1, 'triangle', 0.13)); break;
+      case 'hurt':    blip(110, 0, 0.18, 'sawtooth', 0.2, 60); noise(0, 400, 0.16, 0.22, true); break;
+      case 'bird':    [2200, 2600, 2400].forEach((f2, i) => blip(f2 + Math.random() * 300, i * 0.09, 0.07, 'sine', 0.05)); break;
+      case 'spirit':  blip(520, 0, 0.6, 'sine', 0.05, 660); blip(780, 0.3, 0.7, 'sine', 0.04, 620); break;
+    }
+  } catch (e) {}
+}
+window.lumberSfx = lumberSfx;
 
 // Neon Runner — chiptune-cyberpunk blips/noise.
 function rogueSfx(name) {
@@ -18469,6 +18523,8 @@ function bjUpdateBalance(){
 <script type="module" src="/src/fishpets.js"></script>
 <script type="module" src="/src/mining.js"></script>
 <script type="module" src="/src/scratchers.js"></script>
+<script type="module" src="/src/lumberjack.js"></script>
+<script type="module" src="/src/inventory.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
 <script type="module" src="/src/buddyshoot3d.js"></script>
 <script type="module" src="/src/messenger.js"></script>
@@ -18706,6 +18762,24 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openMining(false)">×</button>
   </div>
   <div id="mining-area"></div>
+</div>
+
+<!-- LUMBERJACK (first-person woodcutting) -->
+<div id="lumber-wrap" style="display:none">
+  <div class="aq-tb sol-titlebar" id="lumber-titlebar">
+    <span>🪓 Lumberjack</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openLumberjack(false)">×</button>
+  </div>
+  <div id="lumber-area"></div>
+</div>
+
+<!-- INVENTORY (gathered materials) -->
+<div id="inventory-wrap" style="display:none">
+  <div class="aq-tb sol-titlebar" id="inventory-titlebar">
+    <span>🎒 Inventory</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openInventory(false)">×</button>
+  </div>
+  <div id="inventory-area"></div>
 </div>
 
 <!-- SCRATCH-OFFS (lottery kiosk) -->

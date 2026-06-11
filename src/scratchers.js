@@ -17,6 +17,7 @@ function fmt(n) { return n.toLocaleString('en-US'); }
 
 const RTP = 0.88;                       // return-to-player per ticket (EV)
 const XP_BASE = 0.4, XP_CAP = 3;        // gambling-XP mult dials (small + capped)
+const XP_COOLDOWN_MS = 8000;            // full XP at most once per ~8s (anti reveal-spam)
 
 // Each design: cost, prize values (smallest ≈ cost), corny theme art bits.
 const TICKETS = [
@@ -78,6 +79,7 @@ function layoutCells(t, prize) {
 // ── state ────────────────────────────────────────────────────────────────────
 let _built = false, area = null, stackEl = null, playEl = null, coinEl = null;
 let idx = 0, cur = null;               // cur = { t, prize, cells, done }
+let _lastXpAt = 0;                     // last time scratch XP was granted
 let cv = null, ctx = null, scratching = false, _lastSfxAt = 0, _checkT = 0;
 
 function best() { return parseInt(localStorage.getItem('aq_scratch_best') || '0', 10) || 0; }
@@ -269,8 +271,17 @@ function finishTicket(revealAll) {
     if (win >= t.cost * 50 && typeof window.aqGameAnnounce === 'function') window.aqGameAnnounce(`scratched a 💰${fmt(win)} winner on a ${t.name} ticket 🎟️`);
     confetti(huge ? 60 : 24);
   } else sfx('lose');
-  if (typeof window.aqGameXp === 'function')
-    window.aqGameXp('gambling', { played: true, won: win > 0, mult: Math.min(XP_CAP, XP_BASE + Math.log2(t.cost / 25) * 0.35 + (win > 0 ? 0.4 : 0)) });
+  // XP rewards the act of SCRATCHING, not buying: Reveal-All / barely-scratched
+  // tickets pay ~nothing (foil-coverage factor), and rapid-fire tickets scale
+  // down on a cooldown — so buy→reveal can't farm gambling XP. Cap unchanged.
+  const frac = (cv && ctx) ? scratchedFrac() : 0;
+  const scratchFactor = Math.min(1, frac / 0.6);
+  const cdFactor = Math.min(1, (performance.now() - _lastXpAt) / XP_COOLDOWN_MS);
+  const xpMult = Math.min(XP_CAP, (XP_BASE + Math.log2(t.cost / 25) * 0.35 + (win > 0 ? 0.4 : 0)) * scratchFactor * cdFactor);
+  if (xpMult >= 0.1 && typeof window.aqGameXp === 'function') {
+    _lastXpAt = performance.now();
+    window.aqGameXp('gambling', { played: true, won: win > 0, mult: xpMult });
+  }
   // result banner
   const res = el('div', 'scr-result ' + (win > 0 ? 'scr-won' : 'scr-lost'),
     win > 0

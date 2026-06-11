@@ -69,6 +69,19 @@ let _users = {};                 // uid -> presence record
 const _convs = {};               // key -> { win, log, unsub, focused }
 const _unread = {};              // otherUid -> count
 const _seenTs = {};              // otherUid -> last DM index ts we've accounted for
+// Persisted per-account so a reload/login doesn't replay notifications for DMs
+// you've already been alerted about. First run on a device baselines silently.
+let _seenLoaded = false;
+function loadSeenTs() {
+  if (_seenLoaded) return false;
+  _seenLoaded = true;
+  try {
+    const raw = localStorage.getItem('aq_msn_seents:' + uid());
+    if (raw) { Object.assign(_seenTs, JSON.parse(raw) || {}); return false; }
+  } catch (e) {}
+  return true;                   // nothing stored — treat this snapshot as already-seen
+}
+function saveSeenTs() { try { localStorage.setItem('aq_msn_seents:' + uid(), JSON.stringify(_seenTs)); } catch (e) {} }
 let _dmIndex = {};               // dm-index/<me>
 
 function effStatus() {
@@ -101,21 +114,24 @@ function setStatusMsg(t) { _myMsg = clean(t).slice(0, 80); try { localStorage.se
 
 // New-DM detection from the dm-index: bump unread + notify for incoming messages.
 function onDmIndex() {
+  const baseline = loadSeenTs();   // first snapshot on a fresh device: record, don't replay
+  let changed = false;
   for (const other in _dmIndex) {
     const e = _dmIndex[other]; if (!e) continue;
     if ((e.lastTs || 0) > (_seenTs[other] || 0)) {
       const incoming = e.from && e.from !== uid();
       const conv = _convs['dm:' + other];
       const openFocused = conv && conv.focused && !conv.win.classList.contains('msn-min');
-      if (incoming && !openFocused) {
+      if (!baseline && incoming && !openFocused) {
         _unread[other] = (_unread[other] || 0) + 1;
         sfx('msg');
         const oid = other, oname = e.withName || 'Aquatard';
         try { window.aqNotify && window.aqNotify({ name: oname, text: e.lastMsg || 'sent a message', onClick: () => openConversation('dm:' + oid, oname, oid) }); } catch (er) {}
       }
-      _seenTs[other] = e.lastTs || 0;
+      _seenTs[other] = e.lastTs || 0; changed = true;
     }
   }
+  if (changed) saveSeenTs();
   renderContacts();
 }
 

@@ -113,6 +113,12 @@ function prestigeMult() { return 1 + prestige * 0.05; }  // +5% per Delve Deeper
 function veinActive() { return performance.now() < veinUntil; }
 function addDepth(n) { depthPts = Math.min(DEPTH_MAX, depthPts + n); try { localStorage.setItem('aq_mining_depth', String(Math.round(depthPts))); } catch (e) {} }
 let stageWrap = null, lockEl = null, _clkT = [], _lockUpdAt = 0, _lastTouch = false;
+// Multitouch/turbo backstop: a touchscreen fires one pointerdown PER finger, so
+// five-finger mashing = 5× hits/credits/XP per gesture. We drop non-primary
+// pointers at the handler (below) and floor the tap interval here. ~33 taps/s is
+// far above any human single finger, so legit fast tapping is unaffected.
+let _lastHitMs = 0;
+const MIN_HIT_GAP = 30;             // ms between honored hits
 // One-time: the auto-clicker check used to be too sensitive (it could flag fast
 // manual / rhythmic touch tapping). Clear any lockout it left behind so those
 // players are freed. (Bumped to v2 to also free mobile users the touch tweak frees.)
@@ -319,6 +325,11 @@ function breakRock() {
 
 function hit(px, py) {
   const now = performance.now();
+  // Backstop vs turbo/auto-clicker bursts and any multitouch that slips past the
+  // isPrimary guard: no human single finger taps faster than ~33/s. Throttled taps
+  // bail before registerClick so they never farm OR pollute the cadence detector.
+  if (now - _lastHitMs < MIN_HIT_GAP) return;
+  _lastHitMs = now;
   if (isLocked()) { showLock(); return; }
   if (registerClick(now)) { lockOut(); return; }
   // A creature is on the field and you tapped it → strike it instead of the rock.
@@ -659,11 +670,12 @@ function build() {
   // the MINE button is a no-aim fallback (normal hits, can't crit).
   cv.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (e.isPrimary === false) return;   // ignore extra simultaneous fingers (multitouch spam)
     _lastTouch = (e.pointerType === 'touch');
     const r = cv.getBoundingClientRect();
     hit((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height));
   });
-  mine.addEventListener('pointerdown', (e) => { e.preventDefault(); _lastTouch = (e.pointerType === 'touch'); hit(); });
+  mine.addEventListener('pointerdown', (e) => { e.preventDefault(); if (e.isPrimary === false) return; _lastTouch = (e.pointerType === 'touch'); hit(); });
   _built = true;
 }
 

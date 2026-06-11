@@ -181,17 +181,6 @@
     @keyframes aqUpdIn { from{opacity:0; transform:translate(-50%,12px)} to{opacity:1; transform:translate(-50%,0)} }
     #aq-update-refresh { background:#fff; color:#0c6fae; border:none; border-radius:8px; font-weight:800; font-size:12px; padding:5px 12px; cursor:pointer; }
     #aq-update-refresh:hover { background:#eaf6ff; }
-    /* one-time apology for the lost stock credits */
-    #aq-sorry-banner { position:fixed; left:50%; top:14px; transform:translateX(-50%); z-index:99998;
-      display:flex; align-items:center; gap:10px; max-width:94vw;
-      background:linear-gradient(180deg,#6a4ea8,#4a2f86); color:#fff; font-size:12.5px; font-weight:600;
-      padding:8px 12px; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.22);
-      animation:aqUpdIn .35s ease; }
-    #aq-sorry-banner b { font-weight:800; }
-    #aq-sorry-banner .kao { font-weight:700; opacity:.95; white-space:nowrap; }
-    #aq-sorry-x { background:rgba(255,255,255,0.2); color:#fff; border:none; border-radius:8px; font-weight:800;
-      font-size:13px; line-height:1; padding:4px 9px; cursor:pointer; flex-shrink:0; }
-    #aq-sorry-x:hover { background:rgba(255,255,255,0.34); }
     #weather { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:pointer; padding:2px 6px; transition:opacity .15s; }
 #weather:hover { opacity:0.8; }
 #wx-icon { font-size:16px; line-height:1; }
@@ -4244,8 +4233,8 @@ html[data-era=beos][data-scheme=light] body:not(.osmode) #hdr::after { display:n
     .aqfp-note { position:absolute; pointer-events:none; font-size:16px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6)); animation:aqfpNote 1.1s ease-out forwards; }
     @keyframes aqfpNote { 0%{opacity:0; transform:translateY(0) scale(.6);} 20%{opacity:1;} 100%{opacity:0; transform:translateY(-34px) scale(1.1);} }
     .fish-dex-pet { margin-top:3px; width:100%; font-size:9px; font-weight:700; font-family:monospace; cursor:pointer;
-      color:#0f380f; background:#cfe8a0; border:1px solid #2a3a1a; border-radius:3px; padding:2px 3px; }
-    .fish-dex-pet.on { background:#7ba672; color:#0f380f; }
+      background:#f8f0e0; color:#182030; border:1px solid #182030; border-radius:3px; padding:2px 0; }
+    .fish-dex-pet.on { background:#88c8e8; color:#182030; }
 
     /* ── XP popups — big skill-tinted "+N XP 🎣" that float up the right of the screen ─── */
     #aq-xp-popups { position:fixed; inset:0; z-index:3000; pointer-events:none; }
@@ -4320,8 +4309,8 @@ html[data-era=beos][data-scheme=light] body:not(.osmode) #hdr::after { display:n
       width:360px; max-width:96vw; max-height:calc(100vh - 64px); overflow:hidden;
     }
     #fishing-wrap.open, #mining-wrap.open { display:flex; }
-    #fishing-area, #mining-area { background:#8a9a4a; padding:10px; display:flex; flex-direction:column; gap:8px; align-items:stretch; flex:1; min-height:0; overflow:auto; }
-    .gbc-stage { position:relative; display:flex; justify-content:center; background:#0f380f; border:3px solid #2a3a1a; border-radius:6px; padding:6px; }
+    #fishing-area, #mining-area { background:#6a5a90; padding:10px; display:flex; flex-direction:column; gap:8px; align-items:stretch; flex:1; min-height:0; overflow:auto; }
+    .gbc-stage { position:relative; display:flex; justify-content:center; background:#182030; border:3px solid #3a4a6a; border-radius:6px; padding:6px; }
     .gbc-lock { position:absolute; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; text-align:center;
       background:rgba(15,56,15,0.94); border-radius:4px; font-family:monospace; color:#cfe8a0; padding:10px; }
     .gbc-lock-t { font-size:14px; font-weight:700; color:#e87b7b; }
@@ -4330,21 +4319,22 @@ html[data-era=beos][data-scheme=light] body:not(.osmode) #hdr::after { display:n
     .gbc-canvas { width:100%; max-width:320px; height:auto; image-rendering:pixelated; image-rendering:crisp-edges; }
     .gbc-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .gbc-btn {
-      font-family:monospace; font-weight:700; font-size:12px; color:#0f380f;
-      background:#cfe8a0; border:2px solid #2a3a1a; border-radius:4px; padding:7px 12px;
-      cursor:pointer; box-shadow:0 2px 0 #2a3a1a; touch-action:none; user-select:none;
+      font-family:monospace; font-weight:700; font-size:12px; color:#182030;
+      background:#f8f0e0; border:2px solid #182030; border-radius:4px; padding:7px 12px;
+      cursor:pointer; box-shadow:0 2px 0 #182030; touch-action:none; user-select:none;
     }
     .gbc-btn:active:not(:disabled) { transform:translateY(2px); box-shadow:none; }
+    .gbc-btn:hover:not(:disabled) { background:#fff; border-color:#f0c030; }
     .gbc-btn:disabled { opacity:0.5; cursor:default; }
-    .gbc-info { font-family:monospace; font-size:11px; font-weight:700; color:#1a2a0a; }
-    .fish-dex { background:#0f380f; border:3px solid #2a3a1a; border-radius:6px; padding:8px; max-height:300px; overflow-y:auto; font-family:monospace; }
-    .fish-dex-head { color:#cfe8a0; font-weight:700; font-size:12px; margin-bottom:8px; text-align:center; }
-    .fish-dex-zname { color:#7ba672; font-weight:700; font-size:11px; margin:6px 0 4px; }
+    .gbc-info { font-family:monospace; font-size:11px; font-weight:700; color:#f8f0e0; text-shadow:0 1px 2px rgba(0,0,0,0.4); }
+    .fish-dex { background:#182030; border:3px solid #3a4a6a; border-radius:6px; padding:8px; max-height:300px; overflow-y:auto; font-family:monospace; }
+    .fish-dex-head { color:#f8f0e0; font-weight:700; font-size:12px; margin-bottom:8px; text-align:center; }
+    .fish-dex-zname { color:#88c8e8; font-weight:700; font-size:11px; margin:6px 0 4px; }
     .fish-dex-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:6px; }
-    .fish-dex-cell { background:#1a2a14; border:1px solid #2a3a1a; border-radius:4px; padding:4px; text-align:center; }
+    .fish-dex-cell { background:#243048; border:1px solid #3a4a6a; border-radius:4px; padding:4px; text-align:center; }
     .fish-dex-spr { width:60px; height:38px; image-rendering:pixelated; image-rendering:crisp-edges; }
-    .fish-dex-lab { color:#cfe8a0; font-size:9px; line-height:1.2; margin-top:2px; }
-    .fish-dex-lab span { display:block; color:#7ba672; font-weight:700; }
+    .fish-dex-lab { color:#f8f0e0; font-size:9px; line-height:1.2; margin-top:2px; }
+    .fish-dex-lab span { display:block; color:#88c8e8; font-weight:700; }
     @media (max-width:768px) {
       #fishing-wrap, #mining-wrap { width:100vw; top:0; left:0; transform:none; height:100%; max-height:none; border-radius:0; }
     }
@@ -15947,7 +15937,9 @@ function renderChatMsg(logEl, p) {
   // Ping when someone @mentions you (not your own message).
   try {
     const myName = (localStorage.getItem('aq_username') || '').trim();
-    if (myName && name !== myName && new RegExp('@' + myName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(rawMsg)) {
+    // History replays on join/login — only ping for genuinely fresh mentions.
+    const freshMention = ts && (Date.now() - ts < 12000);
+    if (freshMention && myName && name !== myName && new RegExp('@' + myName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(rawMsg)) {
       if (typeof playMsgNotification === 'function') playMsgNotification();
       if (typeof aqNotify === 'function') aqNotify({ name, text: rawMsg });
     }
@@ -18899,27 +18891,6 @@ function bjUpdateBalance(){
   </div>
 </div>
 <script>
-  // One-time apology banner for the stock-credit loss. Shows once per browser.
-  (function () {
-    try { if (localStorage.getItem('aq_sorry_stocks_v1')) return; } catch (e) {}
-    function show() {
-      if (document.getElementById('aq-sorry-banner')) return;
-      var b = document.createElement('div');
-      b.id = 'aq-sorry-banner';
-      b.innerHTML = '<span class="kao">(｡•́︵•̀｡)</span>' +
-        '<span>Sorry — a recent update wiped some <b>stock credits &amp; holdings</b>. ' +
-        'It’s fixed now and won’t happen again.</span>' +
-        '<button id="aq-sorry-x" title="Dismiss">Got it</button>';
-      document.body.appendChild(b);
-      b.querySelector('#aq-sorry-x').onclick = function () {
-        try { localStorage.setItem('aq_sorry_stocks_v1', '1'); } catch (e) {}
-        b.style.opacity = '0'; b.style.transition = 'opacity .3s';
-        setTimeout(function () { b.remove(); }, 320);
-      };
-    }
-    if (document.body) setTimeout(show, 1200);
-    else window.addEventListener('DOMContentLoaded', function () { setTimeout(show, 1200); });
-  })();
 </script>
 </body>
 </html>

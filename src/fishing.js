@@ -7,8 +7,17 @@
 // in index.html as window.fishingSfx; visuals are a chunky pixel canvas.
 
 const W = 160, H = 144;                 // GBC native-ish resolution
-const PAL = ['#0f380f', '#306850', '#7ba672', '#cfe8a0']; // dark → light
-const SKY = '#9bbc0f', WATER = '#306850';
+// Game Boy COLOR look: per-zone palette swaps (the most GBC thing there is),
+// plus a shared cream/navy UI palette for meters, text and chrome.
+const ZPAL = [
+  { sky: '#9ce8f8', cloud: '#f0fbff', water: '#2868c8', waterHi: '#4890e0', wave: '#90d0f0', dock: '#a06a3a', dockHi: '#c08850', shadow: '#1c4890' },   // River — bright day
+  { sky: '#68b0e8', cloud: '#e8f4fc', water: '#1848a0', waterHi: '#2868c8', wave: '#68a8e0', dock: '#c8a060', dockHi: '#e0c080', shadow: '#103078' },   // Ocean — deep blue
+  { sky: '#687848', cloud: '#90a060', water: '#28403a', waterHi: '#3a5848', wave: '#688868', dock: '#604830', dockHi: '#786040', shadow: '#182820' },   // Swamp — murk
+  { sky: '#281018', cloud: '#502028', water: '#601810', waterHi: '#882818', wave: '#d85820', dock: '#382028', dockHi: '#503038', shadow: '#400c08' },   // Hell — magma
+];
+const UI = { ink: '#182030', paper: '#f8f0e0', gold: '#f0c030', white: '#f8f8f8',
+  track: '#243048', zone: '#38c860', zoneHi: '#88f0a8', red: '#e04838', trail: '#f0d860' };
+function zp() { return ZPAL[curZone] || ZPAL[0]; }
 const WATER_Y = 58;
 
 // Zones unlock as your Fishing level climbs — deeper waters, rarer fish.
@@ -18,7 +27,8 @@ const ZONES = [
   { name: '🥬 Swamp', lvl: 30 },
   { name: '🔥 Hell',  lvl: 55 },
 ];
-// Rods are bought with credits; a better rod hooks the rarer fish in each zone.
+// Rods are bought with credits. A better rod = more bites, rarer fish on the
+// line, and slightly easier fights — it no longer hard-gates which fish exist.
 const RODS = [
   { name: 'Bamboo', tier: 0, cost: 0 },
   { name: 'Fiber',  tier: 1, cost: 400 },
@@ -60,7 +70,8 @@ const SHAPES = {
   ],
 };
 
-// zone: which water it lives in · rod: minimum rod tier needed to hook it ·
+// zone: which water it lives in · rod: tier the fish PREFERS (catchable on any
+// rod, just rare below that tier) ·
 // shape/col: its pixel sprite. Catch it and it joins your Fish-o-pedia.
 const FISH = [
   // River (zone 0)
@@ -92,7 +103,7 @@ const FISH = [
 // ── Difficulty dials (tune freely) ──────────────────────────────────────────
 const WAIT_MIN = 4200, WAIT_RAND = 8500;     // ms before the real bite (patience)
 const CAST_MS = 550;                         // toss animation before waiting
-const BITE_WINDOW_BASE = 640, BITE_WINDOW_PER = 78;   // reaction window (ms), −per rarity
+const BITE_WINDOW_BASE = 600, BITE_WINDOW_PER = 55;   // reaction window (ms), −per rarity (compressed curve)
 const STRUGGLE_MS_BASE = 5200, STRUGGLE_MS_PER = 560; // struggle time limit (ms), −per rarity
 const MONSTER_CHANCE = 0.04;                          // base chance per bite (×condition)
 const CONDITION_EVERY = 5;                            // re-roll water condition every N casts
@@ -127,6 +138,31 @@ let nibbleFlashUntil = 0;   // visual twitch
 
 // struggle state
 let S = null;
+let streak = 0;                  // consecutive landed fish this session
+let goldFlashUntil = 0;          // flawless-catch golden flash
+let particles = [], floaters = [];
+function sparkle(x, y, color, n) {
+  for (let i = 0; i < n; i++) particles.push({
+    x, y, vx: (Math.random() - 0.5) * 2.2, vy: -Math.random() * 2 - 0.4,
+    life: 26 + Math.random() * 14, c: color, s: 1 + (Math.random() < 0.4 ? 1 : 0), g: 0.08,
+  });
+}
+function splashRing() {
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    particles.push({ x: 103, y: WATER_Y + 2, vx: Math.cos(a) * 1.6, vy: Math.sin(a) * 0.8 - 0.8, life: 20, c: UI.white, s: 1, g: 0.12 });
+  }
+}
+function addFloater(text, color) { floaters.push({ text, color, x: W / 2, y: 58, life: 36 }); }
+// per-zone ambient props (clouds / fish shadows / fireflies / embers)
+let ambients = [];
+function seedAmbients() {
+  ambients = [];
+  if (curZone <= 1) for (let i = 0; i < 2; i++) ambients.push({ kind: 'cloud', x: Math.random() * W, y: 8 + i * 14, v: 0.06 + Math.random() * 0.05 });
+  if (curZone <= 1) ambients.push({ kind: 'shadow', x: -20, y: WATER_Y + 30 + Math.random() * 30, v: 0.25 + Math.random() * 0.2 });
+  if (curZone === 2) for (let i = 0; i < 4; i++) ambients.push({ kind: 'firefly', x: Math.random() * W, y: 10 + Math.random() * 40, ph: Math.random() * 6.28 });
+  if (curZone === 3) for (let i = 0; i < 5; i++) ambients.push({ kind: 'ember', x: Math.random() * W, y: H - Math.random() * 60, v: 0.2 + Math.random() * 0.3 });
+}
 let condition = CONDITIONS.choppy, _castCount = 0;
 function rollCondition() { condition = CONDITIONS[['calm', 'choppy', 'choppy', 'stormy'][(Math.random() * 4) | 0]]; }
 function pickStyle(rarity) {
@@ -218,12 +254,19 @@ function readCaught() { try { return JSON.parse(localStorage.getItem('aq_fishing
 function recordCaught(name) { try { const c = readCaught(); c[name] = (c[name] | 0) + 1; localStorage.setItem('aq_fishing_caught', JSON.stringify(c)); window.aqGamePersist && window.aqGamePersist('aq_fishing_caught'); } catch (e) {} }
 
 function pickFish() {
-  // Only fish in the current zone you can hook with your rod tier.
-  const pool = FISH.filter(f => f.zone === curZone && f.rod <= rodTier());
+  // Every fish in the zone is hookable on any rod; fish above your rod tier are
+  // just rare bites. Rod tier + level both push the odds toward rarer fish.
+  const pool = FISH.filter(f => f.zone === curZone);
   if (!pool.length) return FISH[0];
-  const luck = Math.random() + lvl() / 300;   // higher level nudges toward rarer fish
+  const tier = rodTier();
+  const luck = Math.random() + lvl() / 300;
   let total = 0;
-  const w = pool.map(f => { const x = Math.max(0.15, 1 - f.rarity * 0.16) * (1 + luck * f.rarity * 0.45); total += x; return x; });
+  const w = pool.map(f => {
+    let x = Math.max(0.15, 1 - f.rarity * 0.16) * (1 + luck * f.rarity * 0.45);
+    x *= (f.rod <= tier ? 1 : 0.15);                    // soft preference, not a gate
+    x *= 1 + tier * 0.45 * f.rarity / 5;                // better rod → rarer fish
+    total += x; return x;
+  });
   let r = Math.random() * total;
   for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
   return pool[0];
@@ -243,7 +286,8 @@ function startCast() {
 function enterWaiting(now) {
   state = 'waiting';
   msg = 'Waiting for a bite…';
-  const wait = (WAIT_MIN + Math.random() * WAIT_RAND - Math.min(2500, lvl() * 25)) * condition.waitMult;
+  // better rods get bites noticeably faster (−12% wait per tier)
+  const wait = (WAIT_MIN + Math.random() * WAIT_RAND - Math.min(2500, lvl() * 25)) * condition.waitMult * (1 - 0.12 * rodTier());
   biteAt = now + Math.max(2200, wait);
   // schedule fake nibbles strictly before the real bite (more when stormy)
   nibbles = [];
@@ -260,12 +304,14 @@ function enterBite(now) {
   fish = monster ? (MONSTERS[curZone] || MONSTERS[0]) : pickFish();
   state = 'bite';
   // per-cast reaction-window jitter × water condition
-  const jitter = 0.8 + Math.random() * 0.4;
-  let win = (BITE_WINDOW_BASE - fish.rarity * BITE_WINDOW_PER) * condition.windowMult * jitter;
+  const jitter = 0.85 + Math.random() * 0.3;
+  // Compressed curve (600→325ms instead of 640→220) + slight rod ease per tier.
+  let win = (BITE_WINDOW_BASE - fish.rarity * BITE_WINDOW_PER) * condition.windowMult * jitter * (1 + 0.06 * rodTier());
   if (monster) win *= 0.9;
-  biteWindowEnd = now + Math.max(260, win);
+  biteWindowEnd = now + Math.max(300, win);
   msg = monster ? '🐋 MONSTER! REEL!' : '! DING — REEL NOW !';
   sfx(monster ? 'monster' : 'ding');
+  splashRing();                       // unmistakable visual telegraph
   // Fish is now on the line → start the bitcrushed wave loop.
   startHookWave(fish ? fish.rarity : 0);
 }
@@ -273,43 +319,53 @@ function enterBite(now) {
 function enterStruggle(now) {
   const monster = !!(fish && fish.monster);
   sfx(monster ? 'monster' : 'hook');
-  const r = fish.rarity, c = condition;
-  // per-cast jitter so even the same fish varies cast-to-cast
-  const jv = 0.8 + Math.random() * 0.45;   // marker speed
-  const jz = 0.8 + Math.random() * 0.4;    // zone width
-  let need = Math.max(2, Math.min(4, 2 + r + (Math.random() < 0.35 ? 1 : 0) - (Math.random() < 0.25 ? 1 : 0)));
-  // Marker speed scales gentler with rarity than before (was 1.5 + r*0.55) so
-  // the hardest fish stay challenging but actually trackable frame-to-frame.
-  let markerV = (1.5 + r * 0.42) * c.speedMult * jv;
-  let zoneW = Math.max(11, (30 - r * 3.4) * c.zoneMult * jz);   // slightly wider green for rare fish
-  let totalMs = Math.max(2600, (STRUGGLE_MS_BASE - r * STRUGGLE_MS_PER) * (0.85 + Math.random() * 0.4));
-  let maxMiss = r >= 4 ? 0 : 1;        // only the very rarest are sudden-death
+  const r = fish.rarity, c = condition, tier = rodTier();
+  // mild per-cast jitter only (the old 0.8–1.25× swings made fights feel random)
+  const jv = 0.9 + Math.random() * 0.2;
+  const jz = 0.9 + Math.random() * 0.2;
+  // Compressed difficulty curve: commons a touch tougher, rares a lot fairer.
+  let need = monster ? 5 : 2 + Math.floor(r * 0.55);                // 2..4, monsters 5
+  let markerV = (1.6 + r * 0.28) * c.speedMult * jv * (1 - 0.04 * tier);
+  let zoneW = Math.max(14, (26 - r * 2.2) * c.zoneMult * jz * (1 + 0.05 * tier));
+  let totalMs = Math.max(2800, (STRUGGLE_MS_BASE - r * STRUGGLE_MS_PER) * (0.9 + Math.random() * 0.25));
+  let maxMiss = monster ? 0 : 1;                                    // everyone gets one slip; monsters don't
   let style = monster ? 'monster' : pickStyle(r);
-  // Monsters: still the toughest fight, but landable. Was a brutal 1.45× speed +
-  // shrinking 0.85 zone + sudden-death; now a milder speed bump, kept zone, and
-  // one allowed miss with more time.
-  if (monster) { markerV *= 1.15; zoneW = Math.max(13, zoneW * 0.95); need = Math.min(5, need + 1); totalMs *= 1.6; maxMiss = 1; }
-  // Cap so the marker can't skip past the zone between frames (lowered 6.2→5.2).
-  markerV = Math.min(5.2, markerV);
+  if (monster) { markerV *= 1.1; totalMs *= 1.7; }
+  markerV = Math.min(4.2, markerV);                                 // hard cap (per-16ms units)
   S = {
-    need, hits: 0, misses: 0, maxMiss, style, monster,
-    markerX: 0, markerV, dir: 1,
-    zoneW, zoneW0: zoneW, zoneX: 0,
-    zoneVX: (style === 'drifter' || style === 'monster') ? (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.45) : 0,
+    need, hits: 0, misses: 0, perfects: 0, maxMiss, style, monster,
+    markerX: 0, prevX: 0, markerV, dir: 1,
+    zoneW, zoneW0: zoneW, zoneX: 0, zoneC: 0,
+    drift: (style === 'drifter' || style === 'monster'),            // smooth sine glide
+    nextFlipAt: now + 700 + Math.random() * 900, flashUntil: 0, flipArmed: false,
+    hitFlashUntil: 0, missFlashUntil: 0,
     totalMs, endAt: now + totalMs, t0: now,
   };
   rerollZone();
   state = 'struggle';
   msg = (monster ? '🐋 ' : '') + 'Reel! ' + (STYLE_LABEL[style] || 'tap on green');
 }
-function rerollZone() { if (S) S.zoneX = Math.random() * Math.max(0, 100 - S.zoneW); }
+function rerollZone() {
+  if (!S) return;
+  // pick a centre with room for the drift sine, then glide around it
+  const amp = S.drift ? 8 + Math.random() * 6 : 0;
+  S.zoneAmp = amp;
+  S.zoneC = amp + Math.random() * Math.max(0, 100 - S.zoneW - amp * 2);
+  S.zoneX = S.zoneC;
+}
 
 function landFish(now) {
-  const f = fish, perfect = S && S.misses === 0;
-  const value = Math.round(f.value * (perfect ? 1.25 : 1));
+  const f = fish, noMiss = S && S.misses === 0;
+  const perfects = S ? S.perfects : 0;
+  streak++;
+  // Sale value: clean fight bonus + per-PERFECT-tap bonus + catch streak, capped.
+  const valueMult = Math.min(1.5, (noMiss ? 1.15 : 1) + perfects * 0.05) * (1 + Math.min(0.16, (streak - 1) * 0.02));
+  const value = Math.round(f.value * valueMult);
+  const allPerfect = noMiss && S && perfects >= S.need;
   state = 'caught';
   stopHookWave();
-  msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + `+${value}💰` + (perfect ? ' ✨perfect' : '');
+  goldFlashUntil = allPerfect ? now + 900 : 0;
+  msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + `+${value}💰` + (allPerfect ? ' ✨FLAWLESS' : noMiss ? ' ✨clean' : '');
   sfx('wave-stop');
   if (typeof window.playFanfare === 'function') window.playFanfare(f.monster ? 'jackpot' : 'small');
   if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
@@ -321,7 +377,8 @@ function landFish(now) {
     // Balanced to ~55/min given the slow cast→bite→struggle cadence. Capped rarity curve so
     // monsters still pay proportionally more without trivialising the grind.
     const rarityMult = Math.min(15, 4 + f.rarity * 2.2);   // cap the score-scaled mult
-    window.aqGameXp('fishing', { played: false, won: true, mult: rarityMult * (perfect ? 1.25 : 1) });
+    // clean fight = ×1.3 (overall mult ≤ 19.5, still far under the anti-cheat ceiling)
+    window.aqGameXp('fishing', { played: false, won: true, mult: rarityMult * (noMiss ? 1.3 : 1) });
   }
   // ── Rare money catch: occasionally you reel up something valuable ──────────
   // Chance rises a little with rarity; monsters always cough up loot. Amount
@@ -342,8 +399,10 @@ function landFish(now) {
   if ((f.monster || f.rarity >= 4) && typeof window.aqGameAnnounce === 'function') {
     window.aqGameAnnounce(f.monster ? `landed the LEVIATHAN 🐋 (+${value}💰)!` : `reeled in a rare ${f.name} 🎣 (+${value}💰)`);
   }
-  lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster, img: f.img };
+  lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster, img: f.img,
+                isNew: !(readCaught()[f.name] | 0), value };
   recordCaught(f.name);
+  sparkle(W / 2, 36, f.rarity >= 3 ? UI.gold : UI.white, 8 + f.rarity * 3);
   if (dexOpen) renderDex();
   try {
     const log = JSON.parse(localStorage.getItem('aq_fishing_log') || '[]');
@@ -356,6 +415,7 @@ function landFish(now) {
 
 function missFish(reason) {
   state = 'miss';
+  streak = 0;
   stopHookWave();
   msg = reason || 'It got away…';
   sfx('fail'); sfx('wave-stop');
@@ -365,6 +425,7 @@ function missFish(reason) {
 
 function scareFish() {
   state = 'scared';
+  streak = 0;
   stopHookWave();
   msg = 'You scared it off! Patience…';
   sfx('fail'); sfx('wave-stop');
@@ -373,17 +434,29 @@ function scareFish() {
 
 function tapStruggle() {
   if (!S) return;
-  const inZone = S.markerX >= S.zoneX && S.markerX <= S.zoneX + S.zoneW;
+  const now = performance.now();
+  // Swept hit-test: the marker can't skip the zone between frames — a tap counts
+  // if the path it travelled this frame (±1.5u grace) crossed the sweet spot.
+  const lo = Math.min(S.prevX, S.markerX) - 1.5, hi = Math.max(S.prevX, S.markerX) + 1.5;
+  const inZone = hi >= S.zoneX && lo <= S.zoneX + S.zoneW;
   if (inZone) {
-    S.hits++; sfx('tick');
-    if (S.hits >= S.need) { landFish(performance.now()); return; }
+    // PERFECT strip = the bright inner 40% of the zone
+    const pLo = S.zoneX + S.zoneW * 0.3, pHi = S.zoneX + S.zoneW * 0.7;
+    const perfect = S.markerX >= pLo && S.markerX <= pHi;
+    S.hits++;
+    if (perfect) { S.perfects++; addFloater('PERFECT!', UI.gold); sparkle(markerScreenX(), 76, UI.gold, 6); sfx('tick'); sfx('tick'); }
+    else sfx('tick');
+    S.hitFlashUntil = now + 130;
+    if (S.hits >= S.need) { landFish(now); return; }
     rerollZone();
-    S.markerV = Math.min(5.6, S.markerV * 1.10);   // speed up each hit (capped)
+    S.markerV = Math.min(4.5, S.markerV * 1.08);   // speed up each hit (capped)
   } else {
     S.misses++; sfx('buzz');
+    S.missFlashUntil = now + 180;
     if (S.misses > S.maxMiss) { missFish('Line snapped!'); return; }
   }
 }
+function markerScreenX() { return 14 + (S ? S.markerX / 100 : 0) * 132; }
 
 // One press drives everything (cast / hook / struggle-tap); mashing while
 // waiting scares the fish.
@@ -416,25 +489,24 @@ function tick(t) {
   if (state === 'struggle' && S) {
     const style = S.style, elapsed = now - S.t0;
     let v = S.markerV;
-    if (style === 'darter' || style === 'monster') {            // jittery: flicker speed, random flips
-      // Softer than before (was 0.65 + rand*0.95 with 35% double-flips): the
-      // marker still wavers but stays trackable instead of teleporting.
-      if (Math.random() < 0.035 * f) S.dir *= (Math.random() < 0.25 ? -1 : 1);
-      v *= 0.7 + Math.random() * 0.6;
+    // Darter/monster: direction flips are rate-limited AND telegraphed by a short
+    // marker flash, instead of the old every-frame speed/direction dice rolls.
+    if (style === 'darter' || style === 'monster') {
+      if (!S.flipArmed && now >= S.nextFlipAt) { S.flipArmed = true; S.flashUntil = now + 130; }
+      else if (S.flipArmed && now >= S.flashUntil) {
+        S.dir *= -1; S.flipArmed = false;
+        S.nextFlipAt = now + 700 + Math.random() * 900;
+      }
     }
-    if (style === 'lunger') v *= 0.6 + Math.max(0, Math.sin(elapsed / 300)) * 1.7;  // speed bursts
+    if (style === 'lunger') v *= 0.6 + Math.max(0, Math.sin(elapsed / 300)) * 1.5;  // readable speed pulse
+    S.prevX = S.markerX;
     S.markerX += v * S.dir * f;
     if (S.markerX <= 0) { S.markerX = 0; S.dir = 1; }
     if (S.markerX >= 100) { S.markerX = 100; S.dir = -1; }
-    if (S.zoneVX) {                                              // drifter/monster: moving green zone
-      S.zoneX += S.zoneVX * f;
-      const maxX = Math.max(0, 100 - S.zoneW);
-      if (S.zoneX <= 0) { S.zoneX = 0; S.zoneVX = Math.abs(S.zoneVX); }
-      if (S.zoneX >= maxX) { S.zoneX = maxX; S.zoneVX = -Math.abs(S.zoneVX); }
+    if (S.drift) {                                               // zone glides on a smooth sine
+      S.zoneX = Math.max(0, Math.min(100 - S.zoneW, S.zoneC + Math.sin(elapsed / 650) * S.zoneAmp));
     }
-    if (style === 'thrasher' || style === 'monster') {          // shrinking green zone
-      // Shrink less aggressively (cap 0.55→0.40, floor 9→12) so the target
-      // never collapses to an untappable sliver near the end of the fight.
+    if (style === 'thrasher' || style === 'monster') {           // shrinking zone (gentle, floored)
       S.zoneW = Math.max(12, S.zoneW0 * (1 - Math.min(0.40, elapsed / S.totalMs)));
       if (S.zoneX > 100 - S.zoneW) S.zoneX = Math.max(0, 100 - S.zoneW);
     }
@@ -446,7 +518,7 @@ function tick(t) {
 }
 
 // ── Drawing ───────────────────────────────────────────────────────────────────
-function px(x, y, w, h, color) { cx.fillStyle = PAL[color] || color; cx.fillRect(x | 0, y | 0, w | 0, h | 0); }
+function px(x, y, w, h, color) { cx.fillStyle = color; cx.fillRect(x | 0, y | 0, w | 0, h | 0); }
 
 // Draw a fish pixel-sprite (centered horizontally is the caller's job). `silhouette`
 // renders it as an all-dark unknown for not-yet-caught Fish-o-pedia entries.
@@ -458,10 +530,10 @@ function drawSprite(ctx, shape, col, ox, oy, scale, silhouette) {
       const ch = row[x];
       if (ch === '.' || ch === ' ') continue;
       let c;
-      if (silhouette) c = (ch === 'o') ? '#1a2a14' : '#2e4226';
-      else if (ch === 'o') c = '#0f380f';
-      else if (ch === 'l') c = '#eaffd0';
-      else if (ch === 'e') c = '#0f380f';
+      if (silhouette) c = (ch === 'o') ? '#1a2030' : '#36405a';
+      else if (ch === 'o') c = '#1a1c2c';
+      else if (ch === 'l') c = '#f8f0d8';
+      else if (ch === 'e') c = '#1a1c2c';
       else c = col;
       ctx.fillStyle = c;
       ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
@@ -497,7 +569,7 @@ function drawFishImg(ctx, im, bx, by, bw, bh, silhouette) {
   ctx.drawImage(im, dx, dy, dw, dh);
   if (silhouette) {
     ctx.globalCompositeOperation = 'source-atop';
-    ctx.fillStyle = '#22331a';
+    ctx.fillStyle = '#222a3c';
     ctx.fillRect(dx, dy, dw, dh);
   }
   ctx.restore();
@@ -506,79 +578,143 @@ function drawFishImg(ctx, im, bx, by, bw, bh, silhouette) {
 
 function draw(t) {
   if (!cx) return;
-  cx.fillStyle = SKY; cx.fillRect(0, 0, W, WATER_Y);
-  cx.fillStyle = WATER; cx.fillRect(0, WATER_Y, W, H - WATER_Y);
-  // water-condition label (top-right)
-  cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'right';
+  const P = zp();
+  // golden flawless flash / sky
+  cx.fillStyle = (t < goldFlashUntil && ((t / 90) | 0) % 2 === 0) ? UI.gold : P.sky;
+  cx.fillRect(0, 0, W, WATER_Y);
+  cx.fillStyle = P.water; cx.fillRect(0, WATER_Y, W, H - WATER_Y);
+  px(0, WATER_Y, W, 3, P.waterHi);                       // shoreline highlight band
+
+  // ambient props (clouds drift, shadows cruise, fireflies blink, embers rise)
+  for (const a of ambients) {
+    if (a.kind === 'cloud') {
+      a.x += a.v; if (a.x > W + 22) a.x = -22;
+      px(a.x, a.y, 16, 4, P.cloud); px(a.x + 3, a.y - 2, 9, 2, P.cloud); px(a.x + 4, a.y + 4, 8, 2, P.cloud);
+    } else if (a.kind === 'shadow') {
+      a.x += a.v; if (a.x > W + 24) { a.x = -24; a.y = WATER_Y + 26 + Math.random() * 38; }
+      px(a.x, a.y, 14, 3, P.shadow); px(a.x + 14, a.y + 1, 3, 1, P.shadow);
+    } else if (a.kind === 'firefly') {
+      if (Math.sin(t / 400 + a.ph) > 0.2) px(a.x + Math.sin(t / 900 + a.ph) * 6, a.y + Math.sin(t / 700 + a.ph * 2) * 3, 2, 2, '#d8f060');
+    } else if (a.kind === 'ember') {
+      a.y -= a.v; if (a.y < WATER_Y - 30) { a.y = H - Math.random() * 20; a.x = Math.random() * W; }
+      px(a.x + Math.sin(t / 300 + a.y) * 2, a.y, 2, 2, Math.random() < 0.5 ? '#f8a030' : '#d85820');
+    }
+  }
+
+  // water-condition label (top-right) + streak chip (top-left)
+  cx.fillStyle = UI.ink; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'right';
   cx.fillText(condition.name, W - 3, 3); cx.textAlign = 'left';
+  if (streak >= 2) {
+    px(2, 2, 38, 11, UI.ink);
+    cx.fillStyle = UI.gold; cx.fillText('x' + streak + ' 🔥', 5, 4);
+  }
+
   // animated wave lines
-  cx.fillStyle = PAL[2];
+  cx.fillStyle = P.wave;
   for (let y = WATER_Y + 8; y < H - 16; y += 12) {
     const off = ((t / 70) + y) % 12 | 0;
     for (let x = -12 + off; x < W; x += 12) cx.fillRect(x, y, 5, 1);
   }
-  // dock + rod
-  px(0, WATER_Y - 14, 40, 14, 0);
-  px(34, WATER_Y - 40, 3, 30, 0);                 // rod
-  const rodTip = { x: 37, y: WATER_Y - 38 };
+  // dock + rod (rod bends toward the fight)
+  px(0, WATER_Y - 14, 40, 14, P.dock);
+  px(0, WATER_Y - 14, 40, 2, P.dockHi);
+  const fighting = state === 'struggle' && S;
+  const bend = fighting ? 4 + Math.sin(t / 90) * 2 : 0;
+  px(34, WATER_Y - 40 + bend, 3, 30 - bend, UI.ink);     // rod
+  const rodTip = { x: 37 + bend, y: WATER_Y - 38 + bend };
 
   // bobber position depends on state
   const bx = 100;
   let by = WATER_Y - 2;
-  if (state === 'idle' || state === 'caught' || state === 'miss' || state === 'scared') by = WATER_Y - 2;
-  else if (state === 'casting') { const p = 1 - Math.max(0, (castUntil - t) / CAST_MS); by = WATER_Y - 2; }
-  else if (state === 'waiting') {
+  if (state === 'waiting') {
     by = WATER_Y - 1 + Math.sin(t / 320) * 2;
     if (t < nibbleFlashUntil) by += (Math.random() * 2 - 1) * 3;  // twitch
   } else if (state === 'bite') by = WATER_Y + 10;                 // yanked under
+  else if (fighting) by = WATER_Y + 6 + Math.sin(t / 80) * 3;     // thrashing
 
-  // line
-  cx.strokeStyle = PAL[3]; cx.beginPath(); cx.moveTo(rodTip.x, rodTip.y); cx.lineTo(bx + 2, by); cx.stroke();
-  // bobber
-  px(bx, by, 6, 6, 0); px(bx + 1, by + 1, 4, 2, 3);
-  if (state === 'bite') { px(bx - 1, by - 9, 2, 6, 3); px(bx + 5, by - 9, 2, 6, 3); } // splash
-  if (t < nibbleFlashUntil && state === 'waiting') { px(bx - 3, by - 4, 2, 2, 3); px(bx + 7, by - 3, 2, 2, 3); }
+  // line (jitters while fighting)
+  cx.strokeStyle = UI.paper; cx.beginPath(); cx.moveTo(rodTip.x, rodTip.y);
+  cx.lineTo(bx + 2 + (fighting ? Math.sin(t / 60) * 2 : 0), by); cx.stroke();
+  // bobber (red-cap cream float, classic)
+  px(bx, by, 6, 6, UI.red); px(bx + 1, by + 3, 4, 2, UI.paper);
+  if (t < nibbleFlashUntil && state === 'waiting') { px(bx - 3, by - 4, 2, 2, UI.white); px(bx + 7, by - 3, 2, 2, UI.white); }
 
-  // bite reaction window meter (urgency)
+  // BITE: big "!" speech bubble + urgency meter — unmistakable
   if (state === 'bite') {
-    const total = Math.max(280, BITE_WINDOW_BASE - (fish ? fish.rarity : 0) * BITE_WINDOW_PER);
+    px(bx - 4, by - 30, 14, 16, UI.paper); px(bx - 3, by - 31, 12, 1, UI.paper);
+    px(bx + 1, by - 14, 4, 4, UI.paper);                          // bubble tail
+    cx.fillStyle = UI.red; cx.font = 'bold 12px monospace'; cx.textBaseline = 'top';
+    cx.fillText('!', bx + 1, by - 28);
+    const total = Math.max(300, BITE_WINDOW_BASE - (fish ? fish.rarity : 0) * BITE_WINDOW_PER);
     const left = Math.max(0, (biteWindowEnd - t) / total);
-    px(30, 30, 100, 8, 0); px(31, 31, 98 * left, 6, 3);
-    cx.fillStyle = PAL[0]; cx.font = '8px monospace'; cx.textBaseline = 'top'; cx.fillText('REEL!', 64, 21);
+    px(29, 29, 102, 10, UI.ink); px(31, 31, 98 * left, 6, left < 0.35 ? UI.red : UI.gold);
+    cx.fillStyle = UI.ink; cx.font = 'bold 8px monospace'; cx.fillText('REEL!', 64, 20);
   }
 
-  // struggle UI
-  if (state === 'struggle' && S) {
-    const mx = 14, mw = 132, my = 70, mh = 14;
-    px(mx - 2, my - 2, mw + 4, mh + 4, 0);   // frame
-    px(mx, my, mw, mh, 1);                    // track
-    px(mx + (S.zoneX / 100) * mw, my, (S.zoneW / 100) * mw, mh, 2);  // green zone
-    const markPx = mx + (S.markerX / 100) * mw;
-    px(markPx - 1, my - 3, 3, mh + 6, 3);    // marker
-    // hit pips
-    for (let i = 0; i < S.need; i++) px(mx + i * 9, my + mh + 6, 7, 5, i < S.hits ? 3 : 1);
+  // struggle UI — high-contrast meter with an outlined sweet spot + PERFECT strip
+  if (fighting) {
+    const mx = 14, mw = 132, my = 70, mh = 16;
+    const shake = (t < S.missFlashUntil) ? ((Math.random() * 4 - 2) | 0) : 0;
+    px(mx - 3 + shake, my - 3, mw + 6, mh + 6, (t < S.missFlashUntil) ? UI.red : UI.ink);   // frame (flashes red on miss)
+    px(mx + shake, my, mw, mh, UI.track);                                                   // navy track
+    const zx = mx + (S.zoneX / 100) * mw + shake, zw = (S.zoneW / 100) * mw;
+    const hitFlash = t < S.hitFlashUntil;
+    px(zx - 1, my, 1, mh, UI.ink); px(zx + zw, my, 1, mh, UI.ink);                          // zone outline
+    px(zx, my, zw, mh, hitFlash ? UI.white : UI.zone);                                      // sweet spot
+    px(zx + zw * 0.3, my, zw * 0.4, mh, hitFlash ? UI.white : UI.zoneHi);                   // PERFECT strip
+    // pulsing edge ticks so the zone reads at a glance
+    if (((t / 240) | 0) % 2 === 0) { px(zx, my - 2, zw, 1, UI.zoneHi); px(zx, my + mh + 1, zw, 1, UI.zoneHi); }
+    // marker: ghost trail + white head with ink outline (flashes when a darter is about to flip)
+    const markPx = mx + (S.markerX / 100) * mw + shake;
+    const prevPx = mx + (S.prevX / 100) * mw + shake;
+    px(prevPx - 1, my + 2, 2, mh - 4, UI.trail);
+    px(markPx - 2, my - 4, 5, mh + 8, UI.ink);
+    px(markPx - 1, my - 3, 3, mh + 6, (S.flipArmed && ((t / 60) | 0) % 2 === 0) ? UI.red : UI.white);
+    // hit pips (gold = perfect)
+    for (let i = 0; i < S.need; i++) {
+      px(mx + i * 10, my + mh + 7, 8, 6, UI.ink);
+      if (i < S.hits) px(mx + i * 10 + 1, my + mh + 8, 6, 4, i < S.perfects ? UI.gold : UI.zoneHi);
+    }
     // time bar
-    px(mx, my - 12, mw, 4, 0);
+    px(mx, my - 12, mw, 4, UI.ink);
     const tl = Math.max(0, Math.min(1, (S.endAt - t) / S.totalMs));
-    px(mx, my - 11, mw * tl, 2, 3);
+    px(mx + 1, my - 11, (mw - 2) * tl, 2, tl < 0.3 ? UI.red : UI.paper);
   }
 
-  // caught! — show the fish leaping above the water (photo art, pixel fallback)
+  // caught! — fish leaps above the water (photo art, pixel fallback) + NEW badge
   if (state === 'caught' && lastCatch) {
     const oy = 14 + Math.sin(t / 160) * 2;
     const im = fishImg(lastCatch.img);
-    if (im) {
-      drawFishImg(cx, im, 12, oy, W - 24, lastCatch.monster ? 64 : 56, false);
-    } else {
+    if (im) drawFishImg(cx, im, 12, oy, W - 24, lastCatch.monster ? 64 : 56, false);
+    else {
       const sc = lastCatch.monster ? 6 : 5;
       const sw = spriteW(lastCatch.shape) * sc;
       drawSprite(cx, lastCatch.shape, lastCatch.col, (W - sw) / 2, oy + 6, sc, false);
     }
+    if (lastCatch.isNew) {
+      px(W / 2 - 17, 4, 34, 11, UI.gold);
+      cx.fillStyle = UI.ink; cx.font = 'bold 8px monospace'; cx.textBaseline = 'top'; cx.textAlign = 'center';
+      cx.fillText('NEW!', W / 2, 6); cx.textAlign = 'left';
+    }
+  }
+
+  // particles + floaters (cosmetic, frame-stepped)
+  for (const p of particles) { p.x += p.vx; p.y += p.vy; p.vy += p.g; p.life--; px(p.x, p.y, p.s, p.s, p.c); }
+  particles = particles.filter(p => p.life > 0);
+  if (floaters.length) {
+    cx.font = 'bold 8px monospace'; cx.textBaseline = 'middle'; cx.textAlign = 'center';
+    for (const fl of floaters) {
+      fl.y -= 0.5; fl.life--;
+      cx.fillStyle = UI.ink; cx.fillText(fl.text, fl.x + 1, fl.y + 1);
+      cx.fillStyle = fl.color; cx.fillText(fl.text, fl.x, fl.y);
+    }
+    cx.textAlign = 'left';
+    floaters = floaters.filter(f2 => f2.life > 0);
   }
 
   // message banner
-  cx.fillStyle = PAL[0]; cx.fillRect(0, H - 16, W, 16);
-  cx.fillStyle = PAL[3]; cx.font = '8px monospace'; cx.textBaseline = 'middle';
+  cx.fillStyle = UI.ink; cx.fillRect(0, H - 16, W, 16);
+  cx.fillStyle = UI.paper; cx.font = '8px monospace'; cx.textBaseline = 'middle'; cx.textAlign = 'left';
   cx.fillText(msg, 4, H - 8);
 }
 
@@ -594,10 +730,11 @@ function renderZones() {
     b.className = 'gbc-btn';
     b.disabled = !unlocked;
     b.textContent = unlocked ? z.name : `🔒 ${z.name} · Lv${z.lvl}`;
-    if (i === curZone) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + PAL[3]; }
+    if (i === curZone) { b.style.fontWeight = 'bold'; b.style.outline = '2px solid ' + UI.gold; }
     b.addEventListener('click', () => {
       if (!unlocked || i === curZone) return;
       curZone = i; try { localStorage.setItem('aq_fishing_zone', String(i)); window.aqGamePersist && window.aqGamePersist('aq_fishing_zone'); } catch (e) {}
+      seedAmbients();
       stopHookWave();
       state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
       renderZones(); refreshInfo();
@@ -618,7 +755,7 @@ function renderRodShop() {
   const next = RODS[tier + 1];
   const btn = document.createElement('button'); btn.className = 'gbc-btn';
   btn.disabled = credits() < next.cost;
-  btn.textContent = `Buy ${next.name} rod  💰${next.cost}`;
+  btn.textContent = `Buy ${next.name} rod 💰${next.cost} — more bites · rarer fish · easier fights`;
   btn.addEventListener('click', () => {
     if (credits() < next.cost) return;
     if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
@@ -741,6 +878,7 @@ function openFishing(show = true) {
   stopHookWave();
   state = 'idle'; msg = 'Press CAST to fish'; fish = null; S = null; nibbles = [];
   rollCondition(); _castCount = 0;
+  seedAmbients();
   refreshInfo();
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
   clearInterval(window._fishInfoT);
@@ -749,6 +887,12 @@ function openFishing(show = true) {
 
 if (typeof window !== 'undefined') {
   window.openFishing = openFishing;
+  // test hook: lets the headless harness drive the state machine without exports
+  if (window.__fishTestHook) window.__fishTestHook({
+    snap: () => ({ state, S, fish, msg, streak, curZone }),
+    press, setFish: f => { fish = f; }, setZone: z => { curZone = z; },
+    enterStruggle, tapStruggle, FISH, MONSTERS, pickFish,
+  });
   // Desktop fish-pets bridge: look up any caught fish's sprite + draw it the same way.
   const _allFish = FISH.concat(MONSTERS);
   window.aqFishDef = (name) => _allFish.find(f => f.name === name) || null;

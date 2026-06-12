@@ -62,6 +62,9 @@ const T_ORE = 10;
 const SWING_BASE_MS = 380;            // pickaxe cooldown (a touch faster per tier)
 const REACH = 2.1;                    // how close you must be to mine / melee
 const MELEE_ARC = 0.78;               // dot(facing, toMonster) needed to land a hit
+const MON_MIN_DIST = 0.78;            // creatures stop on this ring around the player —
+                                      // close enough to bite (attack range 0.85) but
+                                      // never inside the camera near-plane (invisible)
 const SACK_BASE = 8;                  // sack capacity = SACK_BASE + tier*2
 const VEIN_RESPAWN_MIN = 14000, VEIN_RESPAWN_RAND = 10000;
 const MON_RESPAWN_MS = 18000;
@@ -311,20 +314,21 @@ function genZone() {
   const hubs = [[cx0, cy0]];
   // 3 main tunnels wander out from the spawn, each ending in a round chamber,
   // with a smaller side-chamber partway — narrow, winding, occasionally forking
-  const nTunnels = 3 + (Math.random() < 0.5 ? 1 : 0);
+  const nTunnels = 3 + (Math.random() < 0.25 ? 1 : 0);
   for (let tn = 0; tn < nTunnels; tn++) {
     let wx = cx0, wy = cy0;
     let heading = (tn / nTunnels) * 6.283 + Math.random() * 1.2;
-    const steps = 16 + (Math.random() * 12) | 0;
+    const steps = 14 + (Math.random() * 9) | 0;
     for (let s = 0; s < steps; s++) {
       heading += (Math.random() - 0.5) * 0.9;                    // gentle meander
+      const pwy = wy;
       wx = clamp(wx + Math.cos(heading), 2, MW - 3);
       wy = clamp(wy + Math.sin(heading), 2, MH - 3);
-      carve(wx, wy);
-      carve(wx + (Math.abs(Math.cos(heading)) > 0.5 ? 0 : 1), wy + (Math.abs(Math.cos(heading)) > 0.5 ? 1 : 0));  // ~1.5 wide
-      if (s === (steps >> 1)) { chamber(wx, wy, 1.8 + Math.random()); hubs.push([wx, wy]); }
+      carve(wx, pwy);                                            // orthogonal bridge: keeps diagonal
+      carve(wx, wy);                                             // steps 4-connected (and ~1.5 wide)
+      if (s === (steps >> 1)) { chamber(wx, wy, 1.7 + Math.random() * 0.8); hubs.push([wx, wy]); }
     }
-    chamber(wx, wy, 2.2 + Math.random() * 1.2);                  // round end chamber
+    chamber(wx, wy, 2.0 + Math.random() * 0.9);                  // round end chamber
     hubs.push([wx, wy]);
   }
   // smooth lone wall nubs so chamber edges read rounded, not crenellated
@@ -432,6 +436,16 @@ function updateMonsters(dt, now) {
       e.wanderT -= dt;
       if (e.wanderT <= 0) { e.wanderT = 0.8 + Math.random() * 1.6; e.wa = Math.random() * TWOPI; }
       moveMob(e, Math.cos(e.wa) * 0.4, Math.sin(e.wa) * 0.4, dt);
+    }
+  }
+  // no-entry ring: nothing crowds inside the camera near-plane — creatures hold
+  // position "right in front" of you, still biting, never invisible
+  for (const e of mons) {
+    const rx = e.x - px, ry = e.y - py, rd = Math.hypot(rx, ry);
+    if (rd < MON_MIN_DIST && rd > 1e-4) {
+      const tx2 = px + rx / rd * MON_MIN_DIST, ty2 = py + ry / rd * MON_MIN_DIST;
+      if (!isWall(tx2, e.y)) e.x = tx2;
+      if (!isWall(e.x, ty2)) e.y = ty2;
     }
   }
   // respawn queue
@@ -1074,7 +1088,7 @@ if (typeof window !== 'undefined') {
   window.openMining = openMining;
   // test hook (headless harness audits cave topology without exports)
   if (window.__m3TestHook) window.__m3TestHook({
-    getWorld: () => ({ map, MW, MH, veins, spawn }), caveH, genZone, setZone: z => { curZone = z; },
+    getWorld: () => ({ map, MW, MH, veins, spawn }), getMons: () => mons, getPlayer: () => ({ px, py }), caveH, genZone, setZone: z => { curZone = z; },
   });
   // Cloud game-save merge can land after the window is already open — re-read the
   // restored pickaxe/zone/prestige and refresh the shop so a synced upgrade shows.

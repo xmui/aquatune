@@ -120,6 +120,15 @@ let depthPts = parseFloat(localStorage.getItem('aq_mining_depth') || '0') || 0;
 let prestige = parseInt(localStorage.getItem('aq_mining_prestige') || '0', 10) || 0;
 
 function idx(x, y) { return y * MW + x; }
+// Smooth heightfield: the cave floor (and ceiling with it) rolls up and down.
+// Continuous, so the camera glides as you walk instead of stepping.
+let _hSeed = 0;
+function caveH(x, y) {
+  return 0.20 * Math.sin(x * 0.55 + _hSeed) * Math.cos(y * 0.48 + _hSeed * 0.7) +
+         0.13 * Math.sin((x + y) * 0.85 + _hSeed * 1.3) +
+         0.07 * Math.sin(x * 1.7 - y * 1.1 + _hSeed * 2.1);
+}
+function eyeZ() { return caveH(px, py) + 0.5; }
 function tileAt(x, y) { const mx = x | 0, my = y | 0; if (mx < 0 || my < 0 || mx >= MW || my >= MH) return 2; return map[idx(mx, my)]; }
 function isWall(x, y) { return tileAt(x, y) > 0; }
 function addDepth(n) {
@@ -289,21 +298,48 @@ function genZone() {
   map = new Uint8Array(MW * MH).fill(1);
   for (let x = 0; x < MW; x++) { map[idx(x, 0)] = 2; map[idx(x, MH - 1)] = 2; }
   for (let y = 0; y < MH; y++) { map[idx(0, y)] = 2; map[idx(MW - 1, y)] = 2; }
-  // drunkard-walk carve from the centre until ~38% of the interior is open
-  const carve = (x, y) => { if (x > 0 && y > 0 && x < MW - 1 && y < MH - 1 && map[idx(x, y)] === 1) { map[idx(x, y)] = 0; return 1; } return 0; };
-  let cx0 = MW >> 1, cy0 = MH >> 1, open = 0;
-  const target = ((MW - 2) * (MH - 2) * 0.38) | 0;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) open += carve(cx0 + dx, cy0 + dy);
-  let wx = cx0, wy = cy0, guard = 0;
-  while (open < target && guard++ < 30000) {
-    const d = (Math.random() * 4) | 0;
-    wx = clamp(wx + (d === 0 ? 1 : d === 1 ? -1 : 0), 1, MW - 2);
-    wy = clamp(wy + (d === 2 ? 1 : d === 3 ? -1 : 0), 1, MH - 2);
-    open += carve(wx, wy);
-    if (Math.random() < 0.4) open += carve(wx + 1, wy);          // widen so caves aren't all 1-wide
-    if (Math.random() < 0.15) { wx = cx0; wy = cy0; }            // hop home → branchy halls
+  // CAVE SYSTEM, not an arena: meandering tunnels (heading + gentle turns)
+  // strung between small ROUND chambers carved with circular masks.
+  const carve = (x, y) => { x |= 0; y |= 0; if (x > 0 && y > 0 && x < MW - 1 && y < MH - 1 && map[idx(x, y)] === 1) map[idx(x, y)] = 0; };
+  const chamber = (cx, cy, r) => {
+    for (let y = Math.floor(cy - r); y <= cy + r; y++)
+      for (let x = Math.floor(cx - r); x <= cx + r; x++)
+        if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r) carve(x, y);
+  };
+  const cx0 = MW >> 1, cy0 = MH >> 1;
+  chamber(cx0, cy0, 2.6);                                        // round spawn chamber
+  const hubs = [[cx0, cy0]];
+  // 3 main tunnels wander out from the spawn, each ending in a round chamber,
+  // with a smaller side-chamber partway — narrow, winding, occasionally forking
+  const nTunnels = 3 + (Math.random() < 0.5 ? 1 : 0);
+  for (let tn = 0; tn < nTunnels; tn++) {
+    let wx = cx0, wy = cy0;
+    let heading = (tn / nTunnels) * 6.283 + Math.random() * 1.2;
+    const steps = 16 + (Math.random() * 12) | 0;
+    for (let s = 0; s < steps; s++) {
+      heading += (Math.random() - 0.5) * 0.9;                    // gentle meander
+      wx = clamp(wx + Math.cos(heading), 2, MW - 3);
+      wy = clamp(wy + Math.sin(heading), 2, MH - 3);
+      carve(wx, wy);
+      carve(wx + (Math.abs(Math.cos(heading)) > 0.5 ? 0 : 1), wy + (Math.abs(Math.cos(heading)) > 0.5 ? 1 : 0));  // ~1.5 wide
+      if (s === (steps >> 1)) { chamber(wx, wy, 1.8 + Math.random()); hubs.push([wx, wy]); }
+    }
+    chamber(wx, wy, 2.2 + Math.random() * 1.2);                  // round end chamber
+    hubs.push([wx, wy]);
   }
+  // smooth lone wall nubs so chamber edges read rounded, not crenellated
+  for (let pass = 0; pass < 2; pass++)
+    for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) {
+      if (map[idx(x, y)] !== 1) continue;
+      let openN = 0;
+      if (map[idx(x + 1, y)] === 0) openN++;
+      if (map[idx(x - 1, y)] === 0) openN++;
+      if (map[idx(x, y + 1)] === 0) openN++;
+      if (map[idx(x, y - 1)] === 0) openN++;
+      if (openN >= 3) map[idx(x, y)] = 0;
+    }
   spawn = { x: cx0 + 0.5, y: cy0 + 0.5 };
+  _hSeed = curZone * 7.3 + Math.random() * 6.28;
   cart = { x: cx0 + 0.5, y: cy0 - 0.45, size: 0.62, float: 0, canvas: null };
   // ore veins: wall tiles touching open floor, weighted by the zone's ore table
   veins.clear();
@@ -570,18 +606,9 @@ function render(now) {
   const pal = ZONES[curZone].pal;
   const bob = Math.abs(Math.sin(walkPhase)) * 2;
   const hor = RH / 2 + pitch + bob;        // pitch shifts the horizon (look up/down)
-  // ceiling / floor split at the horizon, with fog bands + overhead rock shading
-  ctx.fillStyle = pal.ceil; ctx.fillRect(0, 0, RW, Math.max(0, hor));
-  ctx.fillStyle = pal.floor; ctx.fillRect(0, Math.max(0, hor), RW, RH - Math.max(0, hor));
+  const E = eyeZ();                        // eye rides the rolling cave floor
+  ctx.fillStyle = pal.ceil; ctx.fillRect(0, 0, RW, RH);   // base (per-column fills carve it up)
   const [fr, fg, fb] = pal.fog;
-  for (let b = 0; b < 4; b++) {
-    ctx.fillStyle = `rgba(${fr},${fg},${fb},${0.05 + 0.05 * (3 - b)})`;
-    ctx.fillRect(0, hor - (b + 1) * 6, RW, (b + 1) * 12);
-  }
-  // cave feel: the rock directly overhead/underfoot is darker than the distance
-  ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 46));
-  ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 26));
-  ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(0, Math.min(RH, hor + 50), RW, RH);
   // walls (DDA)
   for (let x = 0; x < RW; x++) {
     const cameraX = 2 * x / RW - 1;
@@ -600,7 +627,13 @@ function render(now) {
     const perp = side === 0 ? (sideX - ddx) : (sideY - ddy);
     zbuffer[x] = perp;
     const lineH = RH / perp;
-    const drawStart = -lineH / 2 + hor;
+    // wall sits on the rolling floor: project its base/top from world height
+    const fB = caveH(mapX + 0.5, mapY + 0.5);
+    const drawStart = hor + (E - fB - 1) * lineH;
+    const wallBot = drawStart + lineH;
+    // per-column ceiling + floor so the cave visibly rises and dips
+    ctx.fillStyle = pal.ceil; if (drawStart > 0) ctx.fillRect(x, 0, 1, drawStart);
+    ctx.fillStyle = pal.floor; if (wallBot < RH) ctx.fillRect(x, wallBot, 1, RH - wallBot);
     const tex = texFor(tile);
     let wallX = side === 0 ? py + perp * rdy : px + perp * rdx; wallX -= Math.floor(wallX);
     let texX = (wallX * TEX) | 0;
@@ -619,6 +652,14 @@ function render(now) {
     const sh = clamp(perp / 11, 0, 0.82) + (side === 1 ? 0.14 : 0);
     if (sh > 0.02) { ctx.fillStyle = `rgba(${fr >> 1},${fg >> 1},${fb >> 1},${Math.min(0.88, sh)})`; ctx.fillRect(x, y0, 1, y1 - y0); }
   }
+  // fog bands on the horizon + overhead/underfoot rock shading (over the columns)
+  for (let b = 0; b < 4; b++) {
+    ctx.fillStyle = `rgba(${fr},${fg},${fb},${0.05 + 0.05 * (3 - b)})`;
+    ctx.fillRect(0, hor - (b + 1) * 6, RW, (b + 1) * 12);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 46));
+  ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(0, 0, RW, Math.max(0, hor - 26));
+  ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(0, Math.min(RH, hor + 50), RW, RH);
   // sprites far-first
   const sprites = [];
   if (cart && cart.canvas) sprites.push(cart);
@@ -650,7 +691,7 @@ function drawSprite(sp, hor) {
   const fullH = RH / tY;
   const h = fullH * (sp.size || 1);
   const w = h * (sp.canvas.width / sp.canvas.height);
-  const bottomY = hor + fullH / 2 - (sp.float || 0) * fullH;
+  const bottomY = hor + (eyeZ() - caveH(sp.x, sp.y)) * fullH - (sp.float || 0) * fullH;
   const drawY = bottomY - h - (sp.bob || 0);
   const startX = screenX - w / 2;
   const x0 = Math.max(0, Math.ceil(startX)), x1 = Math.min(RW - 1, Math.floor(startX + w));
@@ -1031,6 +1072,10 @@ function openMining(show = true) {
 
 if (typeof window !== 'undefined') {
   window.openMining = openMining;
+  // test hook (headless harness audits cave topology without exports)
+  if (window.__m3TestHook) window.__m3TestHook({
+    getWorld: () => ({ map, MW, MH, veins, spawn }), caveH, genZone, setZone: z => { curZone = z; },
+  });
   // Cloud game-save merge can land after the window is already open — re-read the
   // restored pickaxe/zone/prestige and refresh the shop so a synced upgrade shows.
   window.addEventListener('aq-gamedata-synced', () => {

@@ -413,6 +413,9 @@ function updateWorld(dt, now) {
     } else {
       if (dist < 9) {                                       // hostile: hunt
         a.x += dx / dist * a.spec.speed * dt; a.y += dy / dist * a.spec.speed * dt;
+        // hold the no-entry ring: bite from right in front, never inside the camera
+        const rd = Math.hypot(a.x - px, a.y - py);
+        if (rd < 0.78 && rd > 1e-4) { a.x = px + (a.x - px) / rd * 0.78; a.y = py + (a.y - py) / rd * 0.78; }
         if (dist < 0.85 && a.cool <= 0 && now >= koUntil) { a.cool = 1.1; hurtPlayer(a.spec.dmg); }
       } else {
         a.wanderT -= dt;

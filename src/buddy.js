@@ -97,8 +97,66 @@ const CLOTHES = {
     <polygon points="44,63 50,70 50,64" fill="#f4f4f4" stroke="#cfcfcf" stroke-width="0.6"/>
     <polygon points="56,63 50,70 50,64" fill="#e8e8e8" stroke="#cfcfcf" stroke-width="0.6"/>
     <rect x="44" y="61" width="12" height="3" rx="1.5" fill="#3a6ea5"/>` },
+  /* ── Pawn Shop exclusives (locked until bought — see src/pawnshop.js) ── */
+  cuban: { name: 'XXL Cuban Chain', svg: `
+    <path d="M 35 62 Q 50 84 65 62" fill="none" stroke="#ffd24a" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 35 62 Q 50 84 65 62" fill="none" stroke="#c8960a" stroke-width="5" stroke-dasharray="3,3" stroke-linecap="round"/>
+    <rect x="44" y="76" width="12" height="10" rx="2" fill="#ffd24a" stroke="#c8960a" stroke-width="1"/>
+    <text x="46.5" y="84" font-size="8" font-weight="900" fill="#7a4d08" font-family="Arial">$</text>` },
+  champbelt: { name: 'Championship Belt', svg: `
+    <rect x="34" y="76" width="32" height="9" rx="3" fill="#181820"/>
+    <ellipse cx="50" cy="80" rx="11" ry="7.5" fill="#ffd24a" stroke="#c8960a" stroke-width="1.4"/>
+    <ellipse cx="50" cy="80" rx="6.5" ry="4.5" fill="#fff2b0"/>
+    <text x="46" y="83" font-size="7" font-weight="900" fill="#a86a0a" font-family="Arial">#1</text>
+    <circle cx="38" cy="80" r="2" fill="#ffd24a"/><circle cx="62" cy="80" r="2" fill="#ffd24a"/>` },
+  furcollar: { name: 'Fur Collar', svg: `
+    <path d="M 33 60 Q 38 70 50 71 Q 62 70 67 60 Q 64 68 58 71 Q 66 72 68 67 L 66 74 Q 58 78 50 77 Q 42 78 34 74 L 32 67 Q 34 72 42 71 Q 36 68 33 60 Z" fill="#8a5a30"/>
+    <path d="M 36 62 Q 43 70 50 70 Q 57 70 64 62" fill="none" stroke="#b8854e" stroke-width="3" stroke-linecap="round" stroke-dasharray="2,2.6"/>` },
+  dollartie: { name: 'Money Tie', svg: `
+    <polygon points="50,62 46,67 50,71 54,67" fill="#2a8a3a"/>
+    <polygon points="48,71 52,71 53,87 50,91 47,87" fill="#2a8a3a"/>
+    <text x="47.4" y="83" font-size="8" font-weight="900" fill="#ffd24a" font-family="Arial">$</text>` },
+  medallion: { name: 'Iced Medallion', svg: `
+    <path d="M 38 63 Q 50 76 62 63" fill="none" stroke="#cfd6de" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="50" cy="77" r="6.5" fill="#cfd6de" stroke="#8a96a4" stroke-width="1"/>
+    <circle cx="50" cy="77" r="4" fill="#aee8ff"/>
+    <path d="M 47 77 L 50 73.4 L 53 77 L 50 80.6 Z" fill="#fff"/>` },
+  blingbow: { name: 'Diamond Bow', svg: `
+    <polygon points="50,64 40,59 40,69" fill="#aee8ff" stroke="#5ab8e0" stroke-width="0.8"/>
+    <polygon points="50,64 60,59 60,69" fill="#aee8ff" stroke="#5ab8e0" stroke-width="0.8"/>
+    <circle cx="50" cy="64" r="3" fill="#fff"/>
+    <circle cx="43" cy="62" r="0.9" fill="#fff"/><circle cx="57" cy="66" r="0.9" fill="#fff"/>` },
 };
 const CLOTHES_KEYS = Object.keys(CLOTHES);
+
+// ── really cursed neotribal tattoos (Pawn Shop exclusives) ──────────────────────
+// body = inked under the clothes layer · face = inked over the mug, under the hat
+const INK = 'rgba(12,22,34,0.78)';
+const TATTOOS = {
+  none: { name: 'None', body: '', face: '' },
+  trampstamp: { name: 'Lower-Back Tribal', body: `
+    <g fill="${INK}"><path d="M 50 96 q -10 -7 -19 -1 q 6 -5 12 -4 q -8 -4 -14 1 q 4 -7 13 -4 q 5 2 8 6 q 3 -4 8 -6 q 9 -3 13 4 q -6 -5 -14 -1 q 6 -1 12 4 q -9 -6 -19 1 Z"/>
+    <path d="M 50 92 l -3 -4 l 3 -2 l 3 2 Z"/></g>` },
+  barbedring: { name: 'Barbed Wire Band', body: `
+    <g stroke="${INK}" stroke-width="2.6" fill="none"><path d="M 20 84 Q 50 96 80 84"/>
+    <path d="M 30 87.5 l -3 -4 M 30 87.5 l 4 -3 M 50 90.5 l -3.6 -3.4 M 50 90.5 l 3.6 -3.4 M 70 87.5 l 3 -4 M 70 87.5 l -4 -3" stroke-width="2"/></g>` },
+  tribalflames: { name: 'Tribal Flames', body: `
+    <g fill="${INK}"><path d="M 24 104 q 3 -12 -1 -18 q 7 6 5 13 q 5 -9 2 -16 q 8 8 4 21 Z"/>
+    <path d="M 42 107 q 3 -13 -2 -20 q 8 6 6 14 q 5 -9 1 -17 q 9 9 5 23 Z"/>
+    <path d="M 62 106 q 4 -12 0 -19 q 7 6 5 13 q 4 -8 1 -15 q 9 9 4 21 Z"/></g>` },
+  scorpking: { name: 'Belly Scorpion', body: `
+    <g fill="${INK}"><ellipse cx="50" cy="86" rx="6" ry="8"/>
+    <path d="M 50 78 q -1 -7 5 -10 q -3 5 -1 8 l 3 -2 l -1 5 Z"/>
+    <path d="M 44 82 q -8 -2 -9 -8 l 3 3 q 3 2 6 2 Z M 44 88 q -9 1 -11 -5 l 4 2 q 4 2 7 1 Z M 56 82 q 8 -2 9 -8 l -3 3 q -3 2 -6 2 Z M 56 88 q 9 1 11 -5 l -4 2 q -4 2 -7 1 Z"/></g>` },
+  facetribal: { name: 'Face Tribal', face: `
+    <g fill="${INK}"><path d="M 28 22 q 10 -3 14 4 q -7 -2 -10 1 q 6 0 8 5 q -8 -3 -12 0 q 3 2 3 6 q -6 -5 -7 -10 q -1 -4 4 -6 Z"/>
+    <path d="M 67 44 q 7 2 8 8 q -4 -3 -8 -3 q 3 3 2 7 q -4 -6 -8 -7 q 4 -3 6 -5 Z"/></g>` },
+  noragrets: { name: '"NO RAGRETS"', body: `
+    <g transform="rotate(-4 50 90)"><rect x="30" y="85" width="40" height="11" rx="2" fill="none" stroke="${INK}" stroke-width="1.6"/>
+    <text x="50" y="93.5" text-anchor="middle" font-size="7.6" font-weight="900" font-family="Georgia,serif" fill="${INK}" letter-spacing="0.5">NO RAGRETS</text>
+    <path d="M 27 90 l -5 -3 l 5 -3 M 73 90 l 5 -3 l -5 -3" fill="none" stroke="${INK}" stroke-width="1.6"/></g>` },
+};
+const TATTOO_KEYS = Object.keys(TATTOOS);
 
 // ── defaults & config ─────────────────────────────────────────────────────────────
 function legacyOutfitKey() {
@@ -118,6 +176,7 @@ function normalize(cfg) {
     expression: EXPRESSIONS[cfg.expression] ? cfg.expression : d.expression,
     outfit:     (window.aqBuddyOutfits && window.aqBuddyOutfits[cfg.outfit] != null) ? cfg.outfit : d.outfit,
     clothes:    CLOTHES[cfg.clothes] ? cfg.clothes : d.clothes,
+    tattoo:     TATTOOS[cfg.tattoo] ? cfg.tattoo : 'none',
   };
 }
 function buddyConfig() {
@@ -162,6 +221,7 @@ function buildBuddySvg(cfg, opts) {
   const ramp = makeRamp(pal, 3);
   const ex = EXPRESSIONS[cfg.expression] || EXPRESSIONS.smile;
   const clothes = (CLOTHES[cfg.clothes] || CLOTHES.none).svg;
+  const tat = TATTOOS[cfg.tattoo] || TATTOOS.none;
   const hat = (window.aqBuddyOutfits && window.aqBuddyOutfits[cfg.outfit]) || '';
   return `<svg viewBox="0 0 100 112" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="display:block">
     <defs>
@@ -174,11 +234,13 @@ function buildBuddySvg(cfg, opts) {
     <ellipse cx="91" cy="82" rx="12" ry="8.5" fill="url(#${id}b)" transform="rotate(30 91 82)"/>
     <ellipse cx="34" cy="74" rx="16" ry="9" fill="rgba(255,255,255,0.38)" transform="rotate(-18 34 74)"/>
     <ellipse cx="50" cy="64" rx="14" ry="5.5" fill="url(#${id}b)"/>
+    <g>${tat.body || ''}</g>
     <g>${clothes}</g>
     <circle cx="50" cy="33" r="27" fill="url(#${id}h)"/>
     <ellipse cx="38" cy="22" rx="12" ry="8" fill="rgba(255,255,255,0.66)" transform="rotate(-28 38 22)"/>
     <g>${ex.eyes}</g>
     <path d="${ex.mouth}" stroke="#001e38" stroke-width="2.3" fill="${ex.fill || 'none'}" stroke-linecap="round" stroke-opacity="0.82"/>
+    <g>${tat.face || ''}</g>
     ${hat}
   </svg>`;
 }
@@ -204,6 +266,11 @@ function applyToMascot(cfg) {
   if (clothes) clothes.innerHTML = (CLOTHES[cfg.clothes] || CLOTHES.none).svg;
   const outfit = document.getElementById('ab-outfit');
   if (outfit) outfit.innerHTML = (window.aqBuddyOutfits && window.aqBuddyOutfits[cfg.outfit]) || '';
+  const tat = TATTOOS[cfg.tattoo] || TATTOOS.none;
+  const tb = document.getElementById('ab-tattoo');
+  if (tb) tb.innerHTML = tat.body || '';
+  const tf = document.getElementById('ab-tattoo-face');
+  if (tf) tf.innerHTML = tat.face || '';
 }
 
 // ── profile card popover (used from chat name/avatar clicks) ──────────────────────
@@ -318,6 +385,8 @@ if (typeof window !== 'undefined') {
   window.aqBuddyExpressionKeys = EXPRESSION_KEYS;
   window.aqBuddyClothes = CLOTHES;
   window.aqBuddyClothesKeys = CLOTHES_KEYS;
+  window.aqBuddyTattoos = TATTOOS;
+  window.aqBuddyTattooKeys = TATTOO_KEYS;
 
   // re-apply whenever any surface changes the config, and once on load
   window.addEventListener('aq-buddy-changed', e => applyToMascot(e.detail || buddyConfig()));

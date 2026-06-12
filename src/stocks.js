@@ -10,7 +10,7 @@
 // drifts slowly between 0 (calm) and 1 (chaotic), driving step size and the
 // frequency of marketwide crashes/pumps.
 
-import { ref, get, set, runTransaction, serverTimestamp } from 'firebase/database';
+import { ref, get, set, onValue, runTransaction, serverTimestamp } from 'firebase/database';
 import { db } from './firebase.js';
 
 // ---------------------------------------------------------------------------
@@ -23,6 +23,12 @@ import { db } from './firebase.js';
 // sensitivity to the marketwide (economy) move; `vol` = idiosyncratic jitter.
 const STOCKS = [
   // survivors keep their id so existing holdings carry over (blz is now WEED)
+  // resource commodities — tied to the Pawn Shop economy (shop sells push the
+  // price down, trades push it around; a shared impact layer makes it global)
+  { id:'ore',     ticker:'ORE',   name:'Ore Futures',        basePrice:50,  beta:0.7, vol:1.2, profile:'steady', commodity:true },
+  { id:'gems',    ticker:'GEMS',  name:'Gem Exchange',       basePrice:120, beta:0.9, vol:1.7, profile:'swingy', commodity:true },
+  { id:'lumbr',   ticker:'LUMBR', name:'Lumber Futures',     basePrice:35,  beta:0.8, vol:1.3, profile:'steady', commodity:true },
+  { id:'fish',    ticker:'FISH',  name:'Fish Market',        basePrice:30,  beta:0.8, vol:1.4, profile:'steady', commodity:true },
   { id:'blz',     ticker:'WEED',  name:'Weed Inc.',          basePrice:42,  beta:1.2, vol:1.6, profile:'steady' },
   { id:'snow',    ticker:'SNOW',  name:'Snow',               basePrice:88,  beta:1.6, vol:2.2, profile:'swingy' },
   { id:'gun',     ticker:'GUNZ',  name:'Gunz',               basePrice:64,  beta:1.1, vol:1.4, profile:'steady' },
@@ -71,6 +77,39 @@ const REGIME_PERIOD  = 600;    // ticks per regime segment (~40 min) — slow ca
 const SNAPSHOT_EVERY = 20;     // write a Firebase snapshot every N ticks
 const CHART_WINDOW   = 160;    // max points kept for the live chart
 const PRICE_FLOOR    = 0.01;
+
+// ── Commodity impact layer ────────────────────────────────────────────────────
+// The deterministic market is identical for everyone, so player supply/demand
+// lives in a tiny shared Firebase node: `market-impact/<id>` = { imp, ts }.
+// `imp` is a log-price impulse (selling materials pushes it down, buying shares
+// pushes it up) that DECAYS with a ~25-minute half-life — prices can spike but
+// always equalize back toward fair value, and the multiplier is hard-capped.
+const IMPACT_CAP = 0.45;                       // |log impact| cap (≈ ±57% price)
+const IMPACT_HALF_MS = 25 * 60 * 1000;
+let _impacts = {};                             // id -> { imp, ts }
+function _decayedImp(e, now) { return e ? (e.imp || 0) * Math.pow(0.5, (now - (e.ts || now)) / IMPACT_HALF_MS) : 0; }
+function impactMult(id) {
+  const s = STOCKS.find(x => x.id === id);
+  if (!s || !s.commodity) return 1;
+  const imp = Math.max(-IMPACT_CAP, Math.min(IMPACT_CAP, _decayedImp(_impacts[id], Date.now())));
+  return Math.exp(imp);
+}
+function pushImpact(id, delta) {
+  const s = STOCKS.find(x => x.id === id);
+  if (!s || !s.commodity || !isFinite(delta)) return;
+  delta = Math.max(-0.1, Math.min(0.1, delta));      // per-event clamp
+  try {
+    runTransaction(ref(db, 'market-impact/' + id), cur => {
+      const now = Date.now();
+      const imp = _decayedImp(cur, now) + delta;
+      return { imp: Math.max(-0.6, Math.min(0.6, imp)), ts: now };
+    }).catch(() => {});
+  } catch (e) {}
+  // optimistic local echo so the seller sees the rate move immediately
+  const now = Date.now();
+  _impacts[id] = { imp: Math.max(-0.6, Math.min(0.6, _decayedImp(_impacts[id], now) + delta)), ts: now };
+}
+try { onValue(ref(db, 'market-impact'), snap => { _impacts = snap.val() || {}; }); } catch (e) {}
 const MEAN_REVERT    = 0.012;  // gentle pull back toward base price (keeps stocks alive)
 
 const COMPARE_COLORS = ['#36c9ff','#ff5d8f','#ffd23f','#7be36a','#c79bff','#ff9f43','#5ad1c4','#ff6b6b'];
@@ -223,7 +262,8 @@ function advanceTo(target) {
 
 function priceOf(id) {
   const buf = history[id];
-  return buf && buf.length ? buf[buf.length - 1].price : (STOCKS.find(s => s.id === id)?.basePrice || 0);
+  const raw = buf && buf.length ? buf[buf.length - 1].price : (STOCKS.find(s => s.id === id)?.basePrice || 0);
+  return raw * impactMult(id);
 }
 // % change across the selected timeframe
 function pctChange(id) {
@@ -326,7 +366,11 @@ function rangeHour(id) {
   return { hi, lo };
 }
 function visibleIds() { return _compareMode ? [..._compareSet] : [_selected]; }
-function seriesOf(id) { return _series[id] && _series[id].length ? _series[id] : (history[id] || []); }
+function seriesOf(id) {
+  const raw = _series[id] && _series[id].length ? _series[id] : (history[id] || []);
+  const m = impactMult(id);
+  return m === 1 ? raw : raw.map(p => ({ ...p, price: p.price * m }));
+}
 
 // ---------------------------------------------------------------------------
 // Firebase: config (write-once), snapshots, clock sync
@@ -716,6 +760,7 @@ function doBuy(id, qty) {
   savePortfolio();
   // No XP for buying — finance XP comes only from realized profit on a sell, so
   // spamming buy↔sell round-trips (no net gain) can't farm it.
+  pushImpact(id, Math.min(0.06, cost / 60000));      // demand nudges commodities up
   tradeMsg(`Bought ${qty} @ ${fmt(px)} (−${cost} 🪙).`, true);
   renderAll();
 }
@@ -737,6 +782,7 @@ function doSell(id, qty) {
   if (profit > 0 && typeof window.aqGameXp === 'function') {
     window.aqGameXp('finance', { played: false, won: true, mult: Math.min(6, profit / 800) });
   }
+  pushImpact(id, -Math.min(0.06, proceeds / 60000)); // supply nudges commodities down
   tradeMsg(`Sold ${qty} @ ${fmt(px)} (+${proceeds} 🪙).`, true);
   renderAll();
 }
@@ -821,3 +867,9 @@ async function openStocks(show = true) {
 }
 
 window.openStocks = openStocks;
+// Pawn-shop hooks: live commodity rate (price/base ratio) + supply impact pushes.
+window.aqResourceRate = function (id) {
+  const s = STOCKS.find(x => x.id === id);
+  return s ? priceOf(id) / s.basePrice : 1;
+};
+window.aqResourceImpact = pushImpact;

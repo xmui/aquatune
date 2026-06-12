@@ -8,24 +8,53 @@
 // Item ids are namespaced: 'ore_copper', 'log_oak', …  Register display info in
 // ITEMS below when adding a new resource type.
 
+// value = base credit worth (the Pawn Shop pays value × the live commodity rate);
+// commodity = which Exchange ticker (ore / gems / lumbr) sets that rate.
 const ITEMS = {
   // mining ores (match src/mining.js ORES names, lowercased)
-  ore_stone:    { name: 'Stone',        icon: '🪨' },
-  ore_copper:   { name: 'Copper Ore',   icon: '🟠' },
-  ore_coal:     { name: 'Coal',         icon: '⚫' },
-  ore_iron:     { name: 'Iron Ore',     icon: '⚙️' },
-  ore_gold:     { name: 'Gold Ore',     icon: '🟡' },
-  ore_emerald:  { name: 'Emerald',      icon: '🟢' },
-  ore_ruby:     { name: 'Ruby',         icon: '🔴' },
-  ore_obsidian: { name: 'Obsidian',     icon: '🟣' },
-  ore_diamond:  { name: 'Diamond',      icon: '💎' },
-  ore_aquatune: { name: 'Aquatune Ore', icon: '🔷' },
+  ore_stone:    { name: 'Stone',        icon: '🪨', value: 2,   commodity: 'ore' },
+  ore_copper:   { name: 'Copper Ore',   icon: '🟠', value: 5,   commodity: 'ore' },
+  ore_coal:     { name: 'Coal',         icon: '⚫', value: 8,   commodity: 'ore' },
+  ore_iron:     { name: 'Iron Ore',     icon: '⚙️', value: 13,  commodity: 'ore' },
+  ore_gold:     { name: 'Gold Ore',     icon: '🟡', value: 26,  commodity: 'ore' },
+  ore_emerald:  { name: 'Emerald',      icon: '🟢', value: 48,  commodity: 'gems' },
+  ore_ruby:     { name: 'Ruby',         icon: '🔴', value: 90,  commodity: 'gems' },
+  ore_obsidian: { name: 'Obsidian',     icon: '🟣', value: 120, commodity: 'ore' },
+  ore_diamond:  { name: 'Diamond',      icon: '💎', value: 200, commodity: 'gems' },
+  ore_aquatune: { name: 'Aquatune Ore', icon: '🔷', value: 340, commodity: 'gems' },
   // woodcutting logs (match src/lumberjack.js TREES)
-  log_birch:    { name: 'Birch Logs',   icon: '🪵' },
-  log_oak:      { name: 'Oak Logs',     icon: '🪵' },
-  log_pine:     { name: 'Pine Logs',    icon: '🌲' },
-  log_redwood:  { name: 'Redwood Logs', icon: '🪵' },
-  log_spirit:   { name: 'Spirit Logs',  icon: '✨' },
+  log_birch:    { name: 'Birch Logs',   icon: '🪵', value: 3,   commodity: 'lumbr' },
+  log_oak:      { name: 'Oak Logs',     icon: '🪵', value: 7,   commodity: 'lumbr' },
+  log_pine:     { name: 'Pine Logs',    icon: '🌲', value: 14,  commodity: 'lumbr' },
+  log_redwood:  { name: 'Redwood Logs', icon: '🪵', value: 28,  commodity: 'lumbr' },
+  log_spirit:   { name: 'Spirit Logs',  icon: '✨', value: 55,  commodity: 'lumbr' },
+  // forest produce (shaken loose while felling — see src/lumberjack.js)
+  apple:        { name: 'Apple',        icon: '🍎', value: 4,   commodity: 'lumbr' },
+  // the day's catch (src/fishing.js; values match the fish table)
+  fish_minnow:          { name: 'Minnow',          icon: '🐟', value: 4,   commodity: 'fish' },
+  fish_bass:            { name: 'Bass',            icon: '🐟', value: 10,  commodity: 'fish' },
+  fish_pike:            { name: 'Pike',            icon: '🐟', value: 18,  commodity: 'fish' },
+  fish_rainbow_trout:   { name: 'Rainbow Trout',   icon: '🐟', value: 30,  commodity: 'fish' },
+  fish_golden_carp:     { name: 'Golden Carp',     icon: '🐠', value: 75,  commodity: 'fish' },
+  fish_sardine:         { name: 'Sardine',         icon: '🐟', value: 8,   commodity: 'fish' },
+  fish_mackerel:        { name: 'Mackerel',        icon: '🐟', value: 18,  commodity: 'fish' },
+  fish_pufferfish:      { name: 'Pufferfish',      icon: '🐡', value: 36,  commodity: 'fish' },
+  fish_swordfish:       { name: 'Swordfish',       icon: '🐠', value: 85,  commodity: 'fish' },
+  fish_anglerfish:      { name: 'Anglerfish',      icon: '🐠', value: 130, commodity: 'fish' },
+  fish_mudfish:         { name: 'Mudfish',         icon: '🐟', value: 20,  commodity: 'fish' },
+  fish_catfish:         { name: 'Catfish',         icon: '🐟', value: 42,  commodity: 'fish' },
+  fish_eel:             { name: 'Eel',             icon: '🐟', value: 78,  commodity: 'fish' },
+  fish_snapping_turtle: { name: 'Snapping Turtle', icon: '🐢', value: 115, commodity: 'fish' },
+  fish_bog_serpent:     { name: 'Bog Serpent',     icon: '🐍', value: 190, commodity: 'fish' },
+  fish_lavafish:        { name: 'Lavafish',        icon: '🐠', value: 60,  commodity: 'fish' },
+  fish_cinder_eel:      { name: 'Cinder Eel',      icon: '🐍', value: 125, commodity: 'fish' },
+  fish_magma_ray:       { name: 'Magma Ray',       icon: '🐠', value: 230, commodity: 'fish' },
+  fish_demon_koi:       { name: 'Demon Koi',       icon: '🐠', value: 320, commodity: 'fish' },
+  fish_hellfish:        { name: 'Hellfish',        icon: '🐠', value: 420, commodity: 'fish' },
+  fish_river_king:      { name: 'River King',      icon: '🐋', value: 300, commodity: 'fish' },
+  fish_leviathan:       { name: 'Leviathan',       icon: '🐋', value: 500, commodity: 'fish' },
+  fish_bog_horror:      { name: 'Bog Horror',      icon: '🐋', value: 680, commodity: 'fish' },
+  fish_cerberus_fish:   { name: 'Cerberus Fish',   icon: '🐋', value: 950, commodity: 'fish' },
 };
 
 const KEY = 'aq_inventory';
@@ -43,6 +72,19 @@ function invAdd(id, n = 1) {
   if (w && w.classList.contains('open')) render();
 }
 function invCount(id) { return read()[id] | 0; }
+// Remove items (the Pawn Shop spends them). Returns how many were actually taken.
+function invTake(id, n = 1) {
+  const inv = read();
+  const have = inv[id] | 0;
+  const take = Math.max(0, Math.min(have, Math.round(n)));
+  if (!take) return 0;
+  inv[id] = have - take;
+  if (!inv[id]) delete inv[id];
+  write(inv);
+  const w = document.getElementById('inventory-wrap');
+  if (w && w.classList.contains('open')) render();
+  return take;
+}
 
 // ── window ───────────────────────────────────────────────────────────────────
 let _built = false, gridEl = null;
@@ -93,7 +135,7 @@ function build() {
   area.innerHTML = '';
   gridEl = el('div', 'inv-grid');
   area.appendChild(gridEl);
-  area.appendChild(el('div', 'inv-hint', 'Raw materials you\'ve gathered. A trading post is coming soon…'));
+  area.appendChild(el('div', 'inv-hint', 'Raw materials you\'ve gathered. Sell them at the 🏪 Pawn Shop for credits.'));
   _built = true;
 }
 
@@ -110,7 +152,9 @@ function openInventory(show = true) {
 if (typeof window !== 'undefined') {
   window.aqInvAdd = invAdd;
   window.aqInvCount = invCount;
+  window.aqInvTake = invTake;
   window.aqInvAll = read;
+  window.aqInvItems = ITEMS;
   window.openInventory = openInventory;
   window.addEventListener('aq-gamedata-synced', () => {
     const w = document.getElementById('inventory-wrap');

@@ -59,10 +59,22 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
   forest, billboard trees, rhythm-meter chopping, falling-tree danger.
   Game SFX are synthesized via `window.*Sfx` defined near `pokerSfx` in
   `index.html` (uses `initActx()` + `_gameVol`).
-- **Gathered resources also land in the shared inventory** (`src/inventory.js`):
-  call `window.aqInvAdd('<ns>_<id>', n)` (e.g. `ore_copper`, `log_oak`) and
-  register the item's display info in its `ITEMS` map. Counts live in
-  `aq_inventory` (COUNT_KEYS, per-item max-merge) for the future trading post.
+- **Gathered resources land in the shared inventory** (`src/inventory.js`):
+  `window.aqInvAdd/aqInvTake('<ns>_<id>', n)` (e.g. `ore_copper`, `log_oak`);
+  register display info + base `value` + `commodity` in its `ITEMS` map. The
+  **Pawn Shop** (`src/pawnshop.js`) is the ONLY cash-out: it pays `value ×` the
+  live commodity rate from the Exchange's ORE/GEMS/LUMBR tickers
+  (`window.aqResourceRate(id)`), and sells push a shared, capped, decaying
+  price impact (`window.aqResourceImpact`, Firebase `market-impact/<id>`).
+  Shop-exclusive Aquatard accessories/tattoos: registry in pawnshop.js
+  (`aqShopAccessories`/`aqAccOwned`, key `aq_owned_acc`), SVGs in
+  `OUTFIT_DEFS` (index.html) / `CLOTHES`+`TATTOOS` (src/buddy.js), locked in
+  the Creator until bought. `aq_inventory` is a BLOB key (it decrements).
+- **Tools (pick/rod/axe) are bought & repaired at the Pawn Shop** with durability
+  (`src/tools.js`: `aqToolTier/Info/Wear/Buy/Repair`, state in `aq_tools` BLOB;
+  owned tier mirrors to the legacy TIER_KEYS so purchases survive sync races;
+  broken tools act as the indestructible starter tier until repaired). Gadgets
+  (e.g. the mining ENEMY RADAR) share the `aq_owned_acc` store.
 - **Persist bought game items to the cloud.** Anything a user buys/unlocks (pickaxe,
   rod, stage/zone, dex…) must sync per-account or it "resets" on update/new device.
   Write the localStorage key as before, then call `window.aqGamePersist('<key>')`;

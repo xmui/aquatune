@@ -38,6 +38,11 @@ const ACCESSORIES = [
   { id: 'facetribal',   type: 'tattoo', name: 'Face Tribal',        price: 11000, pitch: 'CAREER ENDER' },
 ];
 
+// own-once gadgets (not wearable — they live on the tool wall)
+const GADGETS = [
+  { id: 'radar', name: 'ENEMY RADAR', price: 2800, icon: '📡', pitch: 'FELL OFF A TRUCK', desc: 'Creature blips on the Mining minimap' },
+];
+
 const OWN_KEY = 'aq_owned_acc';
 function owned() { try { return JSON.parse(localStorage.getItem(OWN_KEY) || '{}') || {}; } catch { return {}; } }
 function isOwned(id) { return !!owned()[id]; }
@@ -57,7 +62,7 @@ function rate(commodity) {
 function unitPrice(item) { return Math.max(1, Math.round(item.value * rate(item.commodity))); }
 
 // ── state ────────────────────────────────────────────────────────────────────
-let _built = false, area = null, caseEl = null, sellEl = null, tickerEl = null, tab = 'sell';
+let _built = false, area = null, caseEl = null, sellEl = null, toolsEl = null, tickerEl = null, tab = 'sell';
 let _rateT = null;
 
 // ── render: rate ticker (scrolling marquee) ──────────────────────────────────
@@ -168,15 +173,70 @@ function sellItems(id, n, quiet) {
   if (!quiet) { sfx('chaching'); renderSell(); renderTicker(); }
 }
 
+// ── render: TOOL WALL (buy / repair tools, gadgets) ──────────────────────────
+function renderTools() {
+  if (!toolsEl) return;
+  toolsEl.innerHTML = '';
+  const defs = window.aqToolDefs || {};
+  for (const kind of Object.keys(defs)) {
+    const d = defs[kind];
+    const ti = window.aqToolInfo(kind);
+    const cur = d.tiers[ti.tier];
+    const row = el('div', 'pw-row pw-row-tool');
+    const wearPct = ti.max === -1 ? 100 : Math.round(ti.dur / ti.max * 100);
+    row.innerHTML =
+      `<span class="pw-row-ico">${d.icon}</span>
+       <span class="pw-row-name">${cur.name} ${d.name}${ti.broken ? ' <b class="pw-broke">BROKEN</b>' : ''}
+         <span class="pw-dur"><span class="pw-dur-fill${wearPct < 25 ? ' low' : ''}" style="width:${wearPct}%"></span></span>
+       </span>`;
+    if (ti.max !== -1 && ti.dur < ti.max) {
+      const rc = window.aqToolRepairCost(kind);
+      const fix = el('button', 'pw-btn pw-btn-sell', `🔧 Repair 💰${fmt(rc)}`);
+      fix.disabled = credits() < rc;
+      fix.onclick = () => { if (window.aqToolRepair(kind)) { sfx('chaching'); renderTools(); } else sfx('deny'); };
+      row.appendChild(fix);
+    }
+    if (ti.tier < d.tiers.length - 1) {
+      const next = d.tiers[ti.tier + 1];
+      const b = el('button', 'pw-btn pw-btn-buy', `${next.name} 💰${fmt(next.cost)}`);
+      b.disabled = credits() < next.cost;
+      b.onclick = () => { if (window.aqToolBuy(kind)) { sfx('buy'); try { window.toast && window.toast(`${d.icon} ${next.name} ${d.name} — fresh off the wall!`); } catch (e) {} renderTools(); } else sfx('deny'); };
+      row.appendChild(b);
+    } else row.appendChild(el('span', 'pw-maxed', 'TOP SHELF ✓'));
+    toolsEl.appendChild(row);
+  }
+  for (const g of GADGETS) {
+    const own = isOwned(g.id);
+    const row = el('div', 'pw-row pw-row-tool');
+    row.innerHTML = `<span class="pw-row-ico">${g.icon}</span>
+      <span class="pw-row-name">${g.name} <i>· ${g.desc}</i><div class="pw-item-pitch">★ ${g.pitch} ★</div></span>`;
+    if (own) row.appendChild(el('span', 'pw-maxed', 'OWNED ✓'));
+    else {
+      const b = el('button', 'pw-btn pw-btn-buy', `💰${fmt(g.price)}`);
+      b.disabled = credits() < g.price;
+      b.onclick = () => {
+        if (credits() < g.price) { sfx('deny'); return; }
+        window.aqSetCredits(credits() - g.price);
+        setOwned(g.id); sfx('buy');
+        try { window.toast && window.toast(`${g.icon} ${g.name} installed!`); } catch (e) {}
+        renderTools();
+      };
+      row.appendChild(b);
+    }
+    toolsEl.appendChild(row);
+  }
+}
+
 // ── window plumbing ──────────────────────────────────────────────────────────
 function setTab(t) {
   tab = t;
   if (!area) return;
   area.querySelectorAll('.pw-tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
-  const c = area.querySelector('.pw-case-wrap'), s = area.querySelector('.pw-sell-wrap');
+  const c = area.querySelector('.pw-case-wrap'), s = area.querySelector('.pw-sell-wrap'), w = area.querySelector('.pw-tools-wrap');
   if (c) c.style.display = t === 'buy' ? 'block' : 'none';
   if (s) s.style.display = t === 'sell' ? 'block' : 'none';
-  if (t === 'buy') renderCase(); else renderSell();
+  if (w) w.style.display = t === 'tools' ? 'block' : 'none';
+  if (t === 'buy') renderCase(); else if (t === 'tools') renderTools(); else renderSell();
 }
 function injectStyle() {
   if (document.getElementById('pw-style')) return;
@@ -258,6 +318,13 @@ function injectStyle() {
   .pw-fine{font-size:8.5px;color:#caa888;margin-top:7px;line-height:1.45}
   .pw-empty{text-align:center;font-family:'Arial Black',Verdana,sans-serif;color:#ffe9a0;font-size:14px;padding:26px 10px;text-shadow:0 1px 0 #000}
   .pw-empty span{display:block;font-size:10px;color:#caa888;margin-top:6px;font-family:var(--font-ui)}
+  .pw-tools-wrap{padding:0 12px}
+  .pw-row-tool{background:linear-gradient(180deg,#3a3046,#241c30);border-color:#8a6ad0}
+  .pw-dur{display:block;width:110px;height:6px;border-radius:3px;background:rgba(0,0,0,.5);margin-top:3px;overflow:hidden}
+  .pw-dur-fill{display:block;height:100%;background:linear-gradient(90deg,#58c058,#a8e078)}
+  .pw-dur-fill.low{background:linear-gradient(90deg,#e04838,#ff8a4a)}
+  .pw-broke{color:#ff5858;animation:pwBlink .8s steps(2) infinite}
+  .pw-maxed{font-size:9.5px;font-weight:900;color:#8ae08a}
   @media (max-width:768px){#pawn-wrap{width:100vw;top:0;left:0;transform:none;height:100%;max-height:none;border-radius:0}}`;
   document.head.appendChild(s);
 }
@@ -274,10 +341,12 @@ function build() {
   const tabs = el('div', 'pw-tabs');
   const tSell = el('button', 'pw-tab', '💸 CASH 4 STUFF'); tSell.dataset.t = 'sell'; tSell.onclick = () => setTab('sell');
   const tBuy = el('button', 'pw-tab', '🛍️ THE CASE'); tBuy.dataset.t = 'buy'; tBuy.onclick = () => setTab('buy');
-  tabs.append(tSell, tBuy);
+  const tTools = el('button', 'pw-tab', '🧰 TOOL WALL'); tTools.dataset.t = 'tools'; tTools.onclick = () => setTab('tools');
+  tabs.append(tSell, tBuy, tTools);
   area.appendChild(tabs);
   const sw = el('div', 'pw-sell-wrap'); sellEl = el('div'); sw.appendChild(sellEl); area.appendChild(sw);
   const cw = el('div', 'pw-case-wrap'); caseEl = el('div', 'pw-case'); cw.appendChild(caseEl); area.appendChild(cw);
+  const tw = el('div', 'pw-tools-wrap'); toolsEl = el('div'); tw.appendChild(toolsEl); area.appendChild(tw);
   _built = true;
 }
 function openPawnShop(show = true) {
@@ -291,7 +360,7 @@ function openPawnShop(show = true) {
   clearInterval(_rateT);
   _rateT = setInterval(() => {                      // rates drift live while open
     renderTicker();
-    if (tab === 'sell') renderSell(); else renderCase();
+    if (tab === 'sell') renderSell(); else if (tab === 'tools') renderTools(); else renderCase();
   }, 5000);
 }
 

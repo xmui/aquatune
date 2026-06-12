@@ -70,6 +70,11 @@ The skills/stats system (`src/skills.js`) is intentionally **grindy**:
   (`aqShopAccessories`/`aqAccOwned`, key `aq_owned_acc`), SVGs in
   `OUTFIT_DEFS` (index.html) / `CLOTHES`+`TATTOOS` (src/buddy.js), locked in
   the Creator until bought. `aq_inventory` is a BLOB key (it decrements).
+- **Tools (pick/rod/axe) are bought & repaired at the Pawn Shop** with durability
+  (`src/tools.js`: `aqToolTier/Info/Wear/Buy/Repair`, state in `aq_tools` BLOB;
+  owned tier mirrors to the legacy TIER_KEYS so purchases survive sync races;
+  broken tools act as the indestructible starter tier until repaired). Gadgets
+  (e.g. the mining ENEMY RADAR) share the `aq_owned_acc` store.
 - **Persist bought game items to the cloud.** Anything a user buys/unlocks (pickaxe,
   rod, stage/zone, dex…) must sync per-account or it "resets" on update/new device.
   Write the localStorage key as before, then call `window.aqGamePersist('<key>')`;

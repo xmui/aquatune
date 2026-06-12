@@ -76,7 +76,10 @@ function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function sfx(n) { try { window.miningSfx && window.miningSfx(n); } catch (e) {} }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
-function pickTier() { return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0)); }
+function pickTier() {
+  if (typeof window.aqToolTier === 'function') return Math.min(PICKS.length - 1, window.aqToolTier('pick'));
+  return Math.max(0, Math.min(PICKS.length - 1, parseInt(localStorage.getItem('aq_mining_pick') || '0', 10) || 0));
+}
 function pickPower() { return PICKS[pickTier()].power; }
 function sackCap() { return SACK_BASE + pickTier() * 2; }
 function mineLvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('mining')) || 1; }
@@ -126,7 +129,7 @@ function addDepth(n) {
 
 // ── procedural art ───────────────────────────────────────────────────────────
 let texRock = null, texEdge = null, texDepleted = null, texOre = {}, texCrack = null;
-let monSprites = {}, cartSprite = null, stalactiteSprite = null;
+let monSprites = {}, cartSprite = null, stalactiteSprite = null, stalagmiteSprite = null;
 let stalactites = [];
 let _bakedZone = -1;
 
@@ -268,6 +271,8 @@ function bakeArt() {
   const tints = [['#6a8a4a', '#ffe04a'], ['#4a6a8a', '#5ae0ff'], ['#7a6a3a', '#ffd84a'], ['#8a3a2a', '#ff7a2a'], ['#5a3a8a', '#c08aff']];
   const [body, eye] = tints[curZone];
   stalactiteSprite = bakeStalactite(pal);
+  { const c = mkCanvas(14, 26), g = c.getContext('2d');     // flipped: floor spike
+    g.translate(0, 26); g.scale(1, -1); g.drawImage(stalactiteSprite, 0, 0); stalagmiteSprite = c; }
   monSprites.gremlin = { normal: bakeGremlin(body, eye, false), hurt: bakeGremlin(body, eye, true) };
   monSprites.bat = { normal: bakeBat(body, eye, false), hurt: bakeBat(body, eye, true) };
   if (!cartSprite) cartSprite = bakeCart();
@@ -320,9 +325,11 @@ function genZone() {
   }
   // hanging stalactites on open floor cells (cave dressing)
   stalactites = [];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 26; i++) {
     const p = randFloor(2);
-    if (p) stalactites.push({ x: p.x, y: p.y, size: 0.3 + Math.random() * 0.25, hang: 0.92 + Math.random() * 0.06 });
+    if (!p) continue;
+    const up = Math.random() < 0.35;        // some grow UP from the floor (stalagmites)
+    stalactites.push({ x: p.x, y: p.y, size: (up ? 0.22 : 0.3) + Math.random() * 0.25, hang: up ? 0 : 0.92 + Math.random() * 0.06, up });
   }
   // player + creatures
   px = spawn.x; py = spawn.y + 0.9; pa = -Math.PI / 2; pitch = 0;
@@ -470,6 +477,9 @@ function swing() {
   if (!vein) { sfx('hit'); return; }
   if (sack.length >= sackCap()) { sfx('hit'); addFloater('Sack full! Sell at the cart ⬆', '#ffd84a'); return; }
   vein.hp -= pickPower(); vein.flashT = 0.12;
+  if (typeof window.aqToolWear === 'function' && window.aqToolWear('pick', 1)) {
+    sfx('break'); addFloater('⛏️ Your pick BROKE! Repair it at the Pawn Shop', '#ff5a5a');
+  }
   sfx('hit'); burst(vein.def.color, 6);
   if (vein.hp <= 0) breakVein(vein, mapX, mapY, now);
 }
@@ -613,7 +623,7 @@ function render(now) {
   const sprites = [];
   if (cart && cart.canvas) sprites.push(cart);
   if (stalactiteSprite) for (const st of stalactites)
-    sprites.push({ x: st.x, y: st.y, size: st.size, float: st.hang, canvas: stalactiteSprite });
+    sprites.push({ x: st.x, y: st.y, size: st.size, float: st.hang, canvas: st.up ? stalagmiteSprite : stalactiteSprite });
   for (const e of mons) sprites.push({
     x: e.x, y: e.y, size: e.size,
     float: e.float ? e.float + Math.sin(now / 240 + e.phase) * 0.08 : 0,
@@ -739,7 +749,11 @@ function drawMinimap() {
   ctx.globalAlpha = 0.8;
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(x0 - 1, y0 - 1, mw + 2, MH * 2 + 2);
   ctx.drawImage(minimapBuf, x0, y0);
-  for (const e of mons) { ctx.fillStyle = '#ff4a4a'; ctx.fillRect(x0 + ((e.x * 2) | 0) - 1, y0 + ((e.y * 2) | 0) - 1, 2, 2); }
+  // creature blips need the Pawn Shop ENEMY RADAR gadget
+  if (window.aqAccOwned && window.aqAccOwned('radar')) {
+    const blink = ((performance.now() / 400) | 0) % 2 === 0;
+    for (const e of mons) { ctx.fillStyle = blink ? '#ff4a4a' : '#ff9a9a'; ctx.fillRect(x0 + ((e.x * 2) | 0) - 1, y0 + ((e.y * 2) | 0) - 1, 2, 2); }
+  }
   ctx.fillStyle = '#fff'; ctx.fillRect(x0 + ((px * 2) | 0) - 1, y0 + ((py * 2) | 0) - 1, 2, 2);
   ctx.fillRect(x0 + ((px + dirX * 0.9) * 2 | 0), y0 + (((py + dirY * 0.9) * 2) | 0), 1, 1);
   ctx.globalAlpha = 1;
@@ -797,24 +811,20 @@ function renderZones() {
   zoneEl.appendChild(pb);
 }
 function renderShop() {
+  // Tools are bought + repaired at the Pawn Shop now; this row just shows wear.
   if (!shopEl) return;
-  const tier = pickTier();
   shopEl.innerHTML = '';
-  if (tier >= PICKS.length - 1) { shopEl.appendChild(el('div', 'm3-info', 'Max pickaxe! ⛏ ' + pickPower())); return; }
-  const next = PICKS[tier + 1];
-  const btn = el('button', 'm3-btn m3-btn-buy');
-  btn.disabled = credits() < next.cost;
-  btn.textContent = `Upgrade → ${next.name} pick (⛏${next.power}, 🎒+2)  💰${next.cost}`;
-  btn.addEventListener('click', () => {
-    if (credits() < next.cost) return;
-    if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
-    localStorage.setItem('aq_mining_pick', String(tier + 1));
-    if (window.aqGamePersist) window.aqGamePersist('aq_mining_pick');
-    sfx('upgrade');
-    addFloater(next.name.toUpperCase() + ' PICKAXE!', next.color);
-    refreshInfo();
-  });
-  shopEl.appendChild(btn);
+  const ti = typeof window.aqToolInfo === 'function' ? window.aqToolInfo('pick') : null;
+  const d = el('div', 'm3-info');
+  if (ti && ti.max !== -1) {
+    const pct = Math.round(ti.dur / ti.max * 100);
+    d.textContent = `${PICKS[ti.tier].name} pick · ${ti.broken ? '💔 BROKEN (using Wooden)' : 'durability ' + pct + '%'}`;
+    if (ti.broken || pct < 25) d.style.color = '#ff8a6a';
+  } else d.textContent = `${PICKS[pickTier()].name} pick`;
+  shopEl.appendChild(d);
+  const b = el('button', 'm3-btn m3-btn-buy', '🏪 Pawn Shop (tools & repairs)');
+  b.addEventListener('click', () => { window.OS && window.OS.open && window.OS.open('pawn'); });
+  shopEl.appendChild(b);
 }
 
 function clearOverlay() { if (overlayEl) { overlayEl.remove(); overlayEl = null; } }
@@ -916,6 +926,10 @@ function tick(t) {
     updatePlayer(dt);
     updateMonsters(dt, performance.now());
     updateVeins(performance.now());
+    if (Math.random() < dt * 0.5) {                          // cave drips
+      particles.push({ x: Math.random() * RW, y: 8 + Math.random() * 16, vx: 0, vy: 60, life: 0.8, color: 'rgba(140,190,230,0.7)', s: 1 });
+      if (Math.random() < 0.3) sfx('hit');
+    }
     if (swinging) swing();
     updateHud();
   }

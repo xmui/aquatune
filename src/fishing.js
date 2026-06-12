@@ -246,7 +246,10 @@ function stopHookWave() {
     try { w.src.stop(); w.lfo.stop(); } catch (e2) {}
   }
 }
-function rodTier() { return Math.max(0, Math.min(RODS.length - 1, parseInt(localStorage.getItem('aq_fishing_rod') || '0', 10) || 0)); }
+function rodTier() {
+  if (typeof window.aqToolTier === 'function') return Math.min(RODS.length - 1, window.aqToolTier('rod'));
+  return Math.max(0, Math.min(RODS.length - 1, parseInt(localStorage.getItem('aq_fishing_rod') || '0', 10) || 0));
+}
 function maxZone() { let m = 0; for (let i = 0; i < ZONES.length; i++) if (lvl() >= ZONES[i].lvl) m = i; return m; }
 
 // Caught-counts collection (the Fish-o-pedia). { fishName: count }
@@ -398,6 +401,10 @@ function landFish(now) {
   // Shout monster / very-rare landings to the global lobby chat.
   if ((f.monster || f.rarity >= 4) && typeof window.aqGameAnnounce === 'function') {
     window.aqGameAnnounce(f.monster ? `landed the LEVIATHAN 🐋 (+${value}💰)!` : `reeled in a rare ${f.name} 🎣 (+${value}💰)`);
+  }
+  if (typeof window.aqToolWear === 'function' && window.aqToolWear('rod', 1)) {
+    msg += ' · 🎣 rod SNAPPED! (repair at the Pawn Shop)';
+    sfx('fail');
   }
   lastCatch = { shape: f.shape, col: f.col, name: f.name, monster: !!f.monster, img: f.img,
                 isNew: !(readCaught()[f.name] | 0), value };
@@ -743,26 +750,20 @@ function renderZones() {
   });
 }
 
-// Rod shop — buy the next rod to hook rarer fish.
+// Rods are bought + repaired at the Pawn Shop; this row shows wear and points there.
 function renderRodShop() {
   if (!rodEl) return;
-  const tier = rodTier();
   rodEl.innerHTML = '';
-  if (tier >= RODS.length - 1) {
-    const d = document.createElement('div'); d.className = 'gbc-info'; d.textContent = 'Best rod: ' + RODS[tier].name + ' 🎣';
-    rodEl.appendChild(d); return;
-  }
-  const next = RODS[tier + 1];
+  const ti = typeof window.aqToolInfo === 'function' ? window.aqToolInfo('rod') : null;
+  const d = document.createElement('div'); d.className = 'gbc-info';
+  if (ti && ti.max !== -1) {
+    const pct = Math.round(ti.dur / ti.max * 100);
+    d.textContent = `${RODS[ti.tier].name} rod · ${ti.broken ? '💔 SNAPPED (using Bamboo)' : 'line wear ' + pct + '%'}`;
+  } else d.textContent = `${RODS[rodTier()].name} rod`;
+  rodEl.appendChild(d);
   const btn = document.createElement('button'); btn.className = 'gbc-btn';
-  btn.disabled = credits() < next.cost;
-  btn.textContent = `Buy ${next.name} rod 💰${next.cost} — more bites · rarer fish · easier fights`;
-  btn.addEventListener('click', () => {
-    if (credits() < next.cost) return;
-    if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
-    localStorage.setItem('aq_fishing_rod', String(tier + 1));
-    if (window.aqGamePersist) window.aqGamePersist('aq_fishing_rod');
-    sfx('tick'); refreshInfo();
-  });
+  btn.textContent = '🏪 Pawn Shop (rods & repairs)';
+  btn.addEventListener('click', () => { window.OS && window.OS.open && window.OS.open('pawn'); });
   rodEl.appendChild(btn);
 }
 

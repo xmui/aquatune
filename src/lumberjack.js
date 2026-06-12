@@ -30,15 +30,15 @@ const AXES = [
 // One forest per level gate; each has its own palette + tree species.
 const ZONES = [
   { name: 'Birch Meadow',     lvl: 1,  tree: { id: 'birch',   name: 'Birch',   hp: 14,  logs: [2, 3], logValue: 3 },
-    pal: { sky: '#9ce0f8', skyHi: '#d8f4ff', ground: '#4a8a3a', groundFar: '#6aa84a', fog: [150, 200, 230], trunk: '#e8e0d0', bark: '#6a6258', leaf: '#58b048', leafHi: '#88d068' } },
+    pal: { hillFar: '#7ab8d8', hillNear: '#5a9a68',  sky: '#9ce0f8', skyHi: '#d8f4ff', ground: '#4a8a3a', groundFar: '#6aa84a', fog: [150, 200, 230], trunk: '#e8e0d0', bark: '#6a6258', leaf: '#58b048', leafHi: '#88d068' } },
   { name: 'Oak Grove',        lvl: 10, tree: { id: 'oak',     name: 'Oak',     hp: 26,  logs: [2, 4], logValue: 7 },
-    pal: { sky: '#88c8e8', skyHi: '#c8ecf8', ground: '#3a6a2a', groundFar: '#548a3a', fog: [130, 180, 200], trunk: '#7a5a36', bark: '#4a3620', leaf: '#3a7a2a', leafHi: '#5aa040' } },
+    pal: { hillFar: '#6aa0c8', hillNear: '#4a7a4a',  sky: '#88c8e8', skyHi: '#c8ecf8', ground: '#3a6a2a', groundFar: '#548a3a', fog: [130, 180, 200], trunk: '#7a5a36', bark: '#4a3620', leaf: '#3a7a2a', leafHi: '#5aa040' } },
   { name: 'Pine Highlands',   lvl: 25, tree: { id: 'pine',    name: 'Pine',    hp: 44,  logs: [3, 5], logValue: 14 },
-    pal: { sky: '#a8c0d8', skyHi: '#e0ecf4', ground: '#56684a', groundFar: '#788a64', fog: [180, 196, 210], trunk: '#5a4430', bark: '#3a2c1c', leaf: '#2a5a44', leafHi: '#3a7858' } },
+    pal: { hillFar: '#8aa4c0', hillNear: '#5a7060',  sky: '#a8c0d8', skyHi: '#e0ecf4', ground: '#56684a', groundFar: '#788a64', fog: [180, 196, 210], trunk: '#5a4430', bark: '#3a2c1c', leaf: '#2a5a44', leafHi: '#3a7858' } },
   { name: 'Ancient Redwoods', lvl: 45, tree: { id: 'redwood', name: 'Redwood', hp: 80,  logs: [4, 6], logValue: 28 },
-    pal: { sky: '#d8a868', skyHi: '#f0d0a0', ground: '#5a4630', groundFar: '#7a6244', fog: [200, 150, 90], trunk: '#8a4630', bark: '#5a2c1c', leaf: '#3a5a2a', leafHi: '#54783a' } },
+    pal: { hillFar: '#c09060', hillNear: '#7a5a3a',  sky: '#d8a868', skyHi: '#f0d0a0', ground: '#5a4630', groundFar: '#7a6244', fog: [200, 150, 90], trunk: '#8a4630', bark: '#5a2c1c', leaf: '#3a5a2a', leafHi: '#54783a' } },
   { name: 'Spirit Forest',    lvl: 70, tree: { id: 'spirit',  name: 'Spirit',  hp: 130, logs: [4, 7], logValue: 55 },
-    pal: { sky: '#241838', skyHi: '#4a3068', ground: '#202838', groundFar: '#303c50', fog: [60, 40, 100], trunk: '#cfd8e8', bark: '#8a98b0', leaf: '#7a4ad0', leafHi: '#a878f0' } },
+    pal: { hillFar: '#3a2c58', hillNear: '#2a3448',  sky: '#241838', skyHi: '#4a3068', ground: '#202838', groundFar: '#303c50', fog: [60, 40, 100], trunk: '#cfd8e8', bark: '#8a98b0', leaf: '#7a4ad0', leafHi: '#a878f0' } },
 ];
 
 // ── dials ────────────────────────────────────────────────────────────────────
@@ -55,6 +55,19 @@ const RESPAWN_MS = 75000;             // felled trees regrow after ~75s
 const RARE_CHANCE = 0.12;             // thick tree: 2× hp, 2.5× logs, bonus XP
 const MAX_HP = 100, REGEN_DELAY = 4000, REGEN_PER_S = 4;
 const XP_CAP = 12;                    // mining-style cap on any single grant's mult
+// Wildlife: rarer + tamer in the early forests, more frequent + meaner deeper.
+const WILD = [
+  { id: 'rabbit', friendly: true,  minZone: 0, size: 0.22, speed: 2.6, body: '#cfc4b4', belly: '#f0e8dc', ears: 'tall' },
+  { id: 'deer',   friendly: true,  minZone: 0, size: 0.52, speed: 2.2, body: '#a07848', belly: '#d8c4a0', antlers: true },
+  { id: 'fox',    friendly: true,  minZone: 0, size: 0.3,  speed: 2.4, body: '#e07830', belly: '#f8e8d8', tail: 'bushy' },
+  { id: 'boar',   friendly: false, minZone: 1, size: 0.42, speed: 1.7, body: '#5a4636', belly: '#7a6650', dmg: 8,  hpMul: 2.2, tusks: true },
+  { id: 'wolf',   friendly: false, minZone: 2, size: 0.46, speed: 2.5, body: '#6a7078', belly: '#9aa0a8', dmg: 13, hpMul: 2.8, ears: 'point' },
+  { id: 'bear',   friendly: false, minZone: 3, size: 0.68, speed: 1.9, body: '#4a3424', belly: '#6a4e38', dmg: 20, hpMul: 4.5 },
+  { id: 'stag',   friendly: false, minZone: 4, size: 0.6,  speed: 2.3, body: '#b8c8f0', belly: '#e8f0ff', dmg: 26, hpMul: 3.6, antlers: true, glow: true },
+];
+const WILD_CAP  = [1, 2, 3, 4, 5];          // max animals alive per zone
+const WILD_FREQ = [0.3, 0.45, 0.6, 0.75, 0.9];   // spawn-roll success odds per zone
+const WILD_HOSTILE = [0.15, 0.35, 0.5, 0.65, 0.78]; // hostile share of spawns
 function xpZoneMult() { return Math.pow(1.7, curZone); }
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
@@ -63,7 +76,10 @@ function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function sfx(n) { try { window.lumberSfx && window.lumberSfx(n); } catch (e) {} }
 function credits() { return (typeof window.aqGetCredits === 'function' && window.aqGetCredits()) || 0; }
-function axeTier() { return Math.max(0, Math.min(AXES.length - 1, parseInt(localStorage.getItem('aq_lumber_axe') || '0', 10) || 0)); }
+function axeTier() {
+  if (typeof window.aqToolTier === 'function') return Math.min(AXES.length - 1, window.aqToolTier('axe'));
+  return Math.max(0, Math.min(AXES.length - 1, parseInt(localStorage.getItem('aq_lumber_axe') || '0', 10) || 0));
+}
 function axePower() { return AXES[axeTier()].power; }
 function wcLvl() { return (typeof window.aqSkillLevel === 'function' && window.aqSkillLevel('woodcutting')) || 1; }
 function maxZone() { let m = 0; const l = wcLvl(); for (let i = 0; i < ZONES.length; i++) if (l >= ZONES[i].lvl) m = i; return m; }
@@ -86,6 +102,8 @@ let particles = [], floaters = [];
 let treesMod = new Map();             // treeKey -> { hp, state, fallDir, fallT0, respawnAt, rare }
 let felled = 0, sessionLogs = 0;
 let _birdAt = 0;
+let animals = [], _wildAt = 0, _tameCdAt = 0;
+let clouds = [];
 
 // ── procedural tree sprites ──────────────────────────────────────────────────
 let treeSprites = [], stumpSprite = null, _bakedZone = -1;
@@ -116,6 +134,28 @@ function bakeTree(pal, variant, rare) {
   g.globalAlpha = 1;
   return c;
 }
+// chunky PS1 quadruped billboards, one per species
+let animalSprites = {};
+function bakeAnimal(spec) {
+  const W = 34, H = 26, c = mkCanvas(W, H), g = c.getContext('2d');
+  if (spec.glow) { g.fillStyle = 'rgba(160,180,255,0.3)'; g.beginPath(); g.ellipse(17, 13, 16, 12, 0, 0, TWOPI); g.fill(); }
+  g.fillStyle = spec.body;
+  g.beginPath(); g.ellipse(15, 14, 9, 5.5, 0, 0, TWOPI); g.fill();          // body
+  for (const lx of [9, 13, 18, 22]) g.fillRect(lx, 17, 2, 7);               // legs
+  g.beginPath(); g.ellipse(25, 9, 4.5, 3.6, 0, 0, TWOPI); g.fill();         // head
+  g.fillStyle = spec.belly;
+  g.beginPath(); g.ellipse(14, 16, 6, 2.6, 0, 0, TWOPI); g.fill();
+  if (spec.ears === 'tall') { g.fillStyle = spec.body; g.fillRect(24, 1, 2, 6); g.fillRect(27, 1, 2, 6); }
+  if (spec.ears === 'point') { g.fillStyle = spec.body; g.beginPath(); g.moveTo(23, 6); g.lineTo(24.5, 2); g.lineTo(26, 6); g.fill(); g.beginPath(); g.moveTo(26, 6); g.lineTo(27.5, 2); g.lineTo(29, 6); g.fill(); }
+  if (spec.antlers) { g.strokeStyle = spec.glow ? '#e8f0ff' : '#6a4e2a'; g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(24, 6); g.lineTo(21, 1); g.moveTo(22.5, 3.5); g.lineTo(20, 3);
+    g.moveTo(26, 6); g.lineTo(29, 1); g.moveTo(27.5, 3.5); g.lineTo(30, 3); g.stroke(); }
+  if (spec.tusks) { g.fillStyle = '#f0e8d8'; g.fillRect(27, 11, 2, 3); }
+  if (spec.tail === 'bushy') { g.fillStyle = spec.body; g.beginPath(); g.ellipse(5, 11, 4, 2.4, -0.5, 0, TWOPI); g.fill();
+    g.fillStyle = spec.belly; g.beginPath(); g.ellipse(3.4, 10, 1.6, 1.2, -0.5, 0, TWOPI); g.fill(); }
+  g.fillStyle = '#181820'; g.fillRect(27, 8, 1.6, 1.6);                      // eye
+  return c;
+}
 function bakeStump(pal) {
   const c = mkCanvas(20, 14), g = c.getContext('2d');
   g.fillStyle = pal.trunk; g.fillRect(5, 4, 10, 10);
@@ -130,6 +170,8 @@ function bakeArt() {
   const pal = ZONES[curZone].pal;
   treeSprites = [bakeTree(pal, 0, false), bakeTree(pal, 1, false), bakeTree(pal, 0, true)];
   stumpSprite = bakeStump(pal);
+  animalSprites = {};
+  for (const w of WILD) animalSprites[w.id] = bakeAnimal(w);
 }
 
 // ── forest streaming ─────────────────────────────────────────────────────────
@@ -195,6 +237,25 @@ function swing() {
   const now = performance.now();
   if (now - lastSwingAt < SWING_MS || now < koUntil || state !== 'playing') return;
   lastSwingAt = now; swingT = 1; walkPhase += 0.3;
+  // a hostile beast in reach takes the hit first (friendlies are safe from you)
+  let beast = null, bd = 1.9;
+  for (const a of animals) {
+    if (a.spec.friendly) continue;
+    const dx = a.x - px, dy = a.y - py, d = Math.hypot(dx, dy);
+    if (d < bd && (dx * dirX + dy * dirY) / (d || 1e-3) > FACE_DOT) { beast = a; bd = d; }
+  }
+  if (beast) {
+    beast.hp -= axePower(); beast.hurtT = 0.15;
+    sfx('chop'); burst('#ff7a5a', 6);
+    if (beast.hp <= 0) {
+      beast.dead = true;
+      const reward = 12 + curZone * 9;
+      if (typeof window.aqAddCredits === 'function') window.aqAddCredits(reward);
+      sfx('collect'); burst('#ffd84a', 10);
+      addFloater(`${beast.spec.id} down! +${reward} 💰`, '#ffd84a');
+    }
+    return;
+  }
   const t = facingTree();
   if (!t || !meter) { sfx('whiff'); return; }
   const m = treeState(t);
@@ -206,6 +267,9 @@ function swing() {
   else if (inZone) { dmg = axePower(); burst('#e8d8b0', 6); sfx('chop'); }
   else { dmg = axePower() * 0.25; addFloater('glance…', '#c8c8c8'); sfx('weak'); }
   m.hp -= dmg;
+  if (inZone && typeof window.aqToolWear === 'function' && window.aqToolWear('axe', 1)) {
+    addFloater('🪓 Your axe BROKE! Repair it at the Pawn Shop', '#ff5a5a'); sfx('weak');
+  }
   meter.zoneX = 10 + Math.random() * (80 - meter.zoneW);    // sweet spot moves each swing
   meter.v = Math.min(4.2, meter.v * (inZone ? 1.05 : 1));
   if (m.hp <= 0) fellTree(t, m, now);
@@ -244,6 +308,11 @@ function resolveFall(t, m, now) {
   if (typeof window.recordScore === 'function') window.recordScore('lumber', pay, def.name + (t.rare ? ' (giant)' : ''));
   if (typeof window.aqGameXp === 'function')
     window.aqGameXp('woodcutting', { played: true, won: true, mult: Math.min(XP_CAP, (0.5 + (t.rare ? 0.5 : 0)) * xpZoneMult()) });
+  if ((def.id === 'birch' || def.id === 'oak') && Math.random() < 0.25 && typeof window.aqInvAdd === 'function') {
+    const apples = 1 + (Math.random() < 0.3 ? 1 : 0);
+    window.aqInvAdd('apple', apples);
+    addFloater(`+${apples} 🍎`, '#ff9a9a');
+  }
   felled++; sessionLogs += logs;
   sfx('collect');
   addFloater(`+${logs} ${def.name} logs → 🎒`, '#a8e078');
@@ -310,8 +379,63 @@ function updateWorld(dt, now) {
       if (treesMod.size <= 300) break;
     }
   }
+  // ── wildlife ──
+  if (now > _wildAt) {
+    _wildAt = now + 5000 + Math.random() * 5000;
+    if (animals.length < WILD_CAP[curZone] && Math.random() < WILD_FREQ[curZone]) spawnAnimal();
+  }
+  for (const a of animals) {
+    const dx = px - a.x, dy = py - a.y, dist = Math.hypot(dx, dy) || 1e-3;
+    a.cool -= dt;
+    if (a.hurtT > 0) a.hurtT -= dt;
+    if (dist > 30) { a.dead = true; continue; }            // wandered off
+    if (a.spec.friendly) {
+      if (a.fleeUntil > now || dist < 3.2) {               // shy: keep distance
+        a.x -= dx / dist * a.spec.speed * 1.35 * dt; a.y -= dy / dist * a.spec.speed * 1.35 * dt;
+      } else {
+        a.wanderT -= dt;
+        if (a.wanderT <= 0) { a.wanderT = 1 + Math.random() * 2; a.wa = Math.random() * TWOPI; }
+        a.x += Math.cos(a.wa) * 0.5 * dt; a.y += Math.sin(a.wa) * 0.5 * dt;
+      }
+      // 🤫
+      if (a.spec.id === 'fox' && dist < 1.7 && now > _tameCdAt && now >= koUntil &&
+          !(localStorage.getItem('aq_fox_pet') === '1') &&
+          typeof window.aqInvCount === 'function' && window.aqInvCount('apple') > 0) {
+        _tameCdAt = now + 5000;
+        window.aqInvTake('apple', 1);
+        if (Math.random() < 0.4) {
+          try { localStorage.setItem('aq_fox_pet', '1'); window.aqGamePersist && window.aqGamePersist('aq_fox_pet'); } catch (e) {}
+          addFloater('🦊💕', '#ff9ab8'); sfx('collect');
+          a.dead = true;
+          ensureDeskFox();
+        } else { addFloater('🦊…?', '#f8d8a8'); a.fleeUntil = now + 2500; }
+      }
+    } else {
+      if (dist < 9) {                                       // hostile: hunt
+        a.x += dx / dist * a.spec.speed * dt; a.y += dy / dist * a.spec.speed * dt;
+        if (dist < 0.85 && a.cool <= 0 && now >= koUntil) { a.cool = 1.1; hurtPlayer(a.spec.dmg); }
+      } else {
+        a.wanderT -= dt;
+        if (a.wanderT <= 0) { a.wanderT = 1 + Math.random() * 2; a.wa = Math.random() * TWOPI; }
+        a.x += Math.cos(a.wa) * 0.6 * dt; a.y += Math.sin(a.wa) * 0.6 * dt;
+      }
+    }
+  }
+  if (animals.some(a => a.dead)) animals = animals.filter(a => !a.dead);
   // forest ambience
   if (now > _birdAt) { _birdAt = now + 6000 + Math.random() * 14000; if (curZone < 4) sfx('bird'); else sfx('spirit'); }
+}
+function spawnAnimal() {
+  const hostile = Math.random() < WILD_HOSTILE[curZone];
+  const pool = WILD.filter(w => w.minZone <= curZone && w.friendly !== hostile);
+  if (!pool.length) return;
+  const spec = pool[(Math.random() * pool.length) | 0];
+  const ang = Math.random() * TWOPI, d = 9 + Math.random() * 6;
+  animals.push({
+    spec, x: px + Math.cos(ang) * d, y: py + Math.sin(ang) * d,
+    hp: Math.round(axePower() * (spec.hpMul || 1.5) + curZone * 2), cool: 0, hurtT: 0,
+    wanderT: 0, wa: Math.random() * TWOPI, fleeUntil: 0, dead: false,
+  });
 }
 function findTreeByKey(key) {
   const [ck] = key.split(':');
@@ -333,6 +457,26 @@ function render(now) {
   ctx.fillStyle = pal.sky; ctx.fillRect(0, Math.max(0, hor - 34), RW, 34);
   ctx.fillStyle = pal.groundFar; ctx.fillRect(0, Math.max(0, hor), RW, 26);
   ctx.fillStyle = pal.ground; ctx.fillRect(0, Math.max(0, hor + 26), RW, RH);
+  // drifting clouds (world-angle anchored so they parallax as you turn)
+  ctx.fillStyle = pal.skyHi === '#4a3068' ? 'rgba(120,90,170,0.5)' : 'rgba(255,255,255,0.85)';
+  for (const cl of clouds) {
+    cl.a += cl.v * 0.001;
+    let rel = cl.a - pa;
+    while (rel > Math.PI) rel -= TWOPI; while (rel < -Math.PI) rel += TWOPI;
+    if (Math.abs(rel) > 0.8) continue;
+    const cxp = RW / 2 + (rel / 0.66) * (RW / 2);
+    const cy = Math.max(4, hor - cl.h);
+    ctx.fillRect(cxp - cl.w / 2, cy, cl.w, 5); ctx.fillRect(cxp - cl.w / 3, cy - 3, cl.w * 0.6, 3);
+    ctx.fillRect(cxp - cl.w / 4, cy + 5, cl.w * 0.55, 2);
+  }
+  // rolling hill silhouettes on the horizon (two parallax bands)
+  for (let x = 0; x < RW; x += 2) {
+    const ang = pa + (x / RW - 0.5) * 1.1;
+    const h1 = 13 + 8 * Math.sin(ang * 1.3) + 4 * Math.sin(ang * 2.9 + 2.1);
+    const h2 = 7 + 5 * Math.sin(ang * 2.2 + 1.2) + 3 * Math.sin(ang * 4.7 + 0.4);
+    ctx.fillStyle = pal.hillFar; ctx.fillRect(x, hor - h1, 2, h1);
+    ctx.fillStyle = pal.hillNear; ctx.fillRect(x, hor - h2, 2, h2);
+  }
   const [fr, fg, fb] = pal.fog;
   for (let b = 0; b < 4; b++) {
     ctx.fillStyle = `rgba(${fr},${fg},${fb},${0.06 + 0.05 * (3 - b)})`;
@@ -347,8 +491,12 @@ function render(now) {
     if (d2 > 26 * 26) continue;
     list.push({ t, m, d2 });
   }
-  list.sort((a, b) => b.d2 - a.d2);
-  for (const e of list) drawTree(e.t, e.m, hor, now);
+  for (const a of animals) {
+    const dx = a.x - px, dy = a.y - py;
+    list.push({ a, d2: dx * dx + dy * dy });
+  }
+  list.sort((x, y) => y.d2 - x.d2);
+  for (const e of list) { if (e.a) drawAnimal(e.a, hor, now); else drawTree(e.t, e.m, hor, now); }
   drawMeter(now);
   drawAxe(now, bob);
   for (const p of particles) { ctx.fillStyle = p.color; ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillRect(p.x, p.y, p.s, p.s); }
@@ -404,6 +552,36 @@ function drawTree(t, m, hor, now) {
     const bw = Math.max(14, w * 0.5);
     ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(screenX - bw / 2, baseY - h - 5, bw, 3);
     ctx.fillStyle = '#a8e078'; ctx.fillRect(screenX - bw / 2, baseY - h - 5, bw * (m.hp / m.max), 3);
+  }
+}
+function drawAnimal(a, hor, now) {
+  const dx = a.x - px, dy = a.y - py;
+  const planeX = -dirY * 0.66, planeY = dirX * 0.66;
+  const inv = 1 / (planeX * dirY - dirX * planeY);
+  const tY = inv * (-planeY * dx + planeX * dy);
+  if (tY <= 0.15) return;
+  const tX = inv * (dirY * dx - dirX * dy);
+  const screenX = (RW / 2) * (1 + tX / tY);
+  const fullH = RH / tY;
+  const sprite = animalSprites[a.spec.id];
+  if (!sprite) return;
+  const h = fullH * a.spec.size;
+  const w = h * (sprite.width / sprite.height);
+  const baseY = hor + fullH / 2;
+  ctx.save();
+  ctx.globalAlpha = clamp(1 - tY / 22, 0.2, 1);
+  if (a.hurtT > 0) ctx.filter = 'brightness(2.2)';
+  // hop bob for the small ones, face the way it's moving (cheap flip)
+  const bob = a.spec.size < 0.3 ? Math.abs(Math.sin(now / 130 + a.wa)) * h * 0.18 : 0;
+  ctx.translate(screenX, baseY - bob);
+  if (Math.cos(a.wa) < 0) ctx.scale(-1, 1);
+  ctx.drawImage(sprite, -w / 2, -h, w, h);
+  ctx.restore();
+  ctx.filter = 'none';
+  if (!a.spec.friendly && tY < 7) {
+    const max = Math.round(axePower() * (a.spec.hpMul || 1.5) + curZone * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(screenX - 9, baseY - h - 5, 18, 3);
+    ctx.fillStyle = '#ff6a5a'; ctx.fillRect(screenX - 9, baseY - h - 5, 18 * clamp(a.hp / max, 0, 1), 3);
   }
 }
 function drawMeter(now) {
@@ -485,27 +663,25 @@ function renderZones() {
   });
 }
 function renderShop() {
+  // Axes are bought + repaired at the Pawn Shop; this row shows wear.
   if (!shopEl) return;
-  const tier = axeTier();
   shopEl.innerHTML = '';
-  if (tier >= AXES.length - 1) { shopEl.appendChild(el('div', 'lj-info', 'Best axe! 🪓 ' + axePower())); return; }
-  const next = AXES[tier + 1];
-  const btn = el('button', 'lj-btn lj-btn-buy');
-  btn.disabled = credits() < next.cost;
-  btn.textContent = `Upgrade → ${next.name} axe (🪓${next.power}, wider sweet spot)  💰${next.cost}`;
-  btn.addEventListener('click', () => {
-    if (credits() < next.cost) return;
-    if (typeof window.aqSetCredits === 'function') window.aqSetCredits(credits() - next.cost);
-    localStorage.setItem('aq_lumber_axe', String(tier + 1));
-    if (window.aqGamePersist) window.aqGamePersist('aq_lumber_axe');
-    sfx('collect');
-    addFloater(next.name.toUpperCase() + ' AXE!', next.color);
-    refreshInfo();
-  });
-  shopEl.appendChild(btn);
+  const ti = typeof window.aqToolInfo === 'function' ? window.aqToolInfo('axe') : null;
+  const d = el('div', 'lj-info');
+  if (ti && ti.max !== -1) {
+    const pct = Math.round(ti.dur / ti.max * 100);
+    d.textContent = `${AXES[ti.tier].name} axe · ${ti.broken ? '💔 BROKEN (using Rusty)' : 'edge wear ' + pct + '%'}`;
+  } else d.textContent = `${AXES[axeTier()].name} axe`;
+  shopEl.appendChild(d);
+  const b = el('button', 'lj-btn lj-btn-buy', '🏪 Pawn Shop (axes & repairs)');
+  b.addEventListener('click', () => { window.OS && window.OS.open && window.OS.open('pawn'); });
+  shopEl.appendChild(b);
 }
 function enterZone() {
   treesMod.clear(); meter = null;
+  animals = [];
+  clouds = [];
+  for (let i = 0; i < 4; i++) clouds.push({ a: Math.random() * TWOPI, h: 26 + Math.random() * 26, w: 22 + Math.random() * 22, v: 0.04 + Math.random() * 0.05 });
   bakeArt();
   px = 6.5; py = 6.5; pa = 0.6; pitch = 0;
   if (collide(px, py)) px += 1.4;
@@ -707,8 +883,44 @@ function openLumberjack(show = true) {
   if (!raf) { _lastT = 0; raf = requestAnimationFrame(tick); }
 }
 
+function ensureDeskFox() {
+  try {
+    if (typeof document === 'undefined' || localStorage.getItem('aq_fox_pet') !== '1') return;
+    if (document.getElementById('aq-desk-fox')) return;
+    if (!document.body) { window.addEventListener('DOMContentLoaded', ensureDeskFox); return; }
+    const f = document.createElement('div');
+    f.id = 'aq-desk-fox';
+    f.textContent = '🦊';
+    f.style.cssText = 'position:fixed;bottom:58px;left:30%;z-index:280;font-size:25px;cursor:pointer;' +
+      'transition:left 2.6s ease-in-out;user-select:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35))';
+    document.body.appendChild(f);
+    let dir = 1;
+    const roam = () => {
+      if (!f.isConnected) return;
+      if (Math.random() < 0.7) {
+        const nx = 4 + Math.random() * 88;
+        dir = nx > parseFloat(f.style.left) ? 1 : -1;
+        f.style.left = nx + '%';
+        f.style.transform = 'scaleX(' + dir + ')';
+      }
+      setTimeout(roam, 2800 + Math.random() * 4500);
+    };
+    setTimeout(roam, 1500);
+    f.addEventListener('pointerdown', () => {
+      sfx('bird');
+      const h = document.createElement('div');
+      h.textContent = '❤';
+      h.style.cssText = 'position:fixed;z-index:281;pointer-events:none;font-size:13px;left:' + f.style.left + ';bottom:86px;transition:all 1.1s ease-out;opacity:1';
+      document.body.appendChild(h);
+      requestAnimationFrame(() => { h.style.bottom = '120px'; h.style.opacity = '0'; });
+      setTimeout(() => h.remove(), 1200);
+    });
+  } catch (e) {}
+}
+
 if (typeof window !== 'undefined') {
   window.openLumberjack = openLumberjack;
+  ensureDeskFox();
   window.addEventListener('aq-gamedata-synced', () => {
     const w = document.getElementById('lumber-wrap');
     if (!w || !w.classList.contains('open')) return;
@@ -720,6 +932,6 @@ if (typeof window !== 'undefined') {
   if (window.__ljTestHook) window.__ljTestHook({
     snap: () => ({ state, px, py, pa, pitch, hp, meter, felled, sessionLogs, curZone, treesMod }),
     set: o => { if (o.px != null) px = o.px; if (o.py != null) py = o.py; if (o.pa != null) pa = o.pa; if (o.state) state = o.state; dirX = Math.cos(pa); dirY = Math.sin(pa); },
-    swing, facingTree, treeState, nearbyTrees, fellTree, resolveFall, ZONES, AXES,
+    swing, facingTree, treeState, nearbyTrees, fellTree, resolveFall, spawnAnimal, getAnimals: () => animals, ZONES, AXES, WILD,
   });
 }

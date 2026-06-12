@@ -28,6 +28,8 @@ const ITEMS = {
   log_pine:     { name: 'Pine Logs',    icon: '🌲', value: 14,  commodity: 'lumbr' },
   log_redwood:  { name: 'Redwood Logs', icon: '🪵', value: 28,  commodity: 'lumbr' },
   log_spirit:   { name: 'Spirit Logs',  icon: '✨', value: 55,  commodity: 'lumbr' },
+  // forest produce (shaken loose while felling — see src/lumberjack.js)
+  apple:        { name: 'Apple',        icon: '🍎', value: 4,   commodity: 'lumbr' },
 };
 
 const KEY = 'aq_inventory';

@@ -476,7 +476,6 @@ function swing() {
 function breakVein(vein, mapX, mapY, now) {
   const def = vein.def;
   sack.push({ name: def.name, value: Math.round(def.value * prestigeMult()), color: def.color });
-  if (typeof window.aqInvAdd === 'function') window.aqInvAdd('ore_' + def.name.toLowerCase(), 1);
   // The grind: XP per ore, scaled by rarity + zone depth + prestige, hard-capped.
   if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: true, won: true, mult: Math.min(XP_CAP, (0.3 + def.rarity * 0.15) * xpZoneMult() * prestigeMult()) });
   addDepth(5 + def.rarity * 2.5);
@@ -498,17 +497,21 @@ function updateVeins(now) {
 function trySell() {
   if (!sack.length) return;
   if (Math.hypot(cart.x - px, cart.y - py) > 1.25) return;
-  let total = 0; for (const o of sack) total += o.value;
+  // The cart BANKS your haul into the shared inventory — cash it out at the
+  // Pawn Shop, where the live ORE/GEMS rate sets the price.
+  let total = 0;
+  for (const o of sack) {
+    total += o.value;
+    if (typeof window.aqInvAdd === 'function') window.aqInvAdd('ore_' + o.name.toLowerCase(), 1);
+  }
   const n = sack.length;
-  if (typeof window.aqAddCredits === 'function') window.aqAddCredits(total);
   if (typeof window.recordScore === 'function') window.recordScore('mining', total, ZONES[curZone].name);
   // small haul bonus on top of the per-ore grants
   if (typeof window.aqGameXp === 'function') window.aqGameXp('mining', { played: true, won: true, mult: Math.min(3, n * 0.04 * xpZoneMult()) });
   sack = [];
   sellFlashT = 1;
   sfx('upgrade');
-  try { window.playFanfare?.('win'); } catch (e) {}
-  addFloater('SOLD ' + n + ' ore → +' + total + ' 💰', '#ffd84a');
+  addFloater('BANKED ' + n + ' ore → 🎒 (sell at the Pawn Shop)', '#ffd84a');
   refreshInfo();
 }
 
@@ -667,7 +670,7 @@ function drawTargetLabel() {
     if (v) { txt = v.def.name + ' vein · ' + Math.ceil(v.hp) + '/' + v.max; col = v.def.color; }
   } else if (tgt && tgt.wall && tgt.wall.tile === 5) { txt = 'depleted…'; col = '#9aa'; }
   if (!cart) return drawCross(txt, col);
-  if (Math.hypot(cart.x - px, cart.y - py) < 1.6 && sack.length) { txt = '🛒 step up to SELL'; col = '#ffd84a'; }
+  if (Math.hypot(cart.x - px, cart.y - py) < 1.6 && sack.length) { txt = '🛒 step up to BANK your ore'; col = '#ffd84a'; }
   drawCross(txt, col);
 }
 function drawCross(txt, col) {
@@ -756,7 +759,7 @@ function updateHud() {
   if (vignetteEl) vignetteEl.style.opacity = (0.1 + (1 - hpPct) * 0.6).toFixed(2);
 }
 function refreshInfo() {
-  if (infoEl) infoEl.textContent = `${PICKS[pickTier()].name} pick (⛏${pickPower()})${prestige ? ' ◆' + prestige : ''} · sack ${sack.length}/${sackCap()} · sell at the 🛒 cart`;
+  if (infoEl) infoEl.textContent = `${PICKS[pickTier()].name} pick (⛏${pickPower()})${prestige ? ' ◆' + prestige : ''} · sack ${sack.length}/${sackCap()} · bank at 🛒, sell at the Pawn Shop`;
   renderZones(); renderShop(); updateHud();
 }
 function renderZones() {

@@ -8,24 +8,26 @@
 // Item ids are namespaced: 'ore_copper', 'log_oak', …  Register display info in
 // ITEMS below when adding a new resource type.
 
+// value = base credit worth (the Pawn Shop pays value × the live commodity rate);
+// commodity = which Exchange ticker (ore / gems / lumbr) sets that rate.
 const ITEMS = {
   // mining ores (match src/mining.js ORES names, lowercased)
-  ore_stone:    { name: 'Stone',        icon: '🪨' },
-  ore_copper:   { name: 'Copper Ore',   icon: '🟠' },
-  ore_coal:     { name: 'Coal',         icon: '⚫' },
-  ore_iron:     { name: 'Iron Ore',     icon: '⚙️' },
-  ore_gold:     { name: 'Gold Ore',     icon: '🟡' },
-  ore_emerald:  { name: 'Emerald',      icon: '🟢' },
-  ore_ruby:     { name: 'Ruby',         icon: '🔴' },
-  ore_obsidian: { name: 'Obsidian',     icon: '🟣' },
-  ore_diamond:  { name: 'Diamond',      icon: '💎' },
-  ore_aquatune: { name: 'Aquatune Ore', icon: '🔷' },
+  ore_stone:    { name: 'Stone',        icon: '🪨', value: 2,   commodity: 'ore' },
+  ore_copper:   { name: 'Copper Ore',   icon: '🟠', value: 5,   commodity: 'ore' },
+  ore_coal:     { name: 'Coal',         icon: '⚫', value: 8,   commodity: 'ore' },
+  ore_iron:     { name: 'Iron Ore',     icon: '⚙️', value: 13,  commodity: 'ore' },
+  ore_gold:     { name: 'Gold Ore',     icon: '🟡', value: 26,  commodity: 'ore' },
+  ore_emerald:  { name: 'Emerald',      icon: '🟢', value: 48,  commodity: 'gems' },
+  ore_ruby:     { name: 'Ruby',         icon: '🔴', value: 90,  commodity: 'gems' },
+  ore_obsidian: { name: 'Obsidian',     icon: '🟣', value: 120, commodity: 'ore' },
+  ore_diamond:  { name: 'Diamond',      icon: '💎', value: 200, commodity: 'gems' },
+  ore_aquatune: { name: 'Aquatune Ore', icon: '🔷', value: 340, commodity: 'gems' },
   // woodcutting logs (match src/lumberjack.js TREES)
-  log_birch:    { name: 'Birch Logs',   icon: '🪵' },
-  log_oak:      { name: 'Oak Logs',     icon: '🪵' },
-  log_pine:     { name: 'Pine Logs',    icon: '🌲' },
-  log_redwood:  { name: 'Redwood Logs', icon: '🪵' },
-  log_spirit:   { name: 'Spirit Logs',  icon: '✨' },
+  log_birch:    { name: 'Birch Logs',   icon: '🪵', value: 3,   commodity: 'lumbr' },
+  log_oak:      { name: 'Oak Logs',     icon: '🪵', value: 7,   commodity: 'lumbr' },
+  log_pine:     { name: 'Pine Logs',    icon: '🌲', value: 14,  commodity: 'lumbr' },
+  log_redwood:  { name: 'Redwood Logs', icon: '🪵', value: 28,  commodity: 'lumbr' },
+  log_spirit:   { name: 'Spirit Logs',  icon: '✨', value: 55,  commodity: 'lumbr' },
 };
 
 const KEY = 'aq_inventory';
@@ -43,6 +45,19 @@ function invAdd(id, n = 1) {
   if (w && w.classList.contains('open')) render();
 }
 function invCount(id) { return read()[id] | 0; }
+// Remove items (the Pawn Shop spends them). Returns how many were actually taken.
+function invTake(id, n = 1) {
+  const inv = read();
+  const have = inv[id] | 0;
+  const take = Math.max(0, Math.min(have, Math.round(n)));
+  if (!take) return 0;
+  inv[id] = have - take;
+  if (!inv[id]) delete inv[id];
+  write(inv);
+  const w = document.getElementById('inventory-wrap');
+  if (w && w.classList.contains('open')) render();
+  return take;
+}
 
 // ── window ───────────────────────────────────────────────────────────────────
 let _built = false, gridEl = null;
@@ -93,7 +108,7 @@ function build() {
   area.innerHTML = '';
   gridEl = el('div', 'inv-grid');
   area.appendChild(gridEl);
-  area.appendChild(el('div', 'inv-hint', 'Raw materials you\'ve gathered. A trading post is coming soon…'));
+  area.appendChild(el('div', 'inv-hint', 'Raw materials you\'ve gathered. Sell them at the 🏪 Pawn Shop for credits.'));
   _built = true;
 }
 
@@ -110,7 +125,9 @@ function openInventory(show = true) {
 if (typeof window !== 'undefined') {
   window.aqInvAdd = invAdd;
   window.aqInvCount = invCount;
+  window.aqInvTake = invTake;
   window.aqInvAll = read;
+  window.aqInvItems = ITEMS;
   window.openInventory = openInventory;
   window.addEventListener('aq-gamedata-synced', () => {
     const w = document.getElementById('inventory-wrap');

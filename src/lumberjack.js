@@ -239,15 +239,14 @@ function resolveFall(t, m, now) {
   let logs = def.logs[0] + (Math.random() * (def.logs[1] - def.logs[0] + 1) | 0);
   if (t.rare) logs = Math.round(logs * 2.5);
   if (squished) logs = Math.max(1, logs >> 1);             // dropped half of them on your head
-  const pay = logs * def.logValue;
-  if (typeof window.aqAddCredits === 'function') window.aqAddCredits(pay);
+  const pay = logs * def.logValue;       // base worth — the Pawn Shop pays the live LUMBR rate
   if (typeof window.aqInvAdd === 'function') window.aqInvAdd('log_' + def.id, logs);
   if (typeof window.recordScore === 'function') window.recordScore('lumber', pay, def.name + (t.rare ? ' (giant)' : ''));
   if (typeof window.aqGameXp === 'function')
     window.aqGameXp('woodcutting', { played: true, won: true, mult: Math.min(XP_CAP, (0.5 + (t.rare ? 0.5 : 0)) * xpZoneMult()) });
   felled++; sessionLogs += logs;
   sfx('collect');
-  addFloater(`+${logs} ${def.name} logs (+${pay} 💰)`, '#a8e078');
+  addFloater(`+${logs} ${def.name} logs → 🎒`, '#a8e078');
   if (t.rare && typeof window.aqGameAnnounce === 'function' && curZone >= 2)
     window.aqGameAnnounce(`felled a giant ${def.name} 🪓 (+${pay}💰)`);
   refreshInfo();

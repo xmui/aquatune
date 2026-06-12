@@ -4411,8 +4411,16 @@ html[data-era=beos][data-scheme=light] body:not(.osmode) #hdr::after { display:n
     .cm-tab { flex:1; padding:6px 4px; border:1px solid #6f9fd0; border-bottom:none; border-radius:6px 6px 0 0; background:linear-gradient(180deg,#f4f8fd,#d9e6f5); cursor:pointer; font-size:12px; font-weight:700; color:#23415e; }
     .cm-tab.on { background:linear-gradient(180deg,#fff,#eaf3ff); color:#0a4f9e; }
     .cm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(72px,1fr)); gap:6px; padding:8px; border:1px solid #6f9fd0; border-radius:0 0 6px 6px; background:#f6faff; max-height:200px; overflow:auto; }
-    .cm-cell { display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 2px; border:1px solid #c4d8ef; border-radius:7px; background:#fff; cursor:pointer; }
+    .cm-cell { display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 2px; border:1px solid #c4d8ef; border-radius:7px; background:#fff; cursor:pointer; position:relative; }
+    .cm-cell.cm-locked { filter:saturate(0.45); }
+    .cm-cell.cm-locked .cm-cell-av { opacity:0.55; }
+    .cm-lock { position:absolute; inset:auto 2px 2px 2px; font-size:8px; font-weight:800; line-height:1.2; text-align:center;
+      background:rgba(20,16,8,0.85); color:#ffd84a; border-radius:5px; padding:2px 3px; pointer-events:none; }
     .cm-cell.on { border-color:#0a4f9e; box-shadow:0 0 0 2px rgba(10,79,158,.3); background:#eef6ff; }
+    .cm-cell.cm-locked { opacity:.8; }
+    .cm-cell.cm-locked .cm-cell-av { filter:grayscale(.65) brightness(.8); }
+    .cm-lock { font-size:8px; font-weight:800; color:#ffd24a; background:rgba(0,0,0,0.55);
+      border-radius:5px; padding:2px 4px; margin-top:2px; line-height:1.2; }
     .cm-cell-av { width:48px; height:48px; }
     .cm-cell-av svg { width:100%; height:100%; }
     .cm-cell-lab { font-size:10px; color:#33485e; text-align:center; line-height:1.1; }
@@ -6254,6 +6262,9 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
             <button class="apps-game-btn" onclick="OS.open('lumber');toggleAppsMenu()">
               <span class="agb-icon">🪓</span><span class="agb-name">Lumberjack</span>
             </button>
+            <button class="apps-game-btn" onclick="OS.open('pawn');toggleAppsMenu()">
+              <span class="agb-icon">🏪</span><span class="agb-name">Pawn Shop</span>
+            </button>
             <button class="apps-game-btn" onclick="OS.open('buddyshoot');toggleAppsMenu()">
               <span class="agb-icon">🦆</span><span class="agb-name">Buddy Shoot</span>
             </button>
@@ -6555,6 +6566,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
       <button class="apps-game-btn" data-app="scratch" onclick="OS.open('scratch')"><span class="agb-icon">&#127903;&#65039;</span><span class="agb-name">Scratch</span></button>
       <button class="apps-game-btn" data-app="lumber" onclick="OS.open('lumber')"><span class="agb-icon">&#129683;</span><span class="agb-name">Lumber</span></button>
       <button class="apps-game-btn" data-app="inventory" onclick="OS.open('inventory')"><span class="agb-icon">&#127890;</span><span class="agb-name">Items</span></button>
+      <button class="apps-game-btn" data-app="pawn" onclick="OS.open('pawn')"><span class="agb-icon">&#127978;</span><span class="agb-name">Pawn</span></button>
       <button class="apps-game-btn" data-app="buddyshoot" onclick="OS.open('buddyshoot')"><span class="agb-icon">&#129444;</span><span class="agb-name">Buddy Shoot</span></button>
       <button class="apps-game-btn" data-app="buddyshoot3d" onclick="OS.open('buddyshoot3d')"><span class="agb-icon">&#128520;</span><span class="agb-name">Shoot 3D</span></button>
       <button class="apps-game-btn" data-app="pool" onclick="OS.open('pool')"><span class="agb-icon">&#127921;</span><span class="agb-name">8-Ball Pool</span></button>
@@ -6878,6 +6890,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     <ellipse cx="50" cy="64" rx="14" ry="5.5" fill="url(#ab-b)"/>
     <ellipse cx="50" cy="64" rx="14" ry="5.5" fill="rgba(0,0,0,0.16)"/>
     <!-- Clothes overlay layer — swapped by the buddy creator -->
+    <g id="ab-tattoo"></g>
     <g id="ab-clothes"></g>
     <!-- Head sphere -->
     <circle cx="50" cy="33" r="27" fill="url(#ab-h)"/>
@@ -6899,6 +6912,7 @@ html[data-era=beos] body.osmode #hdr #mb-appname { color:var(--text); text-shado
     <!-- Smile -->
     <path id="ab-mouth" d="M 43.5 43.5 Q 50 50.5 56.5 43.5" stroke="#001e38" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-opacity="0.82"/>
     <!-- Outfit overlay layer — swapped by JS -->
+    <g id="ab-tattoo-face"></g>
     <g id="ab-outfit"></g>
   </svg>
 </div>
@@ -9408,6 +9422,7 @@ const APPS = {
   scratch:   { el:'scratch-wrap',   name:'Scratch-Offs', tb:'#scratch-titlebar', openFn:()=>window.openScratchers?.(), closeFn:()=>window.openScratchers?.(false) },
   lumber:{ keys:true, el:'lumber-wrap', name:'Lumberjack', tb:'#lumber-titlebar', openFn:()=>window.openLumberjack?.(), closeFn:()=>window.openLumberjack?.(false) },
   inventory: { el:'inventory-wrap', name:'Inventory', tb:'#inventory-titlebar', openFn:()=>window.openInventory?.(), closeFn:()=>window.openInventory?.(false) },
+  pawn:      { el:'pawn-wrap',      name:'Pawn Shop', tb:'#pawn-titlebar', openFn:()=>window.openPawnShop?.(), closeFn:()=>window.openPawnShop?.(false) },
   charmaker: { el:'charmaker-wrap', name:'Aquatard Creator',   tb:'#charmaker-titlebar',openFn:()=>window.openCharMaker?.(), closeFn:()=>window.openCharMaker?.(false) },
   chat:      { modal:true, name:'Messenger', openFn:()=>{ window.openMessenger ? window.openMessenger() : toggleBoard(); } },
   rooms:     { modal:true, name:'Public Rooms', openFn:()=>openLobbyOverlay() },
@@ -9757,7 +9772,7 @@ const DOCK_META = {
   mines:{icon:'💣',label:'Minesweeper'}, blackjack:{icon:'🃏',label:'Blackjack'}, rhythm:{icon:'🎶',label:'Beat Tap'},
   holdem:{icon:'🂡',label:"Texas Hold'em"},
   stocks:{icon:'📈',label:'Aquatune Exchange'},
-  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, scratch:{icon:'🎟️',label:'Scratch-Offs'}, lumber:{icon:'🪓',label:'Lumberjack'}, inventory:{icon:'🎒',label:'Inventory'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
+  stats:{icon:'📊',label:'Stats'}, fishing:{icon:'🎣',label:'Fishing'}, mining:{icon:'⛏️',label:'Mining'}, scratch:{icon:'🎟️',label:'Scratch-Offs'}, lumber:{icon:'🪓',label:'Lumberjack'}, inventory:{icon:'🎒',label:'Inventory'}, pawn:{icon:'🏪',label:'Pawn Shop'}, buddyshoot:{icon:'🦆',label:'Buddy Shoot'}, buddyshoot3d:{icon:'😈',label:'Buddy Shoot 3D'},
   pool:{icon:'🎱',label:'8-Ball Pool'}, tetris:{icon:'🧱',label:'Tetris'}, rogue:{icon:'🤖',label:'Neon Runner'},
   tanks:{icon:'🐢',label:'Tank Battle'}, airhockey:{icon:'🏒',label:'Air Hockey'},
   roulette:{icon:'🎡',label:'Roulette'}, charmaker:{icon:'🧑‍🎨',label:'Aquatard Creator'},
@@ -10630,6 +10645,39 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
       <path d="M 41 43 Q 45 40.5 50 42 Q 55 40.5 59 43 Q 55 50 50 51 Q 45 50 41 43 Z" fill="#cc1133"/>
       <path d="M 41 43 Q 50 46 59 43" fill="none" stroke="#990022" stroke-width="1.2"/>
       <path d="M 45 41.5 Q 50 42.5 55 41.5" fill="none" stroke="rgba(255,100,120,0.5)" stroke-width="1.5" stroke-linecap="round"/>`,
+    /* ── Pawn Shop exclusives (locked until bought — see src/pawnshop.js) ── */
+    pawncrown: `
+      <polygon points="32,22 32,8 40,16 50,4 60,16 68,8 68,22" fill="#ffd24a" stroke="#c8960a" stroke-width="1.4"/>
+      <rect x="31" y="20" width="38" height="5" rx="2" fill="#ffd24a" stroke="#c8960a" stroke-width="1"/>
+      <circle cx="40" cy="14" r="2.2" fill="#ff4a6a"/><circle cx="50" cy="10" r="2.6" fill="#4ad9ff"/><circle cx="60" cy="14" r="2.2" fill="#58e058"/>
+      <circle cx="50" cy="22.5" r="1.8" fill="#fff"/>`,
+    snapback: `
+      <path d="M 28 24 Q 50 6 72 24 L 72 30 L 28 30 Z" fill="#1a1a2e"/>
+      <rect x="64" y="24" width="26" height="6" rx="3" fill="#1a1a2e"/>
+      <path d="M 28 24 Q 50 8 72 24" fill="none" stroke="#e0463a" stroke-width="2.4"/>
+      <circle cx="50" cy="12" r="2.4" fill="#e0463a"/>
+      <text x="44" y="26" font-size="9" font-weight="900" fill="#e0463a" font-family="Arial">A</text>`,
+    cashtopper: `
+      <rect x="36" y="0" width="28" height="22" rx="2" fill="#181820"/>
+      <rect x="30" y="20" width="40" height="5" rx="2.5" fill="#181820"/>
+      <rect x="36" y="14" width="28" height="6" fill="#2a8a3a"/>
+      <text x="45" y="20" font-size="7.5" font-weight="900" fill="#ffd24a" font-family="Arial">$</text>
+      <ellipse cx="44" cy="5" rx="5" ry="2.4" fill="rgba(255,255,255,0.18)" transform="rotate(-16 44 5)"/>`,
+    vikinghelm: `
+      <path d="M 32 26 Q 50 4 68 26 L 68 30 L 32 30 Z" fill="#9aa4ae" stroke="#5a646e" stroke-width="1.2"/>
+      <rect x="48" y="6" width="4" height="22" fill="#7a848e"/>
+      <path d="M 32 26 Q 24 18 26 8 Q 33 12 36 22 Z" fill="#e8dcc8" stroke="#b8a888" stroke-width="1"/>
+      <path d="M 68 26 Q 76 18 74 8 Q 67 12 64 22 Z" fill="#e8dcc8" stroke="#b8a888" stroke-width="1"/>`,
+    halo: `
+      <ellipse cx="50" cy="6" rx="17" ry="5" fill="none" stroke="#ffe04a" stroke-width="3.4"/>
+      <ellipse cx="50" cy="6" rx="17" ry="5" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="1.2"/>`,
+    propeller: `
+      <path d="M 34 26 Q 50 10 66 26 L 66 29 L 34 29 Z" fill="#3a78d8"/>
+      <path d="M 34 26 Q 50 12 66 26" fill="none" stroke="#e8c83a" stroke-width="2"/>
+      <rect x="48.6" y="6" width="2.8" height="8" fill="#888"/>
+      <ellipse cx="38" cy="6" rx="11" ry="3" fill="#e0463a" transform="rotate(-8 38 6)"/>
+      <ellipse cx="62" cy="6" rx="11" ry="3" fill="#ffd24a" transform="rotate(8 62 6)"/>
+      <circle cx="50" cy="6" r="2.4" fill="#333"/>`,
   };
   const OUTFIT_KEYS = Object.keys(OUTFIT_DEFS);
   // Reuse the hats for the Buddy Shoot game (src/buddyshoot.js builds its own
@@ -13221,6 +13269,7 @@ function _hslToRgb(h, s, l) {
   <button class="mob-tool-btn" onclick="OS.open('scratch')" title="Scratch-Offs">🎟️<span>Scratch</span></button>
   <button class="mob-tool-btn" onclick="OS.open('lumber')" title="Lumberjack">🪓<span>Lumber</span></button>
   <button class="mob-tool-btn" onclick="OS.open('inventory')" title="Inventory">🎒<span>Items</span></button>
+  <button class="mob-tool-btn" onclick="OS.open('pawn')" title="Pawn Shop">🏪<span>Pawn</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot')" title="Buddy Shoot">🦆<span>Shoot</span></button>
   <button class="mob-tool-btn" onclick="OS.open('buddyshoot3d')" title="Buddy Shoot 3D">😈<span>Shoot3D</span></button>
   <button class="mob-tool-btn" onclick="OS.open('pool')" title="8-Ball Pool">🎱<span>Pool</span></button>
@@ -15607,6 +15656,31 @@ function lumberSfx(name) {
   } catch (e) {}
 }
 window.lumberSfx = lumberSfx;
+
+/* ── PAWN SHOP SFX — register cha-ching, purchase fanfare, deny buzz ── */
+function pawnSfx(name) {
+  if (_gameVol === 0) return;
+  let cx; try { cx = initActx(); } catch (e) { return; }
+  const t = cx.currentTime, V = _gameVol;
+  const blip = (freq, start, dur, type, vol, slide) => {
+    const o = cx.createOscillator(), g = cx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t + start);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + start + dur * 0.9);
+    g.gain.setValueAtTime(0.0001, t + start);
+    g.gain.exponentialRampToValueAtTime(vol * V, t + start + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + start + dur);
+    o.connect(g); g.connect(cx.destination);
+    o.start(t + start); o.stop(t + start + dur + 0.02);
+  };
+  try {
+    switch (name) {
+      case 'chaching': blip(1180, 0, 0.1, 'triangle', 0.2); blip(1570, 0.08, 0.16, 'triangle', 0.18); blip(2100, 0.16, 0.2, 'sine', 0.1); break;
+      case 'buy':      [523, 659, 784, 1047].forEach((f, i) => blip(f, i * 0.07, 0.16, 'square', 0.13)); break;
+      case 'deny':     blip(220, 0, 0.18, 'sawtooth', 0.12, 150); break;
+    }
+  } catch (e) {}
+}
+window.pawnSfx = pawnSfx;
 
 // Neon Runner — chiptune-cyberpunk blips/noise.
 function rogueSfx(name) {
@@ -18525,6 +18599,7 @@ function bjUpdateBalance(){
 <script type="module" src="/src/scratchers.js"></script>
 <script type="module" src="/src/lumberjack.js"></script>
 <script type="module" src="/src/inventory.js"></script>
+<script type="module" src="/src/pawnshop.js"></script>
 <script type="module" src="/src/buddyshoot.js"></script>
 <script type="module" src="/src/buddyshoot3d.js"></script>
 <script type="module" src="/src/messenger.js"></script>
@@ -18780,6 +18855,15 @@ function bjUpdateBalance(){
     <button class="sol-titlebtn sol-close" onclick="window.openInventory(false)">×</button>
   </div>
   <div id="inventory-area"></div>
+</div>
+
+<!-- PAWN SHOP (sell materials, buy Aquatard exclusives) -->
+<div id="pawn-wrap" style="display:none">
+  <div class="aq-tb sol-titlebar" id="pawn-titlebar">
+    <span>🏪 Pawn Shop</span>
+    <button class="sol-titlebtn sol-close" onclick="window.openPawnShop(false)">×</button>
+  </div>
+  <div id="pawn-area"></div>
 </div>
 
 <!-- SCRATCH-OFFS (lottery kiosk) -->

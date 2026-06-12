@@ -361,17 +361,18 @@ function landFish(now) {
   const f = fish, noMiss = S && S.misses === 0;
   const perfects = S ? S.perfects : 0;
   streak++;
-  // Sale value: clean fight bonus + per-PERFECT-tap bonus + catch streak, capped.
-  const valueMult = Math.min(1.5, (noMiss ? 1.15 : 1) + perfects * 0.05) * (1 + Math.min(0.16, (streak - 1) * 0.02));
-  const value = Math.round(f.value * valueMult);
+  const value = f.value;                      // base worth — the Pawn Shop pays the live FISH rate
   const allPerfect = noMiss && S && perfects >= S.need;
+  // The catch goes in the basket (shared inventory), not your wallet — sell it
+  // at the Pawn Shop. A FLAWLESS fight lands a bonus second fish.
+  const haul = allPerfect && !f.monster ? 2 : 1;
+  if (typeof window.aqInvAdd === 'function') window.aqInvAdd('fish_' + f.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'), haul);
   state = 'caught';
   stopHookWave();
   goldFlashUntil = allPerfect ? now + 900 : 0;
-  msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + `+${value}💰` + (allPerfect ? ' ✨FLAWLESS' : noMiss ? ' ✨clean' : '');
+  msg = (f.monster ? '🐋 LANDED THE LEVIATHAN! ' : `Caught a ${f.name}! `) + (haul > 1 ? '×2 ' : '') + '→ 🎒' + (allPerfect ? ' ✨FLAWLESS' : noMiss ? ' ✨clean' : '');
   sfx('wave-stop');
   if (typeof window.playFanfare === 'function') window.playFanfare(f.monster ? 'jackpot' : 'small');
-  if (typeof window.aqAddCredits === 'function') window.aqAddCredits(value);
   // XP comes ONLY from landing a fish (never from playing/missing). Moderate
   // boost over the old (1.1 + rarity*0.6) curve: a bigger base plus steeper —
   // but CAPPED — rarity scaling so monsters reward proportionally more than

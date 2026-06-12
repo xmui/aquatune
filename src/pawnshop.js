@@ -54,7 +54,7 @@ function setOwned(id) {
   } catch (e) {}
 }
 
-const COMMODITY_LABEL = { ore: ['⛏️', 'ORE'], gems: ['💎', 'GEMS'], lumbr: ['🪵', 'LUMBR'] };
+const COMMODITY_LABEL = { ore: ['⛏️', 'ORE'], gems: ['💎', 'GEMS'], lumbr: ['🪵', 'LUMBR'], fish: ['🐟', 'FISH'] };
 function rate(commodity) {
   const r = (typeof window.aqResourceRate === 'function' && window.aqResourceRate(commodity)) || 1;
   return isFinite(r) && r > 0 ? r : 1;

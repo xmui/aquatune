@@ -28,6 +28,7 @@ const STOCKS = [
   { id:'ore',     ticker:'ORE',   name:'Ore Futures',        basePrice:50,  beta:0.7, vol:1.2, profile:'steady', commodity:true },
   { id:'gems',    ticker:'GEMS',  name:'Gem Exchange',       basePrice:120, beta:0.9, vol:1.7, profile:'swingy', commodity:true },
   { id:'lumbr',   ticker:'LUMBR', name:'Lumber Futures',     basePrice:35,  beta:0.8, vol:1.3, profile:'steady', commodity:true },
+  { id:'fish',    ticker:'FISH',  name:'Fish Market',        basePrice:30,  beta:0.8, vol:1.4, profile:'steady', commodity:true },
   { id:'blz',     ticker:'WEED',  name:'Weed Inc.',          basePrice:42,  beta:1.2, vol:1.6, profile:'steady' },
   { id:'snow',    ticker:'SNOW',  name:'Snow',               basePrice:88,  beta:1.6, vol:2.2, profile:'swingy' },
   { id:'gun',     ticker:'GUNZ',  name:'Gunz',               basePrice:64,  beta:1.1, vol:1.4, profile:'steady' },

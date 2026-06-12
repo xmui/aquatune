@@ -30,6 +30,31 @@ const ITEMS = {
   log_spirit:   { name: 'Spirit Logs',  icon: '✨', value: 55,  commodity: 'lumbr' },
   // forest produce (shaken loose while felling — see src/lumberjack.js)
   apple:        { name: 'Apple',        icon: '🍎', value: 4,   commodity: 'lumbr' },
+  // the day's catch (src/fishing.js; values match the fish table)
+  fish_minnow:          { name: 'Minnow',          icon: '🐟', value: 4,   commodity: 'fish' },
+  fish_bass:            { name: 'Bass',            icon: '🐟', value: 10,  commodity: 'fish' },
+  fish_pike:            { name: 'Pike',            icon: '🐟', value: 18,  commodity: 'fish' },
+  fish_rainbow_trout:   { name: 'Rainbow Trout',   icon: '🐟', value: 30,  commodity: 'fish' },
+  fish_golden_carp:     { name: 'Golden Carp',     icon: '🐠', value: 75,  commodity: 'fish' },
+  fish_sardine:         { name: 'Sardine',         icon: '🐟', value: 8,   commodity: 'fish' },
+  fish_mackerel:        { name: 'Mackerel',        icon: '🐟', value: 18,  commodity: 'fish' },
+  fish_pufferfish:      { name: 'Pufferfish',      icon: '🐡', value: 36,  commodity: 'fish' },
+  fish_swordfish:       { name: 'Swordfish',       icon: '🐠', value: 85,  commodity: 'fish' },
+  fish_anglerfish:      { name: 'Anglerfish',      icon: '🐠', value: 130, commodity: 'fish' },
+  fish_mudfish:         { name: 'Mudfish',         icon: '🐟', value: 20,  commodity: 'fish' },
+  fish_catfish:         { name: 'Catfish',         icon: '🐟', value: 42,  commodity: 'fish' },
+  fish_eel:             { name: 'Eel',             icon: '🐟', value: 78,  commodity: 'fish' },
+  fish_snapping_turtle: { name: 'Snapping Turtle', icon: '🐢', value: 115, commodity: 'fish' },
+  fish_bog_serpent:     { name: 'Bog Serpent',     icon: '🐍', value: 190, commodity: 'fish' },
+  fish_lavafish:        { name: 'Lavafish',        icon: '🐠', value: 60,  commodity: 'fish' },
+  fish_cinder_eel:      { name: 'Cinder Eel',      icon: '🐍', value: 125, commodity: 'fish' },
+  fish_magma_ray:       { name: 'Magma Ray',       icon: '🐠', value: 230, commodity: 'fish' },
+  fish_demon_koi:       { name: 'Demon Koi',       icon: '🐠', value: 320, commodity: 'fish' },
+  fish_hellfish:        { name: 'Hellfish',        icon: '🐠', value: 420, commodity: 'fish' },
+  fish_river_king:      { name: 'River King',      icon: '🐋', value: 300, commodity: 'fish' },
+  fish_leviathan:       { name: 'Leviathan',       icon: '🐋', value: 500, commodity: 'fish' },
+  fish_bog_horror:      { name: 'Bog Horror',      icon: '🐋', value: 680, commodity: 'fish' },
+  fish_cerberus_fish:   { name: 'Cerberus Fish',   icon: '🐋', value: 950, commodity: 'fish' },
 };
 
 const KEY = 'aq_inventory';
